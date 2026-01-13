@@ -72,7 +72,7 @@
         <p style="text-align: center; color: #666;">לחץ על הכפתור כדי להוסיף את לני למערכת</p>
 
         <button onclick="initializeDatabase()">אתחל מסד נתונים עם לני</button>
-        <button onclick="window.location.href='?page=admin'" style="background: #6c757d;">עבור לעמוד ניהול</button>
+        <button onclick="window.location.href='admin.html'" style="background: #6c757d;">עבור לעמוד ניהול</button>
 
         <div id="status"></div>
     </div>
@@ -110,6 +110,7 @@
                 // Create לני with all tasks from the original page
                 const leniData = {
                     name: 'לני',
+                    imageName: 'lenny-small.png',
                     tasks: [
                         { id: 1, title: 'צחצוח שיניים', icon: '🪥' },
                         { id: 2, title: 'סידור בובות', icon: '🧸' },
@@ -137,8 +138,8 @@
                 statusDiv.innerHTML = `
                     <strong>הצלחה! 🎉</strong><br>
                     לני נוספה למערכת עם ${leniData.tasks.length} משימות.<br><br>
-                    <a href="?kid=leni" style="color: #667eea; font-weight: bold;">לחץ כאן לעבור ללוח של לני</a><br>
-                    <a href="?page=admin" style="color: #667eea; font-weight: bold;">לחץ כאן לעבור לעמוד ניהול</a>
+                    <a href="index.html?kid=leni" style="color: #667eea; font-weight: bold;">לחץ כאן לעבור ללוח של לני</a><br>
+                    <a href="admin.html" style="color: #667eea; font-weight: bold;">לחץ כאן לעבור לעמוד ניהול</a>
                 `;
 
             } catch (error) {

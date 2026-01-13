@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול ילדים - ABA</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .admin-header {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .admin-header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .kids-list {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .kids-list h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .kid-item {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kid-item:last-child {
+            border-bottom: none;
+        }
+
+        .kid-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .kid-tasks {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .kid-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .add-kid-form {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .add-kid-form h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 1em;
+        }
+
+        .tasks-builder {
+            margin-top: 20px;
+        }
+
+        .tasks-builder h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .task-input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .task-input-row input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+        }
+
+        .task-input-row button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 10px;
+            background: #ff6b6b;
+            color: white;
+            cursor: pointer;
+        }
+
+        .emoji-display {
+            width: 60px;
+            height: 42px;
+            text-align: center;
+            font-size: 1.5em;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .emoji-display:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        /* Emoji Picker Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #667eea;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .emoji-item {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            cursor: pointer;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .emoji-item:hover {
+            transform: scale(1.2);
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.5em;
+            color: white;
+        }
+
+        @media (max-width: 600px) {
+            .kid-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .kid-links {
+                width: 100%;
+            }
+
+            .emoji-grid {
+                grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingState" class="loading">טוען...</div>
+
+    <div id="adminContainer" class="admin-container" style="display: none;">
+        <div class="admin-header">
+            <h1>🎯 ניהול ילדים ומשימות 🎯</h1>
+            <a href="index.html" class="back-link">← חזרה ללוח ראשי</a>
+        </div>
+
+        <div class="kids-list">
+            <h2>רשימת ילדים</h2>
+            <div id="kidsList"></div>
+        </div>
+
+        <div class="add-kid-form">
+            <h2>הוסף ילד חדש</h2>
+
+            <div class="form-group">
+                <label>שם הילד:</label>
+                <input type="text" id="newKidName" placeholder="הכנס שם">
+            </div>
+
+            <div class="form-group">
+                <label>שם תמונה (לדוגמה: lenny-small.png):</label>
+                <input type="text" id="kidImageName" placeholder="שם קובץ התמונה">
+            </div>
+
+            <div class="tasks-builder">
+                <h3>משימות:</h3>
+                <div id="tasksList"></div>
+                <button class="btn btn-secondary" onclick="addTaskRow()">+ הוסף משימה</button>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveNewKid()" style="margin-top: 20px; width: 100%;">שמור ילד</button>
+        </div>
+    </div>
+
+    <!-- Emoji Picker Modal -->
+    <div id="emojiModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>בחר אייקון</h3>
+                <button class="close-btn" onclick="closeEmojiPicker()">×</button>
+            </div>
+            <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Emoji categories
+        const emojis = [
+            // Faces & Emotions
+            '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘',
+            '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒',
+
+            // Activities & Objects
+            '🎯', '🎮', '🎲', '🎭', '🎨', '🎬', '🎪', '🎰', '🎸', '🎹', '🎺', '🎻', '🥁', '🎤', '🎧', '🎼',
+            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍',
+
+            // Nature
+            '🌸', '🌺', '🌻', '🌷', '🌹', '🥀', '🌼', '🌱', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀',
+            '⭐', '🌟', '✨', '💫', '⚡', '🔥', '💥', '☀️', '🌙', '⭐', '🌈', '☁️', '⛅', '🌤️', '⛈️', '🌩️',
+
+            // Animals
+            '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
+            '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞',
+
+            // Food
+            '🍎', '🍏', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅',
+            '🥑', '🍆', '🥔', '🥕', '🌽', '🌶️', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐',
+
+            // Activities & Daily Tasks
+            '🪥', '🧸', '👕', '💧', '🥪', '👟', '🧼', '🚿', '🚽', '🥤', '🛁', '🧴', '🧻', '🧹', '🧺', '🧽',
+            '⏰', '⏱️', '⌚', '📚', '📖', '✏️', '✒️', '🖊️', '🖍️', '📝', '🎒', '🎓', '📐', '📏', '📌', '📍',
+
+            // Symbols
+            '💰', '💵', '💴', '💶', '💷', '🪙', '💳', '🏆', '🥇', '🥈', '🥉', '🎖️', '🏅', '🎗️', '✅', '☑️',
+            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💖', '💝', '💗', '💓', '💞', '💕', '💌'
+        ];
+
+        let currentTaskRow = null;
+
+        // Initialize
+        window.onload = async function() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('adminContainer').style.display = 'block';
+
+            await loadKidsList();
+            addTaskRow(); // Add first task row
+            initEmojiGrid();
+        };
+
+        // Initialize emoji grid
+        function initEmojiGrid() {
+            const emojiGrid = document.getElementById('emojiGrid');
+            emojis.forEach(emoji => {
+                const emojiItem = document.createElement('div');
+                emojiItem.className = 'emoji-item';
+                emojiItem.textContent = emoji;
+                emojiItem.onclick = () => selectEmoji(emoji);
+                emojiGrid.appendChild(emojiItem);
+            });
+        }
+
+        // Load kids list
+        async function loadKidsList() {
+            const snapshot = await db.collection('kids').get();
+            const kidsList = document.getElementById('kidsList');
+            kidsList.innerHTML = '';
+
+            if (snapshot.empty) {
+                kidsList.innerHTML = '<p style="text-align: center; color: #666;">אין ילדים במערכת</p>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const kid = doc.data();
+                const kidDiv = document.createElement('div');
+                kidDiv.className = 'kid-item';
+                kidDiv.innerHTML = `
+                    <div class="kid-info">
+                        <h3>${kid.name}</h3>
+                        <div class="kid-tasks">${kid.tasks.length} משימות | $${(kid.totalMoney || 0).toFixed(2)}</div>
+                    </div>
+                    <div class="kid-links">
+                        <a href="index.html?kid=${doc.id}" class="btn btn-primary">לוח ילד</a>
+                        <a href="index.html?kid=${doc.id}&mode=parent" class="btn btn-secondary">לוח הורה</a>
+                    </div>
+                `;
+                kidsList.appendChild(kidDiv);
+            });
+        }
+
+        // Task row management
+        let taskCounter = 0;
+        function addTaskRow() {
+            const tasksList = document.getElementById('tasksList');
+            const taskRow = document.createElement('div');
+            taskRow.className = 'task-input-row';
+            taskRow.id = `task-${taskCounter}`;
+
+            taskRow.innerHTML = `
+                <div class="emoji-display" onclick="openEmojiPicker('task-${taskCounter}')" data-task-id="task-${taskCounter}">🎯</div>
+                <input type="text" placeholder="תיאור המשימה" data-type="title">
+                <button onclick="removeTaskRow('task-${taskCounter}')">🗑️</button>
+            `;
+
+            tasksList.appendChild(taskRow);
+            taskCounter++;
+        }
+
+        function removeTaskRow(taskId) {
+            document.getElementById(taskId).remove();
+        }
+
+        // Emoji picker
+        function openEmojiPicker(taskId) {
+            currentTaskRow = taskId;
+            document.getElementById('emojiModal').classList.add('active');
+        }
+
+        function closeEmojiPicker() {
+            document.getElementById('emojiModal').classList.remove('active');
+            currentTaskRow = null;
+        }
+
+        function selectEmoji(emoji) {
+            if (currentTaskRow) {
+                const taskRow = document.getElementById(currentTaskRow);
+                const emojiDisplay = taskRow.querySelector('.emoji-display');
+                emojiDisplay.textContent = emoji;
+            }
+            closeEmojiPicker();
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('emojiModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEmojiPicker();
+            }
+        });
+
+        // Save new kid
+        async function saveNewKid() {
+            const name = document.getElementById('newKidName').value.trim();
+            const imageName = document.getElementById('kidImageName').value.trim();
+
+            if (!name) {
+                alert('נא להכניס שם ילד');
+                return;
+            }
+
+            const taskRows = document.querySelectorAll('#tasksList .task-input-row');
+            const tasks = [];
+            let taskId = 1;
+
+            taskRows.forEach(row => {
+                const icon = row.querySelector('.emoji-display').textContent.trim();
+                const title = row.querySelector('[data-type="title"]').value.trim();
+                if (icon && title) {
+                    tasks.push({ id: taskId++, icon, title });
+                }
+            });
+
+            if (tasks.length === 0) {
+                alert('נא להוסיף לפחות משימה אחת');
+                return;
+            }
+
+            try {
+                const kidId = name.toLowerCase().replace(/\s+/g, '-');
+                await db.collection('kids').doc(kidId).set({
+                    name: name,
+                    imageName: imageName || 'lenny-small.png',
+                    tasks: tasks,
+                    completedTasks: [],
+                    totalMoney: 0,
+                    todayRewardGiven: false,
+                    lastResetDate: new Date().toDateString(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert('הילד נוסף בהצלחה!');
+                document.getElementById('newKidName').value = '';
+                document.getElementById('kidImageName').value = '';
+                document.getElementById('tasksList').innerHTML = '';
+                addTaskRow();
+                await loadKidsList();
+            } catch (error) {
+                console.error('Error saving kid:', error);
+                alert('שגיאה בשמירה: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

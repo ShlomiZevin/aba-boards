@@ -283,142 +283,6 @@
             }
         }
 
-        /* Admin Page Styles */
-        .admin-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .admin-header {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .kids-list {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .kid-item {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .kid-item:last-child {
-            border-bottom: none;
-        }
-
-        .kid-info h3 {
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .kid-tasks {
-            font-size: 0.9em;
-            color: #666;
-        }
-
-        .kid-links {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .add-kid-form {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            font-size: 1em;
-        }
-
-        .tasks-builder {
-            margin-top: 20px;
-        }
-
-        .task-input-row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            align-items: center;
-        }
-
-        .task-input-row input {
-            flex: 1;
-            padding: 10px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-        }
-
-        .task-input-row button {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 10px;
-            background: #ff6b6b;
-            color: white;
-            cursor: pointer;
-        }
-
-        .emoji-picker {
-            width: 60px;
-            text-align: center;
-            font-size: 1.5em;
-        }
-
         .hidden {
             display: none;
         }
@@ -445,7 +309,7 @@
 
             <div class="piggy-bank-section">
                 <div class="piggy-bank-icon">
-                    <img src="lenny-small.png" alt="Kid">
+                    <img id="kidImage" src="lenny-small.png" alt="Kid">
                 </div>
                 <div class="money-counter" id="moneyCounter">$0</div>
                 <div class="money-label" id="moneyLabel">קופת החיסכון</div>
@@ -456,34 +320,6 @@
 
         <div class="reset-info">
             הלוח מתאפס כל יום בחצות 🌙
-        </div>
-    </div>
-
-    <!-- Admin Page -->
-    <div id="adminPage" class="admin-container hidden">
-        <div class="admin-header">
-            <h1>🎯 ניהול ילדים ומשימות 🎯</h1>
-        </div>
-
-        <div class="kids-list">
-            <h2 style="color: #667eea; margin-bottom: 20px;">רשימת ילדים</h2>
-            <div id="kidsList"></div>
-        </div>
-
-        <div class="add-kid-form">
-            <h2 style="color: #667eea; margin-bottom: 20px;">הוסף ילד חדש</h2>
-            <div class="form-group">
-                <label>שם הילד:</label>
-                <input type="text" id="newKidName" placeholder="הכנס שם">
-            </div>
-
-            <div class="tasks-builder">
-                <h3 style="color: #667eea; margin-bottom: 15px;">משימות:</h3>
-                <div id="tasksList"></div>
-                <button class="btn btn-secondary" onclick="addTaskRow()">+ הוסף משימה</button>
-            </div>
-
-            <button class="btn btn-primary" onclick="saveNewKid()" style="margin-top: 20px; width: 100%;">שמור ילד</button>
         </div>
     </div>
 
@@ -519,14 +355,11 @@
 
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const page = urlParams.get('page');
         const kidId = urlParams.get('kid');
         const isParent = urlParams.get('mode') === 'parent';
 
-        // Route to appropriate page
-        if (page === 'admin') {
-            showAdminPage();
-        } else if (kidId) {
+        // Route to kid/parent page
+        if (kidId) {
             showKidPage(kidId, isParent);
         } else {
             // Default to לני
@@ -789,6 +622,11 @@
                 document.getElementById('kidTitle').textContent = `🌟 המשימות של ${kidData.name} 🌟`;
                 document.getElementById('moneyLabel').textContent = `קופת החיסכון של ${kidData.name}`;
 
+                // Set kid image
+                const kidImage = document.getElementById('kidImage');
+                kidImage.src = kidData.imageName || 'lenny-small.png';
+                kidImage.alt = kidData.name;
+
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('kidPage').classList.remove('hidden');
 
@@ -796,116 +634,6 @@
             } catch (error) {
                 console.error('Error loading kid page:', error);
                 document.getElementById('loadingState').textContent = 'שגיאה בטעינה';
-            }
-        }
-
-        // Show Admin Page
-        async function showAdminPage() {
-            try {
-                document.getElementById('loadingState').classList.add('hidden');
-                document.getElementById('adminPage').classList.remove('hidden');
-                await loadKidsList();
-                addTaskRow(); // Add first task row
-            } catch (error) {
-                console.error('Error loading admin page:', error);
-                document.getElementById('loadingState').textContent = 'שגיאה בטעינה';
-            }
-        }
-
-        // Load kids list in admin
-        async function loadKidsList() {
-            const snapshot = await db.collection('kids').get();
-            const kidsList = document.getElementById('kidsList');
-            kidsList.innerHTML = '';
-
-            if (snapshot.empty) {
-                kidsList.innerHTML = '<p style="text-align: center; color: #666;">אין ילדים במערכת</p>';
-                return;
-            }
-
-            snapshot.forEach(doc => {
-                const kid = doc.data();
-                const kidDiv = document.createElement('div');
-                kidDiv.className = 'kid-item';
-                kidDiv.innerHTML = `
-                    <div class="kid-info">
-                        <h3>${kid.name}</h3>
-                        <div class="kid-tasks">${kid.tasks.length} משימות | $${(kid.totalMoney || 0).toFixed(2)}</div>
-                    </div>
-                    <div class="kid-links">
-                        <a href="?kid=${doc.id}" class="btn btn-primary">לוח ילד</a>
-                        <a href="?kid=${doc.id}&mode=parent" class="btn btn-secondary">לוח הורה</a>
-                    </div>
-                `;
-                kidsList.appendChild(kidDiv);
-            });
-        }
-
-        // Add task row in admin
-        let taskCounter = 0;
-        function addTaskRow() {
-            const tasksList = document.getElementById('tasksList');
-            const taskRow = document.createElement('div');
-            taskRow.className = 'task-input-row';
-            taskRow.id = `task-${taskCounter}`;
-            taskRow.innerHTML = `
-                <input type="text" class="emoji-picker" placeholder="🎯" maxlength="2" data-type="icon">
-                <input type="text" placeholder="תיאור המשימה" data-type="title">
-                <button onclick="removeTaskRow('task-${taskCounter}')">🗑️</button>
-            `;
-            tasksList.appendChild(taskRow);
-            taskCounter++;
-        }
-
-        function removeTaskRow(taskId) {
-            document.getElementById(taskId).remove();
-        }
-
-        // Save new kid
-        async function saveNewKid() {
-            const name = document.getElementById('newKidName').value.trim();
-            if (!name) {
-                alert('נא להכניס שם ילד');
-                return;
-            }
-
-            const taskRows = document.querySelectorAll('#tasksList .task-input-row');
-            const tasks = [];
-            let taskId = 1;
-
-            taskRows.forEach(row => {
-                const icon = row.querySelector('[data-type="icon"]').value.trim();
-                const title = row.querySelector('[data-type="title"]').value.trim();
-                if (icon && title) {
-                    tasks.push({ id: taskId++, icon, title });
-                }
-            });
-
-            if (tasks.length === 0) {
-                alert('נא להוסיף לפחות משימה אחת');
-                return;
-            }
-
-            try {
-                const kidId = name.toLowerCase().replace(/\s+/g, '-');
-                await db.collection('kids').doc(kidId).set({
-                    name: name,
-                    tasks: tasks,
-                    completedTasks: [],
-                    totalMoney: 0,
-                    todayRewardGiven: false,
-                    lastResetDate: new Date().toDateString(),
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                alert('הילד נוסף בהצלחה!');
-                document.getElementById('newKidName').value = '';
-                document.getElementById('tasksList').innerHTML = '';
-                addTaskRow();
-                await loadKidsList();
-            } catch (error) {
-                console.error('Error saving kid:', error);
-                alert('שגיאה בשמירה: ' + error.message);
             }
         }
     </script>

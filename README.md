@@ -23,7 +23,8 @@ A simple, serverless task management system for kids with parent and admin views
 ```
 aba/
 ├── public/
-│   ├── index.html       # Main application (kid/parent/admin pages)
+│   ├── index.html       # Main kid/parent task page
+│   ├── admin.html       # Admin page for managing kids
 │   ├── init-db.html     # Database initialization page
 │   └── lenny-small.png  # Kid's avatar image
 ├── .firebaserc          # Firebase project configuration
@@ -89,9 +90,9 @@ After deployment, your app will be available at:
 
 ### URLs
 
-- **Kid Page (לני)**: `/?kid=leni`
-- **Parent Page (לני)**: `/?kid=leni&mode=parent`
-- **Admin Page**: `/?page=admin`
+- **Kid Page (לני)**: `/index.html?kid=leni`
+- **Parent Page (לני)**: `/index.html?kid=leni&mode=parent`
+- **Admin Page**: `/admin.html`
 - **Initialize DB**: `/init-db.html`
 
 ### Kid Page
@@ -112,7 +113,9 @@ After deployment, your app will be available at:
 1. **View All Kids**: See all registered kids with their task counts and savings
 2. **Add New Kid**:
    - Enter the kid's name
-   - Add tasks with emojis and descriptions
+   - Enter image filename (optional, defaults to lenny-small.png)
+   - Add tasks by clicking the emoji icon to open emoji picker
+   - Enter task description for each task
    - Click "שמור ילד" to save
 3. **Quick Links**: Direct links to kid and parent pages for each child
 
@@ -125,6 +128,7 @@ Each document represents a kid and contains:
 ```javascript
 {
   name: string,              // Kid's name (e.g., "לני")
+  imageName: string,         // Image filename (e.g., "lenny-small.png")
   tasks: [                   // Array of task objects
     {
       id: number,            // Unique task ID
