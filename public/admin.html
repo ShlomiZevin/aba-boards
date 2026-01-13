@@ -317,7 +317,7 @@
         </div>
 
         <div class="add-kid-form">
-            <h2>הוסף ילד חדש</h2>
+            <h2 id="formTitle">הוסף ילד חדש</h2>
 
             <div class="form-group">
                 <label>שם הילד:</label>
@@ -335,7 +335,8 @@
                 <button class="btn btn-secondary" onclick="addTaskRow()">+ הוסף משימה</button>
             </div>
 
-            <button class="btn btn-primary" onclick="saveNewKid()" style="margin-top: 20px; width: 100%;">שמור ילד</button>
+            <button class="btn btn-primary" id="saveButton" onclick="saveKid()" style="margin-top: 20px; width: 100%;">שמור ילד</button>
+            <button class="btn btn-secondary" id="cancelButton" onclick="cancelEdit()" style="margin-top: 10px; width: 100%; display: none;">ביטול</button>
         </div>
     </div>
 
@@ -397,6 +398,7 @@
         ];
 
         let currentTaskRow = null;
+        let editingKidId = null;
 
         // Initialize
         window.onload = async function() {
@@ -443,6 +445,7 @@
                     <div class="kid-links">
                         <a href="index.html?kid=${doc.id}" class="btn btn-primary">לוח ילד</a>
                         <a href="index.html?kid=${doc.id}&mode=parent" class="btn btn-secondary">לוח הורה</a>
+                        <button class="btn btn-primary" onclick="editKid('${doc.id}')">ערוך</button>
                     </div>
                 `;
                 kidsList.appendChild(kidDiv);
@@ -498,8 +501,64 @@
             }
         });
 
-        // Save new kid
-        async function saveNewKid() {
+        // Edit existing kid
+        async function editKid(kidId) {
+            try {
+                const doc = await db.collection('kids').doc(kidId).get();
+                if (!doc.exists) {
+                    alert('ילד לא נמצא');
+                    return;
+                }
+
+                const kidData = doc.data();
+                editingKidId = kidId;
+
+                // Update form title and button
+                document.getElementById('formTitle').textContent = `ערוך ילד: ${kidData.name}`;
+                document.getElementById('saveButton').textContent = 'שמור שינויים';
+                document.getElementById('cancelButton').style.display = 'block';
+
+                // Fill form with existing data
+                document.getElementById('newKidName').value = kidData.name;
+                document.getElementById('kidImageName').value = kidData.imageName || '';
+
+                // Clear and populate tasks
+                document.getElementById('tasksList').innerHTML = '';
+                taskCounter = 0;
+
+                if (kidData.tasks && kidData.tasks.length > 0) {
+                    kidData.tasks.forEach(task => {
+                        addTaskRow();
+                        const lastRow = document.getElementById(`task-${taskCounter - 1}`);
+                        lastRow.querySelector('.emoji-display').textContent = task.icon;
+                        lastRow.querySelector('[data-type="title"]').value = task.title;
+                    });
+                } else {
+                    addTaskRow();
+                }
+
+                // Scroll to form
+                document.querySelector('.add-kid-form').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error loading kid for edit:', error);
+                alert('שגיאה בטעינת נתוני הילד');
+            }
+        }
+
+        // Cancel edit
+        function cancelEdit() {
+            editingKidId = null;
+            document.getElementById('formTitle').textContent = 'הוסף ילד חדש';
+            document.getElementById('saveButton').textContent = 'שמור ילד';
+            document.getElementById('cancelButton').style.display = 'none';
+            document.getElementById('newKidName').value = '';
+            document.getElementById('kidImageName').value = '';
+            document.getElementById('tasksList').innerHTML = '';
+            addTaskRow();
+        }
+
+        // Save kid (create or update)
+        async function saveKid() {
             const name = document.getElementById('newKidName').value.trim();
             const imageName = document.getElementById('kidImageName').value.trim();
 
@@ -526,23 +585,32 @@
             }
 
             try {
-                const kidId = name.toLowerCase().replace(/\s+/g, '-');
-                await db.collection('kids').doc(kidId).set({
-                    name: name,
-                    imageName: imageName || 'lenny-small.png',
-                    tasks: tasks,
-                    completedTasks: [],
-                    totalMoney: 0,
-                    todayRewardGiven: false,
-                    lastResetDate: new Date().toDateString(),
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                const kidId = editingKidId || name.toLowerCase().replace(/\s+/g, '-');
 
-                alert('הילד נוסף בהצלחה!');
-                document.getElementById('newKidName').value = '';
-                document.getElementById('kidImageName').value = '';
-                document.getElementById('tasksList').innerHTML = '';
-                addTaskRow();
+                if (editingKidId) {
+                    // Update existing kid
+                    await db.collection('kids').doc(kidId).update({
+                        name: name,
+                        imageName: imageName || '',
+                        tasks: tasks
+                    });
+                    alert('השינויים נשמרו בהצלחה!');
+                } else {
+                    // Create new kid
+                    await db.collection('kids').doc(kidId).set({
+                        name: name,
+                        imageName: imageName || '',
+                        tasks: tasks,
+                        completedTasks: [],
+                        totalMoney: 0,
+                        todayRewardGiven: false,
+                        lastResetDate: new Date().toDateString(),
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert('הילד נוסף בהצלחה!');
+                }
+
+                cancelEdit();
                 await loadKidsList();
             } catch (error) {
                 console.error('Error saving kid:', error);
