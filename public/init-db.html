@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initialize Database</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 אתחול מסד נתונים</h1>
+        <p style="text-align: center; color: #666;">לחץ על הכפתור כדי להוסיף את לני למערכת</p>
+
+        <button onclick="initializeDatabase()">אתחל מסד נתונים עם לני</button>
+        <button onclick="window.location.href='?page=admin'" style="background: #6c757d;">עבור לעמוד ניהול</button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function initializeDatabase() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'info';
+            statusDiv.textContent = 'מאתחל מסד נתונים...';
+
+            try {
+                // Check if לני already exists
+                const leniDoc = await db.collection('kids').doc('leni').get();
+                if (leniDoc.exists) {
+                    statusDiv.className = 'error';
+                    statusDiv.textContent = 'לני כבר קיימת במערכת!';
+                    return;
+                }
+
+                // Create לני with all tasks from the original page
+                const leniData = {
+                    name: 'לני',
+                    tasks: [
+                        { id: 1, title: 'צחצוח שיניים', icon: '🪥' },
+                        { id: 2, title: 'סידור בובות', icon: '🧸' },
+                        { id: 3, title: 'להתלבש', icon: '👕' },
+                        { id: 4, title: 'למלא מים', icon: '💧' },
+                        { id: 5, title: 'להכניס את הכריך לתיק', icon: '🥪' },
+                        { id: 6, title: 'להוריד נעליים ולשים במקום', icon: '👟' },
+                        { id: 7, title: 'לשטוף ידיים', icon: '🧼' },
+                        { id: 8, title: 'לאכול משהו אחרי בית ספר', icon: '🍎' },
+                        { id: 9, title: 'העסקה עצמית למשך 45 דקות', icon: '⏰' },
+                        { id: 10, title: 'להתקלח באופן עצמאי', icon: '🚿' },
+                        { id: 11, title: 'ללכת לשירותים באופן עצמאי', icon: '🚽' },
+                        { id: 12, title: 'למזוג מים באופן עצמאי', icon: '🥤' }
+                    ],
+                    completedTasks: [],
+                    totalMoney: 0,
+                    todayRewardGiven: false,
+                    lastResetDate: new Date().toDateString(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await db.collection('kids').doc('leni').set(leniData);
+
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `
+                    <strong>הצלחה! 🎉</strong><br>
+                    לני נוספה למערכת עם ${leniData.tasks.length} משימות.<br><br>
+                    <a href="?kid=leni" style="color: #667eea; font-weight: bold;">לחץ כאן לעבור ללוח של לני</a><br>
+                    <a href="?page=admin" style="color: #667eea; font-weight: bold;">לחץ כאן לעבור לעמוד ניהול</a>
+                `;
+
+            } catch (error) {
+                console.error('Error initializing database:', error);
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `
+                    <strong>שגיאה!</strong><br>
+                    ${error.message}<br><br>
+                    <small>נא לוודא שהגדרת את Firestore בפרויקט Firebase שלך.</small>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
