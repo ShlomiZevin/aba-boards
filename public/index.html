@@ -341,7 +341,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const DAILY_REWARD = 0.5;
         const encouragementMessages = [
             '!כל הכבוד 🎉',
             '!יופי של יופי 🌟',
@@ -545,11 +544,12 @@
                 this.todayRewardGiven = true;
                 await this.saveState();
 
+                const dailyReward = this.kidData.dailyReward || 0.5;
                 const encouragement = document.getElementById('encouragement');
                 encouragement.innerHTML = `
                     <div>!🎉 סיימת את כל המשימות! אתה אלוף 🏆</div>
                     <div style="font-size: 1.5em; margin-top: 20px; color: #ffd700;">
-                        !💰 קיבלת $${DAILY_REWARD} לקופת החיסכון 💰
+                        !💰 קיבלת $${dailyReward.toFixed(2)} לקופת החיסכון 💰
                     </div>
                 `;
                 encouragement.style.display = 'block';
@@ -559,7 +559,7 @@
                 this.createFallingCoins();
 
                 setTimeout(() => {
-                    this.animateMoneyIncrease(DAILY_REWARD);
+                    this.animateMoneyIncrease(dailyReward);
                 }, 1000);
 
                 setTimeout(() => {
