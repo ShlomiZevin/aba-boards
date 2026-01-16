@@ -431,7 +431,40 @@
                 this.bonusRewardsEarned = {}; // Track reward amounts for each bonus task
                 this.todayRewardGiven = false;
                 this.isCelebrating = false; // Prevent multiple simultaneous celebrations
+
+                // Coin style configuration (default to dollar)
+                this.coinStyle = kidData.coinStyle || 'dollar';
+                this.coinImageName = kidData.coinImageName || '';
+
                 this.init();
+            }
+
+            getCoinSymbol() {
+                switch (this.coinStyle) {
+                    case 'shekel':
+                        return '₪';
+                    case 'custom':
+                        return ''; // Will use image instead
+                    case 'dollar':
+                    default:
+                        return '$';
+                }
+            }
+
+            formatMoney(amount) {
+                const symbol = this.getCoinSymbol();
+                if (this.coinStyle === 'custom') {
+                    return `<img src="${this.coinImageName}" style="width: 20px; height: 20px; vertical-align: middle; margin: 0 3px;" /> ${amount.toFixed(2)}`;
+                }
+                return `${symbol}${amount.toFixed(2)}`;
+            }
+
+            formatMoneySimple(amount) {
+                const symbol = this.getCoinSymbol();
+                if (this.coinStyle === 'custom') {
+                    return amount.toFixed(2);
+                }
+                return `${symbol}${amount.toFixed(2)}`;
             }
 
             async init() {
@@ -490,7 +523,11 @@
 
             updateMoneyDisplay() {
                 const counter = document.getElementById('moneyCounter');
-                counter.textContent = `$${this.kidData.totalMoney.toFixed(2)}`;
+                if (this.coinStyle === 'custom') {
+                    counter.innerHTML = `<img src="${this.coinImageName}" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 5px;" /> ${this.kidData.totalMoney.toFixed(2)}`;
+                } else {
+                    counter.textContent = this.formatMoneySimple(this.kidData.totalMoney);
+                }
             }
 
             async toggleTask(taskId) {
@@ -600,12 +637,13 @@
                             card.classList.add('completed');
                         }
 
+                        const symbol = this.getCoinSymbol();
                         const rewardText = task.minReward === task.maxReward
-                            ? `$${task.minReward.toFixed(1)}`
-                            : `$${task.minReward.toFixed(1)}-$${task.maxReward.toFixed(1)}`;
+                            ? `${symbol}${task.minReward.toFixed(1)}`
+                            : `${symbol}${task.minReward.toFixed(1)}-${symbol}${task.maxReward.toFixed(1)}`;
 
                         const earnedText = this.bonusRewardsEarned[task.id]
-                            ? ` (+$${this.bonusRewardsEarned[task.id].toFixed(1)})`
+                            ? ` (+${symbol}${this.bonusRewardsEarned[task.id].toFixed(1)})`
                             : '';
 
                         card.innerHTML = `
@@ -669,10 +707,15 @@
                 encouragement.style.display = 'none';
 
                 // Update content
+                const symbol = this.getCoinSymbol();
+                const moneyDisplay = this.coinStyle === 'custom'
+                    ? `<img src="${this.coinImageName}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
+                    : `+${symbol}${amount.toFixed(1)}`;
+
                 encouragement.innerHTML = `
                     <div style="font-size: 1.5em;">!🎉 בונוס 🎉</div>
                     <div style="font-size: 2em; margin-top: 10px; color: #ffd700;">
-                        !💰 +$${amount.toFixed(1)} 💰
+                        !💰 ${moneyDisplay} 💰
                     </div>
                 `;
 
@@ -681,8 +724,9 @@
                 encouragement.style.opacity = '1';
                 encouragement.style.transform = 'translate(-50%, -50%) scale(1)';
 
-                this.createConfetti(25);
-                this.createFallingCoins();
+                // MASSIVE COIN SPLASH EXPLOSION! 💥
+                this.createMassiveCoinSplash();
+                this.createConfetti(50); // More confetti too!
 
                 setTimeout(() => {
                     encouragement.style.display = 'none';
@@ -738,11 +782,16 @@
                 await this.saveState();
 
                 const dailyReward = this.kidData.dailyReward || 0.5;
+                const symbol = this.getCoinSymbol();
+                const rewardDisplay = this.coinStyle === 'custom'
+                    ? `<img src="${this.coinImageName}" style="width: 35px; height: 35px; vertical-align: middle;" /> ${dailyReward.toFixed(2)}`
+                    : `${symbol}${dailyReward.toFixed(2)}`;
+
                 const encouragement = document.getElementById('encouragement');
                 encouragement.innerHTML = `
                     <div>!🎉 סיימת את כל המשימות! אתה אלוף 🏆</div>
                     <div style="font-size: 1.5em; margin-top: 20px; color: #ffd700;">
-                        !💰 קיבלת $${dailyReward.toFixed(2)} לקופת החיסכון 💰
+                        !💰 קיבלת ${rewardDisplay} לקופת החיסכון 💰
                     </div>
                 `;
                 encouragement.style.display = 'block';
@@ -775,6 +824,68 @@
                 }
             }
 
+            createMassiveCoinSplash() {
+                const celebration = document.getElementById('celebration');
+                const coinEmojis = ['🪙', '💰', '💵', '💴', '💶', '💷', '🤑', '💸', '💲'];
+
+                // Create 100+ coins exploding from center!
+                for (let i = 0; i < 120; i++) {
+                    const coin = document.createElement('div');
+                    coin.style.position = 'fixed';
+                    coin.style.fontSize = (20 + Math.random() * 40) + 'px';
+                    coin.style.zIndex = '1001';
+                    coin.style.pointerEvents = 'none';
+
+                    // Start from center
+                    coin.style.left = '50%';
+                    coin.style.top = '50%';
+
+                    if (this.coinStyle === 'custom' && this.coinImageName) {
+                        // Use custom coin image
+                        coin.innerHTML = `<img src="${this.coinImageName}" style="width: ${30 + Math.random() * 30}px; height: ${30 + Math.random() * 30}px;" />`;
+                    } else {
+                        // Use emoji
+                        coin.textContent = coinEmojis[Math.floor(Math.random() * coinEmojis.length)];
+                    }
+
+                    celebration.appendChild(coin);
+
+                    // Random explosion direction
+                    const angle = Math.random() * Math.PI * 2;
+                    const velocity = 200 + Math.random() * 400;
+                    const vx = Math.cos(angle) * velocity;
+                    const vy = Math.sin(angle) * velocity;
+                    const spin = (Math.random() - 0.5) * 1080; // Random spin
+
+                    // Animate with physics
+                    const startTime = Date.now();
+                    const duration = 2000 + Math.random() * 1000;
+
+                    const animate = () => {
+                        const elapsed = Date.now() - startTime;
+                        const progress = elapsed / duration;
+
+                        if (progress < 1) {
+                            const t = elapsed / 1000;
+                            const gravity = 500;
+
+                            const x = vx * t;
+                            const y = vy * t + 0.5 * gravity * t * t;
+                            const rotation = spin * progress;
+
+                            coin.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+                            coin.style.opacity = 1 - (progress * 0.5);
+
+                            requestAnimationFrame(animate);
+                        } else {
+                            coin.remove();
+                        }
+                    };
+
+                    requestAnimationFrame(animate);
+                }
+            }
+
             animateMoneyIncrease(amount) {
                 const counter = document.getElementById('moneyCounter');
                 const startMoney = this.kidData.totalMoney;
@@ -787,7 +898,12 @@
                     const easeProgress = 1 - Math.pow(1 - progress, 3);
                     const currentMoney = startMoney + (amount * easeProgress);
 
-                    counter.textContent = `$${currentMoney.toFixed(2)}`;
+                    if (this.coinStyle === 'custom') {
+                        counter.innerHTML = `<img src="${this.coinImageName}" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 5px;" /> ${currentMoney.toFixed(2)}`;
+                    } else {
+                        const symbol = this.getCoinSymbol();
+                        counter.textContent = `${symbol}${currentMoney.toFixed(2)}`;
+                    }
                     counter.style.transform = `scale(${1 + Math.sin(progress * Math.PI) * 0.3})`;
 
                     if (progress < 1) {

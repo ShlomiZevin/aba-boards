@@ -339,6 +339,20 @@
                 <input type="number" id="kidDailyReward" placeholder="0.50" step="0.01" min="0" value="0.50">
             </div>
 
+            <div class="form-group">
+                <label>סוג מטבע:</label>
+                <select id="coinStyle" onchange="toggleCoinImageInput()">
+                    <option value="dollar">דולר ($)</option>
+                    <option value="shekel">שקל (₪)</option>
+                    <option value="custom">תמונה מותאמת אישית</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="coinImageGroup" style="display: none;">
+                <label>שם קובץ תמונת מטבע (לדוגמה: coin.png):</label>
+                <input type="text" id="coinImageName" placeholder="שם קובץ התמונה">
+            </div>
+
             <div class="tasks-builder">
                 <h3>משימות:</h3>
                 <div id="tasksList"></div>
@@ -401,6 +415,7 @@
             // Activities & Daily Tasks
             '🪥', '🧸', '👕', '💧', '🥪', '👟', '🧼', '🚿', '🚽', '🥤', '🛁', '🧴', '🧻', '🧹', '🧺', '🧽',
             '⏰', '⏱️', '⌚', '📚', '📖', '✏️', '✒️', '🖊️', '🖍️', '📝', '🎒', '🎓', '📐', '📏', '📌', '📍',
+            '🛏️', '🛋️', '🪑', '🚪', '🪟', '🏠', '🏡', '🏢',
 
             // Electronics & Screens
             '📱', '💻', '🖥️', '⌨️', '🖱️', '🖨️', '📺', '📷', '📹', '🎥', '📞', '☎️', '📟', '📠', '🔋', '🔌',
@@ -459,6 +474,7 @@
                         <a href="index.html?kid=${doc.id}" class="btn btn-primary">לוח ילד</a>
                         <a href="index.html?kid=${doc.id}&mode=parent" class="btn btn-secondary">לוח הורה</a>
                         <button class="btn btn-primary" onclick="editKid('${doc.id}')">ערוך</button>
+                        <button class="btn btn-secondary" onclick="copyKid('${doc.id}')">העתק</button>
                     </div>
                 `;
                 kidsList.appendChild(kidDiv);
@@ -500,6 +516,17 @@
                 rewardInputs.style.display = 'flex';
             } else {
                 rewardInputs.style.display = 'none';
+            }
+        }
+
+        function toggleCoinImageInput() {
+            const coinStyle = document.getElementById('coinStyle').value;
+            const coinImageGroup = document.getElementById('coinImageGroup');
+
+            if (coinStyle === 'custom') {
+                coinImageGroup.style.display = 'block';
+            } else {
+                coinImageGroup.style.display = 'none';
             }
         }
 
@@ -557,6 +584,14 @@
                 document.getElementById('kidMoney').value = kidData.totalMoney || 0;
                 document.getElementById('kidDailyReward').value = kidData.dailyReward || 0.5;
 
+                // Set coin style (default to dollar for backward compatibility)
+                const coinStyle = kidData.coinStyle || 'dollar';
+                document.getElementById('coinStyle').value = coinStyle;
+                if (coinStyle === 'custom') {
+                    document.getElementById('coinImageName').value = kidData.coinImageName || '';
+                    toggleCoinImageInput();
+                }
+
                 // Clear and populate tasks
                 document.getElementById('tasksList').innerHTML = '';
                 taskCounter = 0;
@@ -591,6 +626,58 @@
             }
         }
 
+        // Copy kid board
+        async function copyKid(kidId) {
+            try {
+                const doc = await db.collection('kids').doc(kidId).get();
+                if (!doc.exists) {
+                    alert('ילד לא נמצא');
+                    return;
+                }
+
+                const kidData = doc.data();
+
+                // Prompt for new kid name
+                const newName = prompt(`העתק לוח של ${kidData.name}\nהכנס שם לילד החדש:`, `${kidData.name} - עותק`);
+
+                if (!newName || newName.trim() === '') {
+                    return; // User cancelled
+                }
+
+                const newKidId = newName.toLowerCase().replace(/\s+/g, '-');
+
+                // Check if kid with this name already exists
+                const existingDoc = await db.collection('kids').doc(newKidId).get();
+                if (existingDoc.exists) {
+                    alert('קיים כבר ילד עם שם זה. אנא בחר שם אחר.');
+                    return;
+                }
+
+                // Create new kid with copied data
+                await db.collection('kids').doc(newKidId).set({
+                    name: newName.trim(),
+                    imageName: kidData.imageName || '',
+                    tasks: kidData.tasks || [],
+                    completedTasks: [],
+                    completedBonusTasks: [],
+                    bonusRewardsEarned: {},
+                    totalMoney: 0, // Start with 0 money
+                    dailyReward: kidData.dailyReward || 0.5,
+                    coinStyle: kidData.coinStyle || 'dollar',
+                    coinImageName: kidData.coinImageName || '',
+                    todayRewardGiven: false,
+                    lastResetDate: new Date().toDateString(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert(`הלוח הועתק בהצלחה!\nנוצר לוח חדש עבור ${newName}`);
+                await loadKidsList();
+            } catch (error) {
+                console.error('Error copying kid:', error);
+                alert('שגיאה בהעתקת הלוח: ' + error.message);
+            }
+        }
+
         // Cancel edit
         function cancelEdit() {
             editingKidId = null;
@@ -611,9 +698,16 @@
             const imageName = document.getElementById('kidImageName').value.trim();
             const money = parseFloat(document.getElementById('kidMoney').value) || 0;
             const dailyReward = parseFloat(document.getElementById('kidDailyReward').value) || 0.5;
+            const coinStyle = document.getElementById('coinStyle').value;
+            const coinImageName = document.getElementById('coinImageName').value.trim();
 
             if (!name) {
                 alert('נא להכניס שם ילד');
+                return;
+            }
+
+            if (coinStyle === 'custom' && !coinImageName) {
+                alert('נא להכניס שם קובץ תמונת המטבע');
                 return;
             }
 
@@ -661,7 +755,9 @@
                         imageName: imageName || '',
                         tasks: tasks,
                         totalMoney: money,
-                        dailyReward: dailyReward
+                        dailyReward: dailyReward,
+                        coinStyle: coinStyle,
+                        coinImageName: coinImageName || ''
                     });
                     alert('השינויים נשמרו בהצלחה!');
                 } else {
@@ -673,6 +769,8 @@
                         completedTasks: [],
                         totalMoney: money,
                         dailyReward: dailyReward,
+                        coinStyle: coinStyle,
+                        coinImageName: coinImageName || '',
                         todayRewardGiven: false,
                         lastResetDate: new Date().toDateString(),
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
