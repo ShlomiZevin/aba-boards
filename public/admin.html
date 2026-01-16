@@ -476,11 +476,31 @@
             taskRow.innerHTML = `
                 <div class="emoji-display" onclick="openEmojiPicker('task-${taskCounter}')" data-task-id="task-${taskCounter}">🎯</div>
                 <input type="text" placeholder="תיאור המשימה" data-type="title">
+                <select data-type="taskType" onchange="toggleRewardInputs('task-${taskCounter}')" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                    <option value="regular">משימה רגילה</option>
+                    <option value="bonus">משימת בונוס</option>
+                </select>
+                <div class="reward-inputs" id="reward-task-${taskCounter}" style="display: none; gap: 10px;">
+                    <input type="number" placeholder="מינימום $" data-type="minReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
+                    <input type="number" placeholder="מקסימום $" data-type="maxReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
+                </div>
                 <button onclick="removeTaskRow('task-${taskCounter}')">🗑️</button>
             `;
 
             tasksList.appendChild(taskRow);
             taskCounter++;
+        }
+
+        function toggleRewardInputs(taskId) {
+            const taskRow = document.getElementById(taskId);
+            const taskType = taskRow.querySelector('[data-type="taskType"]').value;
+            const rewardInputs = taskRow.querySelector('.reward-inputs');
+
+            if (taskType === 'bonus') {
+                rewardInputs.style.display = 'flex';
+            } else {
+                rewardInputs.style.display = 'none';
+            }
         }
 
         function removeTaskRow(taskId) {
@@ -547,6 +567,17 @@
                         const lastRow = document.getElementById(`task-${taskCounter - 1}`);
                         lastRow.querySelector('.emoji-display').textContent = task.icon;
                         lastRow.querySelector('[data-type="title"]').value = task.title;
+
+                        // Handle task type (default to regular for backward compatibility)
+                        const taskType = task.type || 'regular';
+                        lastRow.querySelector('[data-type="taskType"]').value = taskType;
+
+                        // If bonus task, populate reward fields
+                        if (taskType === 'bonus' && task.minReward !== undefined && task.maxReward !== undefined) {
+                            toggleRewardInputs(`task-${taskCounter - 1}`);
+                            lastRow.querySelector('[data-type="minReward"]').value = task.minReward;
+                            lastRow.querySelector('[data-type="maxReward"]').value = task.maxReward;
+                        }
                     });
                 } else {
                     addTaskRow();
@@ -593,8 +624,25 @@
             taskRows.forEach(row => {
                 const icon = row.querySelector('.emoji-display').textContent.trim();
                 const title = row.querySelector('[data-type="title"]').value.trim();
+                const taskType = row.querySelector('[data-type="taskType"]').value;
+
                 if (icon && title) {
-                    tasks.push({ id: taskId++, icon, title });
+                    const task = { id: taskId++, icon, title, type: taskType };
+
+                    if (taskType === 'bonus') {
+                        const minReward = parseFloat(row.querySelector('[data-type="minReward"]').value) || 0;
+                        const maxReward = parseFloat(row.querySelector('[data-type="maxReward"]').value) || 0;
+
+                        if (minReward <= 0 || maxReward <= 0 || minReward > maxReward) {
+                            alert('נא להכניס ערכי פרס תקינים (מינימום ומקסימום חיוביים, מינימום <= מקסימום)');
+                            return;
+                        }
+
+                        task.minReward = minReward;
+                        task.maxReward = maxReward;
+                    }
+
+                    tasks.push(task);
                 }
             });
 

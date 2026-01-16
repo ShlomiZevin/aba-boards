@@ -131,7 +131,7 @@
             font-weight: bold;
         }
 
-        .tasks-grid {
+        .tasks-grid, .bonus-tasks-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 20px;
@@ -157,6 +157,47 @@
         .task-card.completed {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+        }
+
+        /* Bonus task styles */
+        .bonus-task-card {
+            background: white;
+            border: 3px solid #ffd700;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bonus-task-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.6);
+        }
+
+        .bonus-task-card.completed {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #333;
+            border-color: #ffaa00;
+        }
+
+        .bonus-reward-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ffd700;
+            color: #333;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
+        }
+
+        .bonus-task-card.completed .bonus-reward-badge {
+            background: #ffaa00;
         }
 
         .task-icon {
@@ -316,7 +357,15 @@
             </div>
         </div>
 
-        <div class="tasks-grid" id="tasksGrid"></div>
+        <div class="tasks-section">
+            <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">משימות רגילות</h2>
+            <div class="tasks-grid" id="tasksGrid"></div>
+        </div>
+
+        <div class="bonus-tasks-section" id="bonusTasksSection" style="display: none; margin-top: 40px;">
+            <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">💰 משימות בונוס 💰</h2>
+            <div class="bonus-tasks-grid" id="bonusTasksGrid"></div>
+        </div>
 
         <div class="reset-info">
             הלוח מתאפס כל יום בחצות 🌙
@@ -372,8 +421,16 @@
                 this.kidData = kidData;
                 this.isParentMode = isParentMode;
                 this.tasks = kidData.tasks || [];
+
+                // Separate regular and bonus tasks
+                this.regularTasks = this.tasks.filter(t => !t.type || t.type === 'regular');
+                this.bonusTasks = this.tasks.filter(t => t.type === 'bonus');
+
                 this.completedTasks = new Set();
+                this.completedBonusTasks = new Set();
+                this.bonusRewardsEarned = {}; // Track reward amounts for each bonus task
                 this.todayRewardGiven = false;
+                this.isCelebrating = false; // Prevent multiple simultaneous celebrations
                 this.init();
             }
 
@@ -392,10 +449,14 @@
                     // New day - reset tasks
                     await db.collection('kids').doc(this.kidId).update({
                         completedTasks: [],
+                        completedBonusTasks: [],
+                        bonusRewardsEarned: {},
                         todayRewardGiven: false,
                         lastResetDate: today
                     });
                     this.completedTasks.clear();
+                    this.completedBonusTasks.clear();
+                    this.bonusRewardsEarned = {};
                     this.todayRewardGiven = false;
                 }
             }
@@ -404,6 +465,8 @@
                 const doc = await db.collection('kids').doc(this.kidId).get();
                 const data = doc.data();
                 this.completedTasks = new Set(data.completedTasks || []);
+                this.completedBonusTasks = new Set(data.completedBonusTasks || []);
+                this.bonusRewardsEarned = data.bonusRewardsEarned || {};
                 this.todayRewardGiven = data.todayRewardGiven || false;
                 this.kidData.totalMoney = data.totalMoney || 0;
             }
@@ -411,6 +474,8 @@
             async saveState() {
                 await db.collection('kids').doc(this.kidId).update({
                     completedTasks: Array.from(this.completedTasks),
+                    completedBonusTasks: Array.from(this.completedBonusTasks),
+                    bonusRewardsEarned: this.bonusRewardsEarned,
                     todayRewardGiven: this.todayRewardGiven
                 });
             }
@@ -445,11 +510,58 @@
                 this.updateProgress();
             }
 
+            async toggleBonusTask(taskId) {
+                if (this.isParentMode) {
+                    // Parents can't toggle tasks
+                    return;
+                }
+
+                const task = this.bonusTasks.find(t => t.id === taskId);
+                if (!task) return;
+
+                if (this.completedBonusTasks.has(taskId)) {
+                    // Unchecking - remove the reward
+                    const rewardAmount = this.bonusRewardsEarned[taskId] || 0;
+                    this.completedBonusTasks.delete(taskId);
+                    delete this.bonusRewardsEarned[taskId];
+
+                    if (rewardAmount > 0) {
+                        await this.addMoney(-rewardAmount);
+                    }
+                } else {
+                    // Checking - give instant reward
+                    this.completedBonusTasks.add(taskId);
+
+                    // Calculate random reward between min and max (1 decimal place)
+                    const minReward = task.minReward || 0;
+                    const maxReward = task.maxReward || 0;
+                    const rewardAmount = minReward === maxReward
+                        ? minReward
+                        : parseFloat((Math.random() * (maxReward - minReward) + minReward).toFixed(1));
+
+                    this.bonusRewardsEarned[taskId] = rewardAmount;
+
+                    // Save state and update UI first
+                    await this.saveState();
+                    this.render();
+
+                    // Then show celebration (after DOM is stable)
+                    this.celebrateBonus(rewardAmount);
+                    this.animateMoneyIncrease(rewardAmount);
+
+                    return; // Exit early to avoid duplicate render
+                }
+
+                await this.saveState();
+                this.render();
+            }
+
             render() {
+                // Render regular tasks
                 const grid = document.getElementById('tasksGrid');
                 grid.innerHTML = '';
 
-                this.tasks.forEach(task => {
+                this.regularTasks.forEach(task => {
                     const card = document.createElement('div');
                     card.className = 'task-card';
                     if (this.completedTasks.has(task.id)) {
@@ -472,15 +584,63 @@
 
                     grid.appendChild(card);
                 });
+
+                // Render bonus tasks
+                const bonusGrid = document.getElementById('bonusTasksGrid');
+                const bonusSection = document.getElementById('bonusTasksSection');
+                bonusGrid.innerHTML = '';
+
+                if (this.bonusTasks.length > 0) {
+                    bonusSection.style.display = 'block';
+
+                    this.bonusTasks.forEach(task => {
+                        const card = document.createElement('div');
+                        card.className = 'bonus-task-card';
+                        if (this.completedBonusTasks.has(task.id)) {
+                            card.classList.add('completed');
+                        }
+
+                        const rewardText = task.minReward === task.maxReward
+                            ? `$${task.minReward.toFixed(1)}`
+                            : `$${task.minReward.toFixed(1)}-$${task.maxReward.toFixed(1)}`;
+
+                        const earnedText = this.bonusRewardsEarned[task.id]
+                            ? ` (+$${this.bonusRewardsEarned[task.id].toFixed(1)})`
+                            : '';
+
+                        card.innerHTML = `
+                            <div class="bonus-reward-badge">${rewardText}${earnedText}</div>
+                            <div class="checkmark">✓</div>
+                            <div class="task-icon">${task.icon}</div>
+                            <div class="task-title">${task.title}</div>
+                        `;
+
+                        if (!this.isParentMode) {
+                            card.style.cursor = 'pointer';
+                            card.addEventListener('click', () => this.toggleBonusTask(task.id));
+                        } else {
+                            card.style.cursor = 'default';
+                            card.style.opacity = '0.8';
+                        }
+
+                        bonusGrid.appendChild(card);
+                    });
+                } else {
+                    bonusSection.style.display = 'none';
+                }
             }
 
             updateProgress() {
-                const progress = (this.completedTasks.size / this.tasks.length) * 100;
+                // Only count regular tasks for the main progress bar
+                const totalRegularTasks = this.regularTasks.length;
+                const progress = totalRegularTasks > 0
+                    ? (this.completedTasks.size / totalRegularTasks) * 100
+                    : 0;
                 const progressBar = document.getElementById('progressBar');
                 progressBar.style.width = progress + '%';
                 progressBar.textContent = Math.round(progress) + '%';
 
-                if (progress === 100 && !this.isParentMode) {
+                if (progress === 100 && totalRegularTasks > 0 && !this.isParentMode) {
                     this.showMegaCelebration();
                 }
             }
@@ -496,6 +656,39 @@
 
                 this.createConfetti(15);
                 this.createStars();
+            }
+
+            celebrateBonus(amount) {
+                if (this.isCelebrating) return; // Prevent overlapping celebrations
+
+                this.isCelebrating = true;
+                const encouragement = document.getElementById('encouragement');
+
+                // Remove animation temporarily
+                encouragement.style.animation = 'none';
+                encouragement.style.display = 'none';
+
+                // Update content
+                encouragement.innerHTML = `
+                    <div style="font-size: 1.5em;">!🎉 בונוס 🎉</div>
+                    <div style="font-size: 2em; margin-top: 10px; color: #ffd700;">
+                        !💰 +$${amount.toFixed(1)} 💰
+                    </div>
+                `;
+
+                // Show without animation first
+                encouragement.style.display = 'block';
+                encouragement.style.opacity = '1';
+                encouragement.style.transform = 'translate(-50%, -50%) scale(1)';
+
+                this.createConfetti(25);
+                this.createFallingCoins();
+
+                setTimeout(() => {
+                    encouragement.style.display = 'none';
+                    encouragement.style.animation = ''; // Restore animation for other uses
+                    this.isCelebrating = false;
+                }, 3000);
             }
 
             createConfetti(count) {
