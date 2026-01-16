@@ -947,7 +947,12 @@
 
                 const kidData = doc.data();
                 document.getElementById('kidTitle').textContent = `🌟 המשימות של ${kidData.name} 🌟`;
-                document.getElementById('moneyLabel').textContent = `קופת החיסכון של ${kidData.name}`;
+
+                // Use custom savings label or default
+                let savingsLabel = kidData.savingsLabel || `קופת החיסכון של [שם]`;
+                // Replace [שם] placeholder with actual name
+                savingsLabel = savingsLabel.replace(/\[שם\]/g, kidData.name);
+                document.getElementById('moneyLabel').textContent = savingsLabel;
 
                 // Set kid image
                 const kidImage = document.getElementById('kidImage');
