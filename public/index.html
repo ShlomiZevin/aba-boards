@@ -605,9 +605,18 @@
                         card.classList.add('completed');
                     }
 
+                    // Determine icon display (emoji or image)
+                    let iconDisplay;
+                    if (task.icon.startsWith('IMG:')) {
+                        const imageName = task.icon.substring(4);
+                        iconDisplay = `<img src="emojis/${imageName}" style="width: 60px; height: 60px; object-fit: contain;" />`;
+                    } else {
+                        iconDisplay = task.icon;
+                    }
+
                     card.innerHTML = `
                         <div class="checkmark">✓</div>
-                        <div class="task-icon">${task.icon}</div>
+                        <div class="task-icon">${iconDisplay}</div>
                         <div class="task-title">${task.title}</div>
                     `;
 
@@ -646,10 +655,19 @@
                             ? ` (+${symbol}${this.bonusRewardsEarned[task.id].toFixed(1)})`
                             : '';
 
+                        // Determine icon display (emoji or image)
+                        let iconDisplay;
+                        if (task.icon.startsWith('IMG:')) {
+                            const imageName = task.icon.substring(4);
+                            iconDisplay = `<img src="emojis/${imageName}" style="width: 60px; height: 60px; object-fit: contain;" />`;
+                        } else {
+                            iconDisplay = task.icon;
+                        }
+
                         card.innerHTML = `
                             <div class="bonus-reward-badge">${rewardText}${earnedText}</div>
                             <div class="checkmark">✓</div>
-                            <div class="task-icon">${task.icon}</div>
+                            <div class="task-icon">${iconDisplay}</div>
                             <div class="task-title">${task.title}</div>
                         `;
 

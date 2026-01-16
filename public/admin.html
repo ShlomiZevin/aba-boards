@@ -390,6 +390,14 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Custom emoji images from emojis/ directory
+        // Add your image filenames here (they should be in the emojis/ folder)
+        const emojiImages = [
+            'irobot-icon.png'
+            // Example: 'star.png', 'heart.png', 'trophy.png'
+            // Add all your emoji image filenames here
+        ];
+
         // Emoji categories
         const emojis = [
             // Faces & Emotions
@@ -441,11 +449,22 @@
         // Initialize emoji grid
         function initEmojiGrid() {
             const emojiGrid = document.getElementById('emojiGrid');
+
+            // Add regular emojis
             emojis.forEach(emoji => {
                 const emojiItem = document.createElement('div');
                 emojiItem.className = 'emoji-item';
                 emojiItem.textContent = emoji;
                 emojiItem.onclick = () => selectEmoji(emoji);
+                emojiGrid.appendChild(emojiItem);
+            });
+
+            // Add custom emoji images from emojis/ directory
+            emojiImages.forEach(imageName => {
+                const emojiItem = document.createElement('div');
+                emojiItem.className = 'emoji-item';
+                emojiItem.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
+                emojiItem.onclick = () => selectEmoji(`IMG:${imageName}`);
                 emojiGrid.appendChild(emojiItem);
             });
         }
@@ -549,7 +568,16 @@
             if (currentTaskRow) {
                 const taskRow = document.getElementById(currentTaskRow);
                 const emojiDisplay = taskRow.querySelector('.emoji-display');
-                emojiDisplay.textContent = emoji;
+
+                // Check if it's an image icon
+                if (emoji.startsWith('IMG:')) {
+                    const imageName = emoji.substring(4);
+                    emojiDisplay.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
+                    emojiDisplay.dataset.icon = emoji; // Store the full IMG: reference
+                } else {
+                    emojiDisplay.textContent = emoji;
+                    emojiDisplay.dataset.icon = emoji;
+                }
             }
             closeEmojiPicker();
         }
@@ -600,7 +628,18 @@
                     kidData.tasks.forEach(task => {
                         addTaskRow();
                         const lastRow = document.getElementById(`task-${taskCounter - 1}`);
-                        lastRow.querySelector('.emoji-display').textContent = task.icon;
+                        const emojiDisplay = lastRow.querySelector('.emoji-display');
+
+                        // Check if it's an image icon
+                        if (task.icon.startsWith('IMG:')) {
+                            const imageName = task.icon.substring(4);
+                            emojiDisplay.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
+                            emojiDisplay.dataset.icon = task.icon;
+                        } else {
+                            emojiDisplay.textContent = task.icon;
+                            emojiDisplay.dataset.icon = task.icon;
+                        }
+
                         lastRow.querySelector('[data-type="title"]').value = task.title;
 
                         // Handle task type (default to regular for backward compatibility)
@@ -716,7 +755,8 @@
             let taskId = 1;
 
             taskRows.forEach(row => {
-                const icon = row.querySelector('.emoji-display').textContent.trim();
+                const emojiDisplay = row.querySelector('.emoji-display');
+                const icon = emojiDisplay.dataset.icon || emojiDisplay.textContent.trim();
                 const title = row.querySelector('[data-type="title"]').value.trim();
                 const taskType = row.querySelector('[data-type="taskType"]').value;
 
