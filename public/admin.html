@@ -354,6 +354,12 @@
             </div>
 
             <div class="form-group">
+                <label>כותרת הדף (ברירת מחדל: "🌟 המשימות של [שם] 🌟"):</label>
+                <input type="text" id="headerLabel" placeholder='לדוגמה: "🎯 לוח המשימות של [שם]" או "✨ [שם] ✨"'>
+                <small style="color: #666; font-size: 0.9em;">השאר ריק לטקסט ברירת מחדל. השתמש ב-[שם] להכללת שם הילד.</small>
+            </div>
+
+            <div class="form-group">
                 <label>טקסט קופת החיסכון (ברירת מחדל: "קופת החיסכון של [שם]"):</label>
                 <input type="text" id="savingsLabel" placeholder='לדוגמה: "החיסכון שלי" או "הכסף של [שם]"'>
                 <small style="color: #666; font-size: 0.9em;">השאר ריק לטקסט ברירת מחדל. השתמש ב-[שם] להכללת שם הילד.</small>
@@ -517,6 +523,7 @@
             taskRow.innerHTML = `
                 <div class="emoji-display" onclick="openEmojiPicker('task-${taskCounter}')" data-task-id="task-${taskCounter}">🎯</div>
                 <input type="text" placeholder="תיאור המשימה" data-type="title">
+                <input type="number" placeholder="כמות" data-type="quantity" min="1" value="1" style="width: 70px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;" title="כמות משימות (ברירת מחדל: 1)">
                 <select data-type="taskType" onchange="toggleRewardInputs('task-${taskCounter}')" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
                     <option value="regular">משימה רגילה</option>
                     <option value="bonus">משימת בונוס</option>
@@ -626,7 +633,8 @@
                     toggleCoinImageInput();
                 }
 
-                // Set savings label
+                // Set header and savings labels
+                document.getElementById('headerLabel').value = kidData.headerLabel || '';
                 document.getElementById('savingsLabel').value = kidData.savingsLabel || '';
 
                 // Clear and populate tasks
@@ -713,6 +721,7 @@
                     dailyReward: kidData.dailyReward || 0.5,
                     coinStyle: kidData.coinStyle || 'dollar',
                     coinImageName: kidData.coinImageName || '',
+                    headerLabel: kidData.headerLabel || '',
                     savingsLabel: kidData.savingsLabel || '',
                     todayRewardGiven: false,
                     lastResetDate: new Date().toDateString(),
@@ -749,15 +758,11 @@
             const dailyReward = parseFloat(document.getElementById('kidDailyReward').value) || 0.5;
             const coinStyle = document.getElementById('coinStyle').value;
             const coinImageName = document.getElementById('coinImageName').value.trim();
+            const headerLabel = document.getElementById('headerLabel').value.trim();
             const savingsLabel = document.getElementById('savingsLabel').value.trim();
 
             if (!name) {
                 alert('נא להכניס שם ילד');
-                return;
-            }
-
-            if (coinStyle === 'custom' && !coinImageName) {
-                alert('נא להכניס שם קובץ תמונת המטבע');
                 return;
             }
 
@@ -770,9 +775,11 @@
                 const icon = emojiDisplay.dataset.icon || emojiDisplay.textContent.trim();
                 const title = row.querySelector('[data-type="title"]').value.trim();
                 const taskType = row.querySelector('[data-type="taskType"]').value;
+                const quantity = parseInt(row.querySelector('[data-type="quantity"]').value) || 1;
 
                 if (icon && title) {
-                    const task = { id: taskId++, icon, title, type: taskType };
+                    // Create base task object
+                    const baseTask = { icon, title, type: taskType };
 
                     if (taskType === 'bonus') {
                         const minReward = parseFloat(row.querySelector('[data-type="minReward"]').value) || 0;
@@ -783,11 +790,14 @@
                             return;
                         }
 
-                        task.minReward = minReward;
-                        task.maxReward = maxReward;
+                        baseTask.minReward = minReward;
+                        baseTask.maxReward = maxReward;
                     }
 
-                    tasks.push(task);
+                    // Add multiple instances based on quantity
+                    for (let i = 0; i < quantity; i++) {
+                        tasks.push({ ...baseTask, id: taskId++ });
+                    }
                 }
             });
 
@@ -809,6 +819,7 @@
                         dailyReward: dailyReward,
                         coinStyle: coinStyle,
                         coinImageName: coinImageName || '',
+                        headerLabel: headerLabel || '',
                         savingsLabel: savingsLabel || ''
                     });
                     alert('השינויים נשמרו בהצלחה!');
@@ -823,6 +834,7 @@
                         dailyReward: dailyReward,
                         coinStyle: coinStyle,
                         coinImageName: coinImageName || '',
+                        headerLabel: headerLabel || '',
                         savingsLabel: savingsLabel || '',
                         todayRewardGiven: false,
                         lastResetDate: new Date().toDateString(),
