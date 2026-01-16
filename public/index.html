@@ -233,10 +233,57 @@
             display: flex;
         }
 
+        .bonus-task-card.completed .checkmark {
+            display: flex;
+        }
+
         @keyframes checkPop {
             0% { transform: scale(0) rotate(0deg); }
             50% { transform: scale(1.2) rotate(180deg); }
             100% { transform: scale(1) rotate(360deg); }
+        }
+
+        /* Testimony indicators */
+        .testimony-badge {
+            position: absolute;
+            top: 10px;
+            left: 60px;
+            font-size: 1.2em;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .testimony-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 1.5em;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .testimony-indicator:hover {
+            background: rgba(102, 126, 234, 0.4);
+            transform: scale(1.1);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         /* Celebration animation */
@@ -314,6 +361,87 @@
             margin-top: 20px;
         }
 
+        .testimony-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .testimony-modal.active {
+            display: flex;
+        }
+
+        .testimony-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .testimony-content h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .testimony-content textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            margin-bottom: 20px;
+            direction: rtl;
+        }
+
+        .testimony-content textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .testimony-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .testimony-buttons button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .testimony-buttons button:hover {
+            transform: scale(1.05);
+        }
+
+        .testimony-buttons .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .testimony-buttons .cancel-btn {
+            background: #e0e0e0;
+            color: #333;
+        }
+
         @media (max-width: 600px) {
             .tasks-grid {
                 grid-template-columns: 1fr;
@@ -375,6 +503,29 @@
     <div class="celebration" id="celebration"></div>
     <div class="encouragement" id="encouragement"></div>
 
+    <!-- Testimony Modal -->
+    <div class="testimony-modal" id="testimonyModal">
+        <div class="testimony-content">
+            <h2 id="testimonyTitle">ספר לנו מה קרה</h2>
+            <textarea id="testimonyInput" placeholder="איך השלמת את המשימה?"></textarea>
+            <div class="testimony-buttons">
+                <button class="submit-btn" onclick="taskBoard.submitTestimony()">שלח</button>
+                <button class="cancel-btn" onclick="taskBoard.cancelTestimony()">ביטול</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Testimony Reader Modal -->
+    <div class="testimony-modal" id="testimonyReaderModal">
+        <div class="testimony-content">
+            <h2 id="testimonyReaderTitle">העדות שלך</h2>
+            <div id="testimonyReaderText" style="padding: 20px; background: #f5f5f5; border-radius: 10px; font-size: 1.1em; line-height: 1.6; min-height: 80px; text-align: right; white-space: pre-wrap;"></div>
+            <div class="testimony-buttons" style="margin-top: 20px;">
+                <button class="submit-btn" onclick="taskBoard.closeTestimonyReader()">סגור</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Firebase configuration
         const firebaseConfig = {
@@ -432,6 +583,11 @@
                 this.todayRewardGiven = false;
                 this.isCelebrating = false; // Prevent multiple simultaneous celebrations
 
+                // Testimony tracking
+                this.testimonies = {}; // Track testimonies for each task
+                this.pendingTestimonyTaskId = null;
+                this.pendingTestimonyIsBonus = false;
+
                 // Coin style configuration (default to dollar)
                 this.coinStyle = kidData.coinStyle || 'dollar';
                 this.coinImageName = kidData.coinImageName || '';
@@ -485,12 +641,14 @@
                         completedBonusTasks: [],
                         bonusRewardsEarned: {},
                         todayRewardGiven: false,
+                        testimonies: {},
                         lastResetDate: today
                     });
                     this.completedTasks.clear();
                     this.completedBonusTasks.clear();
                     this.bonusRewardsEarned = {};
                     this.todayRewardGiven = false;
+                    this.testimonies = {};
                 }
             }
 
@@ -501,6 +659,7 @@
                 this.completedBonusTasks = new Set(data.completedBonusTasks || []);
                 this.bonusRewardsEarned = data.bonusRewardsEarned || {};
                 this.todayRewardGiven = data.todayRewardGiven || false;
+                this.testimonies = data.testimonies || {};
                 this.kidData.totalMoney = data.totalMoney || 0;
             }
 
@@ -509,7 +668,8 @@
                     completedTasks: Array.from(this.completedTasks),
                     completedBonusTasks: Array.from(this.completedBonusTasks),
                     bonusRewardsEarned: this.bonusRewardsEarned,
-                    todayRewardGiven: this.todayRewardGiven
+                    todayRewardGiven: this.todayRewardGiven,
+                    testimonies: this.testimonies
                 });
             }
 
@@ -536,15 +696,28 @@
                     return;
                 }
 
+                const task = this.regularTasks.find(t => t.id === taskId);
+                if (!task) return;
+
                 if (this.completedTasks.has(taskId)) {
+                    // Unchecking - remove task and testimony
                     this.completedTasks.delete(taskId);
+                    delete this.testimonies[taskId];
+                    await this.saveState();
+                    this.render();
+                    this.updateProgress();
                 } else {
-                    this.completedTasks.add(taskId);
-                    this.celebrate();
+                    // Checking - check if testimony required
+                    if (task.requiresTestimony) {
+                        this.showTestimonyModal(taskId, false);
+                    } else {
+                        this.completedTasks.add(taskId);
+                        this.celebrate();
+                        await this.saveState();
+                        this.render();
+                        this.updateProgress();
+                    }
                 }
-                await this.saveState();
-                this.render();
-                this.updateProgress();
             }
 
             async toggleBonusTask(taskId) {
@@ -557,40 +730,43 @@
                 if (!task) return;
 
                 if (this.completedBonusTasks.has(taskId)) {
-                    // Unchecking - remove the reward
+                    // Unchecking - remove the reward and testimony
                     const rewardAmount = this.bonusRewardsEarned[taskId] || 0;
                     this.completedBonusTasks.delete(taskId);
                     delete this.bonusRewardsEarned[taskId];
+                    delete this.testimonies[taskId];
 
                     if (rewardAmount > 0) {
                         await this.addMoney(-rewardAmount);
                     }
-                } else {
-                    // Checking - give instant reward
-                    this.completedBonusTasks.add(taskId);
-
-                    // Calculate random reward between min and max (1 decimal place)
-                    const minReward = task.minReward || 0;
-                    const maxReward = task.maxReward || 0;
-                    const rewardAmount = minReward === maxReward
-                        ? minReward
-                        : parseFloat((Math.random() * (maxReward - minReward) + minReward).toFixed(1));
-
-                    this.bonusRewardsEarned[taskId] = rewardAmount;
-
-                    // Save state and update UI first
                     await this.saveState();
                     this.render();
+                } else {
+                    // Checking - check if testimony required
+                    if (task.requiresTestimony) {
+                        this.showTestimonyModal(taskId, true);
+                    } else {
+                        // Give instant reward without testimony
+                        this.completedBonusTasks.add(taskId);
 
-                    // Then show celebration (after DOM is stable)
-                    this.celebrateBonus(rewardAmount);
-                    this.animateMoneyIncrease(rewardAmount);
+                        // Calculate random reward between min and max (1 decimal place)
+                        const minReward = task.minReward || 0;
+                        const maxReward = task.maxReward || 0;
+                        const rewardAmount = minReward === maxReward
+                            ? minReward
+                            : parseFloat((Math.random() * (maxReward - minReward) + minReward).toFixed(1));
 
-                    return; // Exit early to avoid duplicate render
+                        this.bonusRewardsEarned[taskId] = rewardAmount;
+
+                        // Save state and update UI first
+                        await this.saveState();
+                        this.render();
+
+                        // Then show celebration (after DOM is stable)
+                        this.celebrateBonus(rewardAmount);
+                        this.animateMoneyIncrease(rewardAmount);
+                    }
                 }
-
-                await this.saveState();
-                this.render();
             }
 
             render() {
@@ -614,16 +790,43 @@
                         iconDisplay = task.icon;
                     }
 
+                    // Add testimony indicator if task requires it
+                    const testimonyBadge = task.requiresTestimony ? '<div class="testimony-badge">📝</div>' : '';
+                    const hasTestimony = this.testimonies[task.id];
+                    const testimonyIndicator = hasTestimony ? '<div class="testimony-indicator" title="לחץ לקריאת העדות">💬</div>' : '';
+
                     card.innerHTML = `
                         <div class="checkmark">✓</div>
                         <div class="task-icon">${iconDisplay}</div>
                         <div class="task-title">${task.title}</div>
+                        ${testimonyBadge}
+                        ${testimonyIndicator}
                     `;
 
-                    if (!this.isParentMode) {
+                    // Handle click events
+                    if (hasTestimony && this.completedTasks.has(task.id)) {
+                        // Task has testimony - allow reading in both kid and parent mode
+                        card.addEventListener('click', (e) => {
+                            // Check if clicked on testimony indicator
+                            if (e.target.classList.contains('testimony-indicator') || e.target.closest('.testimony-indicator')) {
+                                this.showTestimonyReader(task.id);
+                            } else if (!this.isParentMode) {
+                                // Only allow toggling in kid mode
+                                this.toggleTask(task.id);
+                            }
+                        });
+                        if (this.isParentMode) {
+                            card.style.cursor = 'default';
+                            card.style.opacity = '0.8';
+                        } else {
+                            card.style.cursor = 'pointer';
+                        }
+                    } else if (!this.isParentMode) {
+                        // No testimony - only kid mode can interact
                         card.style.cursor = 'pointer';
                         card.addEventListener('click', () => this.toggleTask(task.id));
                     } else {
+                        // Parent mode with no testimony
                         card.style.cursor = 'default';
                         card.style.opacity = '0.8';
                     }
@@ -664,17 +867,44 @@
                             iconDisplay = task.icon;
                         }
 
+                        // Add testimony indicator if task requires it
+                        const testimonyBadge = task.requiresTestimony ? '<div class="testimony-badge">📝</div>' : '';
+                        const hasTestimony = this.testimonies[task.id];
+                        const testimonyIndicator = hasTestimony ? '<div class="testimony-indicator" title="לחץ לקריאת העדות">💬</div>' : '';
+
                         card.innerHTML = `
                             <div class="bonus-reward-badge">${rewardText}${earnedText}</div>
                             <div class="checkmark">✓</div>
                             <div class="task-icon">${iconDisplay}</div>
                             <div class="task-title">${task.title}</div>
+                            ${testimonyBadge}
+                            ${testimonyIndicator}
                         `;
 
-                        if (!this.isParentMode) {
+                        // Handle click events
+                        if (hasTestimony && this.completedBonusTasks.has(task.id)) {
+                            // Task has testimony - allow reading in both kid and parent mode
+                            card.addEventListener('click', (e) => {
+                                // Check if clicked on testimony indicator
+                                if (e.target.classList.contains('testimony-indicator') || e.target.closest('.testimony-indicator')) {
+                                    this.showTestimonyReader(task.id);
+                                } else if (!this.isParentMode) {
+                                    // Only allow toggling in kid mode
+                                    this.toggleBonusTask(task.id);
+                                }
+                            });
+                            if (this.isParentMode) {
+                                card.style.cursor = 'default';
+                                card.style.opacity = '0.8';
+                            } else {
+                                card.style.cursor = 'pointer';
+                            }
+                        } else if (!this.isParentMode) {
+                            // No testimony - only kid mode can interact
                             card.style.cursor = 'pointer';
                             card.addEventListener('click', () => this.toggleBonusTask(task.id));
                         } else {
+                            // Parent mode with no testimony
                             card.style.cursor = 'default';
                             card.style.opacity = '0.8';
                         }
@@ -936,6 +1166,108 @@
 
                 animate();
             }
+
+            showTestimonyModal(taskId, isBonus) {
+                this.pendingTestimonyTaskId = taskId;
+                this.pendingTestimonyIsBonus = isBonus;
+
+                const modal = document.getElementById('testimonyModal');
+                const input = document.getElementById('testimonyInput');
+
+                // Clear previous input
+                input.value = '';
+
+                // Get task title for the modal
+                const task = isBonus
+                    ? this.bonusTasks.find(t => t.id === taskId)
+                    : this.regularTasks.find(t => t.id === taskId);
+
+                if (task) {
+                    document.getElementById('testimonyTitle').textContent = `ספר לנו איך השלמת: ${task.title}`;
+                }
+
+                modal.classList.add('active');
+                input.focus();
+            }
+
+            cancelTestimony() {
+                const modal = document.getElementById('testimonyModal');
+                modal.classList.remove('active');
+                this.pendingTestimonyTaskId = null;
+                this.pendingTestimonyIsBonus = false;
+            }
+
+            async submitTestimony() {
+                const testimony = document.getElementById('testimonyInput').value.trim();
+
+                if (!testimony) {
+                    alert('נא להזין תיאור של איך השלמת את המשימה');
+                    return;
+                }
+
+                const taskId = this.pendingTestimonyTaskId;
+                const isBonus = this.pendingTestimonyIsBonus;
+
+                // Close modal
+                this.cancelTestimony();
+
+                // Store testimony
+                this.testimonies[taskId] = testimony;
+
+                if (isBonus) {
+                    // Complete bonus task with testimony
+                    const task = this.bonusTasks.find(t => t.id === taskId);
+                    this.completedBonusTasks.add(taskId);
+
+                    // Calculate random reward between min and max (1 decimal place)
+                    const minReward = task.minReward || 0;
+                    const maxReward = task.maxReward || 0;
+                    const rewardAmount = minReward === maxReward
+                        ? minReward
+                        : parseFloat((Math.random() * (maxReward - minReward) + minReward).toFixed(1));
+
+                    this.bonusRewardsEarned[taskId] = rewardAmount;
+
+                    // Save state and update UI first
+                    await this.saveState();
+                    this.render();
+
+                    // Then show celebration (after DOM is stable)
+                    this.celebrateBonus(rewardAmount);
+                    this.animateMoneyIncrease(rewardAmount);
+                } else {
+                    // Complete regular task with testimony
+                    this.completedTasks.add(taskId);
+                    this.celebrate();
+                    await this.saveState();
+                    this.render();
+                    this.updateProgress();
+                }
+            }
+
+            showTestimonyReader(taskId) {
+                const testimony = this.testimonies[taskId];
+                if (!testimony) return;
+
+                // Find the task to get its title
+                const task = this.regularTasks.find(t => t.id === taskId) || this.bonusTasks.find(t => t.id === taskId);
+
+                const modal = document.getElementById('testimonyReaderModal');
+                const titleEl = document.getElementById('testimonyReaderTitle');
+                const textEl = document.getElementById('testimonyReaderText');
+
+                if (task) {
+                    titleEl.textContent = `העדות שלך - ${task.title}`;
+                }
+
+                textEl.textContent = testimony;
+                modal.classList.add('active');
+            }
+
+            closeTestimonyReader() {
+                const modal = document.getElementById('testimonyReaderModal');
+                modal.classList.remove('active');
+            }
         }
 
         // Show Kid/Parent Page
@@ -969,7 +1301,7 @@
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('kidPage').classList.remove('hidden');
 
-                new TaskBoard(kidId, kidData, isParentMode);
+                window.taskBoard = new TaskBoard(kidId, kidData, isParentMode);
             } catch (error) {
                 console.error('Error loading kid page:', error);
                 document.getElementById('loadingState').textContent = 'שגיאה בטעינה';

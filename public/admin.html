@@ -532,6 +532,10 @@
                     <input type="number" placeholder="מינימום $" data-type="minReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
                     <input type="number" placeholder="מקסימום $" data-type="maxReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
                 </div>
+                <label style="display: flex; align-items: center; gap: 5px; padding: 5px;">
+                    <input type="checkbox" data-type="requiresTestimony" style="width: 20px; height: 20px;">
+                    <span style="font-size: 14px;">דורש עדות</span>
+                </label>
                 <button onclick="removeTaskRow('task-${taskCounter}')">🗑️</button>
             `;
 
@@ -669,6 +673,11 @@
                             lastRow.querySelector('[data-type="minReward"]').value = task.minReward;
                             lastRow.querySelector('[data-type="maxReward"]').value = task.maxReward;
                         }
+
+                        // Set testimony checkbox
+                        if (task.requiresTestimony) {
+                            lastRow.querySelector('[data-type="requiresTestimony"]').checked = true;
+                        }
                     });
                 } else {
                     addTaskRow();
@@ -776,10 +785,11 @@
                 const title = row.querySelector('[data-type="title"]').value.trim();
                 const taskType = row.querySelector('[data-type="taskType"]').value;
                 const quantity = parseInt(row.querySelector('[data-type="quantity"]').value) || 1;
+                const requiresTestimony = row.querySelector('[data-type="requiresTestimony"]').checked;
 
                 if (icon && title) {
                     // Create base task object
-                    const baseTask = { icon, title, type: taskType };
+                    const baseTask = { icon, title, type: taskType, requiresTestimony: requiresTestimony };
 
                     if (taskType === 'bonus') {
                         const minReward = parseFloat(row.querySelector('[data-type="minReward"]').value) || 0;
