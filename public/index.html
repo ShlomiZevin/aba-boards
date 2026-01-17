@@ -579,9 +579,18 @@
                 this.isParentMode = isParentMode;
                 this.tasks = kidData.tasks || [];
 
-                // Separate regular and bonus tasks
-                this.regularTasks = this.tasks.filter(t => !t.type || t.type === 'regular');
-                this.bonusTasks = this.tasks.filter(t => t.type === 'bonus');
+                // Get current day of week (0 = Sunday, 6 = Saturday)
+                this.currentDay = new Date().getDay();
+
+                // Filter tasks by active days, then separate regular and bonus tasks
+                const activeTasks = this.tasks.filter(task => {
+                    // Default to all days active if activeDays not set (backward compatibility)
+                    const activeDays = task.activeDays || [0, 1, 2, 3, 4, 5, 6];
+                    return activeDays.includes(this.currentDay);
+                });
+
+                this.regularTasks = activeTasks.filter(t => !t.type || t.type === 'regular');
+                this.bonusTasks = activeTasks.filter(t => t.type === 'bonus');
 
                 this.completedTasks = new Set();
                 this.completedBonusTasks = new Set();

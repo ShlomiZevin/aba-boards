@@ -166,8 +166,18 @@
 
         .task-input-row {
             display: flex;
+            flex-direction: column;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .task-main-row {
+            display: flex;
+            gap: 10px;
             align-items: center;
         }
 
@@ -527,23 +537,62 @@
             taskRow.id = `task-${taskCounter}`;
 
             taskRow.innerHTML = `
-                <div class="emoji-display" onclick="openEmojiPicker('task-${taskCounter}')" data-task-id="task-${taskCounter}">🎯</div>
-                <input type="text" placeholder="תיאור המשימה" data-type="title">
-                <input type="number" placeholder="כמות" data-type="quantity" min="1" value="1" style="width: 70px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;" title="כמות משימות (ברירת מחדל: 1)">
-                <select data-type="taskType" onchange="toggleRewardInputs('task-${taskCounter}')" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
-                    <option value="regular">משימה רגילה</option>
-                    <option value="bonus">משימת בונוס</option>
-                </select>
-                <div class="reward-inputs" id="reward-task-${taskCounter}" style="display: none; gap: 10px;">
-                    <input type="number" placeholder="מינימום $" data-type="minReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
-                    <input type="number" placeholder="מקסימום $" data-type="maxReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
+                <div class="task-main-row">
+                    <div class="emoji-display" onclick="openEmojiPicker('task-${taskCounter}')" data-task-id="task-${taskCounter}">🎯</div>
+                    <input type="text" placeholder="תיאור המשימה" data-type="title">
+                    <input type="number" placeholder="כמות" data-type="quantity" min="1" value="1" style="width: 70px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;" title="כמות משימות (ברירת מחדל: 1)">
+                    <select data-type="taskType" onchange="toggleRewardInputs('task-${taskCounter}')" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                        <option value="regular">משימה רגילה</option>
+                        <option value="bonus">משימת בונוס</option>
+                    </select>
+                    <div class="reward-inputs" id="reward-task-${taskCounter}" style="display: none; gap: 10px;">
+                        <input type="number" placeholder="מינימום $" data-type="minReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
+                        <input type="number" placeholder="מקסימום $" data-type="maxReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 5px; padding: 5px;">
+                        <input type="checkbox" data-type="requiresTestimony" style="width: 20px; height: 20px;">
+                        <span style="font-size: 14px;">דורש עדות</span>
+                    </label>
+                    <button onclick="removeTaskRow('task-${taskCounter}')">🗑️</button>
                 </div>
-                <label style="display: flex; align-items: center; gap: 5px; padding: 5px;">
-                    <input type="checkbox" data-type="requiresTestimony" style="width: 20px; height: 20px;">
-                    <span style="font-size: 14px;">דורש עדות</span>
-                </label>
-                <button onclick="removeTaskRow('task-${taskCounter}')">🗑️</button>
             `;
+
+            // Add days of week selector
+            const daysContainer = document.createElement('div');
+            daysContainer.className = 'days-selector';
+            daysContainer.style.cssText = 'display: flex; gap: 8px; padding: 8px; margin-top: 5px; background: #f8f9fa; border-radius: 8px; flex-wrap: wrap;';
+            daysContainer.innerHTML = `
+                <span style="font-size: 13px; font-weight: bold; color: #667eea; align-self: center;">ימים פעילים:</span>
+                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
+                    <input type="checkbox" data-day="0" checked style="width: 16px; height: 16px;">
+                    <span>א׳</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
+                    <input type="checkbox" data-day="1" checked style="width: 16px; height: 16px;">
+                    <span>ב׳</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
+                    <input type="checkbox" data-day="2" checked style="width: 16px; height: 16px;">
+                    <span>ג׳</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
+                    <input type="checkbox" data-day="3" checked style="width: 16px; height: 16px;">
+                    <span>ד׳</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
+                    <input type="checkbox" data-day="4" checked style="width: 16px; height: 16px;">
+                    <span>ה׳</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
+                    <input type="checkbox" data-day="5" checked style="width: 16px; height: 16px;">
+                    <span>ו׳</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
+                    <input type="checkbox" data-day="6" checked style="width: 16px; height: 16px;">
+                    <span>שבת</span>
+                </label>
+            `;
+            taskRow.appendChild(daysContainer);
 
             tasksList.appendChild(taskRow);
             taskCounter++;
@@ -684,6 +733,14 @@
                         if (task.requiresTestimony) {
                             lastRow.querySelector('[data-type="requiresTestimony"]').checked = true;
                         }
+
+                        // Set active days (default to all 7 days for backward compatibility)
+                        const activeDays = task.activeDays || [0, 1, 2, 3, 4, 5, 6];
+                        const dayCheckboxes = lastRow.querySelectorAll('[data-day]');
+                        dayCheckboxes.forEach(checkbox => {
+                            const day = parseInt(checkbox.dataset.day);
+                            checkbox.checked = activeDays.includes(day);
+                        });
                     });
                 } else {
                     addTaskRow();
@@ -793,9 +850,24 @@
                 const quantity = parseInt(row.querySelector('[data-type="quantity"]').value) || 1;
                 const requiresTestimony = row.querySelector('[data-type="requiresTestimony"]').checked;
 
+                // Get active days from checkboxes
+                const activeDays = [];
+                const dayCheckboxes = row.querySelectorAll('[data-day]');
+                dayCheckboxes.forEach(checkbox => {
+                    if (checkbox.checked) {
+                        activeDays.push(parseInt(checkbox.dataset.day));
+                    }
+                });
+
                 if (icon && title) {
-                    // Create base task object
-                    const baseTask = { icon, title, type: taskType, requiresTestimony: requiresTestimony };
+                    // Create base task object with activeDays (default to all 7 days if none selected)
+                    const baseTask = {
+                        icon,
+                        title,
+                        type: taskType,
+                        requiresTestimony: requiresTestimony,
+                        activeDays: activeDays.length > 0 ? activeDays : [0, 1, 2, 3, 4, 5, 6]
+                    };
 
                     if (taskType === 'bonus') {
                         const minReward = parseFloat(row.querySelector('[data-type="minReward"]').value) || 0;
