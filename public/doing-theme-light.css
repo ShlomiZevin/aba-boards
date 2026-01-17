@@ -1,0 +1,207 @@
+/* Doing Theme - Color Scheme based on logo */
+/* Color Palette extracted from doing-logo-dark.jpg */
+
+:root {
+    /* Primary Colors - Softer, Lighter Tones */
+    --doing-navy: #4a6785;
+    --doing-navy-dark: #3b5468;
+    --doing-navy-light: #5f7a99;
+
+    /* Accent Colors from Logo - Muted and Pastel */
+    --doing-light-blue: #c5dce8;
+    --doing-cyan: #9dbdd1;
+    --doing-orange: #f5c9a8;
+    --doing-orange-bright: #f7d4b8;
+    --doing-yellow: #ffeaa7;
+
+    /* Text Colors - Softer Contrast */
+    --doing-text-light: #f5f8fa;
+    --doing-text-dark: #4a6785;
+    --doing-text-gray: #a8b5c4;
+
+    /* Background Colors - Lighter, Less Saturated */
+    --doing-bg-primary: linear-gradient(135deg, #6b8aa8 0%, #8099af 100%);
+    --doing-bg-secondary: linear-gradient(135deg, #c5dce8 0%, #b5d4e4 100%);
+    --doing-bg-accent: linear-gradient(135deg, #f5c9a8 0%, #f7d4b8 100%);
+
+    /* Task Card Colors - Gentle Tones */
+    --doing-card-bg: #ffffff;
+    --doing-card-shadow: rgba(74, 103, 133, 0.08);
+    --doing-card-hover-shadow: rgba(74, 103, 133, 0.15);
+    --doing-card-completed-bg: linear-gradient(135deg, #d4e8f0 0%, #e3f0f6 100%);
+
+    /* Bonus Task Colors - Soft Gold */
+    --doing-bonus-border: #ffeaa7;
+    --doing-bonus-shadow: rgba(255, 234, 167, 0.25);
+    --doing-bonus-bg: linear-gradient(135deg, #fff5d6 0%, #fffae8 100%);
+
+    /* Progress Bar - Gentle Blue */
+    --doing-progress-bg: linear-gradient(90deg, #c5dce8, #b5d4e4);
+    --doing-progress-container-bg: #f5f8fa;
+
+    /* Money/Piggy Bank - Soft Yellow */
+    --doing-money-bg: linear-gradient(135deg, #fff5d6 0%, #fffae8 100%);
+    --doing-money-text: #d9a574;
+
+    /* Success/Error States - Softer */
+    --doing-success: #81c784;
+    --doing-error: #ef9a9a;
+    --doing-warning: #f5c9a8;
+}
+
+/* Logo Styling */
+.logo-container {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.app-logo {
+    max-width: 250px;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Apply Doing Theme to Body */
+body.doing-theme {
+    background: var(--doing-bg-primary);
+}
+
+/* Header with Doing Theme */
+.doing-theme .header {
+    background: white;
+    border-top: 3px solid var(--doing-orange);
+}
+
+/* Task Cards with Doing Theme */
+.doing-theme .task-card {
+    background: var(--doing-card-bg);
+    box-shadow: 0 3px 10px var(--doing-card-shadow);
+    border-left: 3px solid var(--doing-light-blue);
+}
+
+.doing-theme .task-card:hover {
+    box-shadow: 0 5px 15px var(--doing-card-hover-shadow);
+    border-left-color: var(--doing-orange);
+}
+
+.doing-theme .task-card.completed {
+    background: var(--doing-card-completed-bg);
+    color: var(--doing-text-dark);
+    border-left-color: var(--doing-cyan);
+}
+
+/* Bonus Task Cards with Doing Theme */
+.doing-theme .bonus-task-card {
+    background: var(--doing-card-bg);
+    border: 2px solid var(--doing-bonus-border);
+    box-shadow: 0 3px 12px var(--doing-bonus-shadow);
+}
+
+.doing-theme .bonus-task-card:hover {
+    border-color: var(--doing-orange);
+    box-shadow: 0 5px 18px rgba(245, 201, 168, 0.35);
+}
+
+.doing-theme .bonus-task-card.completed {
+    background: var(--doing-bonus-bg);
+    color: var(--doing-text-dark);
+}
+
+/* Progress Bar with Doing Theme */
+.doing-theme .progress-bar {
+    background: var(--doing-progress-bg);
+}
+
+.doing-theme .progress-container {
+    background-color: var(--doing-progress-container-bg);
+}
+
+/* Piggy Bank Section with Doing Theme */
+.doing-theme .piggy-bank-section {
+    background: var(--doing-money-bg);
+}
+
+.doing-theme .money-counter {
+    color: var(--doing-money-text);
+}
+
+/* Buttons with Doing Theme */
+.doing-theme .submit-btn,
+.doing-theme .btn-primary {
+    background: linear-gradient(135deg, var(--doing-orange) 0%, var(--doing-orange-bright) 100%);
+    color: var(--doing-text-dark);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 1.1em;
+    font-weight: normal;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(245, 201, 168, 0.2);
+}
+
+.doing-theme .submit-btn:hover,
+.doing-theme .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(245, 201, 168, 0.3);
+}
+
+.doing-theme .cancel-btn,
+.doing-theme .btn-secondary {
+    background: var(--doing-text-gray);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(168, 181, 196, 0.2);
+}
+
+.doing-theme .cancel-btn:hover,
+.doing-theme .btn-secondary:hover {
+    background: var(--doing-navy);
+    box-shadow: 0 3px 10px rgba(74, 103, 133, 0.3);
+}
+
+/* Section Headers with Doing Theme */
+.doing-theme .tasks-section h2 {
+    color: var(--doing-text-light) !important;
+    text-shadow: 1px 1px 3px rgba(74, 103, 133, 0.3) !important;
+}
+
+.doing-theme .bonus-tasks-section h2 {
+    color: var(--doing-yellow) !important;
+    text-shadow: 1px 1px 3px rgba(74, 103, 133, 0.2) !important;
+}
+
+/* Reset Info with Doing Theme */
+.doing-theme .reset-info {
+    background: rgba(245, 248, 250, 0.15);
+    color: var(--doing-text-light);
+    border: 1px solid rgba(245, 248, 250, 0.25);
+}
+
+/* Celebration Effects with Doing Theme */
+.doing-theme .encouragement {
+    background: linear-gradient(135deg, var(--doing-orange), var(--doing-orange-bright));
+    color: var(--doing-text-dark);
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .app-logo {
+        max-width: 180px;
+    }
+}
+
+@media (max-width: 400px) {
+    .app-logo {
+        max-width: 150px;
+    }
+}
