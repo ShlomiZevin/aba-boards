@@ -423,6 +423,7 @@
             min-height: 100px;
             margin-bottom: 20px;
             direction: rtl;
+            text-align: right;
         }
 
         .testimony-content textarea:focus {
@@ -563,14 +564,13 @@
         const db = firebase.firestore();
 
         const encouragementMessages = [
-            '!כל הכבוד 🎉',
-            '!יופי של יופי 🌟',
-            '!אלוף אלופים 🏆',
-            '!מצוין מאוד 💪',
-            '!עבודה מעולה ⭐',
-            '!גאה בך 🎊',
-            '!המשך כך 🚀',
-            '!פשוט מדהים 🌈'
+            'כל הכבוד! 🎉',
+            'אלוף אלופים! 🏆',
+            'מצוין מאוד! 💪',
+            'עבודה מעולה! ⭐',
+            'גאה בך! 🎊',
+            'המשך כך! 🚀',
+            'פשוט מדהים! 🌈'
         ];
 
         // Get URL parameters
@@ -1190,7 +1190,7 @@
             async showMegaCelebration() {
                 if (this.todayRewardGiven) {
                     const encouragement = document.getElementById('encouragement');
-                    encouragement.textContent = '!🎉 סיימת את כל המשימות! אתה אלוף 🏆';
+                    encouragement.textContent = 'סיימת את כל המשימות! אתה אלוף! 🎉🏆';
                     encouragement.style.display = 'block';
                     this.createConfetti(50);
                     this.createStars();
