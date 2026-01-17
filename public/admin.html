@@ -553,6 +553,10 @@
                         <input type="checkbox" data-type="requiresTestimony" style="width: 20px; height: 20px;">
                         <span style="font-size: 14px;">דורש עדות</span>
                     </label>
+                    <label style="display: flex; align-items: center; gap: 5px; padding: 5px;">
+                        <input type="checkbox" data-type="trackTime" style="width: 20px; height: 20px;">
+                        <span style="font-size: 14px;">⏱️ מעקב זמן</span>
+                    </label>
                     <button onclick="removeTaskRow('task-${taskCounter}')">🗑️</button>
                 </div>
             `;
@@ -734,6 +738,11 @@
                             lastRow.querySelector('[data-type="requiresTestimony"]').checked = true;
                         }
 
+                        // Set track time checkbox
+                        if (task.trackTime) {
+                            lastRow.querySelector('[data-type="trackTime"]').checked = true;
+                        }
+
                         // Set active days (default to all 7 days for backward compatibility)
                         const activeDays = task.activeDays || [0, 1, 2, 3, 4, 5, 6];
                         const dayCheckboxes = lastRow.querySelectorAll('[data-day]');
@@ -849,6 +858,7 @@
                 const taskType = row.querySelector('[data-type="taskType"]').value;
                 const quantity = parseInt(row.querySelector('[data-type="quantity"]').value) || 1;
                 const requiresTestimony = row.querySelector('[data-type="requiresTestimony"]').checked;
+                const trackTime = row.querySelector('[data-type="trackTime"]').checked;
 
                 // Get active days from checkboxes
                 const activeDays = [];
@@ -866,6 +876,7 @@
                         title,
                         type: taskType,
                         requiresTestimony: requiresTestimony,
+                        trackTime: trackTime,
                         activeDays: activeDays.length > 0 ? activeDays : [0, 1, 2, 3, 4, 5, 6]
                     };
 

@@ -246,6 +246,21 @@
             100% { transform: scale(1) rotate(360deg); }
         }
 
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        .task-card.started {
+            border: 3px solid #FF9800;
+            box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
+        }
+
+        .bonus-task-card.started {
+            border: 3px solid #FF9800;
+            box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
+        }
+
         /* Testimony indicators */
         .testimony-badge {
             position: absolute;
@@ -603,6 +618,11 @@
                 this.pendingTestimonyTaskId = null;
                 this.pendingTestimonyIsBonus = false;
 
+                // Time tracking
+                this.startedTasks = new Set(); // Track which tasks have been started
+                this.taskStartTimes = {}; // Track start timestamp for each task
+                this.taskDurations = {}; // Track completed durations in seconds
+
                 // Coin style configuration (default to dollar)
                 this.coinStyle = kidData.coinStyle || 'dollar';
                 this.coinImageName = kidData.coinImageName || '';
@@ -638,6 +658,25 @@
                 return `${symbol}${amount.toFixed(2)}`;
             }
 
+            formatDuration(seconds) {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+
+                if (hours > 0) {
+                    return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                } else if (minutes > 0) {
+                    return `${minutes}:${String(secs).padStart(2, '0')}`;
+                } else {
+                    return `${secs}s`;
+                }
+            }
+
+            getElapsedTime(taskId) {
+                if (!this.taskStartTimes[taskId]) return 0;
+                return Math.floor((Date.now() - this.taskStartTimes[taskId]) / 1000);
+            }
+
             async init() {
                 await this.checkDailyReset();
                 await this.loadState();
@@ -657,6 +696,9 @@
                         bonusRewardsEarned: {},
                         todayRewardGiven: false,
                         testimonies: {},
+                        startedTasks: [],
+                        taskStartTimes: {},
+                        taskDurations: {},
                         lastResetDate: today
                     });
                     this.completedTasks.clear();
@@ -664,6 +706,9 @@
                     this.bonusRewardsEarned = {};
                     this.todayRewardGiven = false;
                     this.testimonies = {};
+                    this.startedTasks.clear();
+                    this.taskStartTimes = {};
+                    this.taskDurations = {};
                 }
             }
 
@@ -675,6 +720,9 @@
                 this.bonusRewardsEarned = data.bonusRewardsEarned || {};
                 this.todayRewardGiven = data.todayRewardGiven || false;
                 this.testimonies = data.testimonies || {};
+                this.startedTasks = new Set(data.startedTasks || []);
+                this.taskStartTimes = data.taskStartTimes || {};
+                this.taskDurations = data.taskDurations || {};
                 this.kidData.totalMoney = data.totalMoney || 0;
             }
 
@@ -684,7 +732,10 @@
                     completedBonusTasks: Array.from(this.completedBonusTasks),
                     bonusRewardsEarned: this.bonusRewardsEarned,
                     todayRewardGiven: this.todayRewardGiven,
-                    testimonies: this.testimonies
+                    testimonies: this.testimonies,
+                    startedTasks: Array.from(this.startedTasks),
+                    taskStartTimes: this.taskStartTimes,
+                    taskDurations: this.taskDurations
                 });
             }
 
@@ -715,14 +766,38 @@
                 if (!task) return;
 
                 if (this.completedTasks.has(taskId)) {
-                    // Unchecking - remove task and testimony
+                    // Unchecking - remove task, testimony, and time tracking data
                     this.completedTasks.delete(taskId);
                     delete this.testimonies[taskId];
+                    this.startedTasks.delete(taskId);
+                    delete this.taskStartTimes[taskId];
+                    delete this.taskDurations[taskId];
                     await this.saveState();
                     this.render();
                     this.updateProgress();
+                } else if (task.trackTime && !this.startedTasks.has(taskId)) {
+                    // Time tracking task - first click starts the timer
+                    this.startedTasks.add(taskId);
+                    this.taskStartTimes[taskId] = Date.now();
+                    await this.saveState();
+                    this.render();
+                } else if (task.trackTime && this.startedTasks.has(taskId)) {
+                    // Time tracking task - second click completes it
+                    const duration = Math.floor((Date.now() - this.taskStartTimes[taskId]) / 1000);
+                    this.taskDurations[taskId] = duration;
+
+                    // Check if testimony required
+                    if (task.requiresTestimony) {
+                        this.showTestimonyModal(taskId, false);
+                    } else {
+                        this.completedTasks.add(taskId);
+                        this.celebrate();
+                        await this.saveState();
+                        this.render();
+                        this.updateProgress();
+                    }
                 } else {
-                    // Checking - check if testimony required
+                    // Regular task without time tracking - check if testimony required
                     if (task.requiresTestimony) {
                         this.showTestimonyModal(taskId, false);
                     } else {
@@ -745,19 +820,57 @@
                 if (!task) return;
 
                 if (this.completedBonusTasks.has(taskId)) {
-                    // Unchecking - remove the reward and testimony
+                    // Unchecking - remove the reward, testimony, and time tracking data
                     const rewardAmount = this.bonusRewardsEarned[taskId] || 0;
                     this.completedBonusTasks.delete(taskId);
                     delete this.bonusRewardsEarned[taskId];
                     delete this.testimonies[taskId];
+                    this.startedTasks.delete(taskId);
+                    delete this.taskStartTimes[taskId];
+                    delete this.taskDurations[taskId];
 
                     if (rewardAmount > 0) {
                         await this.addMoney(-rewardAmount);
                     }
                     await this.saveState();
                     this.render();
+                } else if (task.trackTime && !this.startedTasks.has(taskId)) {
+                    // Time tracking task - first click starts the timer
+                    this.startedTasks.add(taskId);
+                    this.taskStartTimes[taskId] = Date.now();
+                    await this.saveState();
+                    this.render();
+                } else if (task.trackTime && this.startedTasks.has(taskId)) {
+                    // Time tracking task - second click completes it
+                    const duration = Math.floor((Date.now() - this.taskStartTimes[taskId]) / 1000);
+                    this.taskDurations[taskId] = duration;
+
+                    // Check if testimony required
+                    if (task.requiresTestimony) {
+                        this.showTestimonyModal(taskId, true);
+                    } else {
+                        // Give instant reward without testimony
+                        this.completedBonusTasks.add(taskId);
+
+                        // Calculate random reward between min and max (1 decimal place)
+                        const minReward = task.minReward || 0;
+                        const maxReward = task.maxReward || 0;
+                        const rewardAmount = minReward === maxReward
+                            ? minReward
+                            : parseFloat((Math.random() * (maxReward - minReward) + minReward).toFixed(1));
+
+                        this.bonusRewardsEarned[taskId] = rewardAmount;
+
+                        // Save state and update UI first
+                        await this.saveState();
+                        this.render();
+
+                        // Then show celebration (after DOM is stable)
+                        this.celebrateBonus(rewardAmount);
+                        this.animateMoneyIncrease(rewardAmount);
+                    }
                 } else {
-                    // Checking - check if testimony required
+                    // Regular bonus task without time tracking - check if testimony required
                     if (task.requiresTestimony) {
                         this.showTestimonyModal(taskId, true);
                     } else {
@@ -810,12 +923,35 @@
                     const hasTestimony = this.testimonies[task.id];
                     const testimonyIndicator = hasTestimony ? '<div class="testimony-indicator" title="לחץ לקריאת העדות">💬</div>' : '';
 
+                    // Add time tracking indicators
+                    let timeTrackingDisplay = '';
+                    if (task.trackTime) {
+                        const isStarted = this.startedTasks.has(task.id);
+                        const isCompleted = this.completedTasks.has(task.id);
+
+                        if (isCompleted && this.taskDurations[task.id] !== undefined) {
+                            // Show completed duration
+                            const duration = this.formatDuration(this.taskDurations[task.id]);
+                            timeTrackingDisplay = `<div class="time-badge" style="position: absolute; bottom: 10px; right: 10px; background: #4CAF50; color: white; padding: 5px 8px; border-radius: 8px; font-size: 12px; font-weight: bold;">⏱️ ${duration}</div>`;
+                        } else if (isStarted) {
+                            // Show elapsed time with "in progress" text
+                            const elapsed = this.getElapsedTime(task.id);
+                            const elapsedDisplay = this.formatDuration(elapsed);
+                            timeTrackingDisplay = `<div class="time-badge started" style="position: absolute; bottom: 10px; right: 10px; background: #FF9800; color: white; padding: 5px 8px; border-radius: 8px; font-size: 12px; font-weight: bold; animation: pulse 1.5s ease-in-out infinite;">⏱️ ${elapsedDisplay} - בתהליך</div>`;
+                            card.classList.add('started');
+                        } else {
+                            // Show timer icon to indicate it's a time-tracked task
+                            timeTrackingDisplay = `<div class="time-badge" style="position: absolute; top: 10px; right: 10px; background: #9E9E9E; color: white; padding: 5px 8px; border-radius: 8px; font-size: 12px;">⏱️</div>`;
+                        }
+                    }
+
                     card.innerHTML = `
                         <div class="checkmark">✓</div>
                         <div class="task-icon">${iconDisplay}</div>
                         <div class="task-title">${task.title}</div>
                         ${testimonyBadge}
                         ${testimonyIndicator}
+                        ${timeTrackingDisplay}
                     `;
 
                     // Handle click events
@@ -887,6 +1023,28 @@
                         const hasTestimony = this.testimonies[task.id];
                         const testimonyIndicator = hasTestimony ? '<div class="testimony-indicator" title="לחץ לקריאת העדות">💬</div>' : '';
 
+                        // Add time tracking indicators
+                        let timeTrackingDisplay = '';
+                        if (task.trackTime) {
+                            const isStarted = this.startedTasks.has(task.id);
+                            const isCompleted = this.completedBonusTasks.has(task.id);
+
+                            if (isCompleted && this.taskDurations[task.id] !== undefined) {
+                                // Show completed duration
+                                const duration = this.formatDuration(this.taskDurations[task.id]);
+                                timeTrackingDisplay = `<div class="time-badge" style="position: absolute; bottom: 10px; left: 10px; background: #4CAF50; color: white; padding: 5px 8px; border-radius: 8px; font-size: 12px; font-weight: bold;">⏱️ ${duration}</div>`;
+                            } else if (isStarted) {
+                                // Show elapsed time with "in progress" text
+                                const elapsed = this.getElapsedTime(task.id);
+                                const elapsedDisplay = this.formatDuration(elapsed);
+                                timeTrackingDisplay = `<div class="time-badge started" style="position: absolute; bottom: 10px; left: 10px; background: #FF9800; color: white; padding: 5px 8px; border-radius: 8px; font-size: 12px; font-weight: bold; animation: pulse 1.5s ease-in-out infinite;">⏱️ ${elapsedDisplay} - בתהליך</div>`;
+                                card.classList.add('started');
+                            } else {
+                                // Show timer icon to indicate it's a time-tracked task
+                                timeTrackingDisplay = `<div class="time-badge" style="position: absolute; top: 50px; right: 10px; background: #9E9E9E; color: white; padding: 5px 8px; border-radius: 8px; font-size: 12px;">⏱️</div>`;
+                            }
+                        }
+
                         card.innerHTML = `
                             <div class="bonus-reward-badge">${rewardText}${earnedText}</div>
                             <div class="checkmark">✓</div>
@@ -894,6 +1052,7 @@
                             <div class="task-title">${task.title}</div>
                             ${testimonyBadge}
                             ${testimonyIndicator}
+                            ${timeTrackingDisplay}
                         `;
 
                         // Handle click events
