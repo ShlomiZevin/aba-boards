@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>לוח משימות</title>
 
+    <!-- Prevent caching -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -491,7 +496,7 @@
     <div id="kidPage" class="container hidden">
         <div class="header">
             <div class="logo-container">
-                <img src="doing-logo-transparent2.png" alt="Doing - Being. Doing. Playing." class="app-logo">
+                <img id="appLogo" src="doing-logo-transparent2.png" alt="Doing - Being. Doing. Playing." class="app-logo">
             </div>
             <h1 id="kidTitle">🌟 המשימות 🌟</h1>
             <div class="progress-container">
@@ -645,7 +650,8 @@
             formatMoney(amount) {
                 const symbol = this.getCoinSymbol();
                 if (this.coinStyle === 'custom') {
-                    return `<img src="${this.coinImageName}" style="width: 20px; height: 20px; vertical-align: middle; margin: 0 3px;" /> ${amount.toFixed(2)}`;
+                    const timestamp = new Date().getTime();
+                    return `<img src="${this.coinImageName}?t=${timestamp}" style="width: 20px; height: 20px; vertical-align: middle; margin: 0 3px;" /> ${amount.toFixed(2)}`;
                 }
                 return `${symbol}${amount.toFixed(2)}`;
             }
@@ -750,7 +756,8 @@
             updateMoneyDisplay() {
                 const counter = document.getElementById('moneyCounter');
                 if (this.coinStyle === 'custom' && this.coinImageName) {
-                    counter.innerHTML = `<img src="${this.coinImageName}" style="width: 50px; height: 50px; vertical-align: middle; margin: 0 5px;" /> ${this.kidData.totalMoney.toFixed(2)}`;
+                    const timestamp = new Date().getTime();
+                    counter.innerHTML = `<img src="${this.coinImageName}?t=${timestamp}" style="width: 50px; height: 50px; vertical-align: middle; margin: 0 5px;" /> ${this.kidData.totalMoney.toFixed(2)}`;
                 } else {
                     counter.textContent = this.formatMoneySimple(this.kidData.totalMoney);
                 }
@@ -913,7 +920,8 @@
                     let iconDisplay;
                     if (task.icon.startsWith('IMG:')) {
                         const imageName = task.icon.substring(4);
-                        iconDisplay = `<img src="emojis/${imageName}" style="width: 60px; height: 60px; object-fit: contain;" />`;
+                        const timestamp = new Date().getTime();
+                        iconDisplay = `<img src="emojis/${imageName}?t=${timestamp}" style="width: 60px; height: 60px; object-fit: contain;" />`;
                     } else {
                         iconDisplay = task.icon;
                     }
@@ -1013,7 +1021,8 @@
                         let iconDisplay;
                         if (task.icon.startsWith('IMG:')) {
                             const imageName = task.icon.substring(4);
-                            iconDisplay = `<img src="emojis/${imageName}" style="width: 60px; height: 60px; object-fit: contain;" />`;
+                            const timestamp = new Date().getTime();
+                            iconDisplay = `<img src="emojis/${imageName}?t=${timestamp}" style="width: 60px; height: 60px; object-fit: contain;" />`;
                         } else {
                             iconDisplay = task.icon;
                         }
@@ -1130,8 +1139,9 @@
 
                 // Update content
                 const symbol = this.getCoinSymbol();
+                const timestamp = new Date().getTime();
                 const moneyDisplay = this.coinStyle === 'custom'
-                    ? `<img src="${this.coinImageName}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
+                    ? `<img src="${this.coinImageName}?t=${timestamp}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
                     : `+${symbol}${amount.toFixed(1)}`;
 
                 encouragement.innerHTML = `
@@ -1205,8 +1215,9 @@
 
                 const dailyReward = this.kidData.dailyReward || 0.5;
                 const symbol = this.getCoinSymbol();
+                const timestamp = new Date().getTime();
                 const rewardDisplay = this.coinStyle === 'custom'
-                    ? `<img src="${this.coinImageName}" style="width: 35px; height: 35px; vertical-align: middle;" /> ${dailyReward.toFixed(2)}`
+                    ? `<img src="${this.coinImageName}?t=${timestamp}" style="width: 35px; height: 35px; vertical-align: middle;" /> ${dailyReward.toFixed(2)}`
                     : `${symbol}${dailyReward.toFixed(2)}`;
 
                 const encouragement = document.getElementById('encouragement');
@@ -1264,7 +1275,8 @@
 
                     if (this.coinStyle === 'custom' && this.coinImageName && this.coinImageName.trim() !== '') {
                         // Use custom coin image
-                        coin.innerHTML = `<img src="${this.coinImageName}" style="width: ${30 + Math.random() * 30}px; height: ${30 + Math.random() * 30}px;" />`;
+                        const timestamp = new Date().getTime();
+                        coin.innerHTML = `<img src="${this.coinImageName}?t=${timestamp}" style="width: ${30 + Math.random() * 30}px; height: ${30 + Math.random() * 30}px;" />`;
                     } else {
                         // Use default golden coin circle with $ symbol
                         const size = 30 + Math.random() * 30;
@@ -1323,7 +1335,8 @@
                     const currentMoney = startMoney + (amount * easeProgress);
 
                     if (this.coinStyle === 'custom') {
-                        counter.innerHTML = `<img src="${this.coinImageName}" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 5px;" /> ${currentMoney.toFixed(2)}`;
+                        const timestamp = new Date().getTime();
+                        counter.innerHTML = `<img src="${this.coinImageName}?t=${timestamp}" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 5px;" /> ${currentMoney.toFixed(2)}`;
                     } else {
                         const symbol = this.getCoinSymbol();
                         counter.textContent = `${symbol}${currentMoney.toFixed(2)}`;
@@ -1444,6 +1457,16 @@
             }
         }
 
+        // Add cache-busting to all images on page load
+        function addCacheBustingToImages() {
+            const timestamp = new Date().getTime();
+            const logo = document.getElementById('appLogo');
+            if (logo && logo.src) {
+                const logoSrc = logo.src.split('?')[0]; // Remove existing query params
+                logo.src = logoSrc + '?t=' + timestamp;
+            }
+        }
+
         // Show Kid/Parent Page
         async function showKidPage(kidId, isParentMode) {
             try {
@@ -1467,13 +1490,17 @@
                 savingsLabel = savingsLabel.replace(/\[שם\]/g, kidData.name);
                 document.getElementById('moneyLabel').textContent = savingsLabel;
 
-                // Set kid image
+                // Set kid image (with cache-busting timestamp)
                 const kidImage = document.getElementById('kidImage');
-                kidImage.src = kidData.imageName || 'me-default-small.jpg';
+                const imageSrc = kidData.imageName || 'me-default-small.jpg';
+                kidImage.src = imageSrc + '?t=' + new Date().getTime();
                 kidImage.alt = kidData.name;
 
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('kidPage').classList.remove('hidden');
+
+                // Add cache-busting to images
+                addCacheBustingToImages();
 
                 window.taskBoard = new TaskBoard(kidId, kidData, isParentMode);
             } catch (error) {
