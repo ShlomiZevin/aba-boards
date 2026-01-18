@@ -749,7 +749,7 @@
 
             updateMoneyDisplay() {
                 const counter = document.getElementById('moneyCounter');
-                if (this.coinStyle === 'custom') {
+                if (this.coinStyle === 'custom' && this.coinImageName) {
                     counter.innerHTML = `<img src="${this.coinImageName}" style="width: 50px; height: 50px; vertical-align: middle; margin: 0 5px;" /> ${this.kidData.totalMoney.toFixed(2)}`;
                 } else {
                     counter.textContent = this.formatMoneySimple(this.kidData.totalMoney);
