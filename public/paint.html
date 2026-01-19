@@ -1,0 +1,339 @@
+<!DOCTYPE HTML>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>לוח ציור</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .paint-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 20px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #ddd;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.2);
+            border-color: #667eea;
+        }
+
+        .color-btn.active {
+            border-color: #667eea;
+            border-width: 4px;
+            transform: scale(1.1);
+        }
+
+        .brush-size {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .size-btn {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .size-btn:hover {
+            border-color: #667eea;
+            transform: scale(1.1);
+        }
+
+        .size-btn.active {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .size-dot {
+            background: #667eea;
+            border-radius: 50%;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .clear-btn {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .clear-btn:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        .eraser-btn {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .eraser-btn:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .eraser-btn.active {
+            background: #34495e;
+        }
+
+        canvas {
+            display: block;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            cursor: crosshair;
+            touch-action: none;
+            background: white;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .controls {
+                gap: 10px;
+            }
+
+            .color-btn {
+                width: 35px;
+                height: 35px;
+            }
+
+            .size-btn {
+                width: 45px;
+                height: 45px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="paint-container">
+        <h1>🎨 לוח הציור שלי 🎨</h1>
+
+        <div class="controls">
+            <div class="color-palette" id="colorPalette"></div>
+
+            <div class="brush-size">
+                <button class="size-btn active" data-size="5">
+                    <div class="size-dot" style="width: 8px; height: 8px;"></div>
+                </button>
+                <button class="size-btn" data-size="10">
+                    <div class="size-dot" style="width: 14px; height: 14px;"></div>
+                </button>
+                <button class="size-btn" data-size="20">
+                    <div class="size-dot" style="width: 22px; height: 22px;"></div>
+                </button>
+            </div>
+
+            <button class="action-btn eraser-btn" id="eraserBtn">🧹 מחק</button>
+            <button class="action-btn clear-btn" id="clearBtn">🗑️ נקה הכל</button>
+        </div>
+
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const width = Math.min(container.clientWidth - 40, 800);
+            const height = Math.min(window.innerHeight - 300, 600);
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // Fill with white background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Colors
+        const colors = [
+            '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF',
+            '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080',
+            '#FFC0CB', '#A52A2A', '#808080', '#FFD700', '#00CED1'
+        ];
+
+        const colorPalette = document.getElementById('colorPalette');
+        let currentColor = colors[0];
+        let currentSize = 5;
+        let isEraser = false;
+        let isDrawing = false;
+
+        // Create color buttons
+        colors.forEach((color, index) => {
+            const btn = document.createElement('div');
+            btn.className = 'color-btn' + (index === 0 ? ' active' : '');
+            btn.style.backgroundColor = color;
+            if (color === '#FFFFFF') {
+                btn.style.border = '3px solid #ddd';
+            }
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentColor = color;
+                isEraser = false;
+                document.getElementById('eraserBtn').classList.remove('active');
+            });
+            colorPalette.appendChild(btn);
+        });
+
+        // Brush size buttons
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentSize = parseInt(btn.dataset.size);
+            });
+        });
+
+        // Eraser button
+        document.getElementById('eraserBtn').addEventListener('click', function() {
+            isEraser = !isEraser;
+            this.classList.toggle('active');
+            if (isEraser) {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            }
+        });
+
+        // Clear button
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+
+        function getPosition(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            let clientX, clientY;
+
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            e.preventDefault();
+
+            const pos = getPosition(e);
+
+            ctx.lineWidth = currentSize;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = isEraser ? 'white' : currentColor;
+
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch events
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
+    </script>
+</body>
+</html>

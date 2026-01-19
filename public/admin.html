@@ -548,13 +548,21 @@
                     <div class="emoji-display" onclick="openEmojiPicker('task-${taskCounter}')" data-task-id="task-${taskCounter}">🎯</div>
                     <input type="text" placeholder="תיאור המשימה" data-type="title">
                     <input type="number" placeholder="כמות" data-type="quantity" min="1" value="1" style="width: 70px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;" title="כמות משימות (ברירת מחדל: 1)">
-                    <select data-type="taskType" onchange="toggleRewardInputs('task-${taskCounter}')" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                    <select data-type="taskType" onchange="toggleTaskTypeInputs('task-${taskCounter}')" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
                         <option value="regular">משימה רגילה</option>
                         <option value="bonus">משימת בונוס</option>
+                        <option value="calm-down">פעילות הרגעה</option>
                     </select>
                     <div class="reward-inputs" id="reward-task-${taskCounter}" style="display: none; gap: 10px;">
                         <input type="number" placeholder="מינימום $" data-type="minReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
                         <input type="number" placeholder="מקסימום $" data-type="maxReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
+                    </div>
+                    <div class="calm-down-inputs" id="calmdown-task-${taskCounter}" style="display: none; gap: 10px; flex-direction: column;">
+                        <select data-type="activityType" style="padding: 10px; border: 2px solid #89CFF0; border-radius: 8px;">
+                            <option value="paint">לוח ציור</option>
+                            <option value="link">קישור (סרטון/אתר)</option>
+                        </select>
+                        <input type="text" placeholder="URL (רק אם בחרת קישור)" data-type="activityUrl" style="padding: 10px; border: 2px solid #89CFF0; border-radius: 8px;">
                     </div>
                     <label style="display: flex; align-items: center; gap: 5px; padding: 5px;">
                         <input type="checkbox" data-type="requiresTestimony" style="width: 20px; height: 20px;">
@@ -609,16 +617,27 @@
             taskCounter++;
         }
 
-        function toggleRewardInputs(taskId) {
+        function toggleTaskTypeInputs(taskId) {
             const taskRow = document.getElementById(taskId);
             const taskType = taskRow.querySelector('[data-type="taskType"]').value;
             const rewardInputs = taskRow.querySelector('.reward-inputs');
+            const calmDownInputs = taskRow.querySelector('.calm-down-inputs');
 
             if (taskType === 'bonus') {
                 rewardInputs.style.display = 'flex';
+                calmDownInputs.style.display = 'none';
+            } else if (taskType === 'calm-down') {
+                rewardInputs.style.display = 'none';
+                calmDownInputs.style.display = 'flex';
             } else {
                 rewardInputs.style.display = 'none';
+                calmDownInputs.style.display = 'none';
             }
+        }
+
+        // Keep old name for backward compatibility
+        function toggleRewardInputs(taskId) {
+            toggleTaskTypeInputs(taskId);
         }
 
         function toggleCoinImageInput() {
@@ -735,9 +754,20 @@
 
                         // If bonus task, populate reward fields
                         if (taskType === 'bonus' && task.minReward !== undefined && task.maxReward !== undefined) {
-                            toggleRewardInputs(`task-${taskCounter - 1}`);
+                            toggleTaskTypeInputs(`task-${taskCounter - 1}`);
                             lastRow.querySelector('[data-type="minReward"]').value = task.minReward;
                             lastRow.querySelector('[data-type="maxReward"]').value = task.maxReward;
+                        }
+
+                        // If calm-down task, populate activity fields
+                        if (taskType === 'calm-down') {
+                            toggleTaskTypeInputs(`task-${taskCounter - 1}`);
+                            if (task.activityType) {
+                                lastRow.querySelector('[data-type="activityType"]').value = task.activityType;
+                            }
+                            if (task.activityUrl) {
+                                lastRow.querySelector('[data-type="activityUrl"]').value = task.activityUrl;
+                            }
                         }
 
                         // Set testimony checkbox
@@ -898,6 +928,20 @@
 
                         baseTask.minReward = minReward;
                         baseTask.maxReward = maxReward;
+                    }
+
+                    if (taskType === 'calm-down') {
+                        const activityType = row.querySelector('[data-type="activityType"]').value;
+                        const activityUrl = row.querySelector('[data-type="activityUrl"]').value.trim();
+
+                        baseTask.activityType = activityType;
+                        if (activityType === 'link') {
+                            if (!activityUrl) {
+                                alert('נא להכניס URL לפעילות הרגעה מסוג קישור');
+                                return;
+                            }
+                            baseTask.activityUrl = activityUrl;
+                        }
                     }
 
                     // Add multiple instances based on quantity

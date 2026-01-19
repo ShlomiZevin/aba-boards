@@ -139,7 +139,7 @@
             font-weight: bold;
         }
 
-        .tasks-grid, .bonus-tasks-grid {
+        .tasks-grid, .bonus-tasks-grid, .calm-down-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 20px;
@@ -206,6 +206,24 @@
 
         .bonus-task-card.completed .bonus-reward-badge {
             background: #ffaa00;
+        }
+
+        /* Calm down task styles */
+        .calm-down-card {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border: 3px solid #89CFF0;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(168, 237, 234, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .calm-down-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(168, 237, 234, 0.7);
         }
 
         .task-icon {
@@ -522,6 +540,11 @@
             <div class="bonus-tasks-grid" id="bonusTasksGrid"></div>
         </div>
 
+        <div class="calm-down-section" id="calmDownSection" style="display: none; margin-top: 40px;">
+            <h2 style="text-align: center; color: #a8edea; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 1.8em;">🧘 פינת ההרגעה 🧘</h2>
+            <div class="calm-down-grid" id="calmDownGrid"></div>
+        </div>
+
         <div class="reset-info">
             הלוח מתאפס כל יום בחצות 🌙
         </div>
@@ -529,6 +552,22 @@
 
     <div class="celebration" id="celebration"></div>
     <div class="encouragement" id="encouragement"></div>
+
+    <!-- Calm Down Activity Modal -->
+    <div class="testimony-modal" id="calmDownModal">
+        <div class="testimony-content" style="max-width: 90vw; max-height: 90vh; width: 100%; height: 80vh; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 id="calmDownTitle" style="color: #667eea;">פעילות הרגעה</h2>
+                <button class="submit-btn" onclick="taskBoard.closeCalmDownActivity()" style="padding: 8px 20px;">סגור</button>
+            </div>
+            <iframe id="calmDownFrame" style="width: 100%; height: calc(100% - 100px); border: 2px solid #667eea; border-radius: 15px;"></iframe>
+            <div id="calmDownFallback" style="display: none; text-align: center; padding: 10px; margin-top: 10px;">
+                <a id="calmDownFallbackLink" href="#" target="_blank" style="color: #667eea; text-decoration: none; font-size: 1.1em; display: inline-flex; align-items: center; gap: 8px;">
+                    אם הסרטון לא נפתח, לחץ כאן לפתיחה ביוטיוב 🚀
+                </a>
+            </div>
+        </div>
+    </div>
 
     <!-- Testimony Modal -->
     <div class="testimony-modal" id="testimonyModal">
@@ -611,6 +650,7 @@
 
                 this.regularTasks = activeTasks.filter(t => !t.type || t.type === 'regular');
                 this.bonusTasks = activeTasks.filter(t => t.type === 'bonus');
+                this.calmDownTasks = activeTasks.filter(t => t.type === 'calm-down');
 
                 this.completedTasks = new Set();
                 this.completedBonusTasks = new Set();
@@ -1097,6 +1137,42 @@
                 } else {
                     bonusSection.style.display = 'none';
                 }
+
+                // Render calm-down tasks
+                const calmDownGrid = document.getElementById('calmDownGrid');
+                const calmDownSection = document.getElementById('calmDownSection');
+                calmDownGrid.innerHTML = '';
+
+                if (this.calmDownTasks.length > 0) {
+                    calmDownSection.style.display = 'block';
+
+                    this.calmDownTasks.forEach(task => {
+                        const card = document.createElement('div');
+                        card.className = 'calm-down-card';
+
+                        // Determine icon display (emoji or image)
+                        let iconDisplay;
+                        if (task.icon.startsWith('IMG:')) {
+                            const imageName = task.icon.substring(4);
+                            const timestamp = new Date().getTime();
+                            iconDisplay = `<img src="emojis/${imageName}?t=${timestamp}" style="width: 60px; height: 60px; object-fit: contain;" />`;
+                        } else {
+                            iconDisplay = task.icon;
+                        }
+
+                        card.innerHTML = `
+                            <div class="task-icon">${iconDisplay}</div>
+                            <div class="task-title">${task.title}</div>
+                        `;
+
+                        card.style.cursor = 'pointer';
+                        card.addEventListener('click', () => this.openCalmDownActivity(task));
+
+                        calmDownGrid.appendChild(card);
+                    });
+                } else {
+                    calmDownSection.style.display = 'none';
+                }
             }
 
             updateProgress() {
@@ -1453,6 +1529,61 @@
 
             closeTestimonyReader() {
                 const modal = document.getElementById('testimonyReaderModal');
+                modal.classList.remove('active');
+            }
+
+            openCalmDownActivity(task) {
+                const modal = document.getElementById('calmDownModal');
+                const frame = document.getElementById('calmDownFrame');
+                const title = document.getElementById('calmDownTitle');
+                const fallbackDiv = document.getElementById('calmDownFallback');
+                const fallbackLink = document.getElementById('calmDownFallbackLink');
+
+                title.textContent = task.title;
+
+                let url = '';
+                let isYouTube = false;
+                let originalUrl = '';
+
+                if (task.activityType === 'paint') {
+                    url = 'paint.html';
+                } else if (task.activityType === 'link' && task.activityUrl) {
+                    originalUrl = task.activityUrl;
+                    // Convert YouTube watch URLs to embed URLs
+                    if (task.activityUrl.includes('youtube.com/watch')) {
+                        const urlObj = new URL(task.activityUrl);
+                        const videoId = urlObj.searchParams.get('v');
+                        url = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`;
+                        isYouTube = true;
+                    } else if (task.activityUrl.includes('youtu.be/')) {
+                        const videoId = task.activityUrl.split('youtu.be/')[1].split('?')[0];
+                        url = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`;
+                        isYouTube = true;
+                    } else {
+                        url = task.activityUrl;
+                    }
+                }
+
+                if (url) {
+                    frame.style.display = 'block';
+                    frame.src = url;
+
+                    // Show fallback link for YouTube videos
+                    if (isYouTube) {
+                        fallbackDiv.style.display = 'block';
+                        fallbackLink.href = originalUrl;
+                    } else {
+                        fallbackDiv.style.display = 'none';
+                    }
+
+                    modal.classList.add('active');
+                }
+            }
+
+            closeCalmDownActivity() {
+                const modal = document.getElementById('calmDownModal');
+                const frame = document.getElementById('calmDownFrame');
+                frame.src = ''; // Clear iframe
                 modal.classList.remove('active');
             }
         }
