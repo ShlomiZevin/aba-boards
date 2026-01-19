@@ -1547,6 +1547,8 @@
 
                 if (task.activityType === 'paint') {
                     url = 'paint.html';
+                } else if (task.activityType === 'bubbles') {
+                    url = 'bubbles.html';
                 } else if (task.activityType === 'link' && task.activityUrl) {
                     originalUrl = task.activityUrl;
                     // Convert YouTube watch URLs to embed URLs
