@@ -221,6 +221,16 @@
             transform: scale(1.05);
         }
 
+        /* Color Schema Options */
+        .color-schema-option:has(input:checked) {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .color-schema-option:hover {
+            border-color: #999;
+        }
+
         /* Emoji Picker Modal */
         .modal {
             display: none;
@@ -436,6 +446,32 @@
                     <input type="text" id="coinImageName" placeholder="לדוגמה: coin.png" style="flex: 1;">
                 </div>
                 <input type="hidden" id="coinImageData">
+            </div>
+
+            <div class="form-group">
+                <label>ערכת צבעים:</label>
+                <div class="color-schema-options" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
+                    <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 3px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="colorSchema" value="purple" checked style="display: none;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(102,126,234,0.4);"></div>
+                        <span style="font-weight: bold; color: #333;">סגול קלאסי</span>
+                    </label>
+                    <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 3px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="colorSchema" value="pink" style="display: none;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); box-shadow: 0 2px 8px rgba(240,147,251,0.4);"></div>
+                        <span style="font-weight: bold; color: #333;">ורוד חלומי</span>
+                    </label>
+                    <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 3px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="colorSchema" value="blue" style="display: none;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); box-shadow: 0 2px 8px rgba(79,172,254,0.4);"></div>
+                        <span style="font-weight: bold; color: #333;">כחול שמיים</span>
+                    </label>
+                    <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 3px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="colorSchema" value="dark" style="display: none;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 100%); box-shadow: 0 2px 8px rgba(44,62,80,0.4);"></div>
+                        <span style="font-weight: bold; color: #333;">כהה מודרני</span>
+                    </label>
+                </div>
             </div>
 
             <div class="form-group">
@@ -1208,6 +1244,13 @@
                     toggleCoinImageInput();
                 }
 
+                // Set color schema (default to purple for backward compatibility)
+                const colorSchema = kidData.colorSchema || 'purple';
+                const colorSchemaInput = document.querySelector(`input[name="colorSchema"][value="${colorSchema}"]`);
+                if (colorSchemaInput) {
+                    colorSchemaInput.checked = true;
+                }
+
                 // Set header and savings labels
                 document.getElementById('headerLabel').value = kidData.headerLabel || '';
                 document.getElementById('savingsLabel').value = kidData.savingsLabel || '';
@@ -1328,6 +1371,7 @@
                     dailyReward: kidData.dailyReward || 0.5,
                     coinStyle: kidData.coinStyle || 'dollar',
                     coinImageName: kidData.coinImageName || '',
+                    colorSchema: kidData.colorSchema || 'purple',
                     headerLabel: kidData.headerLabel || '',
                     savingsLabel: kidData.savingsLabel || '',
                     regularTasksHeader: kidData.regularTasksHeader !== undefined ? kidData.regularTasksHeader : 'משימות רגילות',
@@ -1361,6 +1405,10 @@
             document.getElementById('coinImagePreview').style.display = 'none';
             document.getElementById('kidMoney').value = '';
             document.getElementById('kidDailyReward').value = '0.50';
+            document.getElementById('coinStyle').value = 'dollar';
+            toggleCoinImageInput();
+            // Reset color schema to default
+            document.querySelector('input[name="colorSchema"][value="purple"]').checked = true;
             document.getElementById('tasksList').innerHTML = '';
             addTaskRow();
         }
@@ -1375,6 +1423,7 @@
             const coinStyle = document.getElementById('coinStyle').value;
             let coinImageName = document.getElementById('coinImageName').value.trim();
             const coinImageData = document.getElementById('coinImageData').value;
+            const colorSchema = document.querySelector('input[name="colorSchema"]:checked').value;
             const headerLabel = document.getElementById('headerLabel').value.trim();
             const savingsLabel = document.getElementById('savingsLabel').value.trim();
             const regularTasksHeader = document.getElementById('regularTasksHeader').value.trim();
@@ -1482,6 +1531,7 @@
                     dailyReward: dailyReward,
                     coinStyle: coinStyle,
                     coinImageName: coinImageName || '',
+                    colorSchema: colorSchema || 'purple',
                     headerLabel: headerLabel || '',
                     savingsLabel: savingsLabel || '',
                     regularTasksHeader: regularTasksHeader,

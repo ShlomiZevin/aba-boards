@@ -18,6 +18,79 @@
     <link rel="stylesheet" href="doing-theme-light.css">
 
     <style>
+        /* Color Schema CSS Variables */
+        :root {
+            --primary-start: #667eea;
+            --primary-end: #764ba2;
+            --primary-color: #667eea;
+            --text-on-primary: white;
+            --card-completed-start: #667eea;
+            --card-completed-end: #764ba2;
+        }
+
+        /* Purple Classic (default) */
+        body.schema-purple {
+            --primary-start: #667eea;
+            --primary-end: #764ba2;
+            --primary-color: #667eea;
+            --text-on-primary: white;
+            --card-completed-start: #667eea;
+            --card-completed-end: #764ba2;
+        }
+
+        /* Pink Dreamy */
+        body.schema-pink {
+            --primary-start: #f093fb;
+            --primary-end: #f5576c;
+            --primary-color: #f093fb;
+            --text-on-primary: white;
+            --card-completed-start: #f093fb;
+            --card-completed-end: #f5576c;
+        }
+
+        /* Blue Sky */
+        body.schema-blue {
+            --primary-start: #4facfe;
+            --primary-end: #00f2fe;
+            --primary-color: #4facfe;
+            --text-on-primary: white;
+            --card-completed-start: #4facfe;
+            --card-completed-end: #00f2fe;
+        }
+
+        /* Dark Modern */
+        body.schema-dark {
+            --primary-start: #434343;
+            --primary-end: #1a1a2e;
+            --primary-color: #6c5ce7;
+            --text-on-primary: white;
+            --card-completed-start: #6c5ce7;
+            --card-completed-end: #a29bfe;
+        }
+
+        /* Override doing-theme styles with color schema */
+        body.doing-theme.schema-purple,
+        body.doing-theme.schema-pink,
+        body.doing-theme.schema-blue,
+        body.doing-theme.schema-dark {
+            background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%) !important;
+        }
+
+        body.doing-theme.schema-purple .task-card.completed,
+        body.doing-theme.schema-pink .task-card.completed,
+        body.doing-theme.schema-blue .task-card.completed,
+        body.doing-theme.schema-dark .task-card.completed {
+            background: linear-gradient(135deg, var(--card-completed-start) 0%, var(--card-completed-end) 100%) !important;
+            color: var(--text-on-primary) !important;
+        }
+
+        body.doing-theme.schema-purple .progress-bar,
+        body.doing-theme.schema-pink .progress-bar,
+        body.doing-theme.schema-blue .progress-bar,
+        body.doing-theme.schema-dark .progress-bar {
+            background: linear-gradient(90deg, var(--primary-start), var(--primary-end)) !important;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -26,7 +99,7 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
             min-height: 100vh;
             padding: 20px;
             direction: rtl;
@@ -114,7 +187,7 @@
         }
 
         h1 {
-            color: #667eea;
+            color: var(--primary-color);
             font-size: 2.5em;
             margin-bottom: 10px;
         }
@@ -130,12 +203,12 @@
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            background: linear-gradient(90deg, var(--primary-start), var(--primary-end));
             transition: width 0.5s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            color: var(--text-on-primary);
             font-weight: bold;
         }
 
@@ -163,8 +236,8 @@
         }
 
         .task-card.completed {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--card-completed-start) 0%, var(--card-completed-end) 100%);
+            color: var(--text-on-primary);
         }
 
         /* Bonus task styles */
@@ -305,7 +378,7 @@
             bottom: 10px;
             right: 10px;
             font-size: 1.5em;
-            background: rgba(102, 126, 234, 0.2);
+            background: color-mix(in srgb, var(--primary-color) 20%, transparent);
             border-radius: 50%;
             width: 35px;
             height: 35px;
@@ -318,7 +391,7 @@
         }
 
         .testimony-indicator:hover {
-            background: rgba(102, 126, 234, 0.4);
+            background: color-mix(in srgb, var(--primary-color) 40%, transparent);
             transform: scale(1.1);
         }
 
@@ -377,7 +450,7 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             font-size: 2em;
             font-weight: bold;
-            color: #667eea;
+            color: var(--primary-color);
             text-align: center;
             animation: encouragePop 2s ease;
             pointer-events: none;
@@ -425,7 +498,7 @@
         }
 
         .testimony-content h2 {
-            color: #667eea;
+            color: var(--primary-color);
             margin-bottom: 20px;
             font-size: 1.5em;
         }
@@ -446,7 +519,7 @@
 
         .testimony-content textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary-color);
         }
 
         .testimony-buttons {
@@ -470,8 +543,8 @@
         }
 
         .testimony-buttons .submit-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+            color: var(--text-on-primary);
         }
 
         .testimony-buttons .cancel-btn {
@@ -532,12 +605,12 @@
     <div class="testimony-modal" id="calmDownModal">
         <div class="testimony-content" style="max-width: 90vw; max-height: 90vh; width: 100%; height: 80vh; padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 id="calmDownTitle" style="color: #667eea;">פעילות הרגעה</h2>
+                <h2 id="calmDownTitle">פעילות הרגעה</h2>
                 <button class="submit-btn" onclick="taskBoard.closeCalmDownActivity()" style="padding: 8px 20px;">סגור</button>
             </div>
-            <iframe id="calmDownFrame" style="width: 100%; height: calc(100% - 100px); border: 2px solid #667eea; border-radius: 15px;"></iframe>
+            <iframe id="calmDownFrame" style="width: 100%; height: calc(100% - 100px); border: 2px solid var(--primary-color); border-radius: 15px;"></iframe>
             <div id="calmDownFallback" style="display: none; text-align: center; padding: 10px; margin-top: 10px;">
-                <a id="calmDownFallbackLink" href="#" target="_blank" style="color: #667eea; text-decoration: none; font-size: 1.1em; display: inline-flex; align-items: center; gap: 8px;">
+                <a id="calmDownFallbackLink" href="#" target="_blank" style="color: var(--primary-color); text-decoration: none; font-size: 1.1em; display: inline-flex; align-items: center; gap: 8px;">
                     אם הסרטון לא נפתח, לחץ כאן לפתיחה ביוטיוב
                 </a>
             </div>
@@ -925,7 +998,7 @@
                                 <div class="logo-container">
                                     <img id="appLogo" src="doing-logo-transparent2.png" alt="Doing - Being. Doing. Playing." class="app-logo">
                                 </div>
-                                <h1 id="kidTitle" style="color: #667eea; ${sizeStyles[item.size]}">${this.replaceNamePlaceholder(item.text)}</h1>
+                                <h1 id="kidTitle" style="${sizeStyles[item.size]}">${this.replaceNamePlaceholder(item.text)}</h1>
                                 <div class="progress-container">
                                     <div class="progress-bar" id="progressBar">0%</div>
                                 </div>
@@ -1546,6 +1619,10 @@
                     document.getElementById('loadingState').innerHTML = '<div class="error-message">לא נמצא לוח מוגדר לילד זה.<br>נא להשתמש בבנה לוח כדי ליצור לוח חדש.</div>';
                     return;
                 }
+
+                // Apply color schema
+                const colorSchema = kidData.colorSchema || 'purple';
+                document.body.classList.add(`schema-${colorSchema}`);
 
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('kidPage').classList.remove('hidden');
