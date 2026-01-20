@@ -687,11 +687,21 @@
                 }
             }
 
+            getCoinImageSrc() {
+                // Don't add timestamp to data URLs (breaks them), only to file paths
+                if (this.coinImageName.startsWith('data:')) {
+                    return this.coinImageName;
+                } else {
+                    const timestamp = new Date().getTime();
+                    return `${this.coinImageName}?t=${timestamp}`;
+                }
+            }
+
             formatMoney(amount) {
                 const symbol = this.getCoinSymbol();
                 if (this.coinStyle === 'custom') {
-                    const timestamp = new Date().getTime();
-                    return `<img src="${this.coinImageName}?t=${timestamp}" style="width: 20px; height: 20px; vertical-align: middle; margin: 0 3px;" /> ${amount.toFixed(2)}`;
+                    const coinSrc = this.getCoinImageSrc();
+                    return `<img src="${coinSrc}" style="width: 20px; height: 20px; vertical-align: middle; margin: 0 3px;" /> ${amount.toFixed(2)}`;
                 }
                 return `${symbol}${amount.toFixed(2)}`;
             }
@@ -796,8 +806,8 @@
             updateMoneyDisplay() {
                 const counter = document.getElementById('moneyCounter');
                 if (this.coinStyle === 'custom' && this.coinImageName) {
-                    const timestamp = new Date().getTime();
-                    counter.innerHTML = `<img src="${this.coinImageName}?t=${timestamp}" style="width: 50px; height: 50px; vertical-align: middle; margin: 0 5px;" /> ${this.kidData.totalMoney.toFixed(2)}`;
+                    const coinSrc = this.getCoinImageSrc();
+                    counter.innerHTML = `<img src="${coinSrc}" style="width: 50px; height: 50px; vertical-align: middle; margin: 0 5px;" /> ${this.kidData.totalMoney.toFixed(2)}`;
                 } else {
                     counter.textContent = this.formatMoneySimple(this.kidData.totalMoney);
                 }
@@ -1215,9 +1225,9 @@
 
                 // Update content
                 const symbol = this.getCoinSymbol();
-                const timestamp = new Date().getTime();
+                const coinSrc = this.getCoinImageSrc();
                 const moneyDisplay = this.coinStyle === 'custom'
-                    ? `<img src="${this.coinImageName}?t=${timestamp}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
+                    ? `<img src="${coinSrc}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
                     : `+${symbol}${amount.toFixed(1)}`;
 
                 encouragement.innerHTML = `
@@ -1291,9 +1301,9 @@
 
                 const dailyReward = this.kidData.dailyReward || 0.5;
                 const symbol = this.getCoinSymbol();
-                const timestamp = new Date().getTime();
+                const coinSrc = this.getCoinImageSrc();
                 const rewardDisplay = this.coinStyle === 'custom'
-                    ? `<img src="${this.coinImageName}?t=${timestamp}" style="width: 35px; height: 35px; vertical-align: middle;" /> ${dailyReward.toFixed(2)}`
+                    ? `<img src="${coinSrc}" style="width: 35px; height: 35px; vertical-align: middle;" /> ${dailyReward.toFixed(2)}`
                     : `${symbol}${dailyReward.toFixed(2)}`;
 
                 const encouragement = document.getElementById('encouragement');
@@ -1351,8 +1361,8 @@
 
                     if (this.coinStyle === 'custom' && this.coinImageName && this.coinImageName.trim() !== '') {
                         // Use custom coin image
-                        const timestamp = new Date().getTime();
-                        coin.innerHTML = `<img src="${this.coinImageName}?t=${timestamp}" style="width: ${30 + Math.random() * 30}px; height: ${30 + Math.random() * 30}px;" />`;
+                        const coinSrc = this.getCoinImageSrc();
+                        coin.innerHTML = `<img src="${coinSrc}" style="width: ${30 + Math.random() * 30}px; height: ${30 + Math.random() * 30}px;" />`;
                     } else {
                         // Use default golden coin circle with $ symbol
                         const size = 30 + Math.random() * 30;
@@ -1411,8 +1421,8 @@
                     const currentMoney = startMoney + (amount * easeProgress);
 
                     if (this.coinStyle === 'custom') {
-                        const timestamp = new Date().getTime();
-                        counter.innerHTML = `<img src="${this.coinImageName}?t=${timestamp}" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 5px;" /> ${currentMoney.toFixed(2)}`;
+                        const coinSrc = this.getCoinImageSrc();
+                        counter.innerHTML = `<img src="${coinSrc}" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 5px;" /> ${currentMoney.toFixed(2)}`;
                     } else {
                         const symbol = this.getCoinSymbol();
                         counter.textContent = `${symbol}${currentMoney.toFixed(2)}`;
