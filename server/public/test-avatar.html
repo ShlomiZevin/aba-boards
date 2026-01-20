@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avatar Test - דינוזאור מדבר</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: white;
+      margin-bottom: 30px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .avatar-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .avatar-image {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+    }
+
+    /* Placeholder dinosaur using CSS (until real images are provided) */
+    .placeholder-dino {
+      position: relative;
+      width: 200px;
+      height: 200px;
+    }
+
+    .dino-body {
+      position: absolute;
+      width: 120px;
+      height: 100px;
+      background: #4CAF50;
+      border-radius: 50% 50% 50% 50%;
+      top: 60px;
+      left: 40px;
+    }
+
+    .dino-head {
+      position: absolute;
+      width: 80px;
+      height: 70px;
+      background: #4CAF50;
+      border-radius: 50% 50% 30% 30%;
+      top: 20px;
+      left: 100px;
+    }
+
+    .dino-eye {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      background: white;
+      border-radius: 50%;
+      top: 35px;
+      left: 130px;
+    }
+
+    .dino-eye::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: black;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+    }
+
+    .dino-mouth {
+      position: absolute;
+      width: 40px;
+      height: 10px;
+      background: #e91e63;
+      border-radius: 0 0 20px 20px;
+      top: 65px;
+      left: 130px;
+      transition: height 0.05s ease;
+    }
+
+    .dino-mouth.open-1 { height: 15px; }
+    .dino-mouth.open-2 { height: 22px; }
+    .dino-mouth.open-3 { height: 30px; border-radius: 0 0 20px 20px; }
+
+    .dino-tail {
+      position: absolute;
+      width: 60px;
+      height: 30px;
+      background: #4CAF50;
+      border-radius: 50% 0 0 50%;
+      top: 100px;
+      left: 0;
+    }
+
+    .dino-leg {
+      position: absolute;
+      width: 20px;
+      height: 40px;
+      background: #388E3C;
+      border-radius: 0 0 10px 10px;
+    }
+
+    .dino-leg.left { top: 140px; left: 60px; }
+    .dino-leg.right { top: 140px; left: 110px; }
+
+    .controls {
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      width: 200px;
+      text-align: right;
+    }
+
+    button {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 10px;
+      background: #FF9800;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    button:hover {
+      background: #F57C00;
+      transform: scale(1.05);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status {
+      color: white;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .speech-bubble {
+      position: absolute;
+      top: -60px;
+      background: white;
+      padding: 15px 20px;
+      border-radius: 15px;
+      max-width: 280px;
+      text-align: center;
+      font-size: 18px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .speech-bubble.visible {
+      opacity: 1;
+    }
+
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 15px solid transparent;
+      border-top-color: white;
+      border-bottom: 0;
+    }
+
+    .settings {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: white;
+    }
+
+    .settings label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🦕 דינוזאור מדבר</h1>
+
+  <div style="position: relative;">
+    <div class="speech-bubble" id="speechBubble"></div>
+    <div class="avatar-container" id="avatarContainer">
+      <!-- Placeholder CSS dinosaur - will be replaced with images -->
+      <div class="placeholder-dino" id="placeholderDino">
+        <div class="dino-tail"></div>
+        <div class="dino-body"></div>
+        <div class="dino-leg left"></div>
+        <div class="dino-leg right"></div>
+        <div class="dino-head"></div>
+        <div class="dino-eye"></div>
+        <div class="dino-mouth" id="dinoMouth"></div>
+      </div>
+      <!-- Real avatar images (hidden until loaded) -->
+      <img class="avatar-image" id="avatarImage" style="display: none;" alt="דינוזאור">
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="input-group">
+      <button id="greetBtn">👋 ברך אותי!</button>
+      <input type="text" id="nameInput" value="דני" placeholder="הכנס שם">
+    </div>
+
+    <div class="input-group">
+      <button id="speakBtn">🗣️ דבר!</button>
+      <input type="text" id="textInput" placeholder="מה להגיד?" value="שלום עולם!">
+    </div>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="settings">
+    <h3>הגדרות</h3>
+    <label>
+      <span>מספר תמונות פה:</span>
+      <select id="mouthShapeCount">
+        <option value="3">3 (סגור, חצי, פתוח)</option>
+        <option value="4" selected>4 (סגור, קצת, פתוח, רחב)</option>
+        <option value="5">5</option>
+        <option value="6">6 (כל הצורות)</option>
+      </select>
+    </label>
+  </div>
+
+  <audio id="audioPlayer"></audio>
+
+  <script>
+    const API_URL = 'http://localhost:3001/api';
+
+    // DOM elements
+    const greetBtn = document.getElementById('greetBtn');
+    const speakBtn = document.getElementById('speakBtn');
+    const nameInput = document.getElementById('nameInput');
+    const textInput = document.getElementById('textInput');
+    const status = document.getElementById('status');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const speechBubble = document.getElementById('speechBubble');
+    const dinoMouth = document.getElementById('dinoMouth');
+    const mouthShapeCountSelect = document.getElementById('mouthShapeCount');
+    const avatarImage = document.getElementById('avatarImage');
+    const placeholderDino = document.getElementById('placeholderDino');
+
+    // Mouth shape images (will be populated when images are available)
+    let mouthImages = [];
+    let usingRealImages = false;
+
+    // Load mouth images if available
+    async function loadMouthImages() {
+      const count = parseInt(mouthShapeCountSelect.value);
+      const images = [];
+
+      for (let i = 0; i < count; i++) {
+        const img = new Image();
+        img.src = `/avatar/mouth_${i}.png`;
+
+        try {
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          images.push(img.src);
+        } catch {
+          // Image not found, use placeholder
+          break;
+        }
+      }
+
+      if (images.length > 0) {
+        mouthImages = images;
+        usingRealImages = true;
+        avatarImage.src = images[0];
+        avatarImage.style.display = 'block';
+        placeholderDino.style.display = 'none';
+        console.log(`Loaded ${images.length} mouth images`);
+      } else {
+        usingRealImages = false;
+        avatarImage.style.display = 'none';
+        placeholderDino.style.display = 'block';
+        console.log('Using CSS placeholder dinosaur');
+      }
+    }
+
+    // Animate mouth based on shape index
+    function setMouthShape(shapeIndex) {
+      if (usingRealImages && mouthImages[shapeIndex]) {
+        avatarImage.src = mouthImages[shapeIndex];
+      } else {
+        // CSS placeholder animation
+        dinoMouth.className = 'dino-mouth';
+        if (shapeIndex === 1) dinoMouth.classList.add('open-1');
+        else if (shapeIndex === 2) dinoMouth.classList.add('open-2');
+        else if (shapeIndex >= 3) dinoMouth.classList.add('open-3');
+      }
+    }
+
+    // Play lip-sync animation
+    function playLipSync(lipSyncData) {
+      lipSyncData.forEach(cue => {
+        setTimeout(() => {
+          setMouthShape(cue.shapeIndex);
+        }, cue.start * 1000);
+      });
+
+      // Close mouth at the end
+      const lastCue = lipSyncData[lipSyncData.length - 1];
+      if (lastCue) {
+        setTimeout(() => {
+          setMouthShape(0);
+        }, lastCue.end * 1000);
+      }
+    }
+
+    // Show speech bubble
+    function showSpeechBubble(text) {
+      speechBubble.textContent = text;
+      speechBubble.classList.add('visible');
+    }
+
+    function hideSpeechBubble() {
+      speechBubble.classList.remove('visible');
+    }
+
+    // Generate and play speech
+    async function speak(text) {
+      try {
+        setButtonsDisabled(true);
+        status.textContent = 'מייצר דיבור...';
+
+        const response = await fetch(`${API_URL}/avatar/speak`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            mouthShapeCount: parseInt(mouthShapeCountSelect.value)
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        status.textContent = 'מנגן...';
+        showSpeechBubble(text);
+
+        // Load and play audio
+        audioPlayer.src = `http://localhost:3001${data.audioUrl}`;
+        await audioPlayer.play();
+
+        // Start lip-sync animation
+        playLipSync(data.lipSyncData);
+
+        // Hide bubble when audio ends
+        audioPlayer.onended = () => {
+          hideSpeechBubble();
+          setMouthShape(0);
+          status.textContent = '';
+          setButtonsDisabled(false);
+        };
+
+      } catch (err) {
+        console.error('Error:', err);
+        status.textContent = `שגיאה: ${err.message}`;
+        setButtonsDisabled(false);
+      }
+    }
+
+    // Greet by name
+    async function greet(name) {
+      try {
+        setButtonsDisabled(true);
+        status.textContent = 'מייצר ברכה...';
+
+        const response = await fetch(`${API_URL}/avatar/greet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            mouthShapeCount: parseInt(mouthShapeCountSelect.value)
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        status.textContent = 'מנגן...';
+        showSpeechBubble(data.text);
+
+        // Load and play audio
+        audioPlayer.src = `http://localhost:3001${data.audioUrl}`;
+        await audioPlayer.play();
+
+        // Start lip-sync animation
+        playLipSync(data.lipSyncData);
+
+        // Hide bubble when audio ends
+        audioPlayer.onended = () => {
+          hideSpeechBubble();
+          setMouthShape(0);
+          status.textContent = '';
+          setButtonsDisabled(false);
+        };
+
+      } catch (err) {
+        console.error('Error:', err);
+        status.textContent = `שגיאה: ${err.message}`;
+        setButtonsDisabled(false);
+      }
+    }
+
+    function setButtonsDisabled(disabled) {
+      greetBtn.disabled = disabled;
+      speakBtn.disabled = disabled;
+    }
+
+    // Event listeners
+    greetBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim() || 'חבר';
+      greet(name);
+    });
+
+    speakBtn.addEventListener('click', () => {
+      const text = textInput.value.trim();
+      if (text) speak(text);
+    });
+
+    textInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const text = textInput.value.trim();
+        if (text) speak(text);
+      }
+    });
+
+    mouthShapeCountSelect.addEventListener('change', loadMouthImages);
+
+    // Initialize
+    loadMouthImages();
+  </script>
+</body>
+</html>
