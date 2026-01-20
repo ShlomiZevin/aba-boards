@@ -225,24 +225,33 @@
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 10000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .modal.active {
-            display: flex;
+            display: flex !important;
             align-items: center;
             justify-content: center;
+        }
+
+        body.modal-open {
+            overflow: hidden;
         }
 
         .modal-content {
             background: white;
             padding: 30px;
             border-radius: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 20px;
             max-width: 500px;
             width: 90%;
             max-height: 80vh;
@@ -315,6 +324,42 @@
 
             .emoji-grid {
                 grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            }
+
+            .modal-content {
+                padding: 15px;
+                margin: 10px;
+                width: 95%;
+                max-height: 95vh;
+            }
+
+            #cropCanvas {
+                max-width: 100%;
+                height: auto;
+            }
+
+            .resize-handle {
+                width: 30px !important;
+                height: 30px !important;
+                top: -10px !important;
+                left: -10px !important;
+            }
+
+            .resize-handle.resize-ne {
+                right: -10px !important;
+                left: auto !important;
+            }
+
+            .resize-handle.resize-sw {
+                bottom: -10px !important;
+                top: auto !important;
+            }
+
+            .resize-handle.resize-se {
+                right: -10px !important;
+                bottom: -10px !important;
+                top: auto !important;
+                left: auto !important;
             }
         }
     </style>
@@ -753,8 +798,9 @@
             // Use the appropriate image (coin or kid)
             const imageToUse = isCoinCrop ? currentCoinImage : currentImage;
 
-            // Calculate canvas size (max 500px)
-            const maxSize = 500;
+            // Calculate canvas size - smaller on mobile
+            const isMobile = window.innerWidth <= 600;
+            const maxSize = isMobile ? Math.min(window.innerWidth - 60, 400) : 500;
             let width = imageToUse.width;
             let height = imageToUse.height;
 
@@ -800,6 +846,9 @@
             document.ontouchend = stopDragOrResize;
 
             modal.classList.add('active');
+            document.body.classList.add('modal-open');
+
+            console.log('Modal opened:', modal.classList.contains('active'));
         }
 
         function updateCropBox() {
@@ -999,6 +1048,7 @@
         function closeCropModal() {
             const modal = document.getElementById('cropModal');
             modal.classList.remove('active');
+            document.body.classList.remove('modal-open');
             document.getElementById('kidImageUpload').value = ''; // Reset kid image file input
             document.getElementById('coinImageUpload').value = ''; // Reset coin image file input
             isCoinCrop = false; // Reset flag
