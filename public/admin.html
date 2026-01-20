@@ -345,8 +345,18 @@
             </div>
 
             <div class="form-group">
-                <label>שם תמונה (לדוגמה: lenny-small.png):</label>
-                <input type="text" id="kidImageName" placeholder="שם קובץ התמונה">
+                <label>תמונת פרופיל:</label>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <input type="file" id="kidImageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('kidImageUpload').click()">📤 העלה תמונה</button>
+                    <div id="imagePreview" style="display: none; position: relative;">
+                        <img id="previewImg" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid #667eea;">
+                        <button type="button" onclick="removeImage()" style="position: absolute; top: -5px; right: -5px; width: 25px; height: 25px; border-radius: 50%; background: #ff6b6b; color: white; border: none; cursor: pointer; font-weight: bold;">×</button>
+                    </div>
+                    <small style="color: #666; width: 100%;">או השתמש בשם קובץ קיים:</small>
+                    <input type="text" id="kidImageName" placeholder="לדוגמה: lenny-small.png" style="flex: 1;">
+                </div>
+                <input type="hidden" id="kidImageData">
             </div>
 
             <div class="form-group">
@@ -411,6 +421,26 @@
 
             <button class="btn btn-primary" id="saveButton" onclick="saveKid()" style="margin-top: 20px; width: 100%;">שמור ילד</button>
             <button class="btn btn-secondary" id="cancelButton" onclick="cancelEdit()" style="margin-top: 10px; width: 100%; display: none;">ביטול</button>
+        </div>
+    </div>
+
+    <!-- Image Crop Modal -->
+    <div id="cropModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>חתוך תמונה</h3>
+                <button class="close-btn" onclick="closeCropModal()">×</button>
+            </div>
+            <div style="text-align: center; padding: 20px;">
+                <div style="position: relative; display: inline-block; max-width: 100%;">
+                    <canvas id="cropCanvas" style="max-width: 100%; border: 2px solid #667eea; border-radius: 10px;"></canvas>
+                    <div id="cropBox" style="position: absolute; border: 3px solid #ffd700; cursor: move; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);"></div>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn btn-primary" onclick="applyCrop()">✂️ חתוך</button>
+                    <button class="btn btn-secondary" onclick="closeCropModal()">ביטול</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -579,6 +609,7 @@
                         <select data-type="activityType" style="padding: 10px; border: 2px solid #89CFF0; border-radius: 8px;">
                             <option value="paint">לוח ציור</option>
                             <option value="bubbles">משחק פיצוץ בועות</option>
+                            <option value="xylophone">קסילופון צבעוני</option>
                             <option value="link">קישור (סרטון/אתר)</option>
                         </select>
                         <input type="text" placeholder="URL (רק אם בחרת קישור)" data-type="activityUrl" style="padding: 10px; border: 2px solid #89CFF0; border-radius: 8px;">
@@ -659,6 +690,187 @@
             toggleTaskTypeInputs(taskId);
         }
 
+        // Image upload and crop functionality
+        let currentImage = null;
+        let cropState = {
+            x: 0,
+            y: 0,
+            size: 200,
+            isDragging: false,
+            startX: 0,
+            startY: 0
+        };
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('נא לבחור קובץ תמונה');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    currentImage = img;
+                    showCropModal();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showCropModal() {
+            const modal = document.getElementById('cropModal');
+            const canvas = document.getElementById('cropCanvas');
+            const ctx = canvas.getContext('2d');
+            const cropBox = document.getElementById('cropBox');
+
+            // Calculate canvas size (max 500px)
+            const maxSize = 500;
+            let width = currentImage.width;
+            let height = currentImage.height;
+
+            if (width > maxSize || height > maxSize) {
+                if (width > height) {
+                    height = (height / width) * maxSize;
+                    width = maxSize;
+                } else {
+                    width = (width / height) * maxSize;
+                    height = maxSize;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // Draw image
+            ctx.drawImage(currentImage, 0, 0, width, height);
+
+            // Initialize crop box (square in center)
+            const cropSize = Math.min(width, height) * 0.7;
+            cropState.size = cropSize;
+            cropState.x = (width - cropSize) / 2;
+            cropState.y = (height - cropSize) / 2;
+
+            updateCropBox();
+
+            // Add drag handlers
+            cropBox.onmousedown = startDrag;
+            document.onmousemove = drag;
+            document.onmouseup = stopDrag;
+
+            cropBox.ontouchstart = startDrag;
+            document.ontouchmove = drag;
+            document.ontouchend = stopDrag;
+
+            modal.classList.add('active');
+        }
+
+        function updateCropBox() {
+            const cropBox = document.getElementById('cropBox');
+            cropBox.style.left = cropState.x + 'px';
+            cropBox.style.top = cropState.y + 'px';
+            cropBox.style.width = cropState.size + 'px';
+            cropBox.style.height = cropState.size + 'px';
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            cropState.isDragging = true;
+
+            const cropBox = document.getElementById('cropBox');
+            const rect = cropBox.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            // Store offset from top-left corner of crop box
+            cropState.startX = clientX - rect.left;
+            cropState.startY = clientY - rect.top;
+        }
+
+        function drag(e) {
+            if (!cropState.isDragging) return;
+            e.preventDefault();
+
+            const canvas = document.getElementById('cropCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            // Calculate new position relative to canvas
+            let newX = clientX - canvasRect.left - cropState.startX;
+            let newY = clientY - canvasRect.top - cropState.startY;
+
+            // Keep within canvas bounds
+            newX = Math.max(0, Math.min(newX, canvas.width - cropState.size));
+            newY = Math.max(0, Math.min(newY, canvas.height - cropState.size));
+
+            cropState.x = newX;
+            cropState.y = newY;
+            updateCropBox();
+        }
+
+        function stopDrag() {
+            cropState.isDragging = false;
+        }
+
+        function applyCrop() {
+            const canvas = document.getElementById('cropCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Calculate scale factor
+            const scaleX = currentImage.width / canvas.width;
+            const scaleY = currentImage.height / canvas.height;
+
+            // Create temporary canvas for cropped image
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Set final size to 200x200
+            const finalSize = 200;
+            tempCanvas.width = finalSize;
+            tempCanvas.height = finalSize;
+
+            // Draw cropped and resized image
+            tempCtx.drawImage(
+                currentImage,
+                cropState.x * scaleX,
+                cropState.y * scaleY,
+                cropState.size * scaleX,
+                cropState.size * scaleY,
+                0,
+                0,
+                finalSize,
+                finalSize
+            );
+
+            // Convert to data URL
+            const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
+
+            // Update preview and hidden field
+            document.getElementById('kidImageData').value = dataUrl;
+            document.getElementById('previewImg').src = dataUrl;
+            document.getElementById('imagePreview').style.display = 'block';
+            document.getElementById('kidImageName').value = ''; // Clear filename since we have uploaded image
+
+            closeCropModal();
+        }
+
+        function closeCropModal() {
+            const modal = document.getElementById('cropModal');
+            modal.classList.remove('active');
+            document.getElementById('kidImageUpload').value = ''; // Reset file input
+        }
+
+        function removeImage() {
+            document.getElementById('kidImageData').value = '';
+            document.getElementById('previewImg').src = '';
+            document.getElementById('imagePreview').style.display = 'none';
+        }
+
         function toggleCoinImageInput() {
             const coinStyle = document.getElementById('coinStyle').value;
             const coinImageGroup = document.getElementById('coinImageGroup');
@@ -729,7 +941,22 @@
 
                 // Fill form with existing data
                 document.getElementById('newKidName').value = kidData.name;
-                document.getElementById('kidImageName').value = kidData.imageName || '';
+
+                // Handle image - check if it's a data URL or filename
+                const imageName = kidData.imageName || '';
+                if (imageName.startsWith('data:')) {
+                    // It's an uploaded image (data URL)
+                    document.getElementById('kidImageData').value = imageName;
+                    document.getElementById('previewImg').src = imageName;
+                    document.getElementById('imagePreview').style.display = 'block';
+                    document.getElementById('kidImageName').value = '';
+                } else {
+                    // It's a filename
+                    document.getElementById('kidImageName').value = imageName;
+                    document.getElementById('kidImageData').value = '';
+                    document.getElementById('imagePreview').style.display = 'none';
+                }
+
                 document.getElementById('kidMoney').value = kidData.totalMoney || 0;
                 document.getElementById('kidDailyReward').value = kidData.dailyReward || 0.5;
 
@@ -887,6 +1114,8 @@
             document.getElementById('cancelButton').style.display = 'none';
             document.getElementById('newKidName').value = '';
             document.getElementById('kidImageName').value = '';
+            document.getElementById('kidImageData').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
             document.getElementById('kidMoney').value = '';
             document.getElementById('kidDailyReward').value = '0.50';
             document.getElementById('tasksList').innerHTML = '';
@@ -896,7 +1125,8 @@
         // Save kid (create or update)
         async function saveKid() {
             const name = document.getElementById('newKidName').value.trim();
-            const imageName = document.getElementById('kidImageName').value.trim();
+            let imageName = document.getElementById('kidImageName').value.trim();
+            const imageData = document.getElementById('kidImageData').value;
             const money = parseFloat(document.getElementById('kidMoney').value) || 0;
             const dailyReward = parseFloat(document.getElementById('kidDailyReward').value) || 0.5;
             const coinStyle = document.getElementById('coinStyle').value;
@@ -987,43 +1217,40 @@
             try {
                 const kidId = editingKidId || name.toLowerCase().replace(/\s+/g, '-');
 
+                // Use uploaded image data or filename
+                if (imageData) {
+                    // Store image as data URL (will be shown directly in index.html)
+                    imageName = imageData;
+                }
+
+                // Prepare kid data
+                const kidDataToSave = {
+                    name: name,
+                    imageName: imageName || '',
+                    tasks: tasks,
+                    totalMoney: money,
+                    dailyReward: dailyReward,
+                    coinStyle: coinStyle,
+                    coinImageName: coinImageName || '',
+                    headerLabel: headerLabel || '',
+                    savingsLabel: savingsLabel || '',
+                    regularTasksHeader: regularTasksHeader,
+                    bonusTasksHeader: bonusTasksHeader,
+                    calmDownHeader: calmDownHeader
+                };
+
                 if (editingKidId) {
                     // Update existing kid
-                    await db.collection('kids').doc(kidId).update({
-                        name: name,
-                        imageName: imageName || '',
-                        tasks: tasks,
-                        totalMoney: money,
-                        dailyReward: dailyReward,
-                        coinStyle: coinStyle,
-                        coinImageName: coinImageName || '',
-                        headerLabel: headerLabel || '',
-                        savingsLabel: savingsLabel || '',
-                        regularTasksHeader: regularTasksHeader,
-                        bonusTasksHeader: bonusTasksHeader,
-                        calmDownHeader: calmDownHeader
-                    });
+                    await db.collection('kids').doc(kidId).update(kidDataToSave);
                     alert('השינויים נשמרו בהצלחה!');
                 } else {
                     // Create new kid
-                    await db.collection('kids').doc(kidId).set({
-                        name: name,
-                        imageName: imageName || '',
-                        tasks: tasks,
-                        completedTasks: [],
-                        totalMoney: money,
-                        dailyReward: dailyReward,
-                        coinStyle: coinStyle,
-                        coinImageName: coinImageName || '',
-                        headerLabel: headerLabel || '',
-                        savingsLabel: savingsLabel || '',
-                        regularTasksHeader: regularTasksHeader,
-                        bonusTasksHeader: bonusTasksHeader,
-                        calmDownHeader: calmDownHeader,
-                        todayRewardGiven: false,
-                        lastResetDate: new Date().toDateString(),
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    kidDataToSave.completedTasks = [];
+                    kidDataToSave.todayRewardGiven = false;
+                    kidDataToSave.lastResetDate = new Date().toDateString();
+                    kidDataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
+                    await db.collection('kids').doc(kidId).set(kidDataToSave);
                     alert('הילד נוסף בהצלחה!');
                 }
 
