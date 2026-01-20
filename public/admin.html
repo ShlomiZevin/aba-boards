@@ -385,6 +385,24 @@
                 <small style="color: #666; font-size: 0.9em;">השאר ריק לטקסט ברירת מחדל. השתמש ב-[שם] להכללת שם הילד.</small>
             </div>
 
+            <div class="form-group">
+                <label>כותרת משימות רגילות (ברירת מחדל: "משימות רגילות"):</label>
+                <input type="text" id="regularTasksHeader" placeholder='לדוגמה: "📝 המשימות שלי" או השאר ריק להסתרה'>
+                <small style="color: #666; font-size: 0.9em;">השאר ריק להסתרת הכותרת לגמרי.</small>
+            </div>
+
+            <div class="form-group">
+                <label>כותרת משימות בונוס (ברירת מחדל: "💰 משימות בונוס 💰"):</label>
+                <input type="text" id="bonusTasksHeader" placeholder='לדוגמה: "🎁 משימות מיוחדות" או השאר ריק להסתרה'>
+                <small style="color: #666; font-size: 0.9em;">השאר ריק להסתרת הכותרת לגמרי.</small>
+            </div>
+
+            <div class="form-group">
+                <label>כותרת פינת הרגעה (ברירת מחדל: "🧘 פינת ההרגעה 🧘"):</label>
+                <input type="text" id="calmDownHeader" placeholder='לדוגמה: "😌 מנוחה ורגיעה" או השאר ריק להסתרה'>
+                <small style="color: #666; font-size: 0.9em;">השאר ריק להסתרת הכותרת לגמרי.</small>
+            </div>
+
             <div class="tasks-builder">
                 <h3>משימות:</h3>
                 <div id="tasksList"></div>
@@ -726,6 +744,9 @@
                 // Set header and savings labels
                 document.getElementById('headerLabel').value = kidData.headerLabel || '';
                 document.getElementById('savingsLabel').value = kidData.savingsLabel || '';
+                document.getElementById('regularTasksHeader').value = kidData.regularTasksHeader !== undefined ? kidData.regularTasksHeader : 'משימות רגילות';
+                document.getElementById('bonusTasksHeader').value = kidData.bonusTasksHeader !== undefined ? kidData.bonusTasksHeader : '💰 משימות בונוס 💰';
+                document.getElementById('calmDownHeader').value = kidData.calmDownHeader !== undefined ? kidData.calmDownHeader : '🧘 פינת ההרגעה 🧘';
 
                 // Clear and populate tasks
                 document.getElementById('tasksList').innerHTML = '';
@@ -842,6 +863,9 @@
                     coinImageName: kidData.coinImageName || '',
                     headerLabel: kidData.headerLabel || '',
                     savingsLabel: kidData.savingsLabel || '',
+                    regularTasksHeader: kidData.regularTasksHeader !== undefined ? kidData.regularTasksHeader : 'משימות רגילות',
+                    bonusTasksHeader: kidData.bonusTasksHeader !== undefined ? kidData.bonusTasksHeader : '💰 משימות בונוס 💰',
+                    calmDownHeader: kidData.calmDownHeader !== undefined ? kidData.calmDownHeader : '🧘 פינת ההרגעה 🧘',
                     todayRewardGiven: false,
                     lastResetDate: new Date().toDateString(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -879,6 +903,9 @@
             const coinImageName = document.getElementById('coinImageName').value.trim();
             const headerLabel = document.getElementById('headerLabel').value.trim();
             const savingsLabel = document.getElementById('savingsLabel').value.trim();
+            const regularTasksHeader = document.getElementById('regularTasksHeader').value.trim();
+            const bonusTasksHeader = document.getElementById('bonusTasksHeader').value.trim();
+            const calmDownHeader = document.getElementById('calmDownHeader').value.trim();
 
             if (!name) {
                 alert('נא להכניס שם ילד');
@@ -971,7 +998,10 @@
                         coinStyle: coinStyle,
                         coinImageName: coinImageName || '',
                         headerLabel: headerLabel || '',
-                        savingsLabel: savingsLabel || ''
+                        savingsLabel: savingsLabel || '',
+                        regularTasksHeader: regularTasksHeader,
+                        bonusTasksHeader: bonusTasksHeader,
+                        calmDownHeader: calmDownHeader
                     });
                     alert('השינויים נשמרו בהצלחה!');
                 } else {
@@ -987,6 +1017,9 @@
                         coinImageName: coinImageName || '',
                         headerLabel: headerLabel || '',
                         savingsLabel: savingsLabel || '',
+                        regularTasksHeader: regularTasksHeader,
+                        bonusTasksHeader: bonusTasksHeader,
+                        calmDownHeader: calmDownHeader,
                         todayRewardGiven: false,
                         lastResetDate: new Date().toDateString(),
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()

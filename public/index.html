@@ -531,17 +531,17 @@
         </div>
 
         <div class="tasks-section">
-            <h2 style="text-align: center; color: white; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 1.8em;">משימות רגילות</h2>
+            <h2 id="regularTasksHeader" style="text-align: center; color: white; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 1.8em;">משימות רגילות</h2>
             <div class="tasks-grid" id="tasksGrid"></div>
         </div>
 
         <div class="bonus-tasks-section" id="bonusTasksSection" style="display: none; margin-top: 40px;">
-            <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">💰 משימות בונוס 💰</h2>
+            <h2 id="bonusTasksHeader" style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">💰 משימות בונוס 💰</h2>
             <div class="bonus-tasks-grid" id="bonusTasksGrid"></div>
         </div>
 
         <div class="calm-down-section" id="calmDownSection" style="display: none; margin-top: 40px;">
-            <h2 style="text-align: center; color: #a8edea; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 1.8em;">🧘 פינת ההרגעה 🧘</h2>
+            <h2 id="calmDownHeader" style="text-align: center; color: #a8edea; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 1.8em;">🧘 פינת ההרגעה 🧘</h2>
             <div class="calm-down-grid" id="calmDownGrid"></div>
         </div>
 
@@ -1628,6 +1628,34 @@
                 const imageSrc = kidData.imageName || 'me-default-small.jpg';
                 kidImage.src = imageSrc + '?t=' + new Date().getTime();
                 kidImage.alt = kidData.name;
+
+                // Set section headers (or hide if empty)
+                const regularHeader = document.getElementById('regularTasksHeader');
+                const regularHeaderText = kidData.regularTasksHeader !== undefined ? kidData.regularTasksHeader : 'משימות רגילות';
+                if (regularHeaderText.trim() === '') {
+                    regularHeader.style.display = 'none';
+                } else {
+                    regularHeader.style.display = 'block';
+                    regularHeader.textContent = regularHeaderText;
+                }
+
+                const bonusHeader = document.getElementById('bonusTasksHeader');
+                const bonusHeaderText = kidData.bonusTasksHeader !== undefined ? kidData.bonusTasksHeader : '💰 משימות בונוס 💰';
+                if (bonusHeaderText.trim() === '') {
+                    bonusHeader.style.display = 'none';
+                } else {
+                    bonusHeader.style.display = 'block';
+                    bonusHeader.textContent = bonusHeaderText;
+                }
+
+                const calmDownHeader = document.getElementById('calmDownHeader');
+                const calmDownHeaderText = kidData.calmDownHeader !== undefined ? kidData.calmDownHeader : '🧘 פינת ההרגעה 🧘';
+                if (calmDownHeaderText.trim() === '') {
+                    calmDownHeader.style.display = 'none';
+                } else {
+                    calmDownHeader.style.display = 'block';
+                    calmDownHeader.textContent = calmDownHeaderText;
+                }
 
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('kidPage').classList.remove('hidden');
