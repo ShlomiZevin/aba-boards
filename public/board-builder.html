@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בונה לוחות - ABA</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <!-- Doing Theme -->
+    <link rel="stylesheet" href="doing-theme-light.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .top-bar h1 {
+            color: #667eea;
+            font-size: 1.5em;
+        }
+
+        .top-bar-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        /* Main Layout */
+        .builder-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        /* Component Palette (Left Sidebar) */
+        .palette {
+            width: 280px;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .palette h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .palette-section {
+            margin-bottom: 25px;
+        }
+
+        .palette-section h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .palette-item {
+            background: #f8f9fa;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .palette-item:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+            transform: scale(1.02);
+        }
+
+        .palette-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .palette-item .icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .palette-item .label {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .canvas {
+            background: white;
+            border-radius: 20px;
+            min-height: 600px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .canvas-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            color: #999;
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            margin: 20px;
+        }
+
+        .canvas-empty .icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            min-height: 100px;
+            border: 2px dashed transparent;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            padding: 10px;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        /* Board Items */
+        .board-item {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: move;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .board-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .board-item.dragging {
+            opacity: 0.5;
+        }
+
+        .board-item.drag-over {
+            border-color: #667eea;
+            border-style: dashed;
+        }
+
+        .board-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .board-item-type {
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        .board-item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .board-item-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .board-item-actions button:hover {
+            opacity: 1;
+        }
+
+        .board-item-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .board-item-icon {
+            font-size: 2em;
+            width: 50px;
+            text-align: center;
+        }
+
+        .board-item-icon img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        .board-item-details {
+            flex: 1;
+        }
+
+        .board-item-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .board-item-subtitle {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        /* Header Item Styles */
+        .board-item.header-small .board-item-title { font-size: 1em; }
+        .board-item.header-medium .board-item-title { font-size: 1.3em; }
+        .board-item.header-large .board-item-title { font-size: 1.6em; }
+
+        .board-item.header-item {
+            background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+            border-color: #667eea;
+        }
+
+        /* Bank Item Style */
+        .board-item.bank-item {
+            background: linear-gradient(135deg, #ffd70020 0%, #ffed4e20 100%);
+            border-color: #ffd700;
+        }
+
+        .board-item.bank-item .board-item-type {
+            background: #ffd700;
+            color: #333;
+        }
+
+        /* Task Item Styles */
+        .board-item.task-regular {
+            background: white;
+        }
+
+        .board-item.task-bonus {
+            background: linear-gradient(135deg, #ffd70010 0%, #ffed4e10 100%);
+            border-color: #ffd700;
+        }
+
+        .board-item.task-bonus .board-item-type {
+            background: #ffd700;
+            color: #333;
+        }
+
+        .board-item.task-calm-down {
+            background: linear-gradient(135deg, #a8edea20 0%, #fed6e320 100%);
+            border-color: #89CFF0;
+        }
+
+        .board-item.task-calm-down .board-item-type {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+
+        /* Configuration Panel (Right Sidebar) */
+        .config-panel {
+            width: 350px;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .config-panel.active {
+            display: block;
+        }
+
+        .config-panel h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .config-group {
+            margin-bottom: 20px;
+        }
+
+        .config-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .config-group input,
+        .config-group select,
+        .config-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-size: 14px;
+            direction: rtl;
+        }
+
+        .config-group input:focus,
+        .config-group select:focus,
+        .config-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .config-group small {
+            color: #666;
+            font-size: 0.8em;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .config-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .config-checkbox input {
+            width: 18px;
+            height: 18px;
+        }
+
+        .config-checkbox label {
+            margin: 0;
+            font-weight: normal;
+        }
+
+        /* Days Selector */
+        .days-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .day-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+
+        .day-checkbox input {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Emoji Picker */
+        .emoji-picker-trigger {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .emoji-picker-trigger:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .emoji-picker-trigger img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #667eea;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .emoji-item {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            cursor: pointer;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .emoji-item:hover {
+            transform: scale(1.2);
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.5em;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .builder-container {
+                flex-direction: column;
+            }
+
+            .palette {
+                width: 100%;
+                max-height: 200px;
+            }
+
+            .config-panel {
+                width: 100%;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                max-height: 50vh;
+                border-radius: 20px 20px 0 0;
+            }
+        }
+    </style>
+</head>
+<body class="doing-theme">
+    <div id="loadingState" class="loading">טוען...</div>
+
+    <div id="builderApp" style="display: none;">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <h1>🎨 בונה לוחות - <span id="kidNameDisplay">טוען...</span></h1>
+            <div class="top-bar-buttons">
+                <a href="admin.html" class="btn btn-secondary">← חזרה לניהול</a>
+                <button class="btn btn-primary" onclick="previewBoard()">👁️ תצוגה מקדימה</button>
+                <button class="btn btn-success" onclick="saveBoard()">💾 שמור לוח</button>
+            </div>
+        </div>
+
+        <div class="builder-container">
+            <!-- Component Palette -->
+            <div class="palette">
+                <h3>🧩 רכיבים</h3>
+
+                <div class="palette-section">
+                    <h4>כותרות</h4>
+                    <div class="palette-item" draggable="true" data-type="header" data-size="large">
+                        <div class="icon">📌</div>
+                        <div class="label">כותרת גדולה</div>
+                    </div>
+                    <div class="palette-item" draggable="true" data-type="header" data-size="medium">
+                        <div class="icon">📋</div>
+                        <div class="label">כותרת בינונית</div>
+                    </div>
+                    <div class="palette-item" draggable="true" data-type="header" data-size="small">
+                        <div class="icon">📝</div>
+                        <div class="label">כותרת קטנה</div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <h4>קופת חיסכון</h4>
+                    <div class="palette-item" draggable="true" data-type="bank">
+                        <div class="icon">🐷</div>
+                        <div class="label">קופת חיסכון</div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <h4>משימות</h4>
+                    <div class="palette-item" draggable="true" data-type="task" data-task-type="regular">
+                        <div class="icon">✅</div>
+                        <div class="label">משימה רגילה</div>
+                    </div>
+                    <div class="palette-item" draggable="true" data-type="task" data-task-type="bonus">
+                        <div class="icon">💰</div>
+                        <div class="label">משימת בונוס</div>
+                    </div>
+                    <div class="palette-item" draggable="true" data-type="task" data-task-type="calm-down">
+                        <div class="icon">🧘</div>
+                        <div class="label">פעילות הרגעה</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="canvas-container">
+                <div class="canvas">
+                    <div id="boardItems" class="drop-zone">
+                        <div id="emptyState" class="canvas-empty">
+                            <div class="icon">👆</div>
+                            <div>גרור רכיבים מהצד כדי לבנות את הלוח</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Panel -->
+            <div id="configPanel" class="config-panel">
+                <h3>⚙️ הגדרות רכיב</h3>
+                <div id="configContent">
+                    <!-- Dynamic content based on selected item -->
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="applyConfig()" style="flex: 1;">✓ החל שינויים</button>
+                    <button class="btn btn-secondary" onclick="closeConfig()">ביטול</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emoji Picker Modal -->
+    <div id="emojiModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>בחר אייקון</h3>
+                <button class="close-btn" onclick="closeEmojiPicker()">×</button>
+            </div>
+            <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Custom emoji images from emojis/ directory
+        const emojiImages = [
+            'irobot-icon.png',
+            'friendship.png','hold.png','listen.png','solving.png','strength.png'
+        ];
+
+        // Emoji categories
+        const emojis = [
+            '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘',
+            '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒',
+            '🙈', '🫣',
+            '🎯', '🎮', '🎲', '🎭', '🎨', '🎬', '🎪', '🎰', '🎸', '🎹', '🎺', '🎻', '🥁', '🎤', '🎧', '🎼',
+            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍',
+            '🧒', '👧', '👦', '👶', '🏖️', '🛝', '🤝', '👫', '👬', '👭',
+            '🌸', '🌺', '🌻', '🌷', '🌹', '🥀', '🌼', '🌱', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀',
+            '⭐', '🌟', '✨', '💫', '⚡', '🔥', '💥', '☀️', '🌙', '🌈', '☁️', '⛅', '🌤️', '⛈️', '🌩️',
+            '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
+            '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞',
+            '🍎', '🍏', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅',
+            '🥑', '🍆', '🥔', '🥕', '🌽', '🌶️', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐',
+            '🪥', '🧸', '👕', '💧', '🥪', '👟', '🧼', '🚿', '🚽', '🥤', '🛁', '🧴', '🧻', '🧹', '🧺', '🧽',
+            '⏰', '⏱️', '⌚', '📚', '📖', '✏️', '✒️', '🖊️', '🖍️', '📝', '🎒', '🎓', '📐', '📏', '📌', '📍',
+            '🛏️', '🛋️', '🪑', '🚪', '🪟', '🏠', '🏡', '🏢',
+            '📱', '💻', '🖥️', '⌨️', '🖱️', '🖨️', '📺', '📷', '📹', '🎥', '📞', '☎️', '📟', '📠', '🔋', '🔌',
+            '💰', '💵', '💴', '💶', '💷', '🪙', '💳', '🏆', '🥇', '🥈', '🥉', '🎖️', '🏅', '🎗️', '✅', '☑️',
+            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💖', '💝', '💗', '💓', '💞', '💕', '💌'
+        ];
+
+        // State
+        let kidId = null;
+        let kidData = null;
+        let boardItems = [];
+        let selectedItemIndex = null;
+        let draggedItemIndex = null;
+        let nextItemId = 1;
+
+        // Get URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        kidId = urlParams.get('kid');
+
+        if (!kidId) {
+            alert('לא נבחר ילד');
+            window.location.href = 'admin.html';
+        }
+
+        // Initialize
+        window.onload = async function() {
+            await loadKidData();
+            initDragAndDrop();
+            initEmojiGrid();
+        };
+
+        // Load kid data
+        async function loadKidData() {
+            try {
+                const doc = await db.collection('kids').doc(kidId).get();
+                if (!doc.exists) {
+                    alert('ילד לא נמצא');
+                    window.location.href = 'admin.html';
+                    return;
+                }
+
+                kidData = doc.data();
+                document.getElementById('kidNameDisplay').textContent = kidData.name;
+
+                // Load existing board layout or convert from tasks
+                if (kidData.boardLayout && kidData.boardLayout.items) {
+                    boardItems = kidData.boardLayout.items;
+                    nextItemId = Math.max(...boardItems.map(i => i.id || 0)) + 1;
+                } else {
+                    // Convert existing tasks to board items
+                    convertExistingTasks();
+                }
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('builderApp').style.display = 'block';
+
+                renderBoard();
+            } catch (error) {
+                console.error('Error loading kid:', error);
+                alert('שגיאה בטעינה');
+            }
+        }
+
+        // Convert existing tasks to board items
+        function convertExistingTasks() {
+            boardItems = [];
+
+            // Add header if exists
+            if (kidData.headerLabel) {
+                boardItems.push({
+                    id: nextItemId++,
+                    type: 'header',
+                    size: 'large',
+                    text: kidData.headerLabel
+                });
+            }
+
+            // Add bank
+            boardItems.push({
+                id: nextItemId++,
+                type: 'bank',
+                label: kidData.savingsLabel || 'קופת החיסכון של [שם]',
+                showBonus: true
+            });
+
+            // Add regular tasks header and tasks
+            const regularTasks = (kidData.tasks || []).filter(t => !t.type || t.type === 'regular');
+            if (regularTasks.length > 0) {
+                if (kidData.regularTasksHeader) {
+                    boardItems.push({
+                        id: nextItemId++,
+                        type: 'header',
+                        size: 'medium',
+                        text: kidData.regularTasksHeader
+                    });
+                }
+                regularTasks.forEach(task => {
+                    boardItems.push({
+                        id: nextItemId++,
+                        type: 'task',
+                        taskType: 'regular',
+                        taskData: { ...task }
+                    });
+                });
+            }
+
+            // Add bonus tasks header and tasks
+            const bonusTasks = (kidData.tasks || []).filter(t => t.type === 'bonus');
+            if (bonusTasks.length > 0) {
+                if (kidData.bonusTasksHeader) {
+                    boardItems.push({
+                        id: nextItemId++,
+                        type: 'header',
+                        size: 'medium',
+                        text: kidData.bonusTasksHeader
+                    });
+                }
+                bonusTasks.forEach(task => {
+                    boardItems.push({
+                        id: nextItemId++,
+                        type: 'task',
+                        taskType: 'bonus',
+                        taskData: { ...task }
+                    });
+                });
+            }
+
+            // Add calm-down tasks header and tasks
+            const calmDownTasks = (kidData.tasks || []).filter(t => t.type === 'calm-down');
+            if (calmDownTasks.length > 0) {
+                if (kidData.calmDownHeader) {
+                    boardItems.push({
+                        id: nextItemId++,
+                        type: 'header',
+                        size: 'medium',
+                        text: kidData.calmDownHeader
+                    });
+                }
+                calmDownTasks.forEach(task => {
+                    boardItems.push({
+                        id: nextItemId++,
+                        type: 'task',
+                        taskType: 'calm-down',
+                        taskData: { ...task }
+                    });
+                });
+            }
+        }
+
+        // Initialize drag and drop
+        function initDragAndDrop() {
+            // Palette items
+            document.querySelectorAll('.palette-item').forEach(item => {
+                item.addEventListener('dragstart', handlePaletteDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+
+            // Drop zone
+            const dropZone = document.getElementById('boardItems');
+            dropZone.addEventListener('dragover', handleDragOver);
+            dropZone.addEventListener('drop', handleDrop);
+            dropZone.addEventListener('dragleave', handleDragLeave);
+        }
+
+        function handlePaletteDragStart(e) {
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                fromPalette: true,
+                type: e.target.dataset.type,
+                size: e.target.dataset.size,
+                taskType: e.target.dataset.taskType
+            }));
+        }
+
+        function handleBoardItemDragStart(e, index) {
+            e.target.classList.add('dragging');
+            draggedItemIndex = index;
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                fromPalette: false,
+                index: index
+            }));
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedItemIndex = null;
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            const dropZone = document.getElementById('boardItems');
+            dropZone.classList.add('drag-over');
+
+            // Find closest board item for reordering
+            const boardItemEls = document.querySelectorAll('.board-item');
+            boardItemEls.forEach(el => el.classList.remove('drag-over'));
+
+            const closest = getClosestBoardItem(e.clientY);
+            if (closest) {
+                closest.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            if (!e.relatedTarget || !document.getElementById('boardItems').contains(e.relatedTarget)) {
+                document.getElementById('boardItems').classList.remove('drag-over');
+            }
+        }
+
+        function getClosestBoardItem(y) {
+            const boardItemEls = [...document.querySelectorAll('.board-item')];
+            return boardItemEls.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > (closest.offset || -Infinity)) {
+                    return { offset: offset, element: child };
+                }
+                return closest;
+            }, {}).element;
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            document.getElementById('boardItems').classList.remove('drag-over');
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+
+            // Find drop position
+            const closest = getClosestBoardItem(e.clientY);
+            let dropIndex = boardItems.length;
+            if (closest) {
+                const closestIndex = parseInt(closest.dataset.index);
+                dropIndex = closestIndex;
+            }
+
+            if (data.fromPalette) {
+                // Create new item from palette
+                const newItem = createNewItem(data.type, data.size, data.taskType);
+                boardItems.splice(dropIndex, 0, newItem);
+            } else {
+                // Reorder existing item
+                if (data.index !== undefined && data.index !== dropIndex) {
+                    const [movedItem] = boardItems.splice(data.index, 1);
+                    if (data.index < dropIndex) dropIndex--;
+                    boardItems.splice(dropIndex, 0, movedItem);
+                }
+            }
+
+            renderBoard();
+        }
+
+        // Create new item
+        function createNewItem(type, size, taskType) {
+            const item = {
+                id: nextItemId++,
+                type: type
+            };
+
+            if (type === 'header') {
+                item.size = size || 'medium';
+                item.text = 'כותרת חדשה';
+            } else if (type === 'bank') {
+                item.label = 'קופת החיסכון של [שם]';
+                item.showBonus = true;
+            } else if (type === 'task') {
+                item.taskType = taskType || 'regular';
+                item.taskData = {
+                    id: nextItemId,
+                    icon: '🎯',
+                    title: 'משימה חדשה',
+                    type: taskType || 'regular',
+                    requiresTestimony: false,
+                    trackTime: false,
+                    activeDays: [0, 1, 2, 3, 4, 5, 6]
+                };
+
+                if (taskType === 'bonus') {
+                    item.taskData.minReward = 1;
+                    item.taskData.maxReward = 5;
+                } else if (taskType === 'calm-down') {
+                    item.taskData.activityType = 'paint';
+                    item.taskData.activityUrl = '';
+                }
+            }
+
+            return item;
+        }
+
+        // Render board
+        function renderBoard() {
+            const container = document.getElementById('boardItems');
+            const emptyState = document.getElementById('emptyState');
+
+            // Clear existing items (except empty state)
+            container.querySelectorAll('.board-item').forEach(el => el.remove());
+
+            if (boardItems.length === 0) {
+                emptyState.style.display = 'flex';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            boardItems.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'board-item';
+                itemEl.draggable = true;
+                itemEl.dataset.index = index;
+
+                // Add type-specific classes
+                if (item.type === 'header') {
+                    itemEl.classList.add('header-item', `header-${item.size}`);
+                } else if (item.type === 'bank') {
+                    itemEl.classList.add('bank-item');
+                } else if (item.type === 'task') {
+                    itemEl.classList.add(`task-${item.taskType}`);
+                }
+
+                itemEl.innerHTML = renderItemContent(item);
+
+                // Drag events
+                itemEl.addEventListener('dragstart', (e) => handleBoardItemDragStart(e, index));
+                itemEl.addEventListener('dragend', handleDragEnd);
+
+                // Click to configure
+                itemEl.addEventListener('click', (e) => {
+                    if (!e.target.closest('.board-item-actions')) {
+                        selectItem(index);
+                    }
+                });
+
+                container.appendChild(itemEl);
+            });
+        }
+
+        // Render item content
+        function renderItemContent(item) {
+            let typeLabel = '';
+            let icon = '';
+            let title = '';
+            let subtitle = '';
+
+            if (item.type === 'header') {
+                typeLabel = 'כותרת';
+                icon = item.size === 'large' ? '📌' : (item.size === 'medium' ? '📋' : '📝');
+                title = item.text || 'כותרת';
+                subtitle = item.size === 'large' ? 'גדולה' : (item.size === 'medium' ? 'בינונית' : 'קטנה');
+            } else if (item.type === 'bank') {
+                typeLabel = 'קופת חיסכון';
+                icon = '🐷';
+                title = item.label || 'קופת החיסכון';
+                subtitle = item.showBonus ? 'כולל בונוס' : '';
+            } else if (item.type === 'task') {
+                typeLabel = item.taskType === 'regular' ? 'משימה' : (item.taskType === 'bonus' ? 'בונוס' : 'הרגעה');
+                const taskData = item.taskData || {};
+
+                // Handle icon display
+                if (taskData.icon && taskData.icon.startsWith('IMG:')) {
+                    const imageName = taskData.icon.substring(4);
+                    icon = `<img src="emojis/${imageName}" />`;
+                } else {
+                    icon = taskData.icon || '🎯';
+                }
+
+                title = taskData.title || 'משימה';
+
+                // Build subtitle
+                const subtitleParts = [];
+                if (taskData.requiresTestimony) subtitleParts.push('📝 עדות');
+                if (taskData.trackTime) subtitleParts.push('⏱️ מעקב זמן');
+                if (item.taskType === 'bonus') {
+                    subtitleParts.push(`💰 $${taskData.minReward || 0}-$${taskData.maxReward || 0}`);
+                }
+                if (item.taskType === 'calm-down') {
+                    const activityTypes = {
+                        'paint': '🎨 ציור',
+                        'bubbles': '🫧 בועות',
+                        'xylophone': '🎹 קסילופון',
+                        'breathing': '🧘 נשימות',
+                        'link': '🔗 קישור'
+                    };
+                    subtitleParts.push(activityTypes[taskData.activityType] || '');
+                }
+                subtitle = subtitleParts.join(' | ');
+            }
+
+            return `
+                <div class="board-item-header">
+                    <span class="board-item-type">${typeLabel}</span>
+                    <div class="board-item-actions">
+                        <button onclick="duplicateItem(${boardItems.indexOf(item)})" title="שכפל">📋</button>
+                        <button onclick="deleteItem(${boardItems.indexOf(item)})" title="מחק">🗑️</button>
+                    </div>
+                </div>
+                <div class="board-item-content">
+                    <div class="board-item-icon">${icon}</div>
+                    <div class="board-item-details">
+                        <div class="board-item-title">${title}</div>
+                        <div class="board-item-subtitle">${subtitle}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Select item for configuration
+        function selectItem(index) {
+            selectedItemIndex = index;
+            const item = boardItems[index];
+
+            const configPanel = document.getElementById('configPanel');
+            const configContent = document.getElementById('configContent');
+
+            configContent.innerHTML = renderConfigForm(item);
+            configPanel.classList.add('active');
+
+            // Highlight selected item
+            document.querySelectorAll('.board-item').forEach((el, i) => {
+                el.style.outline = i === index ? '3px solid #667eea' : 'none';
+            });
+        }
+
+        // Render configuration form
+        function renderConfigForm(item) {
+            if (item.type === 'header') {
+                return `
+                    <div class="config-group">
+                        <label>טקסט הכותרת:</label>
+                        <input type="text" id="configText" value="${item.text || ''}" placeholder="הכנס טקסט">
+                        <small>השתמש ב-[שם] להכללת שם הילד</small>
+                    </div>
+                    <div class="config-group">
+                        <label>גודל:</label>
+                        <select id="configSize">
+                            <option value="large" ${item.size === 'large' ? 'selected' : ''}>גדול</option>
+                            <option value="medium" ${item.size === 'medium' ? 'selected' : ''}>בינוני</option>
+                            <option value="small" ${item.size === 'small' ? 'selected' : ''}>קטן</option>
+                        </select>
+                    </div>
+                `;
+            } else if (item.type === 'bank') {
+                return `
+                    <div class="config-group">
+                        <label>כותרת הקופה:</label>
+                        <input type="text" id="configLabel" value="${item.label || ''}" placeholder="קופת החיסכון">
+                        <small>השתמש ב-[שם] להכללת שם הילד</small>
+                    </div>
+                    <div class="config-checkbox">
+                        <input type="checkbox" id="configShowBonus" ${item.showBonus ? 'checked' : ''}>
+                        <label for="configShowBonus">הצג בונוס יומי</label>
+                    </div>
+                `;
+            } else if (item.type === 'task') {
+                const taskData = item.taskData || {};
+                let iconDisplay = taskData.icon || '🎯';
+                if (iconDisplay.startsWith('IMG:')) {
+                    const imageName = iconDisplay.substring(4);
+                    iconDisplay = `<img src="emojis/${imageName}" />`;
+                }
+
+                let html = `
+                    <div class="config-group">
+                        <label>אייקון:</label>
+                        <div class="emoji-picker-trigger" onclick="openEmojiPicker()" id="configIcon" data-icon="${taskData.icon || '🎯'}">
+                            ${iconDisplay}
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>שם המשימה:</label>
+                        <input type="text" id="configTitle" value="${taskData.title || ''}" placeholder="הכנס שם משימה">
+                    </div>
+                    <div class="config-group">
+                        <label>כמות:</label>
+                        <input type="number" id="configQuantity" value="${taskData.quantity || 1}" min="1" placeholder="1">
+                        <small>מספר פעמים שהמשימה תופיע</small>
+                    </div>
+                `;
+
+                // Bonus-specific fields
+                if (item.taskType === 'bonus') {
+                    html += `
+                        <div class="config-group">
+                            <label>פרס מינימום ($):</label>
+                            <input type="number" id="configMinReward" value="${taskData.minReward || 0}" min="0" step="0.1">
+                        </div>
+                        <div class="config-group">
+                            <label>פרס מקסימום ($):</label>
+                            <input type="number" id="configMaxReward" value="${taskData.maxReward || 0}" min="0" step="0.1">
+                        </div>
+                    `;
+                }
+
+                // Calm-down specific fields
+                if (item.taskType === 'calm-down') {
+                    html += `
+                        <div class="config-group">
+                            <label>סוג פעילות:</label>
+                            <select id="configActivityType">
+                                <option value="paint" ${taskData.activityType === 'paint' ? 'selected' : ''}>לוח ציור</option>
+                                <option value="bubbles" ${taskData.activityType === 'bubbles' ? 'selected' : ''}>משחק בועות</option>
+                                <option value="xylophone" ${taskData.activityType === 'xylophone' ? 'selected' : ''}>קסילופון</option>
+                                <option value="breathing" ${taskData.activityType === 'breathing' ? 'selected' : ''}>תרגיל נשימות</option>
+                                <option value="link" ${taskData.activityType === 'link' ? 'selected' : ''}>קישור חיצוני</option>
+                            </select>
+                        </div>
+                        <div class="config-group" id="activityUrlGroup" style="${taskData.activityType === 'link' ? '' : 'display:none'}">
+                            <label>כתובת URL:</label>
+                            <input type="text" id="configActivityUrl" value="${taskData.activityUrl || ''}" placeholder="https://...">
+                        </div>
+                    `;
+                }
+
+                // Common task options (not for calm-down)
+                if (item.taskType !== 'calm-down') {
+                    html += `
+                        <div class="config-checkbox">
+                            <input type="checkbox" id="configTestimony" ${taskData.requiresTestimony ? 'checked' : ''}>
+                            <label for="configTestimony">דורש עדות (תיאור)</label>
+                        </div>
+                        <div class="config-checkbox">
+                            <input type="checkbox" id="configTrackTime" ${taskData.trackTime ? 'checked' : ''}>
+                            <label for="configTrackTime">מעקב זמן</label>
+                        </div>
+                    `;
+                }
+
+                // Days selector
+                const activeDays = taskData.activeDays || [0, 1, 2, 3, 4, 5, 6];
+                const dayNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'שבת'];
+                html += `
+                    <div class="config-group">
+                        <label>ימים פעילים:</label>
+                        <div class="days-selector">
+                            ${dayNames.map((name, i) => `
+                                <div class="day-checkbox">
+                                    <input type="checkbox" id="configDay${i}" data-day="${i}" ${activeDays.includes(i) ? 'checked' : ''}>
+                                    <label for="configDay${i}">${name}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                return html;
+            }
+
+            return '';
+        }
+
+        // Apply configuration
+        function applyConfig() {
+            if (selectedItemIndex === null) return;
+
+            const item = boardItems[selectedItemIndex];
+
+            if (item.type === 'header') {
+                item.text = document.getElementById('configText').value;
+                item.size = document.getElementById('configSize').value;
+            } else if (item.type === 'bank') {
+                item.label = document.getElementById('configLabel').value;
+                item.showBonus = document.getElementById('configShowBonus').checked;
+            } else if (item.type === 'task') {
+                const taskData = item.taskData;
+                taskData.icon = document.getElementById('configIcon').dataset.icon;
+                taskData.title = document.getElementById('configTitle').value;
+                taskData.quantity = parseInt(document.getElementById('configQuantity').value) || 1;
+
+                if (item.taskType === 'bonus') {
+                    taskData.minReward = parseFloat(document.getElementById('configMinReward').value) || 0;
+                    taskData.maxReward = parseFloat(document.getElementById('configMaxReward').value) || 0;
+                }
+
+                if (item.taskType === 'calm-down') {
+                    taskData.activityType = document.getElementById('configActivityType').value;
+                    taskData.activityUrl = document.getElementById('configActivityUrl')?.value || '';
+                }
+
+                if (item.taskType !== 'calm-down') {
+                    taskData.requiresTestimony = document.getElementById('configTestimony').checked;
+                    taskData.trackTime = document.getElementById('configTrackTime').checked;
+                }
+
+                // Days
+                const activeDays = [];
+                for (let i = 0; i <= 6; i++) {
+                    if (document.getElementById(`configDay${i}`).checked) {
+                        activeDays.push(i);
+                    }
+                }
+                taskData.activeDays = activeDays;
+            }
+
+            renderBoard();
+            closeConfig();
+        }
+
+        // Close configuration panel
+        function closeConfig() {
+            document.getElementById('configPanel').classList.remove('active');
+            document.querySelectorAll('.board-item').forEach(el => {
+                el.style.outline = 'none';
+            });
+            selectedItemIndex = null;
+        }
+
+        // Delete item
+        function deleteItem(index) {
+            if (confirm('למחוק את הרכיב?')) {
+                boardItems.splice(index, 1);
+                renderBoard();
+                closeConfig();
+            }
+        }
+
+        // Duplicate item
+        function duplicateItem(index) {
+            const item = JSON.parse(JSON.stringify(boardItems[index]));
+            item.id = nextItemId++;
+            if (item.taskData) {
+                item.taskData.id = nextItemId;
+            }
+            boardItems.splice(index + 1, 0, item);
+            renderBoard();
+        }
+
+        // Emoji picker
+        function initEmojiGrid() {
+            const emojiGrid = document.getElementById('emojiGrid');
+
+            emojis.forEach(emoji => {
+                const emojiItem = document.createElement('div');
+                emojiItem.className = 'emoji-item';
+                emojiItem.textContent = emoji;
+                emojiItem.onclick = () => selectEmoji(emoji);
+                emojiGrid.appendChild(emojiItem);
+            });
+
+            emojiImages.forEach(imageName => {
+                const emojiItem = document.createElement('div');
+                emojiItem.className = 'emoji-item';
+                emojiItem.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
+                emojiItem.onclick = () => selectEmoji(`IMG:${imageName}`);
+                emojiGrid.appendChild(emojiItem);
+            });
+        }
+
+        function openEmojiPicker() {
+            document.getElementById('emojiModal').classList.add('active');
+        }
+
+        function closeEmojiPicker() {
+            document.getElementById('emojiModal').classList.remove('active');
+        }
+
+        function selectEmoji(emoji) {
+            const configIcon = document.getElementById('configIcon');
+            if (configIcon) {
+                configIcon.dataset.icon = emoji;
+                if (emoji.startsWith('IMG:')) {
+                    const imageName = emoji.substring(4);
+                    configIcon.innerHTML = `<img src="emojis/${imageName}" />`;
+                } else {
+                    configIcon.textContent = emoji;
+                }
+            }
+            closeEmojiPicker();
+        }
+
+        document.getElementById('emojiModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEmojiPicker();
+            }
+        });
+
+        // Activity type change handler
+        document.addEventListener('change', function(e) {
+            if (e.target.id === 'configActivityType') {
+                const urlGroup = document.getElementById('activityUrlGroup');
+                if (urlGroup) {
+                    urlGroup.style.display = e.target.value === 'link' ? '' : 'none';
+                }
+            }
+        });
+
+        // Save board
+        async function saveBoard() {
+            try {
+                // Convert board items to tasks array for backward compatibility
+                const tasks = [];
+                let taskId = 1;
+
+                boardItems.forEach(item => {
+                    if (item.type === 'task' && item.taskData) {
+                        const taskData = { ...item.taskData };
+                        const quantity = taskData.quantity || 1;
+                        delete taskData.quantity; // Don't store quantity in individual tasks
+
+                        // Create multiple task instances based on quantity
+                        for (let i = 0; i < quantity; i++) {
+                            tasks.push({
+                                ...taskData,
+                                id: taskId++,
+                                type: item.taskType
+                            });
+                        }
+                    }
+                });
+
+                // Extract headers for backward compatibility
+                const headers = boardItems.filter(i => i.type === 'header');
+                const bankItem = boardItems.find(i => i.type === 'bank');
+
+                // Find section headers (headers before tasks of each type)
+                let regularTasksHeader = '';
+                let bonusTasksHeader = '';
+                let calmDownHeader = '';
+                let headerLabel = '';
+
+                // First large header becomes page header
+                const largeHeader = headers.find(h => h.size === 'large');
+                if (largeHeader) {
+                    headerLabel = largeHeader.text;
+                }
+
+                // Find headers for each section by looking at what comes after them
+                for (let i = 0; i < boardItems.length; i++) {
+                    const item = boardItems[i];
+                    if (item.type === 'header' && item !== largeHeader) {
+                        // Look for next task to determine section
+                        for (let j = i + 1; j < boardItems.length; j++) {
+                            const nextItem = boardItems[j];
+                            if (nextItem.type === 'task') {
+                                if (nextItem.taskType === 'regular' && !regularTasksHeader) {
+                                    regularTasksHeader = item.text;
+                                } else if (nextItem.taskType === 'bonus' && !bonusTasksHeader) {
+                                    bonusTasksHeader = item.text;
+                                } else if (nextItem.taskType === 'calm-down' && !calmDownHeader) {
+                                    calmDownHeader = item.text;
+                                }
+                                break;
+                            }
+                            if (nextItem.type === 'header') break;
+                        }
+                    }
+                }
+
+                // Save to Firestore
+                await db.collection('kids').doc(kidId).update({
+                    tasks: tasks,
+                    boardLayout: { items: boardItems },
+                    headerLabel: headerLabel,
+                    savingsLabel: bankItem?.label || '',
+                    regularTasksHeader: regularTasksHeader,
+                    bonusTasksHeader: bonusTasksHeader,
+                    calmDownHeader: calmDownHeader
+                });
+
+                alert('הלוח נשמר בהצלחה!');
+            } catch (error) {
+                console.error('Error saving board:', error);
+                alert('שגיאה בשמירה: ' + error.message);
+            }
+        }
+
+        // Preview board
+        function previewBoard() {
+            window.open(`index.html?kid=${kidId}`, '_blank');
+        }
+    </script>
+</body>
+</html>

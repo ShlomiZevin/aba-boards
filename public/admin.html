@@ -628,14 +628,19 @@
                 const kid = doc.data();
                 const kidDiv = document.createElement('div');
                 kidDiv.className = 'kid-item';
+                // Check if kid has new board layout
+                const hasNewBoard = kid.boardLayout && kid.boardLayout.items && kid.boardLayout.items.length > 0;
+                const boardUrl = hasNewBoard ? 'board.html' : 'index.html';
+
                 kidDiv.innerHTML = `
                     <div class="kid-info">
                         <h3>${kid.name}</h3>
                         <div class="kid-tasks">${kid.tasks.length} משימות | $${(kid.totalMoney || 0).toFixed(2)}</div>
                     </div>
                     <div class="kid-links">
-                        <a href="index.html?kid=${doc.id}" class="btn btn-primary">לוח ילד</a>
-                        <a href="index.html?kid=${doc.id}&mode=parent" class="btn btn-secondary">לוח הורה</a>
+                        <a href="${boardUrl}?kid=${doc.id}" class="btn btn-primary">לוח ילד</a>
+                        <a href="${boardUrl}?kid=${doc.id}&mode=parent" class="btn btn-secondary">לוח הורה</a>
+                        <a href="board-builder.html?kid=${doc.id}" class="btn btn-primary" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">🎨 בנה לוח</a>
                         <button class="btn btn-primary" onclick="editKid('${doc.id}')">ערוך</button>
                         <button class="btn btn-secondary" onclick="copyKid('${doc.id}')">העתק</button>
                     </div>
