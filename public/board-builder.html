@@ -577,6 +577,55 @@
         <div class="builder-container">
             <!-- Component Palette -->
             <div class="palette">
+                <!-- Kid Settings Section (at top) -->
+                <div class="palette-section" style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 2px solid #eee;">
+                    <h4>הגדרות ילד</h4>
+
+                    <!-- Kid Image -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">תמונת פרופיל:</label>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <input type="file" id="kidImageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                            <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px;" onclick="document.getElementById('kidImageUpload').click()">📤 העלה</button>
+                            <div id="imagePreview" style="display: none; position: relative;">
+                                <img id="previewImg" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid #667eea;">
+                                <button type="button" onclick="removeImage()" style="position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; border-radius: 50%; background: #ff6b6b; color: white; border: none; cursor: pointer; font-size: 12px;">×</button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="kidImageData">
+                    </div>
+
+                    <!-- Daily Reward -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">פרס יומי:</label>
+                        <input type="number" id="dailyReward" placeholder="0.50" step="0.01" min="0" value="0.50" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 8px;">
+                    </div>
+
+                    <!-- Coin Style -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">סוג מטבע:</label>
+                        <select id="coinStyle" onchange="toggleCoinImageInput()" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 8px;">
+                            <option value="dollar">דולר ($)</option>
+                            <option value="shekel">שקל (₪)</option>
+                            <option value="custom">תמונה מותאמת</option>
+                        </select>
+                    </div>
+
+                    <!-- Coin Image (for custom) -->
+                    <div id="coinImageGroup" style="display: none; margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">תמונת מטבע:</label>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <input type="file" id="coinImageUpload" accept="image/*" style="display: none;" onchange="handleCoinImageUpload(event)">
+                            <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px;" onclick="document.getElementById('coinImageUpload').click()">📤 העלה</button>
+                            <div id="coinImagePreview" style="display: none; position: relative;">
+                                <img id="coinPreviewImg" style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%; border: 2px solid #ffd700;">
+                                <button type="button" onclick="removeCoinImage()" style="position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; border-radius: 50%; background: #ff6b6b; color: white; border: none; cursor: pointer; font-size: 12px;">×</button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="coinImageData">
+                    </div>
+                </div>
+
                 <h3>🧩 רכיבים</h3>
 
                 <div class="palette-section">
@@ -646,6 +695,31 @@
         </div>
     </div>
 
+    <!-- Crop Modal -->
+    <div id="cropModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>חתוך תמונה</h3>
+                <button class="close-btn" onclick="closeCropModal()">×</button>
+            </div>
+            <div style="text-align: center; padding: 20px;">
+                <div style="position: relative; display: inline-block; max-width: 100%;">
+                    <canvas id="cropCanvas" style="max-width: 100%; border: 2px solid #667eea; border-radius: 10px;"></canvas>
+                    <div id="cropBox" style="position: absolute; border: 3px solid #ffd700; cursor: move; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);">
+                        <div class="resize-handle resize-nw" style="position: absolute; top: -5px; left: -5px; width: 20px; height: 20px; background: #ffd700; border: 2px solid white; border-radius: 50%; cursor: nw-resize;"></div>
+                        <div class="resize-handle resize-ne" style="position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; background: #ffd700; border: 2px solid white; border-radius: 50%; cursor: ne-resize;"></div>
+                        <div class="resize-handle resize-sw" style="position: absolute; bottom: -5px; left: -5px; width: 20px; height: 20px; background: #ffd700; border: 2px solid white; border-radius: 50%; cursor: sw-resize;"></div>
+                        <div class="resize-handle resize-se" style="position: absolute; bottom: -5px; right: -5px; width: 20px; height: 20px; background: #ffd700; border: 2px solid white; border-radius: 50%; cursor: se-resize;"></div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn btn-primary" onclick="applyCrop()">✂️ חתוך</button>
+                    <button class="btn btn-secondary" onclick="closeCropModal()">ביטול</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Emoji Picker Modal -->
     <div id="emojiModal" class="modal">
         <div class="modal-content">
@@ -708,6 +782,25 @@
         let draggedItemIndex = null;
         let nextItemId = 1;
 
+        // Image upload state
+        let currentImage = null;
+        let currentCoinImage = null;
+        let isCoinCrop = false;
+        let cropState = {
+            x: 0,
+            y: 0,
+            size: 100,
+            isDragging: false,
+            isResizing: false,
+            resizeHandle: null,
+            startX: 0,
+            startY: 0,
+            startSize: 0,
+            startCropX: 0,
+            startCropY: 0,
+            minSize: 50
+        };
+
         // Get URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         kidId = urlParams.get('kid');
@@ -749,11 +842,61 @@
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('builderApp').style.display = 'block';
 
+                // Load kid settings
+                loadKidSettings();
+
                 renderBoard();
             } catch (error) {
                 console.error('Error loading kid:', error);
                 alert('שגיאה בטעינה');
             }
+        }
+
+        // Load kid settings into the palette
+        function loadKidSettings() {
+            // Daily reward
+            document.getElementById('dailyReward').value = kidData.dailyReward || 0.5;
+
+            // Kid image
+            const imageName = kidData.imageName || '';
+            if (imageName) {
+                if (imageName.startsWith('data:')) {
+                    document.getElementById('kidImageData').value = imageName;
+                    document.getElementById('previewImg').src = imageName;
+                    document.getElementById('imagePreview').style.display = 'block';
+                } else {
+                    // It's a filename - show as preview
+                    document.getElementById('previewImg').src = imageName;
+                    document.getElementById('imagePreview').style.display = 'block';
+                }
+            }
+
+            // Coin style
+            const coinStyle = kidData.coinStyle || 'dollar';
+            document.getElementById('coinStyle').value = coinStyle;
+            toggleCoinImageInput();
+
+            // Coin image
+            if (coinStyle === 'custom') {
+                const coinImageName = kidData.coinImageName || '';
+                if (coinImageName) {
+                    if (coinImageName.startsWith('data:')) {
+                        document.getElementById('coinImageData').value = coinImageName;
+                        document.getElementById('coinPreviewImg').src = coinImageName;
+                        document.getElementById('coinImagePreview').style.display = 'block';
+                    } else {
+                        document.getElementById('coinPreviewImg').src = coinImageName;
+                        document.getElementById('coinImagePreview').style.display = 'block';
+                    }
+                }
+            }
+        }
+
+        // Toggle coin image input visibility
+        function toggleCoinImageInput() {
+            const coinStyle = document.getElementById('coinStyle').value;
+            const coinImageGroup = document.getElementById('coinImageGroup');
+            coinImageGroup.style.display = coinStyle === 'custom' ? 'block' : 'none';
         }
 
         // Convert existing tasks to board items
@@ -1378,6 +1521,305 @@
             }
         });
 
+        // ==================== Image Upload Functions ====================
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('נא לבחור קובץ תמונה');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    currentImage = img;
+                    isCoinCrop = false;
+                    showCropModal();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleCoinImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('נא לבחור קובץ תמונה');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    currentCoinImage = img;
+                    isCoinCrop = true;
+                    showCropModal();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showCropModal() {
+            const modal = document.getElementById('cropModal');
+            const canvas = document.getElementById('cropCanvas');
+            const ctx = canvas.getContext('2d');
+            const cropBox = document.getElementById('cropBox');
+
+            const imageToUse = isCoinCrop ? currentCoinImage : currentImage;
+
+            const isMobile = window.innerWidth <= 600;
+            const maxSize = isMobile ? Math.min(window.innerWidth - 60, 400) : 500;
+            let width = imageToUse.width;
+            let height = imageToUse.height;
+
+            if (width > maxSize || height > maxSize) {
+                if (width > height) {
+                    height = (height / width) * maxSize;
+                    width = maxSize;
+                } else {
+                    width = (width / height) * maxSize;
+                    height = maxSize;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(imageToUse, 0, 0, width, height);
+
+            const cropSize = Math.min(width, height) * 0.7;
+            cropState.size = cropSize;
+            cropState.x = (width - cropSize) / 2;
+            cropState.y = (height - cropSize) / 2;
+
+            updateCropBox();
+
+            cropBox.onmousedown = startDrag;
+            cropBox.ontouchstart = startDrag;
+
+            const handles = cropBox.querySelectorAll('.resize-handle');
+            handles.forEach(handle => {
+                handle.onmousedown = (e) => startResize(e, handle.classList[1]);
+                handle.ontouchstart = (e) => startResize(e, handle.classList[1]);
+            });
+
+            document.onmousemove = handleMove;
+            document.onmouseup = stopDragOrResize;
+            document.ontouchmove = handleMove;
+            document.ontouchend = stopDragOrResize;
+
+            modal.classList.add('active');
+        }
+
+        function updateCropBox() {
+            const cropBox = document.getElementById('cropBox');
+            cropBox.style.left = cropState.x + 'px';
+            cropBox.style.top = cropState.y + 'px';
+            cropBox.style.width = cropState.size + 'px';
+            cropBox.style.height = cropState.size + 'px';
+        }
+
+        function startDrag(e) {
+            if (e.target.classList.contains('resize-handle')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            cropState.isDragging = true;
+
+            const cropBox = document.getElementById('cropBox');
+            const rect = cropBox.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            cropState.startX = clientX - rect.left;
+            cropState.startY = clientY - rect.top;
+        }
+
+        function startResize(e, handle) {
+            e.preventDefault();
+            e.stopPropagation();
+            cropState.isResizing = true;
+            cropState.resizeHandle = handle;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            cropState.startX = clientX;
+            cropState.startY = clientY;
+            cropState.startSize = cropState.size;
+            cropState.startCropX = cropState.x;
+            cropState.startCropY = cropState.y;
+        }
+
+        function handleMove(e) {
+            if (cropState.isDragging) {
+                dragCropBox(e);
+            } else if (cropState.isResizing) {
+                resizeCropBox(e);
+            }
+        }
+
+        function dragCropBox(e) {
+            e.preventDefault();
+
+            const canvas = document.getElementById('cropCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            let newX = clientX - canvasRect.left - cropState.startX;
+            let newY = clientY - canvasRect.top - cropState.startY;
+
+            newX = Math.max(0, Math.min(newX, canvas.width - cropState.size));
+            newY = Math.max(0, Math.min(newY, canvas.height - cropState.size));
+
+            cropState.x = newX;
+            cropState.y = newY;
+            updateCropBox();
+        }
+
+        function resizeCropBox(e) {
+            e.preventDefault();
+
+            const canvas = document.getElementById('cropCanvas');
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const deltaX = clientX - cropState.startX;
+            const deltaY = clientY - cropState.startY;
+
+            let newSize = cropState.startSize;
+            let newX = cropState.startCropX;
+            let newY = cropState.startCropY;
+
+            switch(cropState.resizeHandle) {
+                case 'resize-se':
+                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(deltaX, deltaY));
+                    break;
+                case 'resize-sw':
+                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(-deltaX, deltaY));
+                    newX = cropState.startCropX - (newSize - cropState.startSize);
+                    break;
+                case 'resize-ne':
+                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(deltaX, -deltaY));
+                    newY = cropState.startCropY - (newSize - cropState.startSize);
+                    break;
+                case 'resize-nw':
+                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(-deltaX, -deltaY));
+                    newX = cropState.startCropX - (newSize - cropState.startSize);
+                    newY = cropState.startCropY - (newSize - cropState.startSize);
+                    break;
+            }
+
+            newX = Math.max(0, Math.min(newX, canvas.width - newSize));
+            newY = Math.max(0, Math.min(newY, canvas.height - newSize));
+            newSize = Math.min(newSize, canvas.width - newX, canvas.height - newY);
+
+            cropState.size = newSize;
+            cropState.x = newX;
+            cropState.y = newY;
+            updateCropBox();
+        }
+
+        function stopDragOrResize() {
+            cropState.isDragging = false;
+            cropState.isResizing = false;
+            cropState.resizeHandle = null;
+        }
+
+        function applyCrop() {
+            const canvas = document.getElementById('cropCanvas');
+            const imageToUse = isCoinCrop ? currentCoinImage : currentImage;
+
+            const scaleX = imageToUse.width / canvas.width;
+            const scaleY = imageToUse.height / canvas.height;
+
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            const finalSize = 200;
+            tempCanvas.width = finalSize;
+            tempCanvas.height = finalSize;
+
+            tempCtx.drawImage(
+                imageToUse,
+                cropState.x * scaleX,
+                cropState.y * scaleY,
+                cropState.size * scaleX,
+                cropState.size * scaleY,
+                0,
+                0,
+                finalSize,
+                finalSize
+            );
+
+            // Check for transparency
+            let dataUrl;
+            const imageData = tempCtx.getImageData(0, 0, finalSize, finalSize);
+            let hasTransparency = false;
+
+            for (let i = 3; i < imageData.data.length; i += 4) {
+                if (imageData.data[i] < 255) {
+                    hasTransparency = true;
+                    break;
+                }
+            }
+
+            if (hasTransparency) {
+                dataUrl = tempCanvas.toDataURL('image/png');
+            } else {
+                dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
+            }
+
+            if (isCoinCrop) {
+                document.getElementById('coinImageData').value = dataUrl;
+                document.getElementById('coinPreviewImg').src = dataUrl;
+                document.getElementById('coinImagePreview').style.display = 'block';
+                isCoinCrop = false;
+            } else {
+                document.getElementById('kidImageData').value = dataUrl;
+                document.getElementById('previewImg').src = dataUrl;
+                document.getElementById('imagePreview').style.display = 'block';
+            }
+
+            closeCropModal();
+        }
+
+        function closeCropModal() {
+            const modal = document.getElementById('cropModal');
+            modal.classList.remove('active');
+            document.getElementById('kidImageUpload').value = '';
+            document.getElementById('coinImageUpload').value = '';
+            isCoinCrop = false;
+        }
+
+        function removeImage() {
+            document.getElementById('kidImageData').value = '';
+            document.getElementById('previewImg').src = '';
+            document.getElementById('imagePreview').style.display = 'none';
+        }
+
+        function removeCoinImage() {
+            document.getElementById('coinImageData').value = '';
+            document.getElementById('coinPreviewImg').src = '';
+            document.getElementById('coinImagePreview').style.display = 'none';
+        }
+
+        // Click outside crop modal to close
+        document.getElementById('cropModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCropModal();
+            }
+        });
+
+        // ==================== End Image Upload Functions ====================
+
         // Save board
         async function saveBoard() {
             try {
@@ -1440,6 +1882,19 @@
                     }
                 }
 
+                // Get kid settings from palette
+                const dailyReward = parseFloat(document.getElementById('dailyReward').value) || 0.5;
+                const coinStyle = document.getElementById('coinStyle').value;
+
+                // Get kid image - prefer uploaded data, fall back to existing
+                let imageName = document.getElementById('kidImageData').value || kidData.imageName || '';
+
+                // Get coin image - prefer uploaded data, fall back to existing
+                let coinImageName = '';
+                if (coinStyle === 'custom') {
+                    coinImageName = document.getElementById('coinImageData').value || kidData.coinImageName || '';
+                }
+
                 // Save to Firestore
                 await db.collection('kids').doc(kidId).update({
                     tasks: tasks,
@@ -1448,8 +1903,19 @@
                     savingsLabel: bankItem?.label || '',
                     regularTasksHeader: regularTasksHeader,
                     bonusTasksHeader: bonusTasksHeader,
-                    calmDownHeader: calmDownHeader
+                    calmDownHeader: calmDownHeader,
+                    // Kid settings
+                    dailyReward: dailyReward,
+                    imageName: imageName,
+                    coinStyle: coinStyle,
+                    coinImageName: coinImageName
                 });
+
+                // Update local kidData
+                kidData.dailyReward = dailyReward;
+                kidData.imageName = imageName;
+                kidData.coinStyle = coinStyle;
+                kidData.coinImageName = coinImageName;
 
                 alert('הלוח נשמר בהצלחה!');
             } catch (error) {
@@ -1460,7 +1926,7 @@
 
         // Preview board
         function previewBoard() {
-            window.open(`index.html?kid=${kidId}`, '_blank');
+            window.open(`board.html?kid=${kidId}`, '_blank');
         }
     </script>
 </body>
