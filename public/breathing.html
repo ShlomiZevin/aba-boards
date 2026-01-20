@@ -1,0 +1,361 @@
+<!DOCTYPE HTML>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תרגיל נשימות</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .breathing-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .title {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .breathing-circle-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 30px;
+        }
+
+        .breathing-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #a8edea 0%, #667eea 100%);
+            box-shadow: 0 0 40px rgba(102, 126, 234, 0.6);
+            transition: all 4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .breathing-circle.inhale {
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle, #fed6e3 0%, #f093fb 100%);
+            box-shadow: 0 0 80px rgba(240, 147, 251, 0.8);
+        }
+
+        .breathing-circle.exhale {
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, #a8edea 0%, #667eea 100%);
+            box-shadow: 0 0 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .breathing-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .instruction {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+            min-height: 40px;
+            font-weight: bold;
+        }
+
+        .counter {
+            font-size: 1.2em;
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .control-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+            color: white;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(81, 207, 102, 0.4);
+        }
+
+        .stop-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
+        .stop-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .sound-toggle {
+            background: linear-gradient(135deg, #ffd93d 0%, #f6c23e 100%);
+            color: #333;
+        }
+
+        .sound-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 217, 61, 0.4);
+        }
+
+        .info {
+            margin-top: 20px;
+            color: #667eea;
+            font-size: 1em;
+        }
+
+        @media (max-width: 600px) {
+            .title {
+                font-size: 2em;
+            }
+
+            .breathing-circle-container {
+                width: 250px;
+                height: 250px;
+            }
+
+            .breathing-circle {
+                width: 120px;
+                height: 120px;
+            }
+
+            .breathing-circle.inhale {
+                width: 230px;
+                height: 230px;
+            }
+
+            .breathing-text {
+                font-size: 1.5em;
+            }
+
+            .instruction {
+                font-size: 1.2em;
+            }
+
+            .control-btn {
+                padding: 12px 24px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="breathing-container">
+        <h1 class="title">🌬️ תרגיל נשימות 🌬️</h1>
+
+        <div class="instruction" id="instruction">לחץ על "התחל" כדי להתחיל</div>
+        <div class="counter" id="counter"></div>
+
+        <div class="breathing-circle-container">
+            <div class="breathing-circle" id="breathingCircle"></div>
+            <div class="breathing-text" id="breathingText">😌</div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn start-btn" id="startBtn" onclick="startBreathing()">🌟 התחל</button>
+            <button class="control-btn stop-btn" id="stopBtn" onclick="stopBreathing()" style="display: none;">🛑 עצור</button>
+            <button class="control-btn sound-toggle" id="soundBtn" onclick="toggleSound()">🔊 צליל</button>
+        </div>
+
+        <div class="info">
+            עקוב אחרי העיגול: שאף פנימה כשהוא גדל, נשוף החוצה כשהוא קטן
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API context
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let isBreathing = false;
+        let breathCount = 0;
+        let currentPhase = 'ready'; // ready, inhale, hold, exhale
+        let soundEnabled = true;
+        let breathingInterval;
+
+        const circle = document.getElementById('breathingCircle');
+        const text = document.getElementById('breathingText');
+        const instruction = document.getElementById('instruction');
+        const counter = document.getElementById('counter');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const soundBtn = document.getElementById('soundBtn');
+
+        // Breathing cycle timing (in milliseconds)
+        const timing = {
+            inhale: 4000,    // 4 seconds inhale
+            holdIn: 2000,    // 2 seconds hold
+            exhale: 4000,    // 4 seconds exhale
+            holdOut: 2000    // 2 seconds hold
+        };
+
+        function playTone(frequency, duration) {
+            if (!soundEnabled) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequency;
+
+            const now = audioContext.currentTime;
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+        }
+
+        function startBreathing() {
+            if (isBreathing) return;
+
+            isBreathing = true;
+            breathCount = 0;
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+
+            breathingCycle();
+        }
+
+        function stopBreathing() {
+            isBreathing = false;
+            currentPhase = 'ready';
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+
+            // Reset to initial state
+            circle.className = 'breathing-circle';
+            text.textContent = '😌';
+            instruction.textContent = 'לחץ על "התחל" כדי להתחיל';
+            counter.textContent = '';
+
+            if (breathingInterval) {
+                clearTimeout(breathingInterval);
+            }
+        }
+
+        async function breathingCycle() {
+            if (!isBreathing) return;
+
+            // Phase 1: Inhale
+            currentPhase = 'inhale';
+            circle.className = 'breathing-circle inhale';
+            text.textContent = '⬆️';
+            instruction.textContent = 'שאף פנימה דרך האף';
+            playTone(440, 0.5); // A4 note for inhale start
+
+            await wait(timing.inhale);
+            if (!isBreathing) return;
+
+            // Phase 2: Hold (after inhale)
+            currentPhase = 'hold';
+            instruction.textContent = 'החזק את הנשימה';
+            text.textContent = '⏸️';
+            playTone(523, 0.3); // C5 note for hold
+
+            await wait(timing.holdIn);
+            if (!isBreathing) return;
+
+            // Phase 3: Exhale
+            currentPhase = 'exhale';
+            circle.className = 'breathing-circle exhale';
+            text.textContent = '⬇️';
+            instruction.textContent = 'נשוף החוצה דרך הפה';
+            playTone(349, 0.5); // F4 note for exhale start
+
+            await wait(timing.exhale);
+            if (!isBreathing) return;
+
+            // Phase 4: Hold (after exhale)
+            currentPhase = 'hold';
+            instruction.textContent = 'המתן רגע';
+            text.textContent = '⏸️';
+            playTone(392, 0.3); // G4 note for hold
+
+            await wait(timing.holdOut);
+            if (!isBreathing) return;
+
+            // Complete one cycle
+            breathCount++;
+            counter.textContent = `✨ סבבים שהושלמו: ${breathCount} ✨`;
+            playTone(587, 0.5); // D5 note for cycle complete
+
+            // Continue to next cycle
+            breathingCycle();
+        }
+
+        function wait(ms) {
+            return new Promise(resolve => {
+                breathingInterval = setTimeout(resolve, ms);
+            });
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            if (soundEnabled) {
+                soundBtn.innerHTML = '🔊 צליל';
+                playTone(440, 0.2); // Play test sound
+            } else {
+                soundBtn.innerHTML = '🔇 שקט';
+            }
+        }
+
+        // Prevent scrolling on mobile
+        document.body.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
