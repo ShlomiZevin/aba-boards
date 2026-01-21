@@ -176,7 +176,7 @@
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
     const PERSONALITY = 'hila';
-    const SPEED = 1.8; // Speech speed (0.25 to 4.0, default 1.0)
+    const SPEED = 1.6; // Speech speed (0.25 to 4.0, default 1.0)
     // TODO: Replace with actual Hila voice ID from ElevenLabs
     const VOICE_ID = 'flHkNRp1BlvT73UL6gyz'; // Set to null to use default, or replace with actual voice ID like 'abc123xyz'
 
@@ -520,7 +520,6 @@
 
         stopThinkingAnimation();
         status.textContent = '';
-        showSpeechBubble(data.responseText);
 
         audioPlayer.src = `data:audio/mp3;base64,${data.audioBase64}`;
         audioPlayer.playbackRate = SPEED; // Speed up audio playback
@@ -528,7 +527,6 @@
         playLipSync(data.lipSyncData);
 
         audioPlayer.onended = () => {
-          hideSpeechBubble();
           setMouthShape(0);
           status.textContent = '';
           setButtonState('idle');
