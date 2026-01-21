@@ -260,6 +260,16 @@
       <input type="text" id="textInput" placeholder="מה להגיד?" value="שלום עולם!">
     </div>
 
+    <div class="input-group">
+      <button id="chatBtn">💬 שאל את דינו!</button>
+      <input type="text" id="chatInput" placeholder="שאל שאלה...">
+    </div>
+
+    <div class="input-group">
+      <button id="recordBtn">🎤 הקלט ודבר</button>
+      <span id="recordingStatus" style="color: #ff5722; font-size: 14px;"></span>
+    </div>
+
     <div class="status" id="status"></div>
   </div>
 
@@ -480,6 +490,145 @@
     function setButtonsDisabled(disabled) {
       greetBtn.disabled = disabled;
       speakBtn.disabled = disabled;
+      chatBtn.disabled = disabled;
+      recordBtn.disabled = disabled;
+    }
+
+    // Chat with dinosaur (text-based)
+    async function chat(text) {
+      try {
+        setButtonsDisabled(true);
+        status.textContent = 'דינו חושב...';
+
+        const response = await fetch(`${API_URL}/avatar/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            mouthShapeCount: parseInt(mouthShapeCountSelect.value),
+            lipSyncMethod: lipSyncMethodSelect.value
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || response.statusText);
+        }
+
+        const data = await response.json();
+
+        status.textContent = 'דינו מדבר...';
+        console.log('You said:', data.userText);
+        console.log('Dino says:', data.responseText);
+        showSpeechBubble(data.responseText);
+
+        audioPlayer.src = `data:audio/mp3;base64,${data.audioBase64}`;
+        await audioPlayer.play();
+        playLipSync(data.lipSyncData);
+
+        audioPlayer.onended = () => {
+          hideSpeechBubble();
+          setMouthShape(0);
+          status.textContent = '';
+          setButtonsDisabled(false);
+        };
+
+      } catch (err) {
+        console.error('Error:', err);
+        status.textContent = `שגיאה: ${err.message}`;
+        setButtonsDisabled(false);
+      }
+    }
+
+    // Recording state
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    const chatBtn = document.getElementById('chatBtn');
+    const chatInput = document.getElementById('chatInput');
+    const recordBtn = document.getElementById('recordBtn');
+    const recordingStatus = document.getElementById('recordingStatus');
+
+    // Start/stop recording
+    async function toggleRecording() {
+      if (isRecording) {
+        mediaRecorder.stop();
+        recordBtn.textContent = '🎤 הקלט ודבר';
+        recordingStatus.textContent = '';
+        isRecording = false;
+      } else {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            stream.getTracks().forEach(track => track.stop());
+            await sendAudioToServer(audioBlob);
+          };
+
+          mediaRecorder.start();
+          recordBtn.textContent = '⏹️ עצור הקלטה';
+          recordingStatus.textContent = '🔴 מקליט...';
+          isRecording = true;
+        } catch (err) {
+          console.error('Microphone error:', err);
+          status.textContent = 'שגיאה: לא ניתן לגשת למיקרופון';
+        }
+      }
+    }
+
+    // Send recorded audio to server
+    async function sendAudioToServer(audioBlob) {
+      try {
+        setButtonsDisabled(true);
+        status.textContent = 'מעבד הקלטה...';
+
+        const params = new URLSearchParams({
+          mouthShapeCount: mouthShapeCountSelect.value,
+          lipSyncMethod: lipSyncMethodSelect.value
+        });
+
+        const response = await fetch(`${API_URL}/avatar/converse?${params}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'audio/webm' },
+          body: audioBlob
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || response.statusText);
+        }
+
+        const data = await response.json();
+
+        status.textContent = 'דינו מדבר...';
+        console.log('You said:', data.userText);
+        console.log('Dino says:', data.responseText);
+        showSpeechBubble(data.responseText);
+
+        audioPlayer.src = `data:audio/mp3;base64,${data.audioBase64}`;
+        await audioPlayer.play();
+        playLipSync(data.lipSyncData);
+
+        audioPlayer.onended = () => {
+          hideSpeechBubble();
+          setMouthShape(0);
+          status.textContent = '';
+          setButtonsDisabled(false);
+        };
+
+      } catch (err) {
+        console.error('Error:', err);
+        status.textContent = `שגיאה: ${err.message}`;
+        setButtonsDisabled(false);
+      }
     }
 
     // Event listeners
@@ -499,6 +648,20 @@
         if (text) speak(text);
       }
     });
+
+    chatBtn.addEventListener('click', () => {
+      const text = chatInput.value.trim();
+      if (text) chat(text);
+    });
+
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const text = chatInput.value.trim();
+        if (text) chat(text);
+      }
+    });
+
+    recordBtn.addEventListener('click', toggleRecording);
 
     mouthShapeCountSelect.addEventListener('change', loadMouthImages);
 
