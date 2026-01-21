@@ -154,6 +154,13 @@
     // Mouth shape images
     let mouthImages = [];
 
+    // Thinking animation images
+    let thinkingImages = [];
+    let thinkingAnimationInterval = null;
+    let currentThinkingFrame = 0;
+    const THINKING_IMAGE_COUNT = 6;
+    const THINKING_ANIMATION_SPEED = 300; // ms between frames
+
     // Recording state
     let mediaRecorder = null;
     let audioChunks = [];
@@ -191,6 +198,55 @@
         mouthImages = images;
         avatarImage.src = images[0];
         avatarImage.style.display = 'block';
+      }
+    }
+
+    // Load thinking images
+    async function loadThinkingImages() {
+      const images = [];
+
+      for (let i = 0; i < THINKING_IMAGE_COUNT; i++) {
+        const img = new Image();
+        img.src = `/avatar/dinosaur/thinking_${i}.png`;
+
+        try {
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          images.push(img.src);
+        } catch {
+          break;
+        }
+      }
+
+      if (images.length > 0) {
+        thinkingImages = images;
+      }
+    }
+
+    // Start thinking animation (random order)
+    function startThinkingAnimation() {
+      if (thinkingImages.length === 0) return;
+
+      const randomIndex = Math.floor(Math.random() * thinkingImages.length);
+      avatarImage.src = thinkingImages[randomIndex];
+
+      thinkingAnimationInterval = setInterval(() => {
+        const nextIndex = Math.floor(Math.random() * thinkingImages.length);
+        avatarImage.src = thinkingImages[nextIndex];
+      }, THINKING_ANIMATION_SPEED);
+    }
+
+    // Stop thinking animation
+    function stopThinkingAnimation() {
+      if (thinkingAnimationInterval) {
+        clearInterval(thinkingAnimationInterval);
+        thinkingAnimationInterval = null;
+      }
+      // Return to default mouth shape
+      if (mouthImages.length > 0) {
+        avatarImage.src = mouthImages[0];
       }
     }
 
@@ -347,6 +403,7 @@
       try {
         setButtonState('disabled');
         status.textContent = 'חושב...';
+        startThinkingAnimation();
 
         const params = new URLSearchParams({
           mouthShapeCount: MOUTH_SHAPE_COUNT,
@@ -366,6 +423,7 @@
 
         const data = await response.json();
 
+        stopThinkingAnimation();
         status.textContent = '';
         showSpeechBubble(data.responseText);
 
@@ -382,6 +440,7 @@
 
       } catch (err) {
         console.error('Error:', err);
+        stopThinkingAnimation();
         status.textContent = 'שגיאה';
         setTimeout(() => {
           status.textContent = '';
@@ -395,6 +454,7 @@
 
     // Initialize
     loadMouthImages();
+    loadThinkingImages();
   </script>
 </body>
 </html>
