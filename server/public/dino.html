@@ -18,10 +18,9 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: space-between;
       padding: 10px;
-      padding-bottom: 40px;
       overflow: hidden;
+      position: relative;
     }
 
     /* Mobile audio unlock overlay */
@@ -54,12 +53,14 @@
     }
 
     .avatar-container {
-      flex: 1;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 90px;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 100%;
-      min-height: 0;
     }
 
     .avatar-image {
@@ -71,28 +72,34 @@
 
     /* Status display */
     .status-display {
+      position: absolute;
+      bottom: 60px;
+      left: 10px;
+      right: 10px;
       font-size: 14px;
       font-weight: bold;
       color: #2d5a45;
-      min-height: 20px;
+      height: 25px;
       text-align: center;
-      padding: 5px 0;
     }
 
     /* Record button */
     .record-btn {
+      position: absolute;
+      bottom: 5px;
+      left: 50%;
+      transform: translateX(-50%);
       width: 50px;
       height: 50px;
       border-radius: 50%;
       border: none;
       cursor: pointer;
       font-size: 24px;
-      transition: all 0.3s ease;
+      transition: all 0.3s ease, transform 0.3s ease;
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      flex-shrink: 0;
     }
 
     .record-btn.idle {
@@ -110,11 +117,11 @@
     }
 
     .record-btn:hover:not(.disabled) {
-      transform: scale(1.1);
+      transform: translateX(-50%) scale(1.1);
     }
 
     .record-btn:active:not(.disabled) {
-      transform: scale(0.95);
+      transform: translateX(-50%) scale(0.95);
     }
 
     @keyframes pulse {
@@ -146,14 +153,6 @@
       opacity: 1;
     }
 
-    .wrapper {
-      position: relative;
-      width: 100%;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
   </style>
 </head>
 <body>
@@ -162,13 +161,10 @@
     <button class="unlock-btn" id="unlockBtn">🦕 לחץ להתחיל</button>
   </div>
 
-  <div class="wrapper">
-    <div class="speech-bubble" id="speechBubble"></div>
-    <div class="avatar-container">
-      <img id="avatarImage" class="avatar-image" src="/avatar/dinosaur/mouth_0.png" onerror="this.style.display='none'">
-    </div>
+  <div class="avatar-container">
+    <img id="avatarImage" class="avatar-image" src="/avatar/dinosaur/mouth_0.png" onerror="this.style.display='none'">
   </div>
-
+  <div class="speech-bubble" id="speechBubble"></div>
   <div class="status-display" id="status"></div>
   <button class="record-btn idle" id="recordBtn">🎤</button>
 
