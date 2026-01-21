@@ -24,19 +24,8 @@ const DINOSAUR_SYSTEM_PROMPT = `אתה דינוזאור חמוד וידידות�
  * @returns {Promise<string>} - Transcribed text
  */
 async function transcribeAudio(audioBuffer, filename = 'audio.webm') {
-  const fs = require('fs');
-  const path = require('path');
-
-  console.log('Received audio buffer, size:', audioBuffer.length, 'bytes');
-  console.log('First 20 bytes:', audioBuffer.slice(0, 20));
-
-  // Save temp file for debugging and to ensure proper file format
-  const tempPath = path.join(__dirname, '..', 'temp_audio.webm');
-  fs.writeFileSync(tempPath, audioBuffer);
-  console.log('Saved temp audio to:', tempPath);
-
-  // Use file stream instead of buffer
-  const file = fs.createReadStream(tempPath);
+  // Convert buffer to file object without saving to disk
+  const file = await toFile(audioBuffer, filename, { type: 'audio/webm' });
 
   const transcription = await openai.audio.transcriptions.create({
     file: file,
@@ -44,9 +33,6 @@ async function transcribeAudio(audioBuffer, filename = 'audio.webm') {
     language: 'he' // Hebrew
   });
 
-  // Keep temp file for debugging - check server/temp_audio.webm
-  console.log('Whisper transcription:', transcription.text);
-  console.log('Audio saved at:', tempPath, '- listen to verify recording quality');
   return transcription.text;
 }
 

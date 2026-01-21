@@ -544,6 +544,15 @@
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
+    let audioContext = null;
+    let analyser = null;
+    let silenceTimer = null;
+    let hasSpeechStarted = false;
+
+    // Silence detection settings
+    const SILENCE_THRESHOLD = 5; // Volume level below this is considered silence (lowered from 15)
+    const SILENCE_DURATION = 1500; // Stop after 1.5 seconds of silence
+    const MIN_RECORDING_TIME = 500; // Minimum recording time before auto-stop
 
     const chatBtn = document.getElementById('chatBtn');
     const chatInput = document.getElementById('chatInput');
@@ -553,34 +562,103 @@
     // Start/stop recording
     async function toggleRecording() {
       if (isRecording) {
-        mediaRecorder.stop();
-        recordBtn.textContent = '🎤 הקלט ודבר';
-        recordingStatus.textContent = '';
-        isRecording = false;
+        stopRecording();
       } else {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
           audioChunks = [];
+          hasSpeechStarted = false;
+
+          // Setup audio analysis for silence detection
+          audioContext = new AudioContext();
+          // Resume AudioContext if suspended (browser requirement)
+          if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+          }
+
+          const source = audioContext.createMediaStreamSource(stream);
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 512;
+          source.connect(analyser);
+
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const recordingStartTime = Date.now();
+
+          // Monitor audio levels
+          function checkAudioLevel() {
+            if (!isRecording) return;
+
+            analyser.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            const volumeDisplay = Math.round(average);
+
+            if (average > SILENCE_THRESHOLD) {
+              hasSpeechStarted = true;
+              recordingStatus.textContent = `🔴 מקליט... (מדבר)`;
+              // Clear silence timer when speech detected
+              if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+              }
+            } else if (hasSpeechStarted && Date.now() - recordingStartTime > MIN_RECORDING_TIME) {
+              recordingStatus.textContent = `🔴 מקליט... (שקט)`;
+              // Start silence timer if not already running
+              if (!silenceTimer) {
+                silenceTimer = setTimeout(() => {
+                  stopRecording();
+                }, SILENCE_DURATION);
+              }
+            } else {
+              recordingStatus.textContent = `🔴 מקליט...`;
+            }
+
+            requestAnimationFrame(checkAudioLevel);
+          }
 
           mediaRecorder.ondataavailable = (e) => {
             audioChunks.push(e.data);
           };
 
           mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             stream.getTracks().forEach(track => track.stop());
-            await sendAudioToServer(audioBlob);
+            if (audioContext) {
+              audioContext.close();
+              audioContext = null;
+            }
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
+
+            // Only send if we have actual speech
+            if (hasSpeechStarted && audioChunks.length > 0) {
+              const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+              await sendAudioToServer(audioBlob);
+            } else {
+              status.textContent = 'לא זוהה דיבור';
+              setButtonsDisabled(false);
+            }
           };
 
-          mediaRecorder.start();
+          mediaRecorder.start(100); // Collect data every 100ms for better trimming
           recordBtn.textContent = '⏹️ עצור הקלטה';
           recordingStatus.textContent = '🔴 מקליט...';
-          isRecording = true;
+          isRecording = true; // Set this BEFORE starting the audio level check
+          checkAudioLevel();
         } catch (err) {
           console.error('Microphone error:', err);
           status.textContent = 'שגיאה: לא ניתן לגשת למיקרופון';
         }
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        recordBtn.textContent = '🎤 הקלט ודבר';
+        recordingStatus.textContent = '';
+        isRecording = false;
       }
     }
 
