@@ -53,14 +53,12 @@
     }
 
     .avatar-container {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      bottom: 150px;
+      flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 100%;
+      min-height: 0;
     }
 
     .avatar-image {
@@ -72,34 +70,31 @@
 
     /* Status display */
     .status-display {
-      position: absolute;
-      bottom: 120px;
-      left: 10px;
-      right: 10px;
       font-size: 14px;
       font-weight: bold;
       color: #880e4f;
       height: 25px;
       text-align: center;
+      margin-top: 10px;
     }
 
     /* Record button */
     .record-btn {
-      position: absolute;
-      bottom: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 50px;
-      height: 50px;
+      position: fixed;
+      top: 50%;
+      right: 20px;
+      width: 70px;
+      height: 70px;
       border-radius: 50%;
       border: none;
       cursor: pointer;
-      font-size: 24px;
-      transition: all 0.3s ease, transform 0.3s ease;
+      font-size: 32px;
+      transition: all 0.3s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 50;
     }
 
     .record-btn.idle {
@@ -117,11 +112,11 @@
     }
 
     .record-btn:hover:not(.disabled) {
-      transform: translateX(-50%) scale(1.1);
+      transform: scale(1.1);
     }
 
     .record-btn:active:not(.disabled) {
-      transform: translateX(-50%) scale(0.95);
+      transform: scale(0.95);
     }
 
     @keyframes pulse {
