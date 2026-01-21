@@ -19,53 +19,64 @@
 
     <style>
         /* Color Schema CSS Variables */
+        /* Pastel palettes inspired by the Doing logo - suitable for autistic children */
         :root {
-            --primary-start: #667eea;
-            --primary-end: #764ba2;
-            --primary-color: #667eea;
-            --text-on-primary: white;
-            --card-completed-start: #667eea;
-            --card-completed-end: #764ba2;
+            --primary-start: #A8D5E5;
+            --primary-end: #89C4B8;
+            --primary-color: #5BA4B5;
+            --text-on-primary: #2D4A53;
+            /* Completed: lighter/brighter version - "lit up" effect */
+            --card-completed-start: #D4EEF5;
+            --card-completed-end: #C0E8E0;
+            --card-completed-text: #1A3A42;
         }
 
-        /* Purple Classic (default) */
+        /* Teal & Mint - Calming (default) - inspired by logo blue/teal */
         body.schema-purple {
-            --primary-start: #667eea;
-            --primary-end: #764ba2;
-            --primary-color: #667eea;
-            --text-on-primary: white;
-            --card-completed-start: #667eea;
-            --card-completed-end: #764ba2;
+            --primary-start: #A8D5E5;
+            --primary-end: #89C4B8;
+            --primary-color: #5BA4B5;
+            --text-on-primary: #2D4A53;
+            /* Completed: lighter teal/mint with cream tint - glowing effect */
+            --card-completed-start: #D4EEF5;
+            --card-completed-end: #C0E8E0;
+            --card-completed-text: #1A3A42;
         }
 
-        /* Pink Dreamy */
+        /* Coral & Peach - Warm (inspired by logo coral/orange) */
         body.schema-pink {
-            --primary-start: #f093fb;
-            --primary-end: #f5576c;
-            --primary-color: #f093fb;
-            --text-on-primary: white;
-            --card-completed-start: #f093fb;
-            --card-completed-end: #f5576c;
+            --primary-start: #F5C6AA;
+            --primary-end: #E8A07E;
+            --primary-color: #D4896A;
+            --text-on-primary: #4A3228;
+            /* Completed: lighter peach/cream - glowing warm effect */
+            --card-completed-start: #FDE8D8;
+            --card-completed-end: #F8D8C4;
+            --card-completed-text: #3A2218;
         }
 
-        /* Blue Sky */
+        /* Sky & Lavender - Dreamy (soft blue variant) */
         body.schema-blue {
-            --primary-start: #4facfe;
-            --primary-end: #00f2fe;
-            --primary-color: #4facfe;
-            --text-on-primary: white;
-            --card-completed-start: #4facfe;
-            --card-completed-end: #00f2fe;
+            --primary-start: #B8D4E8;
+            --primary-end: #C5B8E8;
+            --primary-color: #7BA3C4;
+            --text-on-primary: #2D3A4A;
+            /* Completed: lighter sky/lavender - ethereal glow */
+            --card-completed-start: #E0EEFA;
+            --card-completed-end: #E8E0F8;
+            --card-completed-text: #1D2A3A;
         }
 
-        /* Dark Modern */
+        /* Soft Navy & Sage - Dark Mode (muted, low-stimulation) */
         body.schema-dark {
-            --primary-start: #434343;
-            --primary-end: #1a1a2e;
-            --primary-color: #6c5ce7;
-            --text-on-primary: white;
-            --card-completed-start: #6c5ce7;
-            --card-completed-end: #a29bfe;
+            --primary-start: #3D5A6C;
+            --primary-end: #2C4A52;
+            --primary-color: #89B5A5;
+            --text-on-primary: #E8F0ED;
+            /* Completed: lighter navy/slate - subtle glow, same family */
+            --card-completed-start: #5A7A8C;
+            --card-completed-end: #4A6A7A;
+            --card-completed-text: #F0F8F5;
         }
 
         /* Override doing-theme styles with color schema */
@@ -81,7 +92,7 @@
         body.doing-theme.schema-blue .task-card.completed,
         body.doing-theme.schema-dark .task-card.completed {
             background: linear-gradient(135deg, var(--card-completed-start) 0%, var(--card-completed-end) 100%) !important;
-            color: var(--text-on-primary) !important;
+            color: var(--card-completed-text, var(--text-on-primary)) !important;
         }
 
         body.doing-theme.schema-purple .progress-bar,
@@ -120,15 +131,15 @@
         }
 
         .piggy-bank-section {
-            background: linear-gradient(145deg, #fff9e6 0%, #fff3cc 50%, #ffe680 100%);
+            background: linear-gradient(145deg, #FDF8E8 0%, #F8F0D8 50%, #F5E6B8 100%);
             padding: 30px 25px;
             border-radius: 25px;
             margin-bottom: 25px;
             box-shadow:
-                0 10px 40px rgba(255, 193, 7, 0.3),
-                0 2px 10px rgba(0,0,0,0.1),
-                inset 0 -3px 0 rgba(255, 193, 7, 0.3);
-            border: 3px solid rgba(255, 215, 0, 0.4);
+                0 10px 40px rgba(232, 200, 109, 0.25),
+                0 2px 10px rgba(0,0,0,0.08),
+                inset 0 -3px 0 rgba(232, 200, 109, 0.25);
+            border: 3px solid rgba(232, 200, 109, 0.5);
             position: relative;
             overflow: hidden;
             text-align: center;
@@ -153,9 +164,9 @@
             border-radius: 50%;
             overflow: hidden;
             box-shadow:
-                0 8px 25px rgba(0,0,0,0.2),
+                0 8px 25px rgba(0,0,0,0.15),
                 0 0 0 4px rgba(255,255,255,0.8),
-                0 0 0 8px rgba(255, 193, 7, 0.3);
+                0 0 0 8px rgba(232, 200, 109, 0.35);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -178,10 +189,7 @@
         .money-counter {
             font-size: 2.8em;
             font-weight: 800;
-            background: linear-gradient(135deg, #f857a6 0%, #ff5858 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #D4896A;
             filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.15));
             margin: 8px 0;
             position: relative;
@@ -217,7 +225,7 @@
         }
 
         h1 {
-            color: var(--primary-color);
+            color: #2D4A53;
             font-size: 2.5em;
             margin-bottom: 10px;
         }
@@ -248,11 +256,11 @@
             color: var(--text-on-primary);
             font-weight: 700;
             font-size: 0.95em;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
             border-radius: 18px;
             position: relative;
             box-shadow:
-                0 2px 10px rgba(102, 126, 234, 0.4),
+                0 2px 10px rgba(0, 0, 0, 0.15),
                 inset 0 1px 0 rgba(255,255,255,0.3);
         }
 
@@ -284,10 +292,7 @@
         .progress-title {
             font-size: 1.3em;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #2D4A53;
             text-align: center;
             margin-bottom: 15px;
             letter-spacing: 0.5px;
@@ -295,6 +300,151 @@
 
         .progress-section .progress-container {
             margin-top: 0;
+        }
+
+        /* Glowing progress bar when all tasks complete */
+        .progress-section.all-done .progress-container {
+            animation: containerGlow 2s ease-in-out infinite;
+        }
+
+        .progress-section.all-done .progress-bar {
+            animation: barGlow 2s ease-in-out infinite;
+            position: relative;
+        }
+
+        @keyframes containerGlow {
+            0%, 100% {
+                box-shadow:
+                    0 4px 15px rgba(232, 200, 109, 0.3),
+                    0 0 20px rgba(232, 200, 109, 0.2),
+                    inset 0 2px 4px rgba(255,255,255,0.8);
+            }
+            50% {
+                box-shadow:
+                    0 4px 25px rgba(232, 200, 109, 0.5),
+                    0 0 35px rgba(232, 200, 109, 0.4),
+                    inset 0 2px 4px rgba(255,255,255,0.8);
+            }
+        }
+
+        @keyframes barGlow {
+            0%, 100% {
+                box-shadow:
+                    0 2px 10px rgba(0, 0, 0, 0.15),
+                    0 0 15px rgba(232, 200, 109, 0.4),
+                    inset 0 1px 0 rgba(255,255,255,0.3);
+            }
+            50% {
+                box-shadow:
+                    0 2px 15px rgba(0, 0, 0, 0.15),
+                    0 0 25px rgba(232, 200, 109, 0.6),
+                    inset 0 1px 0 rgba(255,255,255,0.3);
+            }
+        }
+
+        /* Golden shimmer sweep effect */
+        .progress-section.all-done .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 223, 150, 0.4),
+                rgba(255, 240, 180, 0.6),
+                rgba(255, 223, 150, 0.4),
+                transparent
+            );
+            animation: shimmerSweep 2.5s ease-in-out infinite;
+            border-radius: 18px;
+        }
+
+        @keyframes shimmerSweep {
+            0% {
+                left: -50%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
+        /* Sparkle elements container - overlays the progress bar */
+        .progress-sparkles {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 60px;
+            transform: translateY(-50%);
+            pointer-events: none;
+            overflow: visible;
+            z-index: 5;
+        }
+
+        .sparkle {
+            position: absolute;
+            font-size: 1.2em;
+            opacity: 0;
+            filter: drop-shadow(0 0 3px rgba(255, 215, 100, 0.8));
+        }
+
+        .progress-section.all-done .sparkle {
+            animation: sparkleGlimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes sparkleGlimmer {
+            0%, 100% {
+                opacity: 0.3;
+                transform: scale(0.8) rotate(0deg);
+            }
+            25% {
+                opacity: 1;
+                transform: scale(1.1) rotate(10deg);
+            }
+            50% {
+                opacity: 0.6;
+                transform: scale(0.9) rotate(-5deg);
+            }
+            75% {
+                opacity: 1;
+                transform: scale(1.2) rotate(5deg);
+            }
+        }
+
+        /* Floating golden feather */
+        .golden-feather {
+            position: absolute;
+            font-size: 1.8em;
+            opacity: 0;
+            filter: drop-shadow(0 2px 6px rgba(218, 165, 32, 0.6))
+                    drop-shadow(0 0 10px rgba(255, 215, 100, 0.4));
+            z-index: 10;
+        }
+
+        .progress-section.all-done .golden-feather {
+            animation: featherFloat 4s ease-in-out infinite;
+        }
+
+        @keyframes featherFloat {
+            0%, 100% {
+                opacity: 0.7;
+                transform: translateY(0) rotate(-10deg) scale(1);
+            }
+            25% {
+                opacity: 1;
+                transform: translateY(-5px) rotate(5deg) scale(1.1);
+            }
+            50% {
+                opacity: 0.9;
+                transform: translateY(-8px) rotate(-5deg) scale(1.05);
+            }
+            75% {
+                opacity: 1;
+                transform: translateY(-3px) rotate(8deg) scale(1.1);
+            }
         }
 
         .tasks-grid, .bonus-tasks-grid, .calm-down-grid {
@@ -322,66 +472,68 @@
 
         .task-card.completed {
             background: linear-gradient(135deg, var(--card-completed-start) 0%, var(--card-completed-end) 100%);
-            color: var(--text-on-primary);
+            color: var(--card-completed-text, var(--text-on-primary));
         }
 
         /* Bonus task styles */
         .bonus-task-card {
             background: white;
-            border: 3px solid #ffd700;
+            border: 3px solid #E8C86D;
             border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+            box-shadow: 0 5px 20px rgba(232, 200, 109, 0.3);
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            color: #2D4A53;
         }
 
         .bonus-task-card:hover {
             transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.6);
+            box-shadow: 0 10px 30px rgba(232, 200, 109, 0.5);
         }
 
         .bonus-task-card.completed {
-            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-            color: #333;
-            border-color: #ffaa00;
+            background: linear-gradient(135deg, #F5E6B8 0%, #E8D68D 100%);
+            color: #4A3F28;
+            border-color: #D4B85A;
         }
 
         .bonus-reward-badge {
             position: absolute;
             top: 10px;
             right: 10px;
-            background: #ffd700;
-            color: #333;
+            background: #E8C86D;
+            color: #4A3F28;
             padding: 5px 10px;
             border-radius: 20px;
             font-size: 0.9em;
             font-weight: bold;
-            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
+            box-shadow: 0 2px 8px rgba(232, 200, 109, 0.4);
         }
 
         .bonus-task-card.completed .bonus-reward-badge {
-            background: #ffaa00;
+            background: #D4B85A;
         }
 
         /* Calm down task styles */
         .calm-down-card {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            border: 3px solid #89CFF0;
+            background: linear-gradient(135deg, #C8E6E4 0%, #E8D5DC 100%);
+            border: 3px solid #A8D5E5;
             border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 5px 20px rgba(168, 237, 234, 0.5);
+            box-shadow: 0 5px 20px rgba(168, 213, 229, 0.4);
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            color: #2D4A53;
         }
 
         .calm-down-card:hover {
             transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 10px 30px rgba(168, 237, 234, 0.7);
+            box-shadow: 0 10px 30px rgba(168, 213, 229, 0.6);
         }
 
         /* Dino container - fixed position */
@@ -420,7 +572,7 @@
             display: none;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
+            background: linear-gradient(135deg, #89C4B8 0%, #A8D5E5 100%);
             align-items: center;
             justify-content: center;
             font-size: 40px;
@@ -493,13 +645,13 @@
         }
 
         .task-card.started {
-            border: 3px solid #FF9800;
-            box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
+            border: 3px solid #E8A07E;
+            box-shadow: 0 0 20px rgba(232, 160, 126, 0.4);
         }
 
         .bonus-task-card.started {
-            border: 3px solid #FF9800;
-            box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
+            border: 3px solid #E8A07E;
+            box-shadow: 0 0 20px rgba(232, 160, 126, 0.4);
         }
 
         /* Testimony indicators */
@@ -523,7 +675,7 @@
             bottom: 10px;
             right: 10px;
             font-size: 1.5em;
-            background: color-mix(in srgb, var(--primary-color) 20%, transparent);
+            background: rgba(137, 196, 184, 0.3);
             border-radius: 50%;
             width: 35px;
             height: 35px;
@@ -536,7 +688,7 @@
         }
 
         .testimony-indicator:hover {
-            background: color-mix(in srgb, var(--primary-color) 40%, transparent);
+            background: rgba(137, 196, 184, 0.5);
             transform: scale(1.1);
         }
 
@@ -595,12 +747,13 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             font-size: 2em;
             font-weight: bold;
-            color: var(--primary-color);
+            color: #2D4A53;
             text-align: center;
             animation: encouragePop 2s ease;
             pointer-events: none;
             z-index: 999;
             display: none;
+            border: 3px solid var(--primary-color);
         }
 
         @keyframes encouragePop {
@@ -613,6 +766,7 @@
             color: white;
             font-size: 0.9em;
             margin-top: 20px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
         }
 
         .testimony-modal {
@@ -643,7 +797,7 @@
         }
 
         .testimony-content h2 {
-            color: var(--primary-color);
+            color: #2D4A53;
             margin-bottom: 20px;
             font-size: 1.5em;
         }
@@ -664,7 +818,7 @@
 
         .testimony-content textarea:focus {
             outline: none;
-            border-color: var(--primary-color);
+            border-color: #5BA4B5;
         }
 
         .testimony-buttons {
@@ -690,6 +844,7 @@
         .testimony-buttons .submit-btn {
             background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
             color: var(--text-on-primary);
+            border: 2px solid var(--primary-color);
         }
 
         .testimony-buttons .cancel-btn {
@@ -716,16 +871,18 @@
             padding: 50px;
             font-size: 1.5em;
             color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
         }
 
         .error-message {
             text-align: center;
             padding: 50px;
             font-size: 1.2em;
-            color: white;
-            background: rgba(255,0,0,0.3);
+            color: #4A3228;
+            background: rgba(232, 160, 126, 0.4);
             border-radius: 15px;
             margin: 20px;
+            border: 2px solid rgba(232, 160, 126, 0.6);
         }
     </style>
 </head>
@@ -759,9 +916,9 @@
                 <h2 id="calmDownTitle">פעילות הרגעה</h2>
                 <button class="submit-btn" onclick="taskBoard.closeCalmDownActivity()" style="padding: 8px 20px;">סגור</button>
             </div>
-            <iframe id="calmDownFrame" style="width: 100%; height: calc(100% - 100px); border: 2px solid var(--primary-color); border-radius: 15px;"></iframe>
+            <iframe id="calmDownFrame" style="width: 100%; height: calc(100% - 100px); border: 2px solid #5BA4B5; border-radius: 15px;"></iframe>
             <div id="calmDownFallback" style="display: none; text-align: center; padding: 10px; margin-top: 10px;">
-                <a id="calmDownFallbackLink" href="#" target="_blank" style="color: var(--primary-color); text-decoration: none; font-size: 1.1em; display: inline-flex; align-items: center; gap: 8px;">
+                <a id="calmDownFallbackLink" href="#" target="_blank" style="color: #5BA4B5; text-decoration: none; font-size: 1.1em; display: inline-flex; align-items: center; gap: 8px;">
                     אם הסרטון לא נפתח, לחץ כאן לפתיחה ביוטיוב
                 </a>
             </div>
@@ -925,7 +1082,7 @@
                 await this.checkDailyReset();
                 await this.loadState();
                 this.render();
-                this.updateProgress();
+                this.updateProgress(false); // false = don't trigger celebration on initial load
                 this.updateMoneyDisplay();
             }
 
@@ -1023,7 +1180,7 @@
                     delete this.taskDurations[taskId];
                     await this.saveState();
                     this.render();
-                    this.updateProgress();
+                    this.updateProgress(false); // Don't trigger celebration when uncompleting
                 } else if (task.trackTime && !this.startedTasks.has(taskId)) {
                     this.startedTasks.add(taskId);
                     this.taskStartTimes[taskId] = Date.now();
@@ -1126,11 +1283,15 @@
                 }
 
                 // Always render logo at the top
+                // Use white tagline logo for dark theme, dark tagline for light themes
+                const isDarkTheme = document.body.classList.contains('schema-dark');
+                const logoSrc = isDarkTheme ? 'doing-logo-transparent.png' : 'doing-logo-transparent2.png';
+
                 const logoSection = document.createElement('div');
                 logoSection.className = 'logo-section';
                 logoSection.style.cssText = 'text-align: center; margin-bottom: 20px;';
                 logoSection.innerHTML = `
-                    <img src="doing-logo-transparent2.png" alt="Doing - Being. Doing. Playing." class="app-logo" style="max-width: 200px; height: auto;">
+                    <img src="${logoSrc}" alt="Doing - Being. Doing. Playing." class="app-logo" style="max-width: 200px; height: auto;">
                 `;
                 boardContent.appendChild(logoSection);
 
@@ -1184,10 +1345,13 @@
                         const progressTitle = this.replaceNamePlaceholder(item.title || 'ההתקדמות שלי היום');
                         const progressSection = document.createElement('div');
                         progressSection.className = 'progress-section';
+                        progressSection.id = 'progressSection';
                         progressSection.innerHTML = `
                             <div class="progress-title">${progressTitle}</div>
-                            <div class="progress-container">
+                            <div class="progress-container" style="position: relative;">
                                 <div class="progress-bar" id="progressBar">0%</div>
+                                <div class="progress-sparkles" id="progressSparkles"></div>
+                                <div class="golden-feather" id="goldenFeather" style="right: 15px; top: 50%; transform: translateY(-50%);">⭐</div>
                             </div>
                         `;
                         boardContent.appendChild(progressSection);
@@ -1229,7 +1393,7 @@
                 });
 
                 this.updateMoneyDisplay();
-                this.updateProgress();
+                this.updateProgress(false); // Don't trigger celebration on render
             }
 
             replaceNamePlaceholder(text) {
@@ -1370,7 +1534,7 @@
                 return card;
             }
 
-            updateProgress() {
+            updateProgress(triggerCelebration = true) {
                 const regularLayoutTasks = this.boardLayout.filter(item => {
                     if (item.type !== 'task' || item.taskType !== 'regular') return false;
                     const taskData = item.taskData;
@@ -1389,12 +1553,33 @@
                     : 0;
 
                 const progressBar = document.getElementById('progressBar');
+                const progressSection = document.getElementById('progressSection');
+
                 if (progressBar) {
                     progressBar.style.width = progress + '%';
-                    progressBar.textContent = Math.round(progress) + '%';
+
+                    // Show special indicator when all tasks are done
+                    if (progress === 100 && totalRegularTasks > 0) {
+                        progressBar.textContent = '✓ 100%';
+                        progressBar.style.background = 'linear-gradient(90deg, var(--card-completed-start), var(--card-completed-end))';
+                        // Add glowing animation
+                        if (progressSection) {
+                            progressSection.classList.add('all-done');
+                            this.createProgressSparkles();
+                        }
+                    } else {
+                        progressBar.textContent = Math.round(progress) + '%';
+                        // Remove glow when not complete
+                        if (progressSection) {
+                            progressSection.classList.remove('all-done');
+                            this.clearProgressSparkles();
+                        }
+                    }
                 }
 
-                if (progress === 100 && totalRegularTasks > 0 && !this.isParentMode) {
+                // Only show mega celebration when user actually completes the last task
+                // (not on page load or when toggling bonus tasks)
+                if (triggerCelebration && progress === 100 && totalRegularTasks > 0 && !this.isParentMode) {
                     this.showMegaCelebration();
                 }
             }
@@ -1412,6 +1597,16 @@
                 this.createStars();
             }
 
+            // Get theme-appropriate reward text color (pastel gold tones)
+            getRewardColor() {
+                const isDarkTheme = document.body.classList.contains('schema-dark');
+                if (isDarkTheme) {
+                    return '#C9B896'; // Soft gold for dark theme
+                }
+                // Pastel gold that matches the logo star - readable on white popup
+                return '#B8956A';
+            }
+
             celebrateBonus(amount) {
                 if (this.isCelebrating) return;
 
@@ -1423,13 +1618,14 @@
 
                 const symbol = this.getCoinSymbol();
                 const coinSrc = this.getCoinImageSrc();
+                const rewardColor = this.getRewardColor();
                 const moneyDisplay = this.coinStyle === 'custom'
                     ? `<img src="${coinSrc}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
                     : `+${symbol}${amount.toFixed(1)}`;
 
                 encouragement.innerHTML = `
-                    <div style="font-size: 1.5em;">!בונוס</div>
-                    <div style="font-size: 2em; margin-top: 10px; color: #ffd700;">
+                    <div style="font-size: 1.5em;">בונוס!</div>
+                    <div style="font-size: 2em; margin-top: 10px; color: ${rewardColor}; font-weight: 700;">
                         ${moneyDisplay}
                     </div>
                 `;
@@ -1450,7 +1646,8 @@
 
             createConfetti(count) {
                 const celebration = document.getElementById('celebration');
-                const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
+                // Pastel confetti colors matching the logo palette
+                const colors = ['#A8D5E5', '#89C4B8', '#F5C6AA', '#E8A07E', '#B8D4E8', '#C5B8E8', '#E8C86D'];
 
                 for (let i = 0; i < count; i++) {
                     const confetti = document.createElement('div');
@@ -1478,16 +1675,44 @@
                 }
             }
 
+            // Create floating sparkles around the progress bar
+            createProgressSparkles() {
+                const sparklesContainer = document.getElementById('progressSparkles');
+                if (!sparklesContainer || sparklesContainer.children.length > 0) return;
+
+                const sparkleEmojis = ['✨', '⭐', '🌟', '✨', '💫', '✨'];
+                // Positions centered on the progress bar (top: 50% means middle of the 60px container)
+                const positions = [
+                    { left: '5%', top: '20px' },
+                    { left: '18%', top: '35px' },
+                    { left: '32%', top: '22px' },
+                    { left: '48%', top: '38px' },
+                    { left: '62%', top: '25px' },
+                    { left: '78%', top: '32px' },
+                ];
+
+                positions.forEach((pos, i) => {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'sparkle';
+                    sparkle.textContent = sparkleEmojis[i % sparkleEmojis.length];
+                    sparkle.style.left = pos.left;
+                    sparkle.style.top = pos.top;
+                    sparkle.style.animationDelay = (i * 0.3) + 's';
+                    sparklesContainer.appendChild(sparkle);
+                });
+            }
+
+            // Clear sparkles when progress is not 100%
+            clearProgressSparkles() {
+                const sparklesContainer = document.getElementById('progressSparkles');
+                if (sparklesContainer) {
+                    sparklesContainer.innerHTML = '';
+                }
+            }
+
             async showMegaCelebration() {
+                // Only show the mega celebration once per day
                 if (this.todayRewardGiven) {
-                    const encouragement = document.getElementById('encouragement');
-                    encouragement.textContent = 'סיימת את כל המשימות! אתה אלוף!';
-                    encouragement.style.display = 'block';
-                    this.createConfetti(50);
-                    this.createStars();
-                    setTimeout(() => {
-                        encouragement.style.display = 'none';
-                    }, 3000);
                     return;
                 }
 
@@ -1497,15 +1722,16 @@
                 const dailyReward = this.kidData.dailyReward || 0.5;
                 const symbol = this.getCoinSymbol();
                 const coinSrc = this.getCoinImageSrc();
+                const rewardColor = this.getRewardColor();
                 const rewardDisplay = this.coinStyle === 'custom'
                     ? `<img src="${coinSrc}" style="width: 35px; height: 35px; vertical-align: middle;" /> ${dailyReward.toFixed(2)}`
                     : `${symbol}${dailyReward.toFixed(2)}`;
 
                 const encouragement = document.getElementById('encouragement');
                 encouragement.innerHTML = `
-                    <div>!סיימת את כל המשימות! אתה אלוף</div>
-                    <div style="font-size: 1.5em; margin-top: 20px; color: #ffd700;">
-                        !קיבלת ${rewardDisplay} לקופת החיסכון
+                    <div>סיימת את כל המשימות! אתה אלוף!</div>
+                    <div style="font-size: 1.5em; margin-top: 20px; color: ${rewardColor}; font-weight: 700;">
+                        קיבלת ${rewardDisplay} לקופת החיסכון!
                     </div>
                 `;
                 encouragement.style.display = 'block';
