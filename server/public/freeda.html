@@ -171,12 +171,12 @@
   <audio id="audioPlayer"></audio>
 
   <script>
-    //const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
-    const API_URL = 'http://localhost:3001/api';
+    const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
+    //const API_URL = 'http://localhost:3001/api';
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
     const PERSONALITY = 'hila';
-    const SPEED = 1.2; // Speech speed (0.25 to 4.0, default 1.0)
+    const SPEED = 1.8; // Speech speed (0.25 to 4.0, default 1.0)
     // TODO: Replace with actual Hila voice ID from ElevenLabs
     const VOICE_ID = 'flHkNRp1BlvT73UL6gyz'; // Set to null to use default, or replace with actual voice ID like 'abc123xyz'
 
@@ -344,19 +344,19 @@
       }
     }
 
-    // Play lip-sync animation
+    // Play lip-sync animation (synced with playbackRate)
     function playLipSync(lipSyncData) {
       lipSyncData.forEach(cue => {
         setTimeout(() => {
           setMouthShape(cue.shapeIndex);
-        }, cue.start * 1000);
+        }, (cue.start * 1000) / SPEED);
       });
 
       const lastCue = lipSyncData[lipSyncData.length - 1];
       if (lastCue) {
         setTimeout(() => {
           setMouthShape(0);
-        }, lastCue.end * 1000);
+        }, (lastCue.end * 1000) / SPEED);
       }
     }
 
@@ -523,6 +523,7 @@
         showSpeechBubble(data.responseText);
 
         audioPlayer.src = `data:audio/mp3;base64,${data.audioBase64}`;
+        audioPlayer.playbackRate = SPEED; // Speed up audio playback
         await audioPlayer.play();
         playLipSync(data.lipSyncData);
 

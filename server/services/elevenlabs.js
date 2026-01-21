@@ -76,7 +76,6 @@ async function generateSpeech(text, voiceId = null, speed = 1.0) {
  */
 async function generateSpeechWithTimestamps(text, voiceId = null, speed = 1.0) {
   const selectedVoiceId = voiceId || 'EXAVITQu4vr4xnSDxMaL';
-  console.log('imhere');
   const requestBody = {
     text,
     model_id: 'eleven_v3',
