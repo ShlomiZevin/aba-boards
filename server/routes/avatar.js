@@ -3,8 +3,36 @@ const router = express.Router();
 const avatarService = require('../services/avatar');
 const openaiService = require('../services/openai');
 
-// Simple in-memory conversation history (resets on server restart)
-const conversationHistory = [];
+// Per-user conversation history (keyed by oderId, clears after 1 day)
+const conversations = new Map();
+const CONV_TTL = 24 * 60 * 60 * 1000; // 1 day
+
+function getConversation(userId) {
+  if (!userId) return [];
+  const conv = conversations.get(userId);
+  if (!conv) return [];
+  // Check if expired
+  if (Date.now() - conv.created > CONV_TTL) {
+    conversations.delete(userId);
+    return [];
+  }
+  return conv.history;
+}
+
+function addToConversation(userId, userMsg, assistantMsg) {
+  if (!userId) return;
+  let conv = conversations.get(userId);
+  if (!conv || Date.now() - conv.created > CONV_TTL) {
+    conv = { created: Date.now(), history: [] };
+    conversations.set(userId, conv);
+  }
+  conv.history.push({ role: 'user', content: userMsg });
+  conv.history.push({ role: 'assistant', content: assistantMsg });
+  // Keep limited to last 10 exchanges
+  if (conv.history.length > 20) {
+    conv.history.splice(0, 2);
+  }
+}
 
 /**
  * POST /api/avatar/speak
@@ -69,6 +97,7 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
     const mouthShapeCount = parseInt(req.query.mouthShapeCount) || 4;
     const lipSyncMethod = req.query.lipSyncMethod || 'amplitude';
     const voiceId = req.query.voiceId || null;
+    const userId = req.query.userId || null;
 
     const audioBuffer = req.body;
 
@@ -87,16 +116,9 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
     }
 
     // 2. Generate dinosaur response using GPT (with history)
-    const dinosaurResponse = await openaiService.generateDinosaurResponse(userText, conversationHistory);
-
-    // Add to history
-    conversationHistory.push({ role: 'user', content: userText });
-    conversationHistory.push({ role: 'assistant', content: dinosaurResponse });
-
-    // Keep history limited to last 10 exchanges
-    if (conversationHistory.length > 20) {
-      conversationHistory.splice(0, 2);
-    }
+    const history = getConversation(userId);
+    const dinosaurResponse = await openaiService.generateDinosaurResponse(userText, history);
+    addToConversation(userId, userText, dinosaurResponse);
 
     // 3. Generate speech with lip-sync
     const speechResult = await avatarService.generateAvatarSpeech(dinosaurResponse, {
@@ -122,23 +144,16 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
  */
 router.post('/chat', async (req, res) => {
   try {
-    const { text, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude' } = req.body;
+    const { text, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude', userId } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
 
     // 1. Generate dinosaur response using GPT (with history)
-    const dinosaurResponse = await openaiService.generateDinosaurResponse(text, conversationHistory);
-
-    // Add to history
-    conversationHistory.push({ role: 'user', content: text });
-    conversationHistory.push({ role: 'assistant', content: dinosaurResponse });
-
-    // Keep history limited to last 10 exchanges
-    if (conversationHistory.length > 20) {
-      conversationHistory.splice(0, 2);
-    }
+    const history = getConversation(userId);
+    const dinosaurResponse = await openaiService.generateDinosaurResponse(text, history);
+    addToConversation(userId, text, dinosaurResponse);
 
     // 2. Generate speech with lip-sync
     const speechResult = await avatarService.generateAvatarSpeech(dinosaurResponse, {

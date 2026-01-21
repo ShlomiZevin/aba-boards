@@ -175,6 +175,13 @@
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
 
+    // Generate or retrieve user ID for conversation tracking
+    const USER_ID = localStorage.getItem('dinoUserId') || (() => {
+      const id = 'user_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('dinoUserId', id);
+      return id;
+    })();
+
     // DOM elements
     const status = document.getElementById('status');
     const audioPlayer = document.getElementById('audioPlayer');
@@ -482,7 +489,8 @@
 
         const params = new URLSearchParams({
           mouthShapeCount: MOUTH_SHAPE_COUNT,
-          lipSyncMethod: LIP_SYNC_METHOD
+          lipSyncMethod: LIP_SYNC_METHOD,
+          userId: USER_ID
         });
 
         const response = await fetch(`${API_URL}/avatar/converse?${params}`, {
