@@ -20,7 +20,37 @@
       align-items: center;
       justify-content: space-between;
       padding: 10px;
+      padding-bottom: 40px;
       overflow: hidden;
+    }
+
+    /* Mobile audio unlock overlay */
+    .audio-unlock {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .audio-unlock.hidden {
+      display: none;
+    }
+
+    .unlock-btn {
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      border: none;
+      border-radius: 20px;
+      padding: 20px 40px;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
 
     .avatar-container {
@@ -127,6 +157,11 @@
   </style>
 </head>
 <body>
+  <!-- Mobile audio unlock overlay -->
+  <div class="audio-unlock" id="audioUnlock">
+    <button class="unlock-btn" id="unlockBtn">🦕 לחץ להתחיל</button>
+  </div>
+
   <div class="wrapper">
     <div class="speech-bubble" id="speechBubble"></div>
     <div class="avatar-container">
@@ -140,7 +175,7 @@
   <audio id="audioPlayer"></audio>
 
   <script>
-    const API_URL = 'http://localhost:3001/api';
+    const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
 
@@ -150,6 +185,50 @@
     const speechBubble = document.getElementById('speechBubble');
     const avatarImage = document.getElementById('avatarImage');
     const recordBtn = document.getElementById('recordBtn');
+    const audioUnlock = document.getElementById('audioUnlock');
+    const unlockBtn = document.getElementById('unlockBtn');
+
+    // Audio unlock for mobile browsers
+    let audioUnlocked = false;
+
+    // Tiny valid MP3 file (silence) - needed to unlock HTML audio element
+    const SILENT_MP3 = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1NvZnR3YXJlAExhdmY1Ny44My4xMDAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU3LjEwAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZN3pOGAAAAAAD/+9DEAAAFwANf9AAAIjsrLbzEgAgCgKA59ynOf9QhCEIQhCE3/E/6gfB8HwfPKHP4nz58H36gc/lAQBN/4Pn/gh//y4f/E+X8QBH/lzn////5QEAQf4nz////KAgHz4f////+IBg+D/E/+UOfy4PvygIf8T4nxPlxPlznOc5/8oCAIAgD4f//lAQ/5c//+sHwf8T5c5/y4f5cH+IUHD4Pg+cT/y5/xAEHOc/+D58uH+f//6wf/5cP/4gCH/lHE+J8//qBz/E+X8T4nwfP/+IAAAAB//vQxKsAAADSAAAAAAAAANIAAAAAMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+
+    async function unlockAudio() {
+      try {
+        // Request microphone permission first (while we have user gesture)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop it immediately - we just needed to get permission
+        stream.getTracks().forEach(track => track.stop());
+
+        // Play silent MP3 through the actual audio element to unlock it
+        audioPlayer.src = SILENT_MP3;
+        audioPlayer.volume = 0.1;
+        await audioPlayer.play();
+        audioPlayer.pause();
+        audioPlayer.volume = 1.0;
+
+        audioUnlocked = true;
+        audioUnlock.classList.add('hidden');
+      } catch (err) {
+        console.error('Audio unlock error:', err);
+        // Hide anyway so user can try
+        audioUnlock.classList.add('hidden');
+      }
+    }
+
+    // Check if mobile
+    function isMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Show unlock overlay only on mobile
+    if (!isMobile()) {
+      audioUnlock.classList.add('hidden');
+      audioUnlocked = true;
+    }
+
+    unlockBtn.addEventListener('click', unlockAudio);
 
     // Mouth shape images
     let mouthImages = [];
