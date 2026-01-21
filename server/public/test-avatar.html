@@ -274,6 +274,13 @@
         <option value="6">6 (כל הצורות)</option>
       </select>
     </label>
+    <label>
+      <span>שיטת סנכרון:</span>
+      <select id="lipSyncMethod">
+        <option value="amplitude">Amplitude (ניתוח עוצמת קול)</option>
+        <option value="timestamps">Timestamps (תזמון מ-ElevenLabs)</option>
+      </select>
+    </label>
   </div>
 
   <audio id="audioPlayer"></audio>
@@ -291,6 +298,7 @@
     const speechBubble = document.getElementById('speechBubble');
     const dinoMouth = document.getElementById('dinoMouth');
     const mouthShapeCountSelect = document.getElementById('mouthShapeCount');
+    const lipSyncMethodSelect = document.getElementById('lipSyncMethod');
     const avatarImage = document.getElementById('avatarImage');
     const placeholderDino = document.getElementById('placeholderDino');
 
@@ -386,7 +394,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             text,
-            mouthShapeCount: parseInt(mouthShapeCountSelect.value)
+            mouthShapeCount: parseInt(mouthShapeCountSelect.value),
+            lipSyncMethod: lipSyncMethodSelect.value
           })
         });
 
@@ -432,7 +441,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name,
-            mouthShapeCount: parseInt(mouthShapeCountSelect.value)
+            mouthShapeCount: parseInt(mouthShapeCountSelect.value),
+            lipSyncMethod: lipSyncMethodSelect.value
           })
         });
 

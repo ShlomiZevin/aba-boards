@@ -1,6 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
 /**
@@ -70,7 +67,7 @@ async function generateSpeech(text, voiceId = null) {
  * @returns {Promise<{audioPath: string, timestamps: Array}>}
  */
 async function generateSpeechWithTimestamps(text, voiceId = null) {
-  const selectedVoiceId = voiceId || 'cgSgspJ2msm6clMCkdW9';
+  const selectedVoiceId = voiceId || 'EXAVITQu4vr4xnSDxMaL';
 
   const response = await fetch(
     `${ELEVENLABS_API_URL}/text-to-speech/${selectedVoiceId}/with-timestamps`,
@@ -82,7 +79,7 @@ async function generateSpeechWithTimestamps(text, voiceId = null) {
       },
       body: JSON.stringify({
         text,
-        model_id: 'eleven_multilingual_v2',
+        model_id: 'eleven_v3',
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75
@@ -97,21 +94,11 @@ async function generateSpeechWithTimestamps(text, voiceId = null) {
   }
 
   const data = await response.json();
-
-  // Save audio
-  const audioDir = path.join(__dirname, '../public/audio');
-  if (!fs.existsSync(audioDir)) {
-    fs.mkdirSync(audioDir, { recursive: true });
-  }
-
   const audioBuffer = Buffer.from(data.audio_base64, 'base64');
-  const audioFilename = `speech_${Date.now()}.mp3`;
-  const audioPath = path.join(audioDir, audioFilename);
-  fs.writeFileSync(audioPath, audioBuffer);
 
   return {
-    audioPath,
-    audioFilename,
+    audioBuffer,
+    audioBase64: data.audio_base64,
     alignment: data.alignment // Contains character-level timing
   };
 }

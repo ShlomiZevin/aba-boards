@@ -8,7 +8,7 @@ const avatarService = require('../services/avatar');
  */
 router.post('/speak', async (req, res) => {
   try {
-    const { text, voiceId, mouthShapeCount = 4 } = req.body;
+    const { text, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude' } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -16,7 +16,8 @@ router.post('/speak', async (req, res) => {
 
     const result = await avatarService.generateAvatarSpeech(text, {
       voiceId,
-      mouthShapeCount
+      mouthShapeCount,
+      lipSyncMethod
     });
 
     res.json(result);
@@ -32,7 +33,7 @@ router.post('/speak', async (req, res) => {
  */
 router.post('/greet', async (req, res) => {
   try {
-    const { name, voiceId, mouthShapeCount = 4 } = req.body;
+    const { name, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude' } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -41,7 +42,8 @@ router.post('/greet', async (req, res) => {
     const greeting = avatarService.getGreeting(name);
     const result = await avatarService.generateAvatarSpeech(greeting, {
       voiceId,
-      mouthShapeCount
+      mouthShapeCount,
+      lipSyncMethod
     });
 
     res.json({

@@ -7,28 +7,36 @@ const lipsync = require('./lipsync');
  * @param {object} options - Options
  * @param {string} options.voiceId - ElevenLabs voice ID
  * @param {number} options.mouthShapeCount - Number of available mouth images (3-6)
+ * @param {string} options.lipSyncMethod - 'amplitude' or 'timestamps'
  * @returns {Promise<{audioBase64: string, lipSyncData: Array}>}
  */
 async function generateAvatarSpeech(text, options = {}) {
   const {
     voiceId = null,
-    mouthShapeCount = 4
+    mouthShapeCount = 4,
+    lipSyncMethod = 'amplitude'
   } = options;
 
-  // Generate speech audio (returns base64, no file storage)
-  const { audioBase64 } = await elevenlabs.generateSpeech(text, voiceId);
+  let audioBase64, audioBuffer, lipSyncData;
 
-  // Use simple pattern-based lip-sync
-  // Estimate duration based on text length
-  const estimatedDurationMs = text.length * 80;
-  const lipSyncData = lipsync.generateSimpleLipSync(estimatedDurationMs);
-
-  // Map shapes to available mouth images
-  const mappedLipSync = lipsync.mapShapesToAvailable(lipSyncData, mouthShapeCount);
+  if (lipSyncMethod === 'timestamps') {
+    // Use ElevenLabs with-timestamps API for character-level timing
+    const result = await elevenlabs.generateSpeechWithTimestamps(text, voiceId);
+    audioBase64 = result.audioBase64;
+    audioBuffer = result.audioBuffer;
+    lipSyncData = lipsync.generateTimestampLipSync(result.alignment, mouthShapeCount);
+  } else {
+    // Use amplitude-based analysis
+    const result = await elevenlabs.generateSpeech(text, voiceId);
+    audioBase64 = result.audioBase64;
+    audioBuffer = result.audioBuffer;
+    lipSyncData = lipsync.generateAmplitudeLipSync(audioBuffer, mouthShapeCount);
+  }
 
   return {
     audioBase64,
-    lipSyncData: mappedLipSync
+    lipSyncData,
+    method: lipSyncMethod
   };
 }
 
