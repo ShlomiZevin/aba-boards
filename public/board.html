@@ -120,25 +120,48 @@
         }
 
         .piggy-bank-section {
-            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-            padding: 20px;
-            border-radius: 15px;
-            margin-top: 20px;
-            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
+            background: linear-gradient(145deg, #fff9e6 0%, #fff3cc 50%, #ffe680 100%);
+            padding: 30px 25px;
+            border-radius: 25px;
+            margin-bottom: 25px;
+            box-shadow:
+                0 10px 40px rgba(255, 193, 7, 0.3),
+                0 2px 10px rgba(0,0,0,0.1),
+                inset 0 -3px 0 rgba(255, 193, 7, 0.3);
+            border: 3px solid rgba(255, 215, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .piggy-bank-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%);
+            pointer-events: none;
         }
 
         .piggy-bank-icon {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 10px;
-            animation: wiggle 2s ease-in-out infinite;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+            animation: float 3s ease-in-out infinite;
             border-radius: 50%;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow:
+                0 8px 25px rgba(0,0,0,0.2),
+                0 0 0 4px rgba(255,255,255,0.8),
+                0 0 0 8px rgba(255, 193, 7, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
             background: white;
+            position: relative;
+            z-index: 1;
         }
 
         .piggy-bank-icon img {
@@ -147,24 +170,31 @@
             object-fit: cover;
         }
 
-        @keyframes wiggle {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-5deg); }
-            75% { transform: rotate(5deg); }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
 
         .money-counter {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #ff6b6b;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            margin: 10px 0;
+            font-size: 2.8em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f857a6 0%, #ff5858 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.15));
+            margin: 8px 0;
+            position: relative;
+            z-index: 1;
         }
 
         .money-label {
-            font-size: 1.2em;
-            color: #333;
-            font-weight: bold;
+            font-size: 1.1em;
+            color: #6b5b4f;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            position: relative;
+            z-index: 1;
         }
 
         .coins-animation {
@@ -194,22 +224,77 @@
 
         .progress-container {
             margin-top: 20px;
-            background: #f0f0f0;
-            border-radius: 15px;
-            height: 30px;
+            background: linear-gradient(180deg, #e8e8e8 0%, #f5f5f5 100%);
+            border-radius: 20px;
+            height: 36px;
             overflow: hidden;
             position: relative;
+            box-shadow:
+                inset 0 2px 6px rgba(0,0,0,0.15),
+                0 2px 4px rgba(255,255,255,0.8);
+            border: 2px solid rgba(255,255,255,0.5);
         }
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary-start), var(--primary-end));
-            transition: width 0.5s ease;
+            background: linear-gradient(180deg,
+                color-mix(in srgb, var(--primary-start) 100%, white 20%) 0%,
+                var(--primary-start) 50%,
+                var(--primary-end) 100%);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--text-on-primary);
-            font-weight: bold;
+            font-weight: 700;
+            font-size: 0.95em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            border-radius: 18px;
+            position: relative;
+            box-shadow:
+                0 2px 10px rgba(102, 126, 234, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 10px;
+            right: 10px;
+            height: 8px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%);
+            border-radius: 10px;
+        }
+
+        /* Progress section wrapper */
+        .progress-section {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 25px 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            box-shadow:
+                0 8px 32px rgba(0,0,0,0.1),
+                inset 0 1px 0 rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .progress-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-section .progress-container {
+            margin-top: 0;
         }
 
         .tasks-grid, .bonus-tasks-grid, .calm-down-grid {
@@ -1040,6 +1125,15 @@
                     return;
                 }
 
+                // Always render logo at the top
+                const logoSection = document.createElement('div');
+                logoSection.className = 'logo-section';
+                logoSection.style.cssText = 'text-align: center; margin-bottom: 20px;';
+                logoSection.innerHTML = `
+                    <img src="doing-logo-transparent2.png" alt="Doing - Being. Doing. Playing." class="app-logo" style="max-width: 200px; height: auto;">
+                `;
+                boardContent.appendChild(logoSection);
+
                 let currentTasksGrid = null;
                 let currentTasksType = null;
 
@@ -1061,13 +1155,7 @@
                             const headerSection = document.createElement('div');
                             headerSection.className = 'header';
                             headerSection.innerHTML = `
-                                <div class="logo-container">
-                                    <img id="appLogo" src="doing-logo-transparent2.png" alt="Doing - Being. Doing. Playing." class="app-logo">
-                                </div>
                                 <h1 id="kidTitle" style="${sizeStyles[item.size]}">${this.replaceNamePlaceholder(item.text)}</h1>
-                                <div class="progress-container">
-                                    <div class="progress-bar" id="progressBar">0%</div>
-                                </div>
                             `;
                             boardContent.appendChild(headerSection);
                         } else {
@@ -1089,29 +1177,35 @@
                             boardContent.appendChild(header);
                         }
 
+                    } else if (item.type === 'progress') {
+                        currentTasksGrid = null;
+                        currentTasksType = null;
+
+                        const progressTitle = this.replaceNamePlaceholder(item.title || 'ההתקדמות שלי היום');
+                        const progressSection = document.createElement('div');
+                        progressSection.className = 'progress-section';
+                        progressSection.innerHTML = `
+                            <div class="progress-title">${progressTitle}</div>
+                            <div class="progress-container">
+                                <div class="progress-bar" id="progressBar">0%</div>
+                            </div>
+                        `;
+                        boardContent.appendChild(progressSection);
+
                     } else if (item.type === 'bank') {
                         currentTasksGrid = null;
                         currentTasksType = null;
 
-                        const existingHeader = boardContent.querySelector('.header');
-                        const bankHtml = `
-                            <div class="piggy-bank-section">
-                                <div class="piggy-bank-icon">
-                                    <img id="kidImage" src="${this.getKidImageSrc()}" alt="${this.kidData.name}">
-                                </div>
-                                <div class="money-counter" id="moneyCounter">$0</div>
-                                <div class="money-label" id="moneyLabel">${this.replaceNamePlaceholder(item.label || 'קופת החיסכון')}</div>
+                        const bankSection = document.createElement('div');
+                        bankSection.className = 'piggy-bank-section';
+                        bankSection.innerHTML = `
+                            <div class="piggy-bank-icon">
+                                <img id="kidImage" src="${this.getKidImageSrc()}" alt="${this.kidData.name}">
                             </div>
+                            <div class="money-counter" id="moneyCounter">$0</div>
+                            <div class="money-label" id="moneyLabel">${this.replaceNamePlaceholder(item.label || 'קופת החיסכון')}</div>
                         `;
-
-                        if (existingHeader && !existingHeader.querySelector('.piggy-bank-section')) {
-                            existingHeader.insertAdjacentHTML('beforeend', bankHtml);
-                        } else {
-                            const bankSection = document.createElement('div');
-                            bankSection.className = 'header';
-                            bankSection.innerHTML = bankHtml;
-                            boardContent.appendChild(bankSection);
-                        }
+                        boardContent.appendChild(bankSection);
 
                     } else if (item.type === 'task') {
                         const taskData = item.taskData;

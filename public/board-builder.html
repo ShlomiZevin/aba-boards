@@ -305,6 +305,17 @@
             color: #333;
         }
 
+        /* Progress Bar Item Style */
+        .board-item.progress-item {
+            background: linear-gradient(135deg, #4CAF5020 0%, #8BC34A20 100%);
+            border-color: #4CAF50;
+        }
+
+        .board-item.progress-item .board-item-type {
+            background: #4CAF50;
+            color: white;
+        }
+
         /* Task Item Styles */
         .board-item.task-regular {
             background: white;
@@ -682,6 +693,14 @@
                     <div class="palette-item" draggable="true" data-type="header" data-size="small">
                         <div class="icon">📝</div>
                         <div class="label">כותרת קטנה</div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <h4>התקדמות</h4>
+                    <div class="palette-item" draggable="true" data-type="progress">
+                        <div class="icon">📊</div>
+                        <div class="label">סרגל התקדמות משימות</div>
                     </div>
                 </div>
 
@@ -1150,6 +1169,8 @@
             if (type === 'header') {
                 item.size = size || 'medium';
                 item.text = 'כותרת חדשה';
+            } else if (type === 'progress') {
+                item.title = 'ההתקדמות שלי היום';
             } else if (type === 'bank') {
                 item.label = 'קופת החיסכון של [שם]';
                 item.showBonus = true;
@@ -1201,6 +1222,8 @@
                 // Add type-specific classes
                 if (item.type === 'header') {
                     itemEl.classList.add('header-item', `header-${item.size}`);
+                } else if (item.type === 'progress') {
+                    itemEl.classList.add('progress-item');
                 } else if (item.type === 'bank') {
                     itemEl.classList.add('bank-item');
                 } else if (item.type === 'task') {
@@ -1236,6 +1259,11 @@
                 icon = item.size === 'large' ? '📌' : (item.size === 'medium' ? '📋' : '📝');
                 title = item.text || 'כותרת';
                 subtitle = item.size === 'large' ? 'גדולה' : (item.size === 'medium' ? 'בינונית' : 'קטנה');
+            } else if (item.type === 'progress') {
+                typeLabel = 'סרגל התקדמות';
+                icon = '📊';
+                title = item.title || 'ההתקדמות שלי היום';
+                subtitle = 'מציג את אחוז השלמת המשימות היומיות';
             } else if (item.type === 'bank') {
                 typeLabel = 'קופת חיסכון';
                 icon = '🐷';
@@ -1312,6 +1340,16 @@
 
         // Render configuration form
         function renderConfigForm(item) {
+            if (item.type === 'progress') {
+                return `
+                    <div class="config-group">
+                        <label>כותרת:</label>
+                        <input type="text" id="configProgressTitle" value="${item.title || 'ההתקדמות שלי היום'}" placeholder="הכנס כותרת">
+                        <small>השתמש ב-[שם] להכללת שם הילד</small>
+                    </div>
+                `;
+            }
+
             if (item.type === 'header') {
                 return `
                     <div class="config-group">
@@ -1446,6 +1484,8 @@
             if (item.type === 'header') {
                 item.text = document.getElementById('configText').value;
                 item.size = document.getElementById('configSize').value;
+            } else if (item.type === 'progress') {
+                item.title = document.getElementById('configProgressTitle').value;
             } else if (item.type === 'bank') {
                 item.label = document.getElementById('configLabel').value;
                 item.showBonus = document.getElementById('configShowBonus').checked;

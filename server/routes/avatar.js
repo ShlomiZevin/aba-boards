@@ -98,6 +98,7 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
     const lipSyncMethod = req.query.lipSyncMethod || 'amplitude';
     const voiceId = req.query.voiceId || null;
     const userId = req.query.userId || null;
+    const personality = req.query.personality || 'default';
 
     const audioBuffer = req.body;
 
@@ -117,7 +118,7 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
 
     // 2. Generate dinosaur response using GPT (with history)
     const history = getConversation(userId);
-    const dinosaurResponse = await openaiService.generateDinosaurResponse(userText, history);
+    const dinosaurResponse = await openaiService.generateDinosaurResponse(userText, history, personality);
     addToConversation(userId, userText, dinosaurResponse);
 
     // 3. Generate speech with lip-sync
