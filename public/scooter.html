@@ -1,0 +1,660 @@
+<!DOCTYPE HTML>
+<html lang="he" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>קפיצה על קורקינט</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(180deg, #87CEEB 0%, #98D8C8 70%, #7CB342 70%, #558B2F 100%);
+            overflow: hidden;
+        }
+
+        /* Sky elements */
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.9;
+            animation: cloudMove linear infinite;
+        }
+
+        @keyframes cloudMove {
+            from { transform: translateX(-200px); }
+            to { transform: translateX(100vw); }
+        }
+
+        .sun {
+            position: absolute;
+            top: 30px;
+            left: 50px;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #FFE082 0%, #FFD54F 50%, #FFC107 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 60px rgba(255, 193, 7, 0.6);
+        }
+
+        /* Ground */
+        .ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30%;
+            background: linear-gradient(180deg, #7CB342 0%, #558B2F 50%, #33691E 100%);
+        }
+
+        .road {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: linear-gradient(180deg, #424242 0%, #616161 50%, #757575 100%);
+        }
+
+        .road-line {
+            position: absolute;
+            bottom: 55px;
+            height: 10px;
+            width: 60px;
+            background: #FFD54F;
+            border-radius: 5px;
+            animation: roadLineMove 0.8s linear infinite;
+        }
+
+        @keyframes roadLineMove {
+            from { transform: translateX(-100px); }
+            to { transform: translateX(100vw); }
+        }
+
+        /* Player - on the RIGHT side for RTL feel */
+        .player {
+            position: absolute;
+            bottom: 120px;
+            right: 100px;
+            transition: bottom 0.15s ease-out;
+            z-index: 100;
+        }
+
+        .player.jumping {
+            animation: jump 0.5s ease-out;
+        }
+
+        @keyframes jump {
+            0% { bottom: 120px; }
+            50% { bottom: 280px; }
+            100% { bottom: 120px; }
+        }
+
+        .kid {
+            font-size: 80px;
+            position: relative;
+            animation: kidBounce 0.3s ease-in-out infinite;
+            line-height: 1;
+        }
+
+        @keyframes kidBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .player.jumping .kid {
+            animation: none;
+        }
+
+        .scooter {
+            font-size: 70px;
+            position: absolute;
+            bottom: -55px;
+            right: 5px;
+            line-height: 1;
+        }
+
+        /* Obstacles - come from the LEFT */
+        .obstacle {
+            position: absolute;
+            bottom: 120px;
+            font-size: 70px;
+            animation: obstacleMove 2.5s linear;
+            z-index: 50;
+            line-height: 1;
+        }
+
+        @keyframes obstacleMove {
+            from { left: -80px; }
+            to { left: calc(100vw + 80px); }
+        }
+
+        /* Score display */
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .high-score {
+            position: absolute;
+            top: 85px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 215, 0, 0.95);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #795548;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+        }
+
+        /* Instructions */
+        .instructions {
+            position: absolute;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px 50px;
+            border-radius: 20px;
+            font-size: 1.8em;
+            color: #333;
+            text-align: center;
+            z-index: 1000;
+            animation: pulse 2s ease-in-out infinite;
+            direction: rtl;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+        }
+
+        .instructions.hidden {
+            display: none;
+        }
+
+        /* Game Over */
+        .game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 60px;
+            border-radius: 30px;
+            text-align: center;
+            z-index: 2000;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            direction: rtl;
+        }
+
+        .game-over.active {
+            display: block;
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .game-over h2 {
+            font-size: 2.2em;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .game-over .final-score {
+            font-size: 3.5em;
+            color: #FF9800;
+            margin-bottom: 20px;
+        }
+
+        .game-over button {
+            padding: 18px 50px;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .game-over button:hover {
+            transform: scale(1.05);
+        }
+
+        /* Hit effect */
+        .hit-effect {
+            position: absolute;
+            font-size: 4em;
+            animation: hitPop 0.5s ease-out forwards;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        @keyframes hitPop {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(2) translateY(-50px); }
+        }
+
+        /* Jump effect */
+        .jump-effect {
+            position: absolute;
+            bottom: 120px;
+            right: 100px;
+            font-size: 2.5em;
+            animation: jumpEffectAnim 0.3s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes jumpEffectAnim {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(30px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .score-display {
+                font-size: 1.5em;
+                padding: 12px 30px;
+            }
+
+            .high-score {
+                font-size: 0.9em;
+                top: 70px;
+            }
+
+            .instructions {
+                font-size: 1.4em;
+                padding: 20px 30px;
+            }
+
+            .player {
+                right: 60px;
+            }
+
+            .kid {
+                font-size: 60px;
+            }
+
+            .scooter {
+                font-size: 50px;
+                bottom: -40px;
+            }
+
+            .obstacle {
+                font-size: 55px;
+            }
+
+            .sun {
+                width: 60px;
+                height: 60px;
+                top: 20px;
+                left: 30px;
+            }
+
+            @keyframes jump {
+                0% { bottom: 120px; }
+                50% { bottom: 250px; }
+                100% { bottom: 120px; }
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <!-- Sky elements -->
+        <div class="sun"></div>
+
+        <!-- Ground -->
+        <div class="ground"></div>
+        <div class="road"></div>
+
+        <!-- Player -->
+        <div class="player" id="player">
+            <div class="kid">👦</div>
+            <div class="scooter">🛴</div>
+        </div>
+
+        <!-- UI -->
+        <div class="score-display" id="scoreDisplay">⭐ 0</div>
+        <div class="high-score" id="highScore">🏆 שיא: 0</div>
+
+        <div class="instructions" id="instructions">
+            לחץ או הקש כדי לקפוץ!<br>
+            <span style="font-size: 0.7em;">🛴 דלג מעל המכשולים 🛴</span>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="game-over" id="gameOver">
+            <h2>כל הכבוד! 🎉</h2>
+            <div class="final-score" id="finalScore">0</div>
+            <p style="margin-bottom: 20px; color: #666; font-size: 1.2em;">מכשולים שדילגת!</p>
+            <button onclick="restartGame()">שחק שוב 🎮</button>
+        </div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('gameContainer');
+        const player = document.getElementById('player');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const highScoreDisplay = document.getElementById('highScore');
+        const instructions = document.getElementById('instructions');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreDisplay = document.getElementById('finalScore');
+
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('scooterHighScore') || '0');
+        let isJumping = false;
+        let gameRunning = false;
+        let gameStarted = false;
+        let obstacleInterval;
+        let roadLineInterval;
+        let checkInterval;
+        let obstacles = [];
+
+        // Obstacle types - common emojis that display well everywhere
+        const obstacleTypes = ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⬛', '📦', '🎁', '🏀', '⚽', '🎾'];
+
+        // Initialize
+        highScoreDisplay.textContent = `🏆 שיא: ${highScore}`;
+        createClouds();
+        createRoadLines();
+
+        // Create clouds
+        function createClouds() {
+            for (let i = 0; i < 4; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                const size = 60 + Math.random() * 80;
+                cloud.style.width = size + 'px';
+                cloud.style.height = (size * 0.6) + 'px';
+                cloud.style.top = (20 + Math.random() * 120) + 'px';
+                cloud.style.animationDuration = (15 + Math.random() * 20) + 's';
+                cloud.style.animationDelay = (Math.random() * -20) + 's';
+                gameContainer.appendChild(cloud);
+            }
+        }
+
+        // Create road lines
+        function createRoadLines() {
+            roadLineInterval = setInterval(() => {
+                if (!gameRunning) return;
+                const line = document.createElement('div');
+                line.className = 'road-line';
+                line.style.left = '-60px';
+                gameContainer.appendChild(line);
+                setTimeout(() => line.remove(), 800);
+            }, 200);
+        }
+
+        // Jump function
+        function jump() {
+            if (isJumping || !gameRunning) return;
+
+            isJumping = true;
+            player.classList.add('jumping');
+
+            // Jump effect
+            const effect = document.createElement('div');
+            effect.className = 'jump-effect';
+            effect.textContent = '💨';
+            gameContainer.appendChild(effect);
+            setTimeout(() => effect.remove(), 300);
+
+            // Play jump sound
+            playJumpSound();
+
+            setTimeout(() => {
+                isJumping = false;
+                player.classList.remove('jumping');
+            }, 500);
+        }
+
+        // Play jump sound
+        function playJumpSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.15);
+            } catch (e) {}
+        }
+
+        // Play score sound
+        function playScoreSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (e) {}
+        }
+
+        // Spawn obstacle
+        function spawnObstacle() {
+            if (!gameRunning) return;
+
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            obstacle.textContent = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+            obstacle.style.left = '-80px';
+
+            // Vary speed slightly based on score
+            const baseSpeed = Math.max(1.5, 2.5 - score * 0.02);
+            obstacle.style.animationDuration = baseSpeed + 's';
+
+            gameContainer.appendChild(obstacle);
+            obstacles.push(obstacle);
+
+            // Check for score when obstacle passes
+            obstacle.addEventListener('animationend', () => {
+                if (obstacle.dataset.scored !== 'true' && gameRunning) {
+                    score++;
+                    scoreDisplay.textContent = `⭐ ${score}`;
+                    scoreDisplay.style.transform = 'translateX(-50%) scale(1.2)';
+                    setTimeout(() => {
+                        scoreDisplay.style.transform = 'translateX(-50%) scale(1)';
+                    }, 150);
+                    playScoreSound();
+                }
+                obstacle.remove();
+                obstacles = obstacles.filter(o => o !== obstacle);
+            });
+        }
+
+        // Check collision
+        function checkCollision() {
+            if (!gameRunning) return;
+
+            const playerRect = player.getBoundingClientRect();
+            const playerBottom = playerRect.bottom;
+            const playerLeft = playerRect.left + 30;
+            const playerRight = playerRect.right - 30;
+
+            obstacles.forEach(obstacle => {
+                const obstacleRect = obstacle.getBoundingClientRect();
+
+                // Simple collision detection
+                if (
+                    playerLeft < obstacleRect.right - 15 &&
+                    playerRight > obstacleRect.left + 15 &&
+                    playerBottom > obstacleRect.top + 20
+                ) {
+                    gameOver();
+                }
+            });
+        }
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(obstacleInterval);
+            clearInterval(checkInterval);
+
+            // Hit effect
+            const effect = document.createElement('div');
+            effect.className = 'hit-effect';
+            effect.textContent = '💥';
+            effect.style.right = (window.innerWidth - player.getBoundingClientRect().right + 30) + 'px';
+            effect.style.top = (player.getBoundingClientRect().top) + 'px';
+            gameContainer.appendChild(effect);
+            setTimeout(() => effect.remove(), 500);
+
+            // Update high score
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('scooterHighScore', highScore.toString());
+                highScoreDisplay.textContent = `🏆 שיא: ${highScore}`;
+            }
+
+            // Show game over screen
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.classList.add('active');
+
+            // Clear obstacles
+            obstacles.forEach(o => o.remove());
+            obstacles = [];
+        }
+
+        // Start game
+        function startGame() {
+            if (gameStarted) return;
+
+            gameStarted = true;
+            gameRunning = true;
+            score = 0;
+            scoreDisplay.textContent = '⭐ 0';
+            instructions.classList.add('hidden');
+
+            // Spawn obstacles at intervals
+            obstacleInterval = setInterval(() => {
+                if (gameRunning) {
+                    spawnObstacle();
+                }
+            }, 1800 + Math.random() * 800);
+
+            // Check collision continuously
+            checkInterval = setInterval(checkCollision, 50);
+        }
+
+        // Restart game
+        function restartGame() {
+            gameOverScreen.classList.remove('active');
+            gameStarted = false;
+            startGame();
+            jump(); // Start with a jump
+        }
+
+        // Event listeners
+        function handleInput(e) {
+            e.preventDefault();
+
+            if (!gameStarted) {
+                startGame();
+            }
+
+            jump();
+        }
+
+        // Touch events
+        gameContainer.addEventListener('touchstart', handleInput, { passive: false });
+        gameContainer.addEventListener('mousedown', handleInput);
+
+        // Keyboard events
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                handleInput(e);
+            }
+        });
+
+        // Prevent scrolling on mobile
+        document.body.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && gameRunning) {
+                // Pause game when tab is hidden
+                gameRunning = false;
+                clearInterval(obstacleInterval);
+                clearInterval(checkInterval);
+            }
+        });
+
+        // Listen for messages from parent window (for iframe keyboard forwarding)
+        window.addEventListener('message', (e) => {
+            if (e.data === 'jump' || e.data.type === 'keydown') {
+                if (!gameStarted) {
+                    startGame();
+                }
+                jump();
+            }
+        });
+
+        // Request focus when iframe loads
+        window.focus();
+    </script>
+</body>
+</html>

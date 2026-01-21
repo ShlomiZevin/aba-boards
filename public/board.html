@@ -1724,6 +1724,8 @@
                     url = 'xylophone.html';
                 } else if (task.activityType === 'breathing') {
                     url = 'breathing.html';
+                } else if (task.activityType === 'scooter') {
+                    url = 'scooter.html';
                 } else if (task.activityType === 'link' && task.activityUrl) {
                     originalUrl = task.activityUrl;
                     if (task.activityUrl.includes('youtube.com/watch')) {
@@ -1752,6 +1754,26 @@
                     }
 
                     modal.classList.add('active');
+
+                    // Add keyboard listener to forward space/arrow keys to iframe
+                    this._calmDownKeyHandler = (e) => {
+                        if (e.code === 'Space' || e.code === 'ArrowUp') {
+                            e.preventDefault();
+                            if (frame.contentWindow) {
+                                frame.contentWindow.postMessage('jump', '*');
+                            }
+                        }
+                        // Close on Escape
+                        if (e.code === 'Escape') {
+                            this.closeCalmDownActivity();
+                        }
+                    };
+                    document.addEventListener('keydown', this._calmDownKeyHandler);
+
+                    // Focus iframe after it loads
+                    frame.onload = () => {
+                        frame.contentWindow.focus();
+                    };
                 }
             }
 
@@ -1760,6 +1782,12 @@
                 const frame = document.getElementById('calmDownFrame');
                 frame.src = '';
                 modal.classList.remove('active');
+
+                // Remove keyboard listener
+                if (this._calmDownKeyHandler) {
+                    document.removeEventListener('keydown', this._calmDownKeyHandler);
+                    this._calmDownKeyHandler = null;
+                }
             }
         }
 

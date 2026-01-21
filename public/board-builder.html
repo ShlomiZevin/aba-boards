@@ -1296,6 +1296,7 @@
                         'bubbles': '🫧 בועות',
                         'xylophone': '🎹 קסילופון',
                         'breathing': '🧘 נשימות',
+                        'scooter': '🛴 קורקינט',
                         'link': '🔗 קישור'
                     };
                     subtitleParts.push(activityTypes[taskData.activityType] || '');
@@ -1428,6 +1429,7 @@
                                 <option value="bubbles" ${taskData.activityType === 'bubbles' ? 'selected' : ''}>משחק בועות</option>
                                 <option value="xylophone" ${taskData.activityType === 'xylophone' ? 'selected' : ''}>קסילופון</option>
                                 <option value="breathing" ${taskData.activityType === 'breathing' ? 'selected' : ''}>תרגיל נשימות</option>
+                                <option value="scooter" ${taskData.activityType === 'scooter' ? 'selected' : ''}>קפיצה על קורקינט</option>
                                 <option value="link" ${taskData.activityType === 'link' ? 'selected' : ''}>קישור חיצוני</option>
                             </select>
                         </div>
