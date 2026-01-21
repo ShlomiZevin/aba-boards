@@ -657,6 +657,14 @@
                             </label>
                         </div>
                     </div>
+
+                    <div style="margin-top: 15px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="showDino" style="width: 18px; height: 18px;">
+                            <span style="font-weight: bold;">🦕 הצג דינו על הלוח</span>
+                        </label>
+                        <div style="font-size: 0.8em; color: #666; margin-top: 5px; margin-right: 28px;">דינוזאור מדבר שעוזר לילדים</div>
+                    </div>
                 </div>
 
                 <h3>🧩 רכיבים</h3>
@@ -930,6 +938,9 @@
             if (colorSchemaInput) {
                 colorSchemaInput.checked = true;
             }
+
+            // Show Dino setting
+            document.getElementById('showDino').checked = kidData.showDino || false;
         }
 
         // Toggle coin image input visibility
@@ -1926,6 +1937,7 @@
                 const dailyReward = parseFloat(document.getElementById('dailyReward').value) || 0.5;
                 const coinStyle = document.getElementById('coinStyle').value;
                 const colorSchema = document.querySelector('input[name="colorSchema"]:checked').value;
+                const showDino = document.getElementById('showDino').checked;
 
                 // Get kid image - prefer uploaded data, fall back to existing
                 let imageName = document.getElementById('kidImageData').value || kidData.imageName || '';
@@ -1950,7 +1962,8 @@
                     imageName: imageName,
                     coinStyle: coinStyle,
                     coinImageName: coinImageName,
-                    colorSchema: colorSchema
+                    colorSchema: colorSchema,
+                    showDino: showDino
                 });
 
                 // Update local kidData
@@ -1959,6 +1972,7 @@
                 kidData.coinStyle = coinStyle;
                 kidData.coinImageName = coinImageName;
                 kidData.colorSchema = colorSchema;
+                kidData.showDino = showDino;
 
                 alert('הלוח נשמר בהצלחה!');
             } catch (error) {
