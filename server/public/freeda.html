@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>freeda</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f8bbd9 0%, #e1bee7 100%);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Mobile audio unlock overlay */
+    .audio-unlock {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .audio-unlock.hidden {
+      display: none;
+    }
+
+    .unlock-btn {
+      background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
+      border: none;
+      border-radius: 20px;
+      padding: 20px 40px;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .avatar-container {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .avatar-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 15px;
+    }
+
+    /* Status display */
+    .status-display {
+      position: absolute;
+      bottom: 80px;
+      left: 10px;
+      right: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #880e4f;
+      height: 25px;
+      text-align: center;
+    }
+
+    /* Record button */
+    .record-btn {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      transition: all 0.3s ease, transform 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .record-btn.idle {
+      background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
+    }
+
+    .record-btn.recording {
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+      animation: pulse 1s infinite;
+    }
+
+    .record-btn.disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .record-btn:hover:not(.disabled) {
+      transform: translateX(-50%) scale(1.1);
+    }
+
+    .record-btn:active:not(.disabled) {
+      transform: translateX(-50%) scale(0.95);
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(233, 30, 99, 0.4); }
+      50% { box-shadow: 0 0 0 10px rgba(233, 30, 99, 0); }
+    }
+
+    /* Speech bubble - shows at bottom over button area */
+    .speech-bubble {
+      position: fixed;
+      bottom: 90px;
+      left: 5px;
+      right: 5px;
+      background: rgba(255,255,255,0.95);
+      padding: 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      color: #333;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 10;
+      text-align: center;
+      max-height: 50px;
+      overflow: hidden;
+      line-height: 1.3;
+    }
+
+    .speech-bubble.visible {
+      opacity: 1;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Mobile audio unlock overlay -->
+  <div class="audio-unlock" id="audioUnlock">
+    <button class="unlock-btn" id="unlockBtn">👩‍💼 לחץ להתחיל</button>
+  </div>
+
+  <div class="avatar-container">
+    <img id="avatarImage" class="avatar-image" src="/avatar/hila/mouth_0.png" onerror="this.style.display='none'">
+  </div>
+  <div class="speech-bubble" id="speechBubble"></div>
+  <div class="status-display" id="status"></div>
+  <button class="record-btn idle" id="recordBtn">🎤</button>
+
+  <audio id="audioPlayer"></audio>
+
+  <script>
+    //const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
+    const API_URL = 'http://localhost:3001/api';
+    const MOUTH_SHAPE_COUNT = 6;
+    const LIP_SYNC_METHOD = 'timestamps';
+    const PERSONALITY = 'hila';
+    const SPEED = 1.2; // Speech speed (0.25 to 4.0, default 1.0)
+    // TODO: Replace with actual Hila voice ID from ElevenLabs
+    const VOICE_ID = 'flHkNRp1BlvT73UL6gyz'; // Set to null to use default, or replace with actual voice ID like 'abc123xyz'
+
+    // Generate or retrieve user ID for conversation tracking
+    const USER_ID = localStorage.getItem('hilaUserId') || (() => {
+      const id = 'hila_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('hilaUserId', id);
+      return id;
+    })();
+
+    // DOM elements
+    const status = document.getElementById('status');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const speechBubble = document.getElementById('speechBubble');
+    const avatarImage = document.getElementById('avatarImage');
+    const recordBtn = document.getElementById('recordBtn');
+    const audioUnlock = document.getElementById('audioUnlock');
+    const unlockBtn = document.getElementById('unlockBtn');
+
+    // Audio unlock for mobile browsers
+    let audioUnlocked = false;
+
+    // Tiny valid MP3 file (silence) - needed to unlock HTML audio element
+    const SILENT_MP3 = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1NvZnR3YXJlAExhdmY1Ny44My4xMDAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU3LjEwAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZN3pOGAAAAAAD/+9DEAAAFwANf9AAAIjsrLbzEgAgCgKA59ynOf9QhCEIQhCE3/E/6gfB8HwfPKHP4nz58H36gc/lAQBN/4Pn/gh//y4f/E+X8QBH/lzn////5QEAQf4nz////KAgHz4f////+IBg+D/E/+UOfy4PvygIf8T4nxPlxPlznOc5/8oCAIAgD4f//lAQ/5c//+sHwf8T5c5/y4f5cH+IUHD4Pg+cT/y5/xAEHOc/+D58uH+f//6wf/5cP/4gCH/lHE+J8//qBz/E+X8T4nwfP/+IAAAAB//vQxKsAAADSAAAAAAAAANIAAAAAMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+
+    async function unlockAudio() {
+      try {
+        // Request microphone permission first (while we have user gesture)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop it immediately - we just needed to get permission
+        stream.getTracks().forEach(track => track.stop());
+
+        // Play silent MP3 through the actual audio element to unlock it
+        audioPlayer.src = SILENT_MP3;
+        audioPlayer.volume = 0.1;
+        await audioPlayer.play();
+        audioPlayer.pause();
+        audioPlayer.volume = 1.0;
+
+        audioUnlocked = true;
+        audioUnlock.classList.add('hidden');
+      } catch (err) {
+        console.error('Audio unlock error:', err);
+        // Hide anyway so user can try
+        audioUnlock.classList.add('hidden');
+      }
+    }
+
+    // Check if mobile
+    function isMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Show unlock overlay only on mobile
+    if (!isMobile()) {
+      audioUnlock.classList.add('hidden');
+      audioUnlocked = true;
+    }
+
+    unlockBtn.addEventListener('click', unlockAudio);
+
+    // Mouth shape images
+    let mouthImages = [];
+
+    // Thinking animation images
+    let thinkingImages = [];
+    let thinkingAnimationInterval = null;
+    let currentThinkingFrame = 0;
+    const THINKING_IMAGE_COUNT = 6;
+    const THINKING_ANIMATION_SPEED = 300; // ms between frames
+
+    // Recording state
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let audioContext = null;
+    let analyser = null;
+    let silenceTimer = null;
+    let hasSpeechStarted = false;
+
+    // Silence detection settings
+    const SILENCE_THRESHOLD = 5;
+    const SILENCE_DURATION = 1500;
+    const MIN_RECORDING_TIME = 500;
+
+    // Load mouth images
+    async function loadMouthImages() {
+      const images = [];
+
+      for (let i = 0; i < MOUTH_SHAPE_COUNT; i++) {
+        const img = new Image();
+        img.src = `/avatar/hila/mouth_${i}.png`;
+
+        try {
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          images.push(img.src);
+        } catch {
+          break;
+        }
+      }
+
+      if (images.length > 0) {
+        mouthImages = images;
+        avatarImage.src = images[0];
+        avatarImage.style.display = 'block';
+      }
+    }
+
+    // Load thinking images
+    async function loadThinkingImages() {
+      const images = [];
+
+      for (let i = 0; i < THINKING_IMAGE_COUNT; i++) {
+        const img = new Image();
+        img.src = `/avatar/hila/thinking_${i}.png`;
+
+        try {
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          images.push(img.src);
+        } catch {
+          break;
+        }
+      }
+
+      if (images.length > 0) {
+        thinkingImages = images;
+      }
+    }
+
+    // Start thinking animation (random order)
+    function startThinkingAnimation() {
+      if (thinkingImages.length === 0) return;
+
+      const randomIndex = Math.floor(Math.random() * thinkingImages.length);
+      avatarImage.src = thinkingImages[randomIndex];
+
+      thinkingAnimationInterval = setInterval(() => {
+        const nextIndex = Math.floor(Math.random() * thinkingImages.length);
+        avatarImage.src = thinkingImages[nextIndex];
+      }, THINKING_ANIMATION_SPEED);
+    }
+
+    // Stop thinking animation
+    function stopThinkingAnimation() {
+      if (thinkingAnimationInterval) {
+        clearInterval(thinkingAnimationInterval);
+        thinkingAnimationInterval = null;
+      }
+      // Return to default mouth shape
+      if (mouthImages.length > 0) {
+        avatarImage.src = mouthImages[0];
+      }
+    }
+
+    // Animate mouth
+    function setMouthShape(shapeIndex) {
+      if (mouthImages[shapeIndex]) {
+        avatarImage.src = mouthImages[shapeIndex];
+      }
+    }
+
+    // Play lip-sync animation
+    function playLipSync(lipSyncData) {
+      lipSyncData.forEach(cue => {
+        setTimeout(() => {
+          setMouthShape(cue.shapeIndex);
+        }, cue.start * 1000);
+      });
+
+      const lastCue = lipSyncData[lipSyncData.length - 1];
+      if (lastCue) {
+        setTimeout(() => {
+          setMouthShape(0);
+        }, lastCue.end * 1000);
+      }
+    }
+
+    // Speech bubble
+    function showSpeechBubble(text) {
+      speechBubble.textContent = text;
+      speechBubble.classList.add('visible');
+    }
+
+    function hideSpeechBubble() {
+      speechBubble.classList.remove('visible');
+    }
+
+    // Set button state
+    function setButtonState(state) {
+      recordBtn.className = `record-btn ${state}`;
+      if (state === 'idle') {
+        recordBtn.textContent = '🎤';
+        recordBtn.disabled = false;
+      } else if (state === 'recording') {
+        recordBtn.textContent = '⏹️';
+        recordBtn.disabled = false;
+      } else if (state === 'disabled') {
+        recordBtn.textContent = '⏳';
+        recordBtn.disabled = true;
+      }
+    }
+
+    // Toggle recording
+    async function toggleRecording() {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+          audioChunks = [];
+          hasSpeechStarted = false;
+
+          // Setup audio analysis
+          audioContext = new AudioContext();
+          if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+          }
+
+          const source = audioContext.createMediaStreamSource(stream);
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 512;
+          source.connect(analyser);
+
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const recordingStartTime = Date.now();
+
+          // Monitor audio levels
+          function checkAudioLevel() {
+            if (!isRecording) return;
+
+            analyser.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+            if (average > SILENCE_THRESHOLD) {
+              hasSpeechStarted = true;
+              status.textContent = 'מדברת...';
+              if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+              }
+            } else if (hasSpeechStarted && Date.now() - recordingStartTime > MIN_RECORDING_TIME) {
+              status.textContent = 'שקט...';
+              if (!silenceTimer) {
+                silenceTimer = setTimeout(() => {
+                  stopRecording();
+                }, SILENCE_DURATION);
+              }
+            } else {
+              status.textContent = 'מקשיבה...';
+            }
+
+            requestAnimationFrame(checkAudioLevel);
+          }
+
+          mediaRecorder.ondataavailable = (e) => {
+            audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach(track => track.stop());
+            if (audioContext) {
+              audioContext.close();
+              audioContext = null;
+            }
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
+
+            if (hasSpeechStarted && audioChunks.length > 0) {
+              const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+              await sendAudioToServer(audioBlob);
+            } else {
+              status.textContent = 'לא שמעתי';
+              setTimeout(() => {
+                status.textContent = '';
+              }, 2000);
+              setButtonState('idle');
+            }
+          };
+
+          mediaRecorder.start(100);
+          setButtonState('recording');
+          status.textContent = 'מקשיבה...';
+          isRecording = true;
+          checkAudioLevel();
+
+        } catch (err) {
+          console.error('Microphone error:', err);
+          status.textContent = 'אין מיקרופון';
+        }
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+      }
+    }
+
+    // Send audio to server
+    async function sendAudioToServer(audioBlob) {
+      try {
+        setButtonState('disabled');
+        status.textContent = 'חושבת...';
+        startThinkingAnimation();
+
+        const params = new URLSearchParams({
+          mouthShapeCount: MOUTH_SHAPE_COUNT,
+          lipSyncMethod: LIP_SYNC_METHOD,
+          userId: USER_ID,
+          personality: PERSONALITY,
+          speed: SPEED
+        });
+
+        // Add voice ID if specified
+        if (VOICE_ID) {
+          params.append('voiceId', VOICE_ID);
+        }
+
+        const response = await fetch(`${API_URL}/avatar/converse?${params}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'audio/webm' },
+          body: audioBlob
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || response.statusText);
+        }
+
+        const data = await response.json();
+
+        stopThinkingAnimation();
+        status.textContent = '';
+        showSpeechBubble(data.responseText);
+
+        audioPlayer.src = `data:audio/mp3;base64,${data.audioBase64}`;
+        await audioPlayer.play();
+        playLipSync(data.lipSyncData);
+
+        audioPlayer.onended = () => {
+          hideSpeechBubble();
+          setMouthShape(0);
+          status.textContent = '';
+          setButtonState('idle');
+        };
+
+      } catch (err) {
+        console.error('Error:', err);
+        stopThinkingAnimation();
+        status.textContent = 'שגיאה';
+        setTimeout(() => {
+          status.textContent = '';
+          setButtonState('idle');
+        }, 2000);
+      }
+    }
+
+    // Event listeners
+    recordBtn.addEventListener('click', toggleRecording);
+
+    // Initialize
+    loadMouthImages();
+    loadThinkingImages();
+  </script>
+</body>
+</html>

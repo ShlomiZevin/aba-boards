@@ -8,26 +8,28 @@ const lipsync = require('./lipsync');
  * @param {string} options.voiceId - ElevenLabs voice ID
  * @param {number} options.mouthShapeCount - Number of available mouth images (3-6)
  * @param {string} options.lipSyncMethod - 'amplitude' or 'timestamps'
+ * @param {number} options.speed - Speech speed (0.25 to 4.0, default 1.0)
  * @returns {Promise<{audioBase64: string, lipSyncData: Array}>}
  */
 async function generateAvatarSpeech(text, options = {}) {
   const {
     voiceId = null,
     mouthShapeCount = 4,
-    lipSyncMethod = 'amplitude'
+    lipSyncMethod = 'amplitude',
+    speed = 1.0
   } = options;
 
   let audioBase64, audioBuffer, lipSyncData;
 
   if (lipSyncMethod === 'timestamps') {
     // Use ElevenLabs with-timestamps API for character-level timing
-    const result = await elevenlabs.generateSpeechWithTimestamps(text, voiceId);
+    const result = await elevenlabs.generateSpeechWithTimestamps(text, voiceId, speed);
     audioBase64 = result.audioBase64;
     audioBuffer = result.audioBuffer;
     lipSyncData = lipsync.generateTimestampLipSync(result.alignment, mouthShapeCount);
   } else {
     // Use amplitude-based analysis
-    const result = await elevenlabs.generateSpeech(text, voiceId);
+    const result = await elevenlabs.generateSpeech(text, voiceId, speed);
     audioBase64 = result.audioBase64;
     audioBuffer = result.audioBuffer;
     lipSyncData = lipsync.generateAmplitudeLipSync(audioBuffer, mouthShapeCount);

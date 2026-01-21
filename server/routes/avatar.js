@@ -40,7 +40,7 @@ function addToConversation(userId, userMsg, assistantMsg) {
  */
 router.post('/speak', async (req, res) => {
   try {
-    const { text, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude' } = req.body;
+    const { text, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude', speed = 1.0 } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -49,7 +49,8 @@ router.post('/speak', async (req, res) => {
     const result = await avatarService.generateAvatarSpeech(text, {
       voiceId,
       mouthShapeCount,
-      lipSyncMethod
+      lipSyncMethod,
+      speed
     });
 
     res.json(result);
@@ -65,7 +66,7 @@ router.post('/speak', async (req, res) => {
  */
 router.post('/greet', async (req, res) => {
   try {
-    const { name, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude' } = req.body;
+    const { name, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude', speed = 1.0 } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -75,7 +76,8 @@ router.post('/greet', async (req, res) => {
     const result = await avatarService.generateAvatarSpeech(greeting, {
       voiceId,
       mouthShapeCount,
-      lipSyncMethod
+      lipSyncMethod,
+      speed
     });
 
     res.json({
@@ -99,6 +101,7 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
     const voiceId = req.query.voiceId || null;
     const userId = req.query.userId || null;
     const personality = req.query.personality || 'default';
+    const speed = parseFloat(req.query.speed) || 1.0;
 
     const audioBuffer = req.body;
 
@@ -106,10 +109,16 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
       return res.status(400).json({ error: 'Audio data is required' });
     }
 
+    const totalStart = Date.now();
+
     // 1. Transcribe audio using OpenAI Whisper
+    const transcribeStart = Date.now();
     const userText = await openaiService.transcribeAudio(audioBuffer, 'recording.webm');
+    const transcribeTime = Date.now() - transcribeStart;
+
     console.log('=== Whisper Transcript ===');
     console.log('User said:', userText);
+    console.log(`Transcription time: ${transcribeTime}ms`);
     console.log('==========================');
 
     if (!userText || userText.trim() === '') {
@@ -117,16 +126,31 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
     }
 
     // 2. Generate dinosaur response using GPT (with history)
+    const llmStart = Date.now();
     const history = getConversation(userId);
     const dinosaurResponse = await openaiService.generateDinosaurResponse(userText, history, personality);
+    const llmTime = Date.now() - llmStart;
     addToConversation(userId, userText, dinosaurResponse);
 
     // 3. Generate speech with lip-sync
+    const ttsStart = Date.now();
     const speechResult = await avatarService.generateAvatarSpeech(dinosaurResponse, {
       voiceId,
       mouthShapeCount,
-      lipSyncMethod
+      lipSyncMethod,
+      speed
     });
+    const ttsTime = Date.now() - ttsStart;
+
+    const totalTime = Date.now() - totalStart;
+
+    console.log('=== Performance Metrics ===');
+    console.log(`Transcription (Whisper): ${transcribeTime}ms`);
+    console.log(`LLM Response (GPT): ${llmTime}ms`);
+    console.log(`Text-to-Speech (ElevenLabs): ${ttsTime}ms`);
+    console.log(`Total pipeline: ${totalTime}ms`);
+    console.log(`Speed setting: ${speed}`);
+    console.log('===========================');
 
     res.json({
       userText,
@@ -145,7 +169,7 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
  */
 router.post('/chat', async (req, res) => {
   try {
-    const { text, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude', userId } = req.body;
+    const { text, voiceId, mouthShapeCount = 4, lipSyncMethod = 'amplitude', userId, speed = 1.0 } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -160,7 +184,8 @@ router.post('/chat', async (req, res) => {
     const speechResult = await avatarService.generateAvatarSpeech(dinosaurResponse, {
       voiceId,
       mouthShapeCount,
-      lipSyncMethod
+      lipSyncMethod,
+      speed
     });
 
     res.json({
