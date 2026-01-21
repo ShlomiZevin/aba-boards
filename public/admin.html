@@ -28,7 +28,7 @@
         }
 
         .admin-container {
-            max-width: 1200px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
@@ -66,36 +66,64 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
-        .kids-list h2 {
-            color: #667eea;
+        .kids-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .kids-list-header h2 {
+            color: #667eea;
+            margin: 0;
         }
 
         .kid-item {
             padding: 20px;
-            border-bottom: 1px solid #eee;
+            border: 2px solid #f0f0f0;
+            border-radius: 15px;
+            margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .kid-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
         }
 
         .kid-item:last-child {
-            border-bottom: none;
+            margin-bottom: 0;
         }
 
         .kid-info h3 {
             color: #667eea;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            font-size: 1.2em;
         }
 
-        .kid-tasks {
+        .kid-stats {
             font-size: 0.9em;
             color: #666;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .kid-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .kid-links {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -107,6 +135,7 @@
             transition: all 0.3s ease;
             text-decoration: none;
             display: inline-block;
+            font-size: 14px;
         }
 
         .btn-primary {
@@ -124,114 +153,54 @@
             color: #333;
         }
 
-        .add-kid-form {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        .btn-secondary:hover {
+            background: #e0e0e0;
         }
 
-        .add-kid-form h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            font-size: 1em;
-            direction: rtl;
-            text-align: right;
-        }
-
-        .tasks-builder {
-            margin-top: 20px;
-        }
-
-        .tasks-builder h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-
-        .task-input-row {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-        }
-
-        .task-main-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .task-input-row input {
-            flex: 1;
-            padding: 10px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            direction: rtl;
-            text-align: right;
-        }
-
-        .task-input-row button {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 10px;
-            background: #ff6b6b;
+        .btn-success {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
             color: white;
-            cursor: pointer;
         }
 
-        .emoji-display {
-            width: 60px;
-            height: 42px;
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 233, 123, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-add {
+            padding: 12px 25px;
+            font-size: 16px;
+        }
+
+        .loading {
             text-align: center;
+            padding: 50px;
             font-size: 1.5em;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            background: white;
-            transition: all 0.3s ease;
+            color: white;
         }
 
-        .emoji-display:hover {
-            border-color: #667eea;
-            transform: scale(1.05);
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
         }
 
-        /* Color Schema Options */
-        .color-schema-option:has(input:checked) {
-            border-color: #667eea;
-            background: #f0f0ff;
+        .empty-state .icon {
+            font-size: 4em;
+            margin-bottom: 15px;
         }
 
-        .color-schema-option:hover {
-            border-color: #999;
-        }
-
-        /* Emoji Picker Modal */
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -242,7 +211,6 @@
             height: 100%;
             background-color: rgba(0,0,0,0.5);
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
         }
 
         .modal.active {
@@ -251,21 +219,12 @@
             justify-content: center;
         }
 
-        body.modal-open {
-            overflow: hidden;
-        }
-
         .modal-content {
             background: white;
             padding: 30px;
             border-radius: 20px;
-            max-height: 90vh;
-            overflow-y: auto;
-            margin: 20px;
-            max-width: 500px;
+            max-width: 400px;
             width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
@@ -288,37 +247,29 @@
             color: #666;
         }
 
-        .emoji-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
-            gap: 10px;
-            margin-top: 20px;
+        .form-group {
+            margin-bottom: 20px;
         }
 
-        .emoji-item {
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2em;
-            cursor: pointer;
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
             border: 2px solid #eee;
             border-radius: 10px;
-            transition: all 0.3s ease;
+            font-size: 1em;
+            direction: rtl;
         }
 
-        .emoji-item:hover {
-            transform: scale(1.2);
+        .form-group input:focus {
+            outline: none;
             border-color: #667eea;
-            background: #f0f0ff;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 50px;
-            font-size: 1.5em;
-            color: white;
         }
 
         @media (max-width: 600px) {
@@ -332,44 +283,18 @@
                 width: 100%;
             }
 
-            .emoji-grid {
-                grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            .kid-links .btn {
+                flex: 1;
+                text-align: center;
             }
 
-            .modal-content {
-                padding: 15px;
-                margin: 10px;
-                width: 95%;
-                max-height: 95vh;
+            .kids-list-header {
+                flex-direction: column;
+                align-items: stretch;
             }
 
-            #cropCanvas {
-                max-width: 100%;
-                height: auto;
-            }
-
-            .resize-handle {
-                width: 30px !important;
-                height: 30px !important;
-                top: -10px !important;
-                left: -10px !important;
-            }
-
-            .resize-handle.resize-ne {
-                right: -10px !important;
-                left: auto !important;
-            }
-
-            .resize-handle.resize-sw {
-                bottom: -10px !important;
-                top: auto !important;
-            }
-
-            .resize-handle.resize-se {
-                right: -10px !important;
-                bottom: -10px !important;
-                top: auto !important;
-                left: auto !important;
+            .kids-list-header h2 {
+                text-align: center;
             }
         }
     </style>
@@ -382,173 +307,54 @@
             <div class="logo-container">
                 <img src="doing-logo-transparent2.png" alt="Doing - Being. Doing. Playing." class="app-logo">
             </div>
-            <h1>🎯 ניהול ילדים ומשימות 🎯</h1>
+            <h1>ניהול ילדים</h1>
             <a href="index.html" class="back-link">← חזרה ללוח ראשי</a>
         </div>
 
         <div class="kids-list">
-            <h2>רשימת ילדים</h2>
+            <div class="kids-list-header">
+                <h2>רשימת ילדים</h2>
+                <button class="btn btn-success btn-add" onclick="showAddKidModal()">+ הוסף ילד חדש</button>
+            </div>
             <div id="kidsList"></div>
         </div>
+    </div>
 
-        <div class="add-kid-form">
-            <h2 id="formTitle">הוסף ילד חדש</h2>
-
+    <!-- Add Kid Modal -->
+    <div id="addKidModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>הוסף ילד חדש</h3>
+                <button class="close-btn" onclick="closeAddKidModal()">×</button>
+            </div>
             <div class="form-group">
                 <label>שם הילד:</label>
                 <input type="text" id="newKidName" placeholder="הכנס שם">
             </div>
-
-            <div class="form-group">
-                <label>תמונת פרופיל:</label>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <input type="file" id="kidImageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
-                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('kidImageUpload').click()">📤 העלה תמונה</button>
-                    <div id="imagePreview" style="display: none; position: relative;">
-                        <img id="previewImg" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid #667eea;">
-                        <button type="button" onclick="removeImage()" style="position: absolute; top: -5px; right: -5px; width: 25px; height: 25px; border-radius: 50%; background: #ff6b6b; color: white; border: none; cursor: pointer; font-weight: bold;">×</button>
-                    </div>
-                    <small style="color: #666; width: 100%;">או השתמש בשם קובץ קיים:</small>
-                    <input type="text" id="kidImageName" placeholder="לדוגמה: lenny-small.png" style="flex: 1;">
-                </div>
-                <input type="hidden" id="kidImageData">
-            </div>
-
-            <div class="form-group">
-                <label>סכום כסף ($):</label>
-                <input type="number" id="kidMoney" placeholder="0.00" step="0.01" min="0">
-            </div>
-
-            <div class="form-group">
-                <label>פרס יומי בעבור סיום כל המשימות ($):</label>
-                <input type="number" id="kidDailyReward" placeholder="0.50" step="0.01" min="0" value="0.50">
-            </div>
-
-            <div class="form-group">
-                <label>סוג מטבע:</label>
-                <select id="coinStyle" onchange="toggleCoinImageInput()">
-                    <option value="dollar">דולר ($)</option>
-                    <option value="shekel">שקל (₪)</option>
-                    <option value="custom">תמונה מותאמת אישית</option>
-                </select>
-            </div>
-
-            <div class="form-group" id="coinImageGroup" style="display: none;">
-                <label>תמונת מטבע:</label>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <input type="file" id="coinImageUpload" accept="image/*" style="display: none;" onchange="handleCoinImageUpload(event)">
-                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('coinImageUpload').click()">📤 העלה תמונה</button>
-                    <div id="coinImagePreview" style="display: none; position: relative;">
-                        <img id="coinPreviewImg" style="width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 3px solid #ffd700;">
-                        <button type="button" onclick="removeCoinImage()" style="position: absolute; top: -5px; right: -5px; width: 25px; height: 25px; border-radius: 50%; background: #ff6b6b; color: white; border: none; cursor: pointer; font-weight: bold;">×</button>
-                    </div>
-                    <small style="color: #666; width: 100%;">או השתמש בשם קובץ קיים:</small>
-                    <input type="text" id="coinImageName" placeholder="לדוגמה: coin.png" style="flex: 1;">
-                </div>
-                <input type="hidden" id="coinImageData">
-            </div>
-
-            <div class="form-group">
-                <label>ערכת צבעים:</label>
-                <div class="color-schema-options" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
-                    <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 3px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
-                        <input type="radio" name="colorSchema" value="purple" checked style="display: none;">
-                        <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(102,126,234,0.4);"></div>
-                        <span style="font-weight: bold; color: #333;">סגול קלאסי</span>
-                    </label>
-                    <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 3px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
-                        <input type="radio" name="colorSchema" value="pink" style="display: none;">
-                        <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); box-shadow: 0 2px 8px rgba(240,147,251,0.4);"></div>
-                        <span style="font-weight: bold; color: #333;">ורוד חלומי</span>
-                    </label>
-                    <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 3px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
-                        <input type="radio" name="colorSchema" value="blue" style="display: none;">
-                        <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); box-shadow: 0 2px 8px rgba(79,172,254,0.4);"></div>
-                        <span style="font-weight: bold; color: #333;">כחול שמיים</span>
-                    </label>
-                    <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 3px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
-                        <input type="radio" name="colorSchema" value="dark" style="display: none;">
-                        <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 100%); box-shadow: 0 2px 8px rgba(44,62,80,0.4);"></div>
-                        <span style="font-weight: bold; color: #333;">כהה מודרני</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>כותרת הדף (ברירת מחדל: "🌟 המשימות של [שם] 🌟"):</label>
-                <input type="text" id="headerLabel" placeholder='לדוגמה: "🎯 לוח המשימות של [שם]" או "✨ [שם] ✨"'>
-                <small style="color: #666; font-size: 0.9em;">השאר ריק לטקסט ברירת מחדל. השתמש ב-[שם] להכללת שם הילד.</small>
-            </div>
-
-            <div class="form-group">
-                <label>טקסט קופת החיסכון (ברירת מחדל: "קופת החיסכון של [שם]"):</label>
-                <input type="text" id="savingsLabel" placeholder='לדוגמה: "החיסכון שלי" או "הכסף של [שם]"'>
-                <small style="color: #666; font-size: 0.9em;">השאר ריק לטקסט ברירת מחדל. השתמש ב-[שם] להכללת שם הילד.</small>
-            </div>
-
-            <div class="form-group">
-                <label>כותרת משימות רגילות (ברירת מחדל: "משימות רגילות"):</label>
-                <input type="text" id="regularTasksHeader" placeholder='לדוגמה: "📝 המשימות שלי" או השאר ריק להסתרה'>
-                <small style="color: #666; font-size: 0.9em;">השאר ריק להסתרת הכותרת לגמרי.</small>
-            </div>
-
-            <div class="form-group">
-                <label>כותרת משימות בונוס (ברירת מחדל: "💰 משימות בונוס 💰"):</label>
-                <input type="text" id="bonusTasksHeader" placeholder='לדוגמה: "🎁 משימות מיוחדות" או השאר ריק להסתרה'>
-                <small style="color: #666; font-size: 0.9em;">השאר ריק להסתרת הכותרת לגמרי.</small>
-            </div>
-
-            <div class="form-group">
-                <label>כותרת פינת הרגעה (ברירת מחדל: "🧘 פינת ההרגעה 🧘"):</label>
-                <input type="text" id="calmDownHeader" placeholder='לדוגמה: "😌 מנוחה ורגיעה" או השאר ריק להסתרה'>
-                <small style="color: #666; font-size: 0.9em;">השאר ריק להסתרת הכותרת לגמרי.</small>
-            </div>
-
-            <div class="tasks-builder">
-                <h3>משימות:</h3>
-                <div id="tasksList"></div>
-                <button class="btn btn-secondary" onclick="addTaskRow()">+ הוסף משימה</button>
-            </div>
-
-            <button class="btn btn-primary" id="saveButton" onclick="saveKid()" style="margin-top: 20px; width: 100%;">שמור ילד</button>
-            <button class="btn btn-secondary" id="cancelButton" onclick="cancelEdit()" style="margin-top: 10px; width: 100%; display: none;">ביטול</button>
+            <button class="btn btn-primary" onclick="addNewKid()" style="width: 100%;">צור ילד עם לוח ברירת מחדל</button>
+            <p style="text-align: center; margin-top: 15px; color: #666; font-size: 0.9em;">
+                לאחר יצירת הילד, השתמש ב"בנה לוח" כדי לערוך את הלוח
+            </p>
         </div>
     </div>
 
-    <!-- Image Crop Modal -->
-    <div id="cropModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3>חתוך תמונה</h3>
-                <button class="close-btn" onclick="closeCropModal()">×</button>
-            </div>
-            <div style="text-align: center; padding: 20px;">
-                <div style="position: relative; display: inline-block; max-width: 100%;">
-                    <canvas id="cropCanvas" style="max-width: 100%; border: 2px solid #667eea; border-radius: 10px;"></canvas>
-                    <div id="cropBox" style="position: absolute; border: 3px solid #ffd700; cursor: move; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);">
-                        <!-- Resize handles -->
-                        <div class="resize-handle resize-nw" style="position: absolute; top: -5px; left: -5px; width: 20px; height: 20px; background: #ffd700; border: 2px solid white; border-radius: 50%; cursor: nw-resize;"></div>
-                        <div class="resize-handle resize-ne" style="position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; background: #ffd700; border: 2px solid white; border-radius: 50%; cursor: ne-resize;"></div>
-                        <div class="resize-handle resize-sw" style="position: absolute; bottom: -5px; left: -5px; width: 20px; height: 20px; background: #ffd700; border: 2px solid white; border-radius: 50%; cursor: sw-resize;"></div>
-                        <div class="resize-handle resize-se" style="position: absolute; bottom: -5px; right: -5px; width: 20px; height: 20px; background: #ffd700; border: 2px solid white; border-radius: 50%; cursor: se-resize;"></div>
-                    </div>
-                </div>
-                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
-                    <button class="btn btn-primary" onclick="applyCrop()">✂️ חתוך</button>
-                    <button class="btn btn-secondary" onclick="closeCropModal()">ביטול</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Emoji Picker Modal -->
-    <div id="emojiModal" class="modal">
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>בחר אייקון</h3>
-                <button class="close-btn" onclick="closeEmojiPicker()">×</button>
+                <h3>מחיקת ילד</h3>
+                <button class="close-btn" onclick="closeDeleteModal()">×</button>
             </div>
-            <div class="emoji-grid" id="emojiGrid"></div>
+            <p style="text-align: center; margin-bottom: 20px; font-size: 1.1em;">
+                האם אתה בטוח שברצונך למחוק את <strong id="deleteKidName"></strong>?
+            </p>
+            <p style="text-align: center; margin-bottom: 20px; color: #ff6b6b;">
+                פעולה זו לא ניתנת לביטול!
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-danger" onclick="confirmDeleteKid()" style="flex: 1;">מחק</button>
+                <button class="btn btn-secondary" onclick="closeDeleteModal()" style="flex: 1;">ביטול</button>
+            </div>
         </div>
     </div>
 
@@ -567,87 +373,14 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Custom emoji images from emojis/ directory
-        // Add your image filenames here (they should be in the emojis/ folder)
-        const emojiImages = [
-            'irobot-icon.png',
-            'friendship.png','hold.png','listen.png','solving.png','strength.png'
-            // Example: 'star.png', 'heart.png', 'trophy.png'
-            // Add all your emoji image filenames here
-        ];
-
-        // Emoji categories
-        const emojis = [
-            // Faces & Emotions
-            '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘',
-            '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒',
-            '🙈', '🫣',
-
-            // Activities & Objects
-            '🎯', '🎮', '🎲', '🎭', '🎨', '🎬', '🎪', '🎰', '🎸', '🎹', '🎺', '🎻', '🥁', '🎤', '🎧', '🎼',
-            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍',
-            '🧒', '👧', '👦', '👶', '🏖️', '🛝', '🤝', '👫', '👬', '👭',
-
-            // Nature
-            '🌸', '🌺', '🌻', '🌷', '🌹', '🥀', '🌼', '🌱', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀',
-            '⭐', '🌟', '✨', '💫', '⚡', '🔥', '💥', '☀️', '🌙', '⭐', '🌈', '☁️', '⛅', '🌤️', '⛈️', '🌩️',
-
-            // Animals
-            '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
-            '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞',
-
-            // Food
-            '🍎', '🍏', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅',
-            '🥑', '🍆', '🥔', '🥕', '🌽', '🌶️', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐',
-
-            // Activities & Daily Tasks
-            '🪥', '🧸', '👕', '💧', '🥪', '👟', '🧼', '🚿', '🚽', '🥤', '🛁', '🧴', '🧻', '🧹', '🧺', '🧽',
-            '⏰', '⏱️', '⌚', '📚', '📖', '✏️', '✒️', '🖊️', '🖍️', '📝', '🎒', '🎓', '📐', '📏', '📌', '📍',
-            '🛏️', '🛋️', '🪑', '🚪', '🪟', '🏠', '🏡', '🏢',
-
-            // Electronics & Screens
-            '📱', '💻', '🖥️', '⌨️', '🖱️', '🖨️', '📺', '📷', '📹', '🎥', '📞', '☎️', '📟', '📠', '🔋', '🔌',
-
-            // Symbols
-            '💰', '💵', '💴', '💶', '💷', '🪙', '💳', '🏆', '🥇', '🥈', '🥉', '🎖️', '🏅', '🎗️', '✅', '☑️',
-            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💖', '💝', '💗', '💓', '💞', '💕', '💌'
-        ];
-
-        let currentTaskRow = null;
-        let editingKidId = null;
+        let kidToDelete = null;
 
         // Initialize
         window.onload = async function() {
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('adminContainer').style.display = 'block';
-
             await loadKidsList();
-            addTaskRow(); // Add first task row
-            initEmojiGrid();
         };
-
-        // Initialize emoji grid
-        function initEmojiGrid() {
-            const emojiGrid = document.getElementById('emojiGrid');
-
-            // Add regular emojis
-            emojis.forEach(emoji => {
-                const emojiItem = document.createElement('div');
-                emojiItem.className = 'emoji-item';
-                emojiItem.textContent = emoji;
-                emojiItem.onclick = () => selectEmoji(emoji);
-                emojiGrid.appendChild(emojiItem);
-            });
-
-            // Add custom emoji images from emojis/ directory
-            emojiImages.forEach(imageName => {
-                const emojiItem = document.createElement('div');
-                emojiItem.className = 'emoji-item';
-                emojiItem.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
-                emojiItem.onclick = () => selectEmoji(`IMG:${imageName}`);
-                emojiGrid.appendChild(emojiItem);
-            });
-        }
 
         // Load kids list
         async function loadKidsList() {
@@ -656,7 +389,13 @@
             kidsList.innerHTML = '';
 
             if (snapshot.empty) {
-                kidsList.innerHTML = '<p style="text-align: center; color: #666;">אין ילדים במערכת</p>';
+                kidsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">👶</div>
+                        <p>אין ילדים במערכת</p>
+                        <p style="margin-top: 10px;">לחץ על "הוסף ילד חדש" כדי להתחיל</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -664,675 +403,180 @@
                 const kid = doc.data();
                 const kidDiv = document.createElement('div');
                 kidDiv.className = 'kid-item';
-                // Check if kid has new board layout
-                const hasNewBoard = kid.boardLayout && kid.boardLayout.items && kid.boardLayout.items.length > 0;
-                const boardUrl = hasNewBoard ? 'board.html' : 'index.html';
+
+                const taskCount = kid.tasks ? kid.tasks.length : 0;
+                const money = (kid.totalMoney || 0).toFixed(2);
+                const coinSymbol = kid.coinStyle === 'shekel' ? '₪' : '$';
 
                 kidDiv.innerHTML = `
                     <div class="kid-info">
                         <h3>${kid.name}</h3>
-                        <div class="kid-tasks">${kid.tasks.length} משימות | $${(kid.totalMoney || 0).toFixed(2)}</div>
+                        <div class="kid-stats">
+                            <span class="kid-stat">📋 ${taskCount} משימות</span>
+                            <span class="kid-stat">💰 ${coinSymbol}${money}</span>
+                        </div>
                     </div>
                     <div class="kid-links">
-                        <a href="${boardUrl}?kid=${doc.id}" class="btn btn-primary">לוח ילד</a>
-                        <a href="${boardUrl}?kid=${doc.id}&mode=parent" class="btn btn-secondary">לוח הורה</a>
-                        <a href="board-builder.html?kid=${doc.id}" class="btn btn-primary" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">🎨 בנה לוח</a>
-                        <button class="btn btn-primary" onclick="editKid('${doc.id}')">ערוך</button>
-                        <button class="btn btn-secondary" onclick="copyKid('${doc.id}')">העתק</button>
+                        <a href="board.html?kid=${doc.id}" class="btn btn-primary">📱 לוח</a>
+                        <a href="board-builder.html?kid=${doc.id}" class="btn btn-success">🎨 בנה לוח</a>
+                        <button class="btn btn-secondary" onclick="copyKid('${doc.id}')">📋 העתק</button>
+                        <button class="btn btn-danger" onclick="showDeleteModal('${doc.id}', '${kid.name}')">🗑️</button>
                     </div>
                 `;
                 kidsList.appendChild(kidDiv);
             });
         }
 
-        // Task row management
-        let taskCounter = 0;
-        function addTaskRow() {
-            const tasksList = document.getElementById('tasksList');
-            const taskRow = document.createElement('div');
-            taskRow.className = 'task-input-row';
-            taskRow.id = `task-${taskCounter}`;
-
-            taskRow.innerHTML = `
-                <div class="task-main-row">
-                    <div class="emoji-display" onclick="openEmojiPicker('task-${taskCounter}')" data-task-id="task-${taskCounter}">🎯</div>
-                    <input type="text" placeholder="תיאור המשימה" data-type="title">
-                    <input type="number" placeholder="כמות" data-type="quantity" min="1" value="1" style="width: 70px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;" title="כמות משימות (ברירת מחדל: 1)">
-                    <select data-type="taskType" onchange="toggleTaskTypeInputs('task-${taskCounter}')" style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
-                        <option value="regular">משימה רגילה</option>
-                        <option value="bonus">משימת בונוס</option>
-                        <option value="calm-down">פעילות הרגעה</option>
-                    </select>
-                    <div class="reward-inputs" id="reward-task-${taskCounter}" style="display: none; gap: 10px;">
-                        <input type="number" placeholder="מינימום $" data-type="minReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
-                        <input type="number" placeholder="מקסימום $" data-type="maxReward" step="0.01" min="0" style="width: 100px; padding: 10px; border: 2px solid #ffd700; border-radius: 8px;">
-                    </div>
-                    <div class="calm-down-inputs" id="calmdown-task-${taskCounter}" style="display: none; gap: 10px; flex-direction: column;">
-                        <select data-type="activityType" style="padding: 10px; border: 2px solid #89CFF0; border-radius: 8px;">
-                            <option value="paint">לוח ציור</option>
-                            <option value="bubbles">משחק פיצוץ בועות</option>
-                            <option value="xylophone">קסילופון צבעוני</option>
-                            <option value="breathing">תרגיל נשימות</option>
-                            <option value="link">קישור (סרטון/אתר)</option>
-                        </select>
-                        <input type="text" placeholder="URL (רק אם בחרת קישור)" data-type="activityUrl" style="padding: 10px; border: 2px solid #89CFF0; border-radius: 8px;">
-                    </div>
-                    <label style="display: flex; align-items: center; gap: 5px; padding: 5px;">
-                        <input type="checkbox" data-type="requiresTestimony" style="width: 20px; height: 20px;">
-                        <span style="font-size: 14px;">דורש עדות</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 5px; padding: 5px;">
-                        <input type="checkbox" data-type="trackTime" style="width: 20px; height: 20px;">
-                        <span style="font-size: 14px;">⏱️ מעקב זמן</span>
-                    </label>
-                    <button onclick="removeTaskRow('task-${taskCounter}')">🗑️</button>
-                </div>
-            `;
-
-            // Add days of week selector
-            const daysContainer = document.createElement('div');
-            daysContainer.className = 'days-selector';
-            daysContainer.style.cssText = 'display: flex; gap: 8px; padding: 8px; margin-top: 5px; background: #f8f9fa; border-radius: 8px; flex-wrap: wrap;';
-            daysContainer.innerHTML = `
-                <span style="font-size: 13px; font-weight: bold; color: #667eea; align-self: center;">ימים פעילים:</span>
-                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
-                    <input type="checkbox" data-day="0" checked style="width: 16px; height: 16px;">
-                    <span>א׳</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
-                    <input type="checkbox" data-day="1" checked style="width: 16px; height: 16px;">
-                    <span>ב׳</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
-                    <input type="checkbox" data-day="2" checked style="width: 16px; height: 16px;">
-                    <span>ג׳</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
-                    <input type="checkbox" data-day="3" checked style="width: 16px; height: 16px;">
-                    <span>ד׳</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
-                    <input type="checkbox" data-day="4" checked style="width: 16px; height: 16px;">
-                    <span>ה׳</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
-                    <input type="checkbox" data-day="5" checked style="width: 16px; height: 16px;">
-                    <span>ו׳</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 3px; font-size: 12px;">
-                    <input type="checkbox" data-day="6" checked style="width: 16px; height: 16px;">
-                    <span>שבת</span>
-                </label>
-            `;
-            taskRow.appendChild(daysContainer);
-
-            tasksList.appendChild(taskRow);
-            taskCounter++;
+        // Show add kid modal
+        function showAddKidModal() {
+            document.getElementById('newKidName').value = '';
+            document.getElementById('addKidModal').classList.add('active');
+            document.getElementById('newKidName').focus();
         }
 
-        function toggleTaskTypeInputs(taskId) {
-            const taskRow = document.getElementById(taskId);
-            const taskType = taskRow.querySelector('[data-type="taskType"]').value;
-            const rewardInputs = taskRow.querySelector('.reward-inputs');
-            const calmDownInputs = taskRow.querySelector('.calm-down-inputs');
-
-            if (taskType === 'bonus') {
-                rewardInputs.style.display = 'flex';
-                calmDownInputs.style.display = 'none';
-            } else if (taskType === 'calm-down') {
-                rewardInputs.style.display = 'none';
-                calmDownInputs.style.display = 'flex';
-            } else {
-                rewardInputs.style.display = 'none';
-                calmDownInputs.style.display = 'none';
-            }
+        // Close add kid modal
+        function closeAddKidModal() {
+            document.getElementById('addKidModal').classList.remove('active');
         }
 
-        // Keep old name for backward compatibility
-        function toggleRewardInputs(taskId) {
-            toggleTaskTypeInputs(taskId);
-        }
+        // Add new kid with default board layout
+        async function addNewKid() {
+            const name = document.getElementById('newKidName').value.trim();
 
-        // Image upload and crop functionality
-        let currentImage = null;
-        let cropState = {
-            x: 0,
-            y: 0,
-            size: 200,
-            isDragging: false,
-            isResizing: false,
-            resizeHandle: null,
-            startX: 0,
-            startY: 0,
-            startSize: 0,
-            startCropX: 0,
-            startCropY: 0,
-            minSize: 50
-        };
-
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (!file.type.startsWith('image/')) {
-                alert('נא לבחור קובץ תמונה');
+            if (!name) {
+                alert('נא להכניס שם ילד');
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    currentImage = img;
-                    showCropModal();
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
+            const kidId = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\u0590-\u05FF-]/g, '');
 
-        function showCropModal() {
-            const modal = document.getElementById('cropModal');
-            const canvas = document.getElementById('cropCanvas');
-            const ctx = canvas.getContext('2d');
-            const cropBox = document.getElementById('cropBox');
-
-            // Use the appropriate image (coin or kid)
-            const imageToUse = isCoinCrop ? currentCoinImage : currentImage;
-
-            // Calculate canvas size - smaller on mobile
-            const isMobile = window.innerWidth <= 600;
-            const maxSize = isMobile ? Math.min(window.innerWidth - 60, 400) : 500;
-            let width = imageToUse.width;
-            let height = imageToUse.height;
-
-            if (width > maxSize || height > maxSize) {
-                if (width > height) {
-                    height = (height / width) * maxSize;
-                    width = maxSize;
-                } else {
-                    width = (width / height) * maxSize;
-                    height = maxSize;
-                }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            // Draw image
-            ctx.drawImage(imageToUse, 0, 0, width, height);
-
-            // Initialize crop box (square in center)
-            const cropSize = Math.min(width, height) * 0.7;
-            cropState.size = cropSize;
-            cropState.x = (width - cropSize) / 2;
-            cropState.y = (height - cropSize) / 2;
-
-            updateCropBox();
-
-            // Add drag handlers for crop box
-            cropBox.onmousedown = startDrag;
-            cropBox.ontouchstart = startDrag;
-
-            // Add resize handlers for each corner
-            const handles = cropBox.querySelectorAll('.resize-handle');
-            handles.forEach(handle => {
-                handle.onmousedown = (e) => startResize(e, handle.classList[1]);
-                handle.ontouchstart = (e) => startResize(e, handle.classList[1]);
-            });
-
-            // Global move and release handlers
-            document.onmousemove = handleMove;
-            document.onmouseup = stopDragOrResize;
-            document.ontouchmove = handleMove;
-            document.ontouchend = stopDragOrResize;
-
-            modal.classList.add('active');
-            document.body.classList.add('modal-open');
-
-            console.log('Modal opened:', modal.classList.contains('active'));
-        }
-
-        function updateCropBox() {
-            const cropBox = document.getElementById('cropBox');
-            cropBox.style.left = cropState.x + 'px';
-            cropBox.style.top = cropState.y + 'px';
-            cropBox.style.width = cropState.size + 'px';
-            cropBox.style.height = cropState.size + 'px';
-        }
-
-        function startDrag(e) {
-            // Don't start dragging if clicking on a resize handle
-            if (e.target.classList.contains('resize-handle')) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-            cropState.isDragging = true;
-
-            const cropBox = document.getElementById('cropBox');
-            const rect = cropBox.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            // Store offset from top-left corner of crop box
-            cropState.startX = clientX - rect.left;
-            cropState.startY = clientY - rect.top;
-        }
-
-        function startResize(e, handle) {
-            e.preventDefault();
-            e.stopPropagation();
-            cropState.isResizing = true;
-            cropState.resizeHandle = handle;
-
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            cropState.startX = clientX;
-            cropState.startY = clientY;
-            cropState.startSize = cropState.size;
-            cropState.startCropX = cropState.x;
-            cropState.startCropY = cropState.y;
-        }
-
-        function handleMove(e) {
-            if (cropState.isDragging) {
-                dragCropBox(e);
-            } else if (cropState.isResizing) {
-                resizeCropBox(e);
-            }
-        }
-
-        function dragCropBox(e) {
-            e.preventDefault();
-
-            const canvas = document.getElementById('cropCanvas');
-            const canvasRect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            // Calculate new position relative to canvas
-            let newX = clientX - canvasRect.left - cropState.startX;
-            let newY = clientY - canvasRect.top - cropState.startY;
-
-            // Keep within canvas bounds
-            newX = Math.max(0, Math.min(newX, canvas.width - cropState.size));
-            newY = Math.max(0, Math.min(newY, canvas.height - cropState.size));
-
-            cropState.x = newX;
-            cropState.y = newY;
-            updateCropBox();
-        }
-
-        function resizeCropBox(e) {
-            e.preventDefault();
-
-            const canvas = document.getElementById('cropCanvas');
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            const deltaX = clientX - cropState.startX;
-            const deltaY = clientY - cropState.startY;
-
-            let newSize = cropState.startSize;
-            let newX = cropState.startCropX;
-            let newY = cropState.startCropY;
-
-            // Handle different resize corners
-            switch(cropState.resizeHandle) {
-                case 'resize-se': // Bottom-right
-                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(deltaX, deltaY));
-                    break;
-                case 'resize-sw': // Bottom-left
-                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(-deltaX, deltaY));
-                    newX = cropState.startCropX - (newSize - cropState.startSize);
-                    break;
-                case 'resize-ne': // Top-right
-                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(deltaX, -deltaY));
-                    newY = cropState.startCropY - (newSize - cropState.startSize);
-                    break;
-                case 'resize-nw': // Top-left
-                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(-deltaX, -deltaY));
-                    newX = cropState.startCropX - (newSize - cropState.startSize);
-                    newY = cropState.startCropY - (newSize - cropState.startSize);
-                    break;
-            }
-
-            // Keep within canvas bounds
-            newX = Math.max(0, Math.min(newX, canvas.width - newSize));
-            newY = Math.max(0, Math.min(newY, canvas.height - newSize));
-            newSize = Math.min(newSize, canvas.width - newX, canvas.height - newY);
-
-            cropState.size = newSize;
-            cropState.x = newX;
-            cropState.y = newY;
-            updateCropBox();
-        }
-
-        function stopDragOrResize() {
-            cropState.isDragging = false;
-            cropState.isResizing = false;
-            cropState.resizeHandle = null;
-        }
-
-        function applyCrop() {
-            const canvas = document.getElementById('cropCanvas');
-            const ctx = canvas.getContext('2d');
-
-            // Use the appropriate image (coin or kid)
-            const imageToUse = isCoinCrop ? currentCoinImage : currentImage;
-
-            // Calculate scale factor
-            const scaleX = imageToUse.width / canvas.width;
-            const scaleY = imageToUse.height / canvas.height;
-
-            // Create temporary canvas for cropped image
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-
-            // Set final size to 200x200
-            const finalSize = 200;
-            tempCanvas.width = finalSize;
-            tempCanvas.height = finalSize;
-
-            // Draw cropped and resized image
-            tempCtx.drawImage(
-                imageToUse,
-                cropState.x * scaleX,
-                cropState.y * scaleY,
-                cropState.size * scaleX,
-                cropState.size * scaleY,
-                0,
-                0,
-                finalSize,
-                finalSize
-            );
-
-            // Convert to data URL - use PNG if image has transparency, otherwise JPEG
-            let dataUrl;
-            const imageData = tempCtx.getImageData(0, 0, finalSize, finalSize);
-            let hasTransparency = false;
-
-            // Check for any transparent pixels
-            for (let i = 3; i < imageData.data.length; i += 4) {
-                if (imageData.data[i] < 255) {
-                    hasTransparency = true;
-                    break;
-                }
-            }
-
-            if (hasTransparency) {
-                // Use PNG to preserve transparency
-                dataUrl = tempCanvas.toDataURL('image/png');
-            } else {
-                // Use JPEG for smaller file size
-                dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
-            }
-
-            if (isCoinCrop) {
-                // Update coin image preview and hidden field
-                document.getElementById('coinImageData').value = dataUrl;
-                document.getElementById('coinPreviewImg').src = dataUrl;
-                document.getElementById('coinImagePreview').style.display = 'block';
-                document.getElementById('coinImageName').value = ''; // Clear filename since we have uploaded image
-                isCoinCrop = false; // Reset flag
-            } else {
-                // Update kid image preview and hidden field
-                document.getElementById('kidImageData').value = dataUrl;
-                document.getElementById('previewImg').src = dataUrl;
-                document.getElementById('imagePreview').style.display = 'block';
-                document.getElementById('kidImageName').value = ''; // Clear filename since we have uploaded image
-            }
-
-            closeCropModal();
-        }
-
-        function closeCropModal() {
-            const modal = document.getElementById('cropModal');
-            modal.classList.remove('active');
-            document.body.classList.remove('modal-open');
-            document.getElementById('kidImageUpload').value = ''; // Reset kid image file input
-            document.getElementById('coinImageUpload').value = ''; // Reset coin image file input
-            isCoinCrop = false; // Reset flag
-        }
-
-        function removeImage() {
-            document.getElementById('kidImageData').value = '';
-            document.getElementById('previewImg').src = '';
-            document.getElementById('imagePreview').style.display = 'none';
-        }
-
-        // Coin image upload functionality
-        let currentCoinImage = null;
-        let isCoinCrop = false; // Track if we're cropping coin or kid image
-
-        function handleCoinImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (!file.type.startsWith('image/')) {
-                alert('נא לבחור קובץ תמונה');
+            // Check if kid already exists
+            const existingDoc = await db.collection('kids').doc(kidId).get();
+            if (existingDoc.exists) {
+                alert('קיים כבר ילד עם שם זה. אנא בחר שם אחר.');
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    currentCoinImage = img;
-                    isCoinCrop = true;
-                    showCropModal();
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function removeCoinImage() {
-            document.getElementById('coinImageData').value = '';
-            document.getElementById('coinPreviewImg').src = '';
-            document.getElementById('coinImagePreview').style.display = 'none';
-        }
-
-        function toggleCoinImageInput() {
-            const coinStyle = document.getElementById('coinStyle').value;
-            const coinImageGroup = document.getElementById('coinImageGroup');
-
-            if (coinStyle === 'custom') {
-                coinImageGroup.style.display = 'block';
-            } else {
-                coinImageGroup.style.display = 'none';
-            }
-        }
-
-        function removeTaskRow(taskId) {
-            document.getElementById(taskId).remove();
-        }
-
-        // Emoji picker
-        function openEmojiPicker(taskId) {
-            currentTaskRow = taskId;
-            document.getElementById('emojiModal').classList.add('active');
-        }
-
-        function closeEmojiPicker() {
-            document.getElementById('emojiModal').classList.remove('active');
-            currentTaskRow = null;
-        }
-
-        function selectEmoji(emoji) {
-            if (currentTaskRow) {
-                const taskRow = document.getElementById(currentTaskRow);
-                const emojiDisplay = taskRow.querySelector('.emoji-display');
-
-                // Check if it's an image icon
-                if (emoji.startsWith('IMG:')) {
-                    const imageName = emoji.substring(4);
-                    emojiDisplay.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
-                    emojiDisplay.dataset.icon = emoji; // Store the full IMG: reference
-                } else {
-                    emojiDisplay.textContent = emoji;
-                    emojiDisplay.dataset.icon = emoji;
-                }
-            }
-            closeEmojiPicker();
-        }
-
-        // Close modal when clicking outside
-        document.getElementById('emojiModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeEmojiPicker();
-            }
-        });
-
-        // Edit existing kid
-        async function editKid(kidId) {
-            try {
-                const doc = await db.collection('kids').doc(kidId).get();
-                if (!doc.exists) {
-                    alert('ילד לא נמצא');
-                    return;
-                }
-
-                const kidData = doc.data();
-                editingKidId = kidId;
-
-                // Update form title and button
-                document.getElementById('formTitle').textContent = `ערוך ילד: ${kidData.name}`;
-                document.getElementById('saveButton').textContent = 'שמור שינויים';
-                document.getElementById('cancelButton').style.display = 'block';
-
-                // Fill form with existing data
-                document.getElementById('newKidName').value = kidData.name;
-
-                // Handle image - check if it's a data URL or filename
-                const imageName = kidData.imageName || '';
-                if (imageName.startsWith('data:')) {
-                    // It's an uploaded image (data URL)
-                    document.getElementById('kidImageData').value = imageName;
-                    document.getElementById('previewImg').src = imageName;
-                    document.getElementById('imagePreview').style.display = 'block';
-                    document.getElementById('kidImageName').value = '';
-                } else {
-                    // It's a filename
-                    document.getElementById('kidImageName').value = imageName;
-                    document.getElementById('kidImageData').value = '';
-                    document.getElementById('imagePreview').style.display = 'none';
-                }
-
-                document.getElementById('kidMoney').value = kidData.totalMoney || 0;
-                document.getElementById('kidDailyReward').value = kidData.dailyReward || 0.5;
-
-                // Set coin style (default to dollar for backward compatibility)
-                const coinStyle = kidData.coinStyle || 'dollar';
-                document.getElementById('coinStyle').value = coinStyle;
-                if (coinStyle === 'custom') {
-                    const coinImageName = kidData.coinImageName || '';
-                    // Check if it's a data URL or filename
-                    if (coinImageName.startsWith('data:')) {
-                        // It's an uploaded image (data URL)
-                        document.getElementById('coinImageData').value = coinImageName;
-                        document.getElementById('coinPreviewImg').src = coinImageName;
-                        document.getElementById('coinImagePreview').style.display = 'block';
-                        document.getElementById('coinImageName').value = '';
-                    } else {
-                        // It's a filename
-                        document.getElementById('coinImageName').value = coinImageName;
-                        document.getElementById('coinImageData').value = '';
-                        document.getElementById('coinImagePreview').style.display = 'none';
+            // Create default board layout
+            const defaultBoardLayout = {
+                items: [
+                    {
+                        id: 1,
+                        type: 'bank',
+                        label: `קופת החיסכון של ${name}`
+                    },
+                    {
+                        id: 2,
+                        type: 'progress',
+                        title: 'ההתקדמות שלי היום'
+                    },
+                    {
+                        id: 3,
+                        type: 'header',
+                        size: 'medium',
+                        text: 'המשימות שלי'
+                    },
+                    {
+                        id: 4,
+                        type: 'task',
+                        taskType: 'regular',
+                        taskData: {
+                            id: 1,
+                            icon: '✅',
+                            title: 'משימה לדוגמה',
+                            type: 'regular',
+                            requiresTestimony: false,
+                            trackTime: false,
+                            activeDays: [0, 1, 2, 3, 4, 5, 6]
+                        }
+                    },
+                    {
+                        id: 5,
+                        type: 'header',
+                        size: 'medium',
+                        text: '💰 משימות בונוס 💰'
+                    },
+                    {
+                        id: 6,
+                        type: 'task',
+                        taskType: 'bonus',
+                        taskData: {
+                            id: 2,
+                            icon: '🌟',
+                            title: 'משימת בונוס לדוגמה',
+                            type: 'bonus',
+                            minReward: 1,
+                            maxReward: 5,
+                            requiresTestimony: false,
+                            trackTime: false,
+                            activeDays: [0, 1, 2, 3, 4, 5, 6]
+                        }
+                    },
+                    {
+                        id: 7,
+                        type: 'header',
+                        size: 'medium',
+                        text: '🧘 פינת ההרגעה 🧘'
+                    },
+                    {
+                        id: 8,
+                        type: 'task',
+                        taskType: 'calm-down',
+                        taskData: {
+                            id: 3,
+                            icon: '🎨',
+                            title: 'לוח ציור',
+                            type: 'calm-down',
+                            activityType: 'paint',
+                            activeDays: [0, 1, 2, 3, 4, 5, 6]
+                        }
                     }
-                    toggleCoinImageInput();
+                ]
+            };
+
+            // Create tasks array from board layout for backward compatibility
+            const tasks = defaultBoardLayout.items
+                .filter(item => item.type === 'task')
+                .map(item => item.taskData);
+
+            try {
+                await db.collection('kids').doc(kidId).set({
+                    name: name,
+                    imageName: '',
+                    tasks: tasks,
+                    boardLayout: defaultBoardLayout,
+                    completedTasks: [],
+                    completedBonusTasks: [],
+                    bonusRewardsEarned: {},
+                    totalMoney: 0,
+                    dailyReward: 0.5,
+                    coinStyle: 'dollar',
+                    coinImageName: '',
+                    colorSchema: 'purple',
+                    headerLabel: '',
+                    savingsLabel: '',
+                    regularTasksHeader: 'המשימות שלי',
+                    bonusTasksHeader: '💰 משימות בונוס 💰',
+                    calmDownHeader: '🧘 פינת ההרגעה 🧘',
+                    todayRewardGiven: false,
+                    lastResetDate: new Date().toDateString(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                closeAddKidModal();
+                await loadKidsList();
+
+                // Open board builder for the new kid
+                if (confirm(`${name} נוצר בהצלחה!\n\nהאם לפתוח את בונה הלוחות כדי לערוך את הלוח?`)) {
+                    window.location.href = `board-builder.html?kid=${kidId}`;
                 }
-
-                // Set color schema (default to purple for backward compatibility)
-                const colorSchema = kidData.colorSchema || 'purple';
-                const colorSchemaInput = document.querySelector(`input[name="colorSchema"][value="${colorSchema}"]`);
-                if (colorSchemaInput) {
-                    colorSchemaInput.checked = true;
-                }
-
-                // Set header and savings labels
-                document.getElementById('headerLabel').value = kidData.headerLabel || '';
-                document.getElementById('savingsLabel').value = kidData.savingsLabel || '';
-                document.getElementById('regularTasksHeader').value = kidData.regularTasksHeader !== undefined ? kidData.regularTasksHeader : 'משימות רגילות';
-                document.getElementById('bonusTasksHeader').value = kidData.bonusTasksHeader !== undefined ? kidData.bonusTasksHeader : '💰 משימות בונוס 💰';
-                document.getElementById('calmDownHeader').value = kidData.calmDownHeader !== undefined ? kidData.calmDownHeader : '🧘 פינת ההרגעה 🧘';
-
-                // Clear and populate tasks
-                document.getElementById('tasksList').innerHTML = '';
-                taskCounter = 0;
-
-                if (kidData.tasks && kidData.tasks.length > 0) {
-                    kidData.tasks.forEach(task => {
-                        addTaskRow();
-                        const lastRow = document.getElementById(`task-${taskCounter - 1}`);
-                        const emojiDisplay = lastRow.querySelector('.emoji-display');
-
-                        // Check if it's an image icon
-                        if (task.icon.startsWith('IMG:')) {
-                            const imageName = task.icon.substring(4);
-                            emojiDisplay.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
-                            emojiDisplay.dataset.icon = task.icon;
-                        } else {
-                            emojiDisplay.textContent = task.icon;
-                            emojiDisplay.dataset.icon = task.icon;
-                        }
-
-                        lastRow.querySelector('[data-type="title"]').value = task.title;
-
-                        // Handle task type (default to regular for backward compatibility)
-                        const taskType = task.type || 'regular';
-                        lastRow.querySelector('[data-type="taskType"]').value = taskType;
-
-                        // If bonus task, populate reward fields
-                        if (taskType === 'bonus' && task.minReward !== undefined && task.maxReward !== undefined) {
-                            toggleTaskTypeInputs(`task-${taskCounter - 1}`);
-                            lastRow.querySelector('[data-type="minReward"]').value = task.minReward;
-                            lastRow.querySelector('[data-type="maxReward"]').value = task.maxReward;
-                        }
-
-                        // If calm-down task, populate activity fields
-                        if (taskType === 'calm-down') {
-                            toggleTaskTypeInputs(`task-${taskCounter - 1}`);
-                            if (task.activityType) {
-                                lastRow.querySelector('[data-type="activityType"]').value = task.activityType;
-                            }
-                            if (task.activityUrl) {
-                                lastRow.querySelector('[data-type="activityUrl"]').value = task.activityUrl;
-                            }
-                        }
-
-                        // Set testimony checkbox
-                        if (task.requiresTestimony) {
-                            lastRow.querySelector('[data-type="requiresTestimony"]').checked = true;
-                        }
-
-                        // Set track time checkbox
-                        if (task.trackTime) {
-                            lastRow.querySelector('[data-type="trackTime"]').checked = true;
-                        }
-
-                        // Set active days (default to all 7 days for backward compatibility)
-                        const activeDays = task.activeDays || [0, 1, 2, 3, 4, 5, 6];
-                        const dayCheckboxes = lastRow.querySelectorAll('[data-day]');
-                        dayCheckboxes.forEach(checkbox => {
-                            const day = parseInt(checkbox.dataset.day);
-                            checkbox.checked = activeDays.includes(day);
-                        });
-                    });
-                } else {
-                    addTaskRow();
-                }
-
-                // Scroll to form
-                document.querySelector('.add-kid-form').scrollIntoView({ behavior: 'smooth' });
             } catch (error) {
-                console.error('Error loading kid for edit:', error);
-                alert('שגיאה בטעינת נתוני הילד');
+                console.error('Error adding kid:', error);
+                alert('שגיאה ביצירת הילד: ' + error.message);
             }
         }
 
-        // Copy kid board
+        // Copy kid
         async function copyKid(kidId) {
             try {
                 const doc = await db.collection('kids').doc(kidId).get();
@@ -1342,41 +586,39 @@
                 }
 
                 const kidData = doc.data();
-
-                // Prompt for new kid name
                 const newName = prompt(`העתק לוח של ${kidData.name}\nהכנס שם לילד החדש:`, `${kidData.name} - עותק`);
 
                 if (!newName || newName.trim() === '') {
-                    return; // User cancelled
+                    return;
                 }
 
-                const newKidId = newName.toLowerCase().replace(/\s+/g, '-');
+                const newKidId = newName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\u0590-\u05FF-]/g, '');
 
-                // Check if kid with this name already exists
                 const existingDoc = await db.collection('kids').doc(newKidId).get();
                 if (existingDoc.exists) {
                     alert('קיים כבר ילד עם שם זה. אנא בחר שם אחר.');
                     return;
                 }
 
-                // Create new kid with copied data
                 await db.collection('kids').doc(newKidId).set({
                     name: newName.trim(),
                     imageName: kidData.imageName || '',
                     tasks: kidData.tasks || [],
+                    boardLayout: kidData.boardLayout || null,
                     completedTasks: [],
                     completedBonusTasks: [],
                     bonusRewardsEarned: {},
-                    totalMoney: 0, // Start with 0 money
+                    totalMoney: 0,
                     dailyReward: kidData.dailyReward || 0.5,
                     coinStyle: kidData.coinStyle || 'dollar',
                     coinImageName: kidData.coinImageName || '',
                     colorSchema: kidData.colorSchema || 'purple',
                     headerLabel: kidData.headerLabel || '',
                     savingsLabel: kidData.savingsLabel || '',
-                    regularTasksHeader: kidData.regularTasksHeader !== undefined ? kidData.regularTasksHeader : 'משימות רגילות',
-                    bonusTasksHeader: kidData.bonusTasksHeader !== undefined ? kidData.bonusTasksHeader : '💰 משימות בונוס 💰',
-                    calmDownHeader: kidData.calmDownHeader !== undefined ? kidData.calmDownHeader : '🧘 פינת ההרגעה 🧘',
+                    regularTasksHeader: kidData.regularTasksHeader || '',
+                    bonusTasksHeader: kidData.bonusTasksHeader || '',
+                    calmDownHeader: kidData.calmDownHeader || '',
+                    showDino: kidData.showDino || false,
                     todayRewardGiven: false,
                     lastResetDate: new Date().toDateString(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1390,177 +632,47 @@
             }
         }
 
-        // Cancel edit
-        function cancelEdit() {
-            editingKidId = null;
-            document.getElementById('formTitle').textContent = 'הוסף ילד חדש';
-            document.getElementById('saveButton').textContent = 'שמור ילד';
-            document.getElementById('cancelButton').style.display = 'none';
-            document.getElementById('newKidName').value = '';
-            document.getElementById('kidImageName').value = '';
-            document.getElementById('kidImageData').value = '';
-            document.getElementById('imagePreview').style.display = 'none';
-            document.getElementById('coinImageName').value = '';
-            document.getElementById('coinImageData').value = '';
-            document.getElementById('coinImagePreview').style.display = 'none';
-            document.getElementById('kidMoney').value = '';
-            document.getElementById('kidDailyReward').value = '0.50';
-            document.getElementById('coinStyle').value = 'dollar';
-            toggleCoinImageInput();
-            // Reset color schema to default
-            document.querySelector('input[name="colorSchema"][value="purple"]').checked = true;
-            document.getElementById('tasksList').innerHTML = '';
-            addTaskRow();
+        // Show delete modal
+        function showDeleteModal(kidId, kidName) {
+            kidToDelete = kidId;
+            document.getElementById('deleteKidName').textContent = kidName;
+            document.getElementById('deleteModal').classList.add('active');
         }
 
-        // Save kid (create or update)
-        async function saveKid() {
-            const name = document.getElementById('newKidName').value.trim();
-            let imageName = document.getElementById('kidImageName').value.trim();
-            const imageData = document.getElementById('kidImageData').value;
-            const money = parseFloat(document.getElementById('kidMoney').value) || 0;
-            const dailyReward = parseFloat(document.getElementById('kidDailyReward').value) || 0.5;
-            const coinStyle = document.getElementById('coinStyle').value;
-            let coinImageName = document.getElementById('coinImageName').value.trim();
-            const coinImageData = document.getElementById('coinImageData').value;
-            const colorSchema = document.querySelector('input[name="colorSchema"]:checked').value;
-            const headerLabel = document.getElementById('headerLabel').value.trim();
-            const savingsLabel = document.getElementById('savingsLabel').value.trim();
-            const regularTasksHeader = document.getElementById('regularTasksHeader').value.trim();
-            const bonusTasksHeader = document.getElementById('bonusTasksHeader').value.trim();
-            const calmDownHeader = document.getElementById('calmDownHeader').value.trim();
+        // Close delete modal
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            kidToDelete = null;
+        }
 
-            if (!name) {
-                alert('נא להכניס שם ילד');
-                return;
-            }
-
-            const taskRows = document.querySelectorAll('#tasksList .task-input-row');
-            const tasks = [];
-            let taskId = 1;
-
-            taskRows.forEach(row => {
-                const emojiDisplay = row.querySelector('.emoji-display');
-                const icon = emojiDisplay.dataset.icon || emojiDisplay.textContent.trim();
-                const title = row.querySelector('[data-type="title"]').value.trim();
-                const taskType = row.querySelector('[data-type="taskType"]').value;
-                const quantity = parseInt(row.querySelector('[data-type="quantity"]').value) || 1;
-                const requiresTestimony = row.querySelector('[data-type="requiresTestimony"]').checked;
-                const trackTime = row.querySelector('[data-type="trackTime"]').checked;
-
-                // Get active days from checkboxes
-                const activeDays = [];
-                const dayCheckboxes = row.querySelectorAll('[data-day]');
-                dayCheckboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
-                        activeDays.push(parseInt(checkbox.dataset.day));
-                    }
-                });
-
-                if (icon && title) {
-                    // Create base task object with activeDays (default to all 7 days if none selected)
-                    const baseTask = {
-                        icon,
-                        title,
-                        type: taskType,
-                        requiresTestimony: requiresTestimony,
-                        trackTime: trackTime,
-                        activeDays: activeDays.length > 0 ? activeDays : [0, 1, 2, 3, 4, 5, 6]
-                    };
-
-                    if (taskType === 'bonus') {
-                        const minReward = parseFloat(row.querySelector('[data-type="minReward"]').value) || 0;
-                        const maxReward = parseFloat(row.querySelector('[data-type="maxReward"]').value) || 0;
-
-                        if (minReward <= 0 || maxReward <= 0 || minReward > maxReward) {
-                            alert('נא להכניס ערכי פרס תקינים (מינימום ומקסימום חיוביים, מינימום <= מקסימום)');
-                            return;
-                        }
-
-                        baseTask.minReward = minReward;
-                        baseTask.maxReward = maxReward;
-                    }
-
-                    if (taskType === 'calm-down') {
-                        const activityType = row.querySelector('[data-type="activityType"]').value;
-                        const activityUrl = row.querySelector('[data-type="activityUrl"]').value.trim();
-
-                        baseTask.activityType = activityType;
-                        if (activityType === 'link') {
-                            if (!activityUrl) {
-                                alert('נא להכניס URL לפעילות הרגעה מסוג קישור');
-                                return;
-                            }
-                            baseTask.activityUrl = activityUrl;
-                        }
-                    }
-
-                    // Add multiple instances based on quantity
-                    for (let i = 0; i < quantity; i++) {
-                        tasks.push({ ...baseTask, id: taskId++ });
-                    }
-                }
-            });
-
-            if (tasks.length === 0) {
-                alert('נא להוסיף לפחות משימה אחת');
-                return;
-            }
+        // Confirm delete kid
+        async function confirmDeleteKid() {
+            if (!kidToDelete) return;
 
             try {
-                const kidId = editingKidId || name.toLowerCase().replace(/\s+/g, '-');
-
-                // Use uploaded image data or filename
-                if (imageData) {
-                    // Store image as data URL (will be shown directly in index.html)
-                    imageName = imageData;
-                }
-
-                // Use uploaded coin image data or filename
-                if (coinImageData) {
-                    // Store coin image as data URL
-                    coinImageName = coinImageData;
-                }
-
-                // Prepare kid data
-                const kidDataToSave = {
-                    name: name,
-                    imageName: imageName || '',
-                    tasks: tasks,
-                    totalMoney: money,
-                    dailyReward: dailyReward,
-                    coinStyle: coinStyle,
-                    coinImageName: coinImageName || '',
-                    colorSchema: colorSchema || 'purple',
-                    headerLabel: headerLabel || '',
-                    savingsLabel: savingsLabel || '',
-                    regularTasksHeader: regularTasksHeader,
-                    bonusTasksHeader: bonusTasksHeader,
-                    calmDownHeader: calmDownHeader
-                };
-
-                if (editingKidId) {
-                    // Update existing kid
-                    await db.collection('kids').doc(kidId).update(kidDataToSave);
-                    alert('השינויים נשמרו בהצלחה!');
-                } else {
-                    // Create new kid
-                    kidDataToSave.completedTasks = [];
-                    kidDataToSave.todayRewardGiven = false;
-                    kidDataToSave.lastResetDate = new Date().toDateString();
-                    kidDataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-
-                    await db.collection('kids').doc(kidId).set(kidDataToSave);
-                    alert('הילד נוסף בהצלחה!');
-                }
-
-                cancelEdit();
+                await db.collection('kids').doc(kidToDelete).delete();
+                closeDeleteModal();
                 await loadKidsList();
+                alert('הילד נמחק בהצלחה');
             } catch (error) {
-                console.error('Error saving kid:', error);
-                alert('שגיאה בשמירה: ' + error.message);
+                console.error('Error deleting kid:', error);
+                alert('שגיאה במחיקה: ' + error.message);
             }
         }
+
+        // Close modals when clicking outside
+        document.getElementById('addKidModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAddKidModal();
+        });
+
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
+
+        // Handle Enter key in name input
+        document.getElementById('newKidName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addNewKid();
+        });
     </script>
 </body>
 </html>
