@@ -297,6 +297,7 @@
     // Mouth shape images (will be populated when images are available)
     let mouthImages = [];
     let usingRealImages = false;
+    let currentCharacter = 'dinosaur'; // Default character
 
     // Load mouth images if available
     async function loadMouthImages() {
@@ -305,7 +306,7 @@
 
       for (let i = 0; i < count; i++) {
         const img = new Image();
-        img.src = `/avatar/mouth_${i}.png`;
+        img.src = `/avatar/${currentCharacter}/mouth_${i}.png`;
 
         try {
           await new Promise((resolve, reject) => {
@@ -398,8 +399,8 @@
         status.textContent = 'מנגן...';
         showSpeechBubble(text);
 
-        // Load and play audio
-        audioPlayer.src = `http://localhost:3001${data.audioUrl}`;
+        // Load and play audio from base64 (no file storage)
+        audioPlayer.src = `data:audio/mp3;base64,${data.audioBase64}`;
         await audioPlayer.play();
 
         // Start lip-sync animation
@@ -444,8 +445,8 @@
         status.textContent = 'מנגן...';
         showSpeechBubble(data.text);
 
-        // Load and play audio
-        audioPlayer.src = `http://localhost:3001${data.audioUrl}`;
+        // Load and play audio from base64 (no file storage)
+        audioPlayer.src = `data:audio/mp3;base64,${data.audioBase64}`;
         await audioPlayer.play();
 
         // Start lip-sync animation

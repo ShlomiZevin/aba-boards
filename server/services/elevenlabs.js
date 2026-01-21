@@ -28,7 +28,6 @@ async function getVoices() {
  */
 async function generateSpeech(text, voiceId = null) {
   // Use a default multilingual voice if none specified
-  // "Rachel" is a good default, but we'll fetch voices to find a suitable one
   const selectedVoiceId = voiceId || 'EXAVITQu4vr4xnSDxMaL'; // Sarah - multilingual
 
   const response = await fetch(
@@ -57,20 +56,10 @@ async function generateSpeech(text, voiceId = null) {
 
   const audioBuffer = Buffer.from(await response.arrayBuffer());
 
-  // Save to temp file
-  const audioDir = path.join(__dirname, '../public/audio');
-  if (!fs.existsSync(audioDir)) {
-    fs.mkdirSync(audioDir, { recursive: true });
-  }
-
-  const audioFilename = `speech_${Date.now()}.mp3`;
-  const audioPath = path.join(audioDir, audioFilename);
-  fs.writeFileSync(audioPath, audioBuffer);
-
+  // Return buffer directly - no file storage
   return {
-    audioPath,
-    audioFilename,
-    audioBuffer
+    audioBuffer,
+    audioBase64: audioBuffer.toString('base64')
   };
 }
 
