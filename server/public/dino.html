@@ -171,8 +171,8 @@
   <audio id="audioPlayer"></audio>
 
   <script>
-    const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
-    //const API_URL = 'http://localhost:3001/api';
+    //const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
+    const API_URL = 'http://localhost:3001/api';
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
 
@@ -211,6 +211,19 @@
         await audioPlayer.play();
         audioPlayer.pause();
         audioPlayer.volume = 1.0;
+
+        // CRITICAL: Initialize and unlock Web Audio API for streaming playback
+        const ctx = initPlaybackAudioContext();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+
+        // Create and play a very short silent buffer to fully unlock Web Audio API
+        const silentBuffer = ctx.createBuffer(1, 1, 22050);
+        const silentSource = ctx.createBufferSource();
+        silentSource.buffer = silentBuffer;
+        silentSource.connect(ctx.destination);
+        silentSource.start(0);
 
         audioUnlocked = true;
         audioUnlock.classList.add('hidden');
@@ -387,6 +400,31 @@
         stopRecording();
       } else {
         try {
+          // Initialize playback context and unlock it if needed
+          const ctx = initPlaybackAudioContext();
+          console.log('Record button clicked, AudioContext state:', ctx.state);
+
+          if (ctx.state === 'suspended') {
+            await ctx.resume();
+            console.log('AudioContext resumed for beep, new state:', ctx.state);
+          }
+
+          // Always play a brief beep sound when starting to record (provides audio feedback)
+          const beepBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+          const data = beepBuffer.getChannelData(0);
+          for (let i = 0; i < data.length; i++) {
+            data[i] = Math.sin(2 * Math.PI * 800 * i / ctx.sampleRate) * 0.3;
+          }
+          const beepSource = ctx.createBufferSource();
+          beepSource.buffer = beepBuffer;
+          beepSource.connect(ctx.destination);
+          beepSource.start(0);
+          console.log('Beep started');
+
+          if (!audioUnlocked) {
+            audioUnlocked = true;
+          }
+
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
           audioChunks = [];
@@ -485,12 +523,12 @@
 
     // Audio playback state for streaming
     let playbackAudioContext = null;
-    let audioQueue = [];
-    let isPlaying = false;
+    let audioChunksQueue = [];
+    let isPlayingQueue = false;
     let currentLipSyncTimeouts = [];
-    let nextPlayTime = 0;
+    let cumulativeDuration = 0;
 
-    // Initialize audio context for streaming playback
+    // Initialize audio context for streaming playback (for beep only)
     function initPlaybackAudioContext() {
       if (!playbackAudioContext || playbackAudioContext.state === 'closed') {
         playbackAudioContext = new AudioContext();
@@ -498,78 +536,86 @@
       return playbackAudioContext;
     }
 
-    // Convert base64 to ArrayBuffer
-    function base64ToArrayBuffer(base64) {
-      const binaryString = atob(base64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      return bytes.buffer;
-    }
-
-    // Queue audio chunk for playback
+    // Queue audio chunk - play them sequentially via HTML audio element
     async function queueAudioChunk(audioBase64, lipSyncData) {
       try {
-        const ctx = initPlaybackAudioContext();
-        if (ctx.state === 'suspended') {
-          await ctx.resume();
-        }
+        console.log('Received audio chunk');
 
-        const arrayBuffer = base64ToArrayBuffer(audioBase64);
-        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        // Store chunk with its lip sync data
+        audioChunksQueue.push({
+          audioBase64,
+          lipSyncData,
+          startTime: cumulativeDuration
+        });
 
-        audioQueue.push({ audioBuffer, lipSyncData });
-
-        // Start playback if not already playing
-        if (!isPlaying) {
-          nextPlayTime = ctx.currentTime;
-          playNextChunk();
+        // Start playing queue if not already playing
+        if (!isPlayingQueue) {
+          playNextAudioChunk();
         }
       } catch (err) {
-        console.error('Error decoding audio chunk:', err);
+        console.error('Error queueing audio chunk:', err);
       }
     }
 
-    // Play next chunk from queue - sequential, no overlap
-    function playNextChunk() {
-      if (audioQueue.length === 0) {
-        isPlaying = false;
-        setMouthShape(0);
+    // Play next chunk from queue sequentially
+    async function playNextAudioChunk() {
+      if (audioChunksQueue.length === 0) {
+        isPlayingQueue = false;
+        console.log('Audio queue finished');
         return;
       }
 
-      isPlaying = true;
-      const ctx = playbackAudioContext;
-      const { audioBuffer, lipSyncData } = audioQueue.shift();
+      isPlayingQueue = true;
+      const chunk = audioChunksQueue.shift();
 
-      // Create buffer source
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
+      try {
+        // Set audio source
+        audioPlayer.src = `data:audio/mp3;base64,${chunk.audioBase64}`;
 
-      // Start immediately
-      source.start(0);
+        console.log('Playing chunk, lip sync events:', chunk.lipSyncData?.length || 0);
 
-      // Schedule lip-sync animation from now
-      if (lipSyncData && lipSyncData.length > 0) {
-        animateLipSyncWithOffset(lipSyncData, 0);
+        // Start playback
+        await audioPlayer.play();
+
+        // Animate lip sync for this chunk
+        if (chunk.lipSyncData && chunk.lipSyncData.length > 0) {
+          playLipSync(chunk.lipSyncData);
+        }
+
+        // When this chunk ends, play the next one
+        audioPlayer.onended = () => {
+          playNextAudioChunk();
+        };
+
+      } catch (err) {
+        console.error('Error playing audio chunk:', err);
+        // Try next chunk on error
+        playNextAudioChunk();
       }
-
-      // When this chunk ends, play the next one
-      source.onended = () => {
-        playNextChunk();
-      };
     }
 
-    // Animate lip-sync with time offset
-    function animateLipSyncWithOffset(lipSyncData, offsetMs) {
-      lipSyncData.forEach(cue => {
-        const timeout = setTimeout(() => {
-          setMouthShape(cue.shapeIndex);
-        }, offsetMs + (cue.start * 1000));
-        currentLipSyncTimeouts.push(timeout);
-      });
+    // Called when all streaming is done
+    function onStreamingComplete() {
+      // If no chunks are playing/queued, clean up now
+      if (!isPlayingQueue && audioChunksQueue.length === 0) {
+        hideSpeechBubble();
+        setMouthShape(0);
+        status.textContent = '';
+        setButtonState('idle');
+      } else {
+        // Wait for last chunk to finish, then clean up
+        const originalOnEnded = audioPlayer.onended;
+        audioPlayer.onended = () => {
+          if (audioChunksQueue.length === 0) {
+            hideSpeechBubble();
+            setMouthShape(0);
+            status.textContent = '';
+            setButtonState('idle');
+          } else {
+            originalOnEnded();
+          }
+        };
+      }
     }
 
     // Clear all lip-sync timeouts
@@ -581,10 +627,12 @@
     // Reset streaming playback state
     function resetStreamingPlayback() {
       clearLipSyncTimeouts();
-      audioQueue = [];
-      isPlaying = false;
-      nextPlayTime = 0;
+      audioChunksQueue = [];
+      isPlayingQueue = false;
+      cumulativeDuration = 0;
       setMouthShape(0);
+      audioPlayer.pause();
+      audioPlayer.src = '';
     }
 
     // Parse SSE events from buffer
@@ -681,7 +729,7 @@
                 break;
 
               case 'audio':
-                // Queue audio chunk for playback
+                // Queue audio chunk for collection
                 if (!receivedFirstAudio) {
                   receivedFirstAudio = true;
                   console.log('First audio chunk received');
@@ -691,6 +739,7 @@
 
               case 'done':
                 console.log('Streaming complete:', event.data.metrics);
+                onStreamingComplete();
                 break;
 
               case 'error':
@@ -703,14 +752,7 @@
           }
         }
 
-        // Wait for all audio to finish playing
-        await waitForPlaybackComplete();
-
-        // Cleanup
-        hideSpeechBubble();
-        setMouthShape(0);
-        status.textContent = '';
-        setButtonState('idle');
+        // Note: onended handler is managed by playNextAudioChunk()
 
       } catch (err) {
         console.error('Streaming error:', err);
@@ -722,20 +764,6 @@
           setButtonState('idle');
         }, 2000);
       }
-    }
-
-    // Wait for playback to complete
-    function waitForPlaybackComplete() {
-      return new Promise(resolve => {
-        const checkComplete = () => {
-          if (!isPlaying && audioQueue.length === 0) {
-            resolve();
-          } else {
-            setTimeout(checkComplete, 100);
-          }
-        };
-        checkComplete();
-      });
     }
 
     // Event listeners
