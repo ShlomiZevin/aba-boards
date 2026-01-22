@@ -5,6 +5,50 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+/**
+ * Extract complete sentences from text buffer
+ * Handles Hebrew and English sentence boundaries
+ * @param {string} text - Text buffer to check
+ * @returns {{ complete: string[], remaining: string }}
+ */
+/**
+ * Check if text has actual speakable content (not just emojis/whitespace/punctuation)
+ */
+function hasSpeakableContent(text) {
+  // Remove emojis, whitespace, and punctuation - check if anything remains
+  // This regex matches: emojis, whitespace, punctuation
+  const stripped = text
+    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/gu, '') // emojis
+    .replace(/[\s.,!?;:\-–—'"()[\]{}…\u05C3]/g, ''); // whitespace and punctuation
+  return stripped.length > 0;
+}
+
+function extractCompleteSentences(text) {
+  // Match sentences ending with . ! ? or Hebrew sof pasuq (׃)
+  // Also handle common Hebrew punctuation patterns
+  const sentences = [];
+  let remaining = text;
+
+  // Regex to find sentence boundaries
+  // Looks for: content followed by sentence-ending punctuation and optional whitespace
+  const sentenceEndPattern = /^(.*?[.!?\u05C3])\s*/;
+
+  let match;
+  while ((match = remaining.match(sentenceEndPattern)) !== null) {
+    const sentence = match[1].trim();
+    // Only add if it has actual speakable content (not just emojis/whitespace)
+    if (sentence && hasSpeakableContent(sentence)) {
+      sentences.push(sentence);
+    } else if (sentence) {
+      // If it's just emoji/punctuation, prepend to remaining to merge with next sentence
+      // But don't keep accumulating - just skip empty ones
+    }
+    remaining = remaining.slice(match[0].length);
+  }
+
+  return { complete: sentences, remaining };
+}
+
 // System prompts for different dinosaur personalities
 const PROMPTS = {
   default: `אתה דינוזאור חמוד וידידותי בשם דינו. אתה עוזר לילדים עם אוטיזם במשחקים ומשימות.
@@ -79,8 +123,57 @@ async function generateDinosaurResponse(userMessage, conversationHistory = [], p
   return response.choices[0].message.content;
 }
 
+/**
+ * Stream a response from the dinosaur character, yielding complete sentences
+ * @param {string} userMessage - User's message
+ * @param {Array} conversationHistory - Previous messages for context
+ * @param {string} personality - Which personality to use
+ * @yields {string} - Complete sentences as they become available
+ */
+async function* streamDinosaurResponse(userMessage, conversationHistory = [], personality = 'default') {
+  const systemPrompt = PROMPTS[personality] || PROMPTS.default;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...conversationHistory,
+    { role: 'user', content: userMessage }
+  ];
+
+  const stream = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages,
+    max_tokens: 150,
+    temperature: 0.7,
+    stream: true
+  });
+
+  let buffer = '';
+
+  for await (const chunk of stream) {
+    const content = chunk.choices[0]?.delta?.content || '';
+    buffer += content;
+
+    // Check for complete sentences
+    const { complete, remaining } = extractCompleteSentences(buffer);
+
+    // Yield each complete sentence
+    for (const sentence of complete) {
+      yield sentence;
+    }
+
+    buffer = remaining;
+  }
+
+  // Yield any remaining text at the end (only if it has speakable content)
+  if (buffer.trim() && hasSpeakableContent(buffer.trim())) {
+    yield buffer.trim();
+  }
+}
+
 module.exports = {
   transcribeAudio,
   generateDinosaurResponse,
+  streamDinosaurResponse,
+  extractCompleteSentences,
   DINOSAUR_SYSTEM_PROMPT
 };

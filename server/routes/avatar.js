@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const avatarService = require('../services/avatar');
 const openaiService = require('../services/openai');
+const elevenlabsService = require('../services/elevenlabs');
+const lipsyncService = require('../services/lipsync');
 
 // Per-user conversation history (keyed by oderId, clears after 1 day)
 const conversations = new Map();
@@ -161,6 +163,173 @@ router.post('/converse', express.raw({ type: 'audio/*', limit: '10mb' }), async 
     console.error('Error in conversation:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+/**
+ * POST /api/avatar/converse-stream
+ * Streaming conversation: receive audio, transcribe, stream response with audio chunks
+ * Uses Server-Sent Events (SSE) to push audio as it becomes available
+ */
+router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }), async (req, res) => {
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+  res.flushHeaders();
+
+  const sendEvent = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const mouthShapeCount = parseInt(req.query.mouthShapeCount) || 6;
+    const lipSyncMethod = req.query.lipSyncMethod || 'timestamps';
+    const voiceId = req.query.voiceId || null;
+    const userId = req.query.userId || null;
+    const personality = req.query.personality || 'default';
+    const speed = parseFloat(req.query.speed) || 1.0;
+
+    const audioBuffer = req.body;
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      sendEvent('error', { error: 'Audio data is required' });
+      res.end();
+      return;
+    }
+
+    const totalStart = Date.now();
+
+    // 1. Transcribe audio (fast, non-streaming)
+    const transcribeStart = Date.now();
+    const userText = await openaiService.transcribeAudio(audioBuffer, 'recording.webm');
+    const transcribeTime = Date.now() - transcribeStart;
+
+    console.log('=== Streaming Converse ===');
+    console.log('User said:', userText);
+    console.log(`Transcription time: ${transcribeTime}ms`);
+
+    if (!userText || userText.trim() === '') {
+      sendEvent('error', { error: 'Could not transcribe audio' });
+      res.end();
+      return;
+    }
+
+    // Send transcript immediately
+    sendEvent('transcript', { userText, transcribeTime });
+
+    // 2. Stream LLM response sentence by sentence
+    const history = getConversation(userId);
+    let fullResponse = '';
+    let sentenceIndex = 0;
+    let firstAudioTime = null;
+
+    const llmStart = Date.now();
+
+    for await (const sentence of openaiService.streamDinosaurResponse(userText, history, personality)) {
+      const sentenceStart = Date.now();
+      fullResponse += (fullResponse ? ' ' : '') + sentence;
+
+      // Send the text chunk
+      sendEvent('text', { text: sentence, index: sentenceIndex });
+
+      // Skip TTS for empty/whitespace-only sentences
+      const cleanedSentence = sentence.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/gu, '').trim();
+      if (!cleanedSentence) {
+        console.log(`Skipping TTS for emoji-only sentence: ${sentence}`);
+        sentenceIndex++;
+        continue;
+      }
+
+      // 3. Stream TTS for this sentence
+      let audioChunkIndex = 0;
+      const useTimestamps = lipSyncMethod === 'timestamps';
+
+      try {
+        if (useTimestamps) {
+          // Stream with timestamps for precise lip-sync
+          for await (const chunk of elevenlabsService.streamSpeechWithTimestamps(sentence, voiceId, speed)) {
+            if (firstAudioTime === null) {
+              firstAudioTime = Date.now() - totalStart;
+              console.log(`First audio chunk at: ${firstAudioTime}ms`);
+            }
+
+            // Generate lip-sync data from alignment if available
+            let lipSyncData = null;
+            if (chunk.alignment) {
+              lipSyncData = lipsyncService.generateTimestampLipSync(chunk.alignment, mouthShapeCount);
+            }
+
+            sendEvent('audio', {
+              audioBase64: chunk.audioBase64,
+              lipSyncData,
+              sentenceIndex,
+              chunkIndex: audioChunkIndex++,
+              isFinal: chunk.isFinal
+            });
+          }
+        } else {
+          // Stream without timestamps, use amplitude-based lip-sync
+          for await (const chunk of elevenlabsService.streamSpeech(sentence, voiceId, speed)) {
+            if (firstAudioTime === null) {
+              firstAudioTime = Date.now() - totalStart;
+              console.log(`First audio chunk at: ${firstAudioTime}ms`);
+            }
+
+            // Generate amplitude-based lip-sync from audio chunk
+            const audioBuffer = Buffer.from(chunk.audioBase64, 'base64');
+            const lipSyncData = lipsyncService.generateAmplitudeLipSync(audioBuffer, mouthShapeCount);
+
+            sendEvent('audio', {
+              audioBase64: chunk.audioBase64,
+              lipSyncData,
+              sentenceIndex,
+              chunkIndex: audioChunkIndex++,
+              isFinal: false
+            });
+          }
+        }
+      } catch (ttsError) {
+        console.error('TTS streaming error for sentence:', sentence, ttsError);
+        sendEvent('tts-error', { error: ttsError.message, sentenceIndex });
+      }
+
+      const sentenceTime = Date.now() - sentenceStart;
+      console.log(`Sentence ${sentenceIndex} processed in ${sentenceTime}ms`);
+      sentenceIndex++;
+    }
+
+    // Add to conversation history
+    addToConversation(userId, userText, fullResponse);
+
+    const totalTime = Date.now() - totalStart;
+    const llmTime = Date.now() - llmStart;
+
+    console.log('=== Streaming Performance ===');
+    console.log(`Transcription: ${transcribeTime}ms`);
+    console.log(`First audio: ${firstAudioTime}ms`);
+    console.log(`LLM + TTS streaming: ${llmTime}ms`);
+    console.log(`Total: ${totalTime}ms`);
+    console.log(`Sentences: ${sentenceIndex}`);
+    console.log('=============================');
+
+    // 4. Signal completion
+    sendEvent('done', {
+      fullResponse,
+      metrics: {
+        transcribeTime,
+        firstAudioTime,
+        totalTime,
+        sentenceCount: sentenceIndex
+      }
+    });
+
+  } catch (err) {
+    console.error('Error in streaming conversation:', err);
+    sendEvent('error', { error: err.message });
+  }
+
+  res.end();
 });
 
 /**

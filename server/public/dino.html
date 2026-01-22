@@ -172,6 +172,7 @@
 
   <script>
     const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
+    //const API_URL = 'http://localhost:3001/api';
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
 
@@ -480,12 +481,154 @@
       }
     }
 
-    // Send audio to server
+    // ===== STREAMING AUDIO PLAYBACK =====
+
+    // Audio playback state for streaming
+    let playbackAudioContext = null;
+    let audioQueue = [];
+    let isPlaying = false;
+    let currentLipSyncTimeouts = [];
+    let nextPlayTime = 0;
+
+    // Initialize audio context for streaming playback
+    function initPlaybackAudioContext() {
+      if (!playbackAudioContext || playbackAudioContext.state === 'closed') {
+        playbackAudioContext = new AudioContext();
+      }
+      return playbackAudioContext;
+    }
+
+    // Convert base64 to ArrayBuffer
+    function base64ToArrayBuffer(base64) {
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    // Queue audio chunk for playback
+    async function queueAudioChunk(audioBase64, lipSyncData) {
+      try {
+        const ctx = initPlaybackAudioContext();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+
+        const arrayBuffer = base64ToArrayBuffer(audioBase64);
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+        audioQueue.push({ audioBuffer, lipSyncData });
+
+        // Start playback if not already playing
+        if (!isPlaying) {
+          nextPlayTime = ctx.currentTime;
+          playNextChunk();
+        }
+      } catch (err) {
+        console.error('Error decoding audio chunk:', err);
+      }
+    }
+
+    // Play next chunk from queue - sequential, no overlap
+    function playNextChunk() {
+      if (audioQueue.length === 0) {
+        isPlaying = false;
+        setMouthShape(0);
+        return;
+      }
+
+      isPlaying = true;
+      const ctx = playbackAudioContext;
+      const { audioBuffer, lipSyncData } = audioQueue.shift();
+
+      // Create buffer source
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+
+      // Start immediately
+      source.start(0);
+
+      // Schedule lip-sync animation from now
+      if (lipSyncData && lipSyncData.length > 0) {
+        animateLipSyncWithOffset(lipSyncData, 0);
+      }
+
+      // When this chunk ends, play the next one
+      source.onended = () => {
+        playNextChunk();
+      };
+    }
+
+    // Animate lip-sync with time offset
+    function animateLipSyncWithOffset(lipSyncData, offsetMs) {
+      lipSyncData.forEach(cue => {
+        const timeout = setTimeout(() => {
+          setMouthShape(cue.shapeIndex);
+        }, offsetMs + (cue.start * 1000));
+        currentLipSyncTimeouts.push(timeout);
+      });
+    }
+
+    // Clear all lip-sync timeouts
+    function clearLipSyncTimeouts() {
+      currentLipSyncTimeouts.forEach(t => clearTimeout(t));
+      currentLipSyncTimeouts = [];
+    }
+
+    // Reset streaming playback state
+    function resetStreamingPlayback() {
+      clearLipSyncTimeouts();
+      audioQueue = [];
+      isPlaying = false;
+      nextPlayTime = 0;
+      setMouthShape(0);
+    }
+
+    // Parse SSE events from buffer
+    function parseSSEBuffer(buffer) {
+      const events = [];
+      const lines = buffer.split('\n');
+      let currentEvent = null;
+      let remaining = '';
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Check if this might be an incomplete line at the end
+        if (i === lines.length - 1 && line !== '') {
+          remaining = line;
+          break;
+        }
+
+        if (line.startsWith('event: ')) {
+          currentEvent = { type: line.slice(7).trim(), data: null };
+        } else if (line.startsWith('data: ') && currentEvent) {
+          try {
+            currentEvent.data = JSON.parse(line.slice(6));
+            events.push(currentEvent);
+          } catch (e) {
+            console.warn('Failed to parse SSE data:', line);
+          }
+          currentEvent = null;
+        } else if (line === '' && currentEvent) {
+          // Empty line ends event without data
+          currentEvent = null;
+        }
+      }
+
+      return { events, remaining };
+    }
+
+    // Send audio to server with streaming response
     async function sendAudioToServer(audioBlob) {
       try {
         setButtonState('disabled');
         status.textContent = 'חושב...';
         startThinkingAnimation();
+        resetStreamingPlayback();
 
         const params = new URLSearchParams({
           mouthShapeCount: MOUTH_SHAPE_COUNT,
@@ -493,43 +636,106 @@
           userId: USER_ID
         });
 
-        const response = await fetch(`${API_URL}/avatar/converse?${params}`, {
+        // Use streaming endpoint
+        const response = await fetch(`${API_URL}/avatar/converse-stream?${params}`, {
           method: 'POST',
           headers: { 'Content-Type': 'audio/webm' },
           body: audioBlob
         });
 
         if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || response.statusText);
+          throw new Error(`Server error: ${response.status}`);
         }
 
-        const data = await response.json();
+        // Read the SSE stream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let speechText = '';
+        let receivedFirstAudio = false;
 
-        stopThinkingAnimation();
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const { events, remaining } = parseSSEBuffer(buffer);
+          buffer = remaining;
+
+          for (const event of events) {
+            switch (event.type) {
+              case 'transcript':
+                console.log('Transcribed:', event.data.userText);
+                console.log(`Transcription time: ${event.data.transcribeTime}ms`);
+                break;
+
+              case 'text':
+                // Append text to speech bubble
+                speechText += (speechText ? ' ' : '') + event.data.text;
+                stopThinkingAnimation();
+                showSpeechBubble(speechText);
+                status.textContent = '';
+                break;
+
+              case 'audio':
+                // Queue audio chunk for playback
+                if (!receivedFirstAudio) {
+                  receivedFirstAudio = true;
+                  console.log('First audio chunk received');
+                }
+                await queueAudioChunk(event.data.audioBase64, event.data.lipSyncData);
+                break;
+
+              case 'done':
+                console.log('Streaming complete:', event.data.metrics);
+                break;
+
+              case 'error':
+                throw new Error(event.data.error);
+
+              case 'tts-error':
+                console.warn('TTS error for sentence:', event.data.sentenceIndex, event.data.error);
+                break;
+            }
+          }
+        }
+
+        // Wait for all audio to finish playing
+        await waitForPlaybackComplete();
+
+        // Cleanup
+        hideSpeechBubble();
+        setMouthShape(0);
         status.textContent = '';
-        showSpeechBubble(data.responseText);
-
-        audioPlayer.src = `data:audio/mp3;base64,${data.audioBase64}`;
-        await audioPlayer.play();
-        playLipSync(data.lipSyncData);
-
-        audioPlayer.onended = () => {
-          hideSpeechBubble();
-          setMouthShape(0);
-          status.textContent = '';
-          setButtonState('idle');
-        };
+        setButtonState('idle');
 
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Streaming error:', err);
         stopThinkingAnimation();
+        resetStreamingPlayback();
         status.textContent = 'שגיאה';
         setTimeout(() => {
           status.textContent = '';
           setButtonState('idle');
         }, 2000);
       }
+    }
+
+    // Wait for playback to complete
+    function waitForPlaybackComplete() {
+      return new Promise(resolve => {
+        const checkComplete = () => {
+          if (!isPlaying && audioQueue.length === 0) {
+            resolve();
+          } else {
+            setTimeout(checkComplete, 100);
+          }
+        };
+        checkComplete();
+      });
     }
 
     // Event listeners
