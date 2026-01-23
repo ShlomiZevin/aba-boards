@@ -162,7 +162,7 @@
   </div>
 
   <div class="avatar-container">
-    <img id="avatarImage" class="avatar-image" src="/avatar/dinosaur/mouth_0.png" onerror="this.style.display='none'">
+    <img id="avatarImage" class="avatar-image" src="./avatar/dinosaur/mouth_0.png" onerror="this.style.display='none'">
   </div>
   <div class="speech-bubble" id="speechBubble"></div>
   <div class="status-display" id="status"></div>
@@ -171,8 +171,8 @@
   <audio id="audioPlayer"></audio>
 
   <script>
-    const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
-    //const API_URL = 'http://localhost:3001/api';
+    //const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
+    const API_URL = 'http://localhost:3001/api';
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
 
@@ -277,7 +277,7 @@
 
       for (let i = 0; i < MOUTH_SHAPE_COUNT; i++) {
         const img = new Image();
-        img.src = `/avatar/dinosaur/mouth_${i}.png`;
+        img.src = `./avatar/dinosaur/mouth_${i}.png`;
 
         try {
           await new Promise((resolve, reject) => {
@@ -303,7 +303,7 @@
 
       for (let i = 0; i < THINKING_IMAGE_COUNT; i++) {
         const img = new Image();
-        img.src = `/avatar/dinosaur/thinking_${i}.png`;
+        img.src = `./avatar/dinosaur/thinking_${i}.png`;
 
         try {
           await new Promise((resolve, reject) => {
@@ -527,6 +527,8 @@
     let isPlayingQueue = false;
     let currentLipSyncTimeouts = [];
     let cumulativeDuration = 0;
+    let streamingComplete = false;
+    const MIN_BUFFER_CHUNKS = 1; // Start immediately - each chunk is now a complete sentence
 
     // Initialize audio context for streaming playback (for beep only)
     function initPlaybackAudioContext() {
@@ -539,7 +541,7 @@
     // Queue audio chunk - play them sequentially via HTML audio element
     async function queueAudioChunk(audioBase64, lipSyncData) {
       try {
-        console.log('Received audio chunk');
+        console.log('Received audio chunk, queue length before:', audioChunksQueue.length);
 
         // Store chunk with its lip sync data
         audioChunksQueue.push({
@@ -548,9 +550,14 @@
           startTime: cumulativeDuration
         });
 
+        console.log(`Queued chunk, total in queue: ${audioChunksQueue.length}`);
+
         // Start playing queue if not already playing
         if (!isPlayingQueue) {
+          console.log('Starting playback immediately');
           playNextAudioChunk();
+        } else {
+          console.log('Already playing, chunk will play after current one');
         }
       } catch (err) {
         console.error('Error queueing audio chunk:', err);
@@ -562,17 +569,34 @@
       if (audioChunksQueue.length === 0) {
         isPlayingQueue = false;
         console.log('Audio queue finished');
+
+        // If streaming is complete and queue is empty, clean up
+        if (streamingComplete) {
+          hideSpeechBubble();
+          setMouthShape(0);
+          status.textContent = '';
+          setButtonState('idle');
+        }
         return;
       }
 
+      // Mark as playing BEFORE we start
       isPlayingQueue = true;
       const chunk = audioChunksQueue.shift();
 
-      try {
-        // Set audio source
-        audioPlayer.src = `data:audio/mp3;base64,${chunk.audioBase64}`;
+      console.log('Playing next chunk, remaining in queue:', audioChunksQueue.length);
 
-        console.log('Playing chunk, lip sync events:', chunk.lipSyncData?.length || 0);
+      try {
+        // IMPORTANT: Set onended BEFORE changing src to avoid race conditions
+        audioPlayer.onended = () => {
+          console.log('Chunk ended, playing next');
+          playNextAudioChunk();
+        };
+
+        // Set audio source - Opus format
+        audioPlayer.src = `data:audio/ogg;base64,${chunk.audioBase64}`;
+
+        console.log('Starting playback, lip sync events:', chunk.lipSyncData?.length || 0);
 
         // Start playback
         await audioPlayer.play();
@@ -582,40 +606,33 @@
           playLipSync(chunk.lipSyncData);
         }
 
-        // When this chunk ends, play the next one
-        audioPlayer.onended = () => {
-          playNextAudioChunk();
-        };
-
       } catch (err) {
         console.error('Error playing audio chunk:', err);
-        // Try next chunk on error
+        // Mark as not playing and try next chunk on error
+        isPlayingQueue = false;
         playNextAudioChunk();
       }
     }
 
     // Called when all streaming is done
     function onStreamingComplete() {
+      streamingComplete = true;
+      console.log('Streaming complete flag set, queue length:', audioChunksQueue.length);
+
+      // If we have buffered chunks but haven't started playing yet, start now
+      if (!isPlayingQueue && audioChunksQueue.length > 0 && audioPlayer.paused) {
+        console.log('Streaming done, starting playback with buffered chunks');
+        playNextAudioChunk();
+      }
+
       // If no chunks are playing/queued, clean up now
       if (!isPlayingQueue && audioChunksQueue.length === 0) {
         hideSpeechBubble();
         setMouthShape(0);
         status.textContent = '';
         setButtonState('idle');
-      } else {
-        // Wait for last chunk to finish, then clean up
-        const originalOnEnded = audioPlayer.onended;
-        audioPlayer.onended = () => {
-          if (audioChunksQueue.length === 0) {
-            hideSpeechBubble();
-            setMouthShape(0);
-            status.textContent = '';
-            setButtonState('idle');
-          } else {
-            originalOnEnded();
-          }
-        };
       }
+      // Otherwise, playNextAudioChunk will clean up when queue is empty
     }
 
     // Clear all lip-sync timeouts
@@ -630,6 +647,7 @@
       audioChunksQueue = [];
       isPlayingQueue = false;
       cumulativeDuration = 0;
+      streamingComplete = false;
       setMouthShape(0);
       audioPlayer.pause();
       audioPlayer.src = '';

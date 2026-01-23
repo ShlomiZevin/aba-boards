@@ -24,27 +24,52 @@ function hasSpeakableContent(text) {
 }
 
 function extractCompleteSentences(text) {
-  // Match sentences ending with . ! ? or Hebrew sof pasuq (׃)
-  // Also handle common Hebrew punctuation patterns
+  // Match sentences ending with . ! ? , or Hebrew sof pasuq (׃)
+  // Breaking on commas creates smaller chunks for faster audio generation
   const sentences = [];
-  let remaining = text;
+  let remaining = text.trim(); // Trim whitespace at start
 
-  // Regex to find sentence boundaries
+  console.log('=== extractCompleteSentences DEBUG ===');
+  console.log('Input text:', text);
+  console.log('Text length:', text.length);
+  console.log('Trimmed text:', remaining);
+  console.log('Trimmed length:', remaining.length);
+  console.log('Character codes of first 100 chars:', remaining.substring(0, 100).split('').map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
+
+  // Regex to find sentence boundaries - now includes comma
   // Looks for: content followed by sentence-ending punctuation and optional whitespace
-  const sentenceEndPattern = /^(.*?[.!?\u05C3])\s*/;
+  const sentenceEndPattern = /^(.*?[.!?,\u05C3])\s*/s; // Added 's' flag for dotall mode
 
   let match;
+  let iteration = 0;
   while ((match = remaining.match(sentenceEndPattern)) !== null) {
+    iteration++;
     const sentence = match[1].trim();
+    console.log(`Iteration ${iteration}: matched "${sentence}" (length: ${sentence.length})`);
+    console.log(`  Matched text: "${match[0]}"`);
+    console.log(`  Match[1]: "${match[1]}"`);
+    console.log(`  Remaining length: ${remaining.length} -> ${remaining.length - match[0].length}`);
+
     // Only add if it has actual speakable content (not just emojis/whitespace)
     if (sentence && hasSpeakableContent(sentence)) {
       sentences.push(sentence);
+      console.log(`  ✓ Added sentence ${sentences.length}`);
     } else if (sentence) {
+      console.log(`  ✗ Skipped (no speakable content)`);
       // If it's just emoji/punctuation, prepend to remaining to merge with next sentence
       // But don't keep accumulating - just skip empty ones
     }
-    remaining = remaining.slice(match[0].length);
+    remaining = remaining.slice(match[0].length).trim(); // Trim after slicing
+
+    // Safety check to prevent infinite loops
+    if (iteration > 100) {
+      console.error('Too many iterations in extractCompleteSentences, breaking');
+      break;
+    }
   }
+
+  console.log(`Final: ${sentences.length} sentences, remaining: "${remaining}"`);
+  console.log('======================================');
 
   return { complete: sentences, remaining };
 }

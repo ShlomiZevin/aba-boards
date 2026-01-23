@@ -171,8 +171,8 @@
   <audio id="audioPlayer"></audio>
 
   <script>
-    const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
-    //const API_URL = 'http://localhost:3001/api';
+    //const API_URL = 'https://avatar-server-1018338671074.me-west1.run.app/api';
+    const API_URL = 'http://localhost:3001/api';
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
 
@@ -528,7 +528,7 @@
     let currentLipSyncTimeouts = [];
     let cumulativeDuration = 0;
     let streamingComplete = false;
-    const MIN_BUFFER_CHUNKS = 3; // Wait for 3 chunks before starting playback
+    const MIN_BUFFER_CHUNKS = 1; // Start immediately - each chunk is now a complete sentence
 
     // Initialize audio context for streaming playback (for beep only)
     function initPlaybackAudioContext() {
@@ -539,32 +539,27 @@
     }
 
     // Queue audio chunk - play them sequentially via HTML audio element
-    async function queueAudioChunk(audioBase64, lipSyncData) {
+    async function queueAudioChunk(audioBase64, lipSyncData, sentenceIndex) {
       try {
-        console.log('Received audio chunk, queue length before:', audioChunksQueue.length);
+        const queueLengthBefore = audioChunksQueue.length;
+        console.log(`📥 Received sentence ${sentenceIndex}, queue length before:`, queueLengthBefore);
 
-        // Store chunk with its lip sync data
+        // Store chunk with its lip sync data and sentence index
         audioChunksQueue.push({
           audioBase64,
           lipSyncData,
+          sentenceIndex,
           startTime: cumulativeDuration
         });
 
-        // Start playing queue if:
-        // 1. Not already playing
-        // 2. Audio element is paused
-        // 3. We have enough chunks buffered OR streaming is complete
-        if (!isPlayingQueue && audioPlayer.paused) {
-          const hasEnoughBuffer = audioChunksQueue.length >= MIN_BUFFER_CHUNKS;
+        console.log(`✓ Queued sentence ${sentenceIndex}, total in queue: ${audioChunksQueue.length}`);
 
-          if (hasEnoughBuffer || streamingComplete) {
-            console.log(`Starting playback (buffered ${audioChunksQueue.length} chunks)`);
-            playNextAudioChunk();
-          } else {
-            console.log(`Buffering... (${audioChunksQueue.length}/${MIN_BUFFER_CHUNKS} chunks)`);
-          }
+        // Start playing queue if not already playing
+        if (!isPlayingQueue) {
+          console.log('▶️  Starting playback immediately');
+          playNextAudioChunk();
         } else {
-          console.log('Queue already playing, chunk will play after current one');
+          console.log('⏸️  Already playing, chunk will play after current one finishes');
         }
       } catch (err) {
         console.error('Error queueing audio chunk:', err);
@@ -574,11 +569,13 @@
     // Play next chunk from queue sequentially
     async function playNextAudioChunk() {
       if (audioChunksQueue.length === 0) {
+        // No chunks to play - mark as not playing so next chunk will start playback
         isPlayingQueue = false;
-        console.log('Audio queue finished');
+        console.log('⏸️  Queue empty, stopped playing');
 
-        // If streaming is complete and queue is empty, clean up
+        // If streaming is complete, clean up UI
         if (streamingComplete) {
+          console.log('✅ Streaming complete, cleaning up');
           hideSpeechBubble();
           setMouthShape(0);
           status.textContent = '';
@@ -591,34 +588,54 @@
       isPlayingQueue = true;
       const chunk = audioChunksQueue.shift();
 
-      console.log('Playing next chunk, remaining in queue:', audioChunksQueue.length);
+      console.log(`🔊 Playing sentence ${chunk.sentenceIndex}, remaining in queue: ${audioChunksQueue.length}`);
 
-      try {
-        // IMPORTANT: Set onended BEFORE changing src to avoid race conditions
+      // Set audio source first - Opus format
+      audioPlayer.src = `data:audio/ogg;base64,${chunk.audioBase64}`;
+
+      console.log('Set audio src, data length:', chunk.audioBase64.length, 'lip sync events:', chunk.lipSyncData?.length || 0);
+
+      // Wait for audio to be ready to play
+      return new Promise((resolve) => {
+        let hasStartedPlaying = false;
+
+        // When audio can start playing
+        audioPlayer.oncanplay = async () => {
+          if (hasStartedPlaying) return; // Prevent double-play
+          hasStartedPlaying = true;
+
+          console.log('Audio ready, starting playback');
+
+          try {
+            await audioPlayer.play();
+            console.log('Playback started successfully');
+
+            // Animate lip sync for this chunk
+            if (chunk.lipSyncData && chunk.lipSyncData.length > 0) {
+              playLipSync(chunk.lipSyncData);
+            }
+          } catch (playErr) {
+            console.error('**FAILED TO START PLAYBACK**:', playErr.name, playErr.message);
+            // Don't skip - try to continue anyway
+          }
+        };
+
+        // When audio finishes playing
         audioPlayer.onended = () => {
-          console.log('Chunk ended, playing next');
+          console.log(`✓ Sentence ${chunk.sentenceIndex} finished, playing next`);
+          resolve();
           playNextAudioChunk();
         };
 
-        // Set audio source
-        audioPlayer.src = `data:audio/mp3;base64,${chunk.audioBase64}`;
-
-        console.log('Starting playback, lip sync events:', chunk.lipSyncData?.length || 0);
-
-        // Start playback
-        await audioPlayer.play();
-
-        // Animate lip sync for this chunk
-        if (chunk.lipSyncData && chunk.lipSyncData.length > 0) {
-          playLipSync(chunk.lipSyncData);
-        }
-
-      } catch (err) {
-        console.error('Error playing audio chunk:', err);
-        // Mark as not playing and try next chunk on error
-        isPlayingQueue = false;
-        playNextAudioChunk();
-      }
+        // Error handler
+        audioPlayer.onerror = (e) => {
+          console.error('**AUDIO ELEMENT ERROR**:', audioPlayer.error?.message, 'code:', audioPlayer.error?.code);
+          console.error('ReadyState:', audioPlayer.readyState, 'NetworkState:', audioPlayer.networkState);
+          // Still try to play next chunk
+          resolve();
+          playNextAudioChunk();
+        };
+      });
     }
 
     // Called when all streaming is done
@@ -627,13 +644,14 @@
       console.log('Streaming complete flag set, queue length:', audioChunksQueue.length);
 
       // If we have buffered chunks but haven't started playing yet, start now
-      if (!isPlayingQueue && audioChunksQueue.length > 0 && audioPlayer.paused) {
+      if (!isPlayingQueue && audioChunksQueue.length > 0) {
         console.log('Streaming done, starting playback with buffered chunks');
         playNextAudioChunk();
       }
 
-      // If no chunks are playing/queued, clean up now
-      if (!isPlayingQueue && audioChunksQueue.length === 0) {
+      // If no chunks are queued and we're not actively playing, clean up now
+      if (audioChunksQueue.length === 0 && !isPlayingQueue) {
+        console.log('No chunks left, cleaning up immediately');
         hideSpeechBubble();
         setMouthShape(0);
         status.textContent = '';
@@ -695,7 +713,7 @@
       return { events, remaining };
     }
 
-    // Send audio to server with streaming response
+    // Send audio to server with polling-based response
     async function sendAudioToServer(audioBlob) {
       try {
         setButtonState('disabled');
@@ -709,78 +727,81 @@
           userId: USER_ID
         });
 
-        // Use streaming endpoint
-        const response = await fetch(`${API_URL}/avatar/converse-stream?${params}`, {
+        // Start the session
+        console.log('🚀 Starting polling session...');
+        const startResponse = await fetch(`${API_URL}/avatar/converse-poll-start?${params}`, {
           method: 'POST',
           headers: { 'Content-Type': 'audio/webm' },
           body: audioBlob
         });
 
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
+        if (!startResponse.ok) {
+          throw new Error(`Server error: ${startResponse.status}`);
         }
 
-        // Read the SSE stream
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
+        const { sessionId } = await startResponse.json();
+        console.log('✓ Session started:', sessionId);
+
+        // Poll for updates
         let speechText = '';
         let receivedFirstAudio = false;
+        let isComplete = false;
+        let receivedSentences = new Set(); // Track which sentences we've received
 
-        while (true) {
-          const { done, value } = await reader.read();
+        while (!isComplete) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // Poll every 100ms
 
-          if (done) {
-            break;
+          const pollResponse = await fetch(`${API_URL}/avatar/converse-poll?sessionId=${sessionId}`);
+
+          if (!pollResponse.ok) {
+            throw new Error(`Poll error: ${pollResponse.status}`);
           }
 
-          buffer += decoder.decode(value, { stream: true });
-          const { events, remaining } = parseSSEBuffer(buffer);
-          buffer = remaining;
+          const data = await pollResponse.json();
 
-          for (const event of events) {
-            switch (event.type) {
-              case 'transcript':
-                console.log('Transcribed:', event.data.userText);
-                console.log(`Transcription time: ${event.data.transcribeTime}ms`);
-                break;
+          // Handle transcript
+          if (data.transcript && !receivedFirstAudio) {
+            console.log('Transcribed:', data.transcript.userText);
+            console.log(`Transcription time: ${data.transcript.transcribeTime}ms`);
+          }
 
-              case 'text':
-                // Append text to speech bubble
-                speechText += (speechText ? ' ' : '') + event.data.text;
-                stopThinkingAnimation();
-                showSpeechBubble(speechText);
-                status.textContent = '';
-                break;
+          // Handle text chunks
+          for (const textChunk of data.textChunks) {
+            speechText += (speechText ? ' ' : '') + textChunk.text;
+            stopThinkingAnimation();
+            showSpeechBubble(speechText);
+            status.textContent = '';
+          }
 
-              case 'audio':
-                // Queue audio chunk for collection
-                if (!receivedFirstAudio) {
-                  receivedFirstAudio = true;
-                  console.log('First audio chunk received');
-                }
-                await queueAudioChunk(event.data.audioBase64, event.data.lipSyncData);
-                break;
-
-              case 'done':
-                console.log('Streaming complete:', event.data.metrics);
-                onStreamingComplete();
-                break;
-
-              case 'error':
-                throw new Error(event.data.error);
-
-              case 'tts-error':
-                console.warn('TTS error for sentence:', event.data.sentenceIndex, event.data.error);
-                break;
+          // Handle audio chunks
+          for (const audioChunk of data.audioChunks) {
+            if (!receivedFirstAudio) {
+              receivedFirstAudio = true;
+              console.log('First audio chunk received');
             }
+
+            // Only queue if we haven't received this sentence yet
+            if (!receivedSentences.has(audioChunk.sentenceIndex)) {
+              receivedSentences.add(audioChunk.sentenceIndex);
+              await queueAudioChunk(audioChunk.audioBase64, audioChunk.lipSyncData, audioChunk.sentenceIndex);
+            }
+          }
+
+          // Check if complete
+          if (data.isComplete) {
+            isComplete = true;
+            console.log('Polling complete:', data.metrics);
+            onStreamingComplete();
+          }
+
+          // Handle error
+          if (data.error) {
+            throw new Error(data.error);
           }
         }
 
-        // Note: onended handler is managed by playNextAudioChunk()
-
       } catch (err) {
-        console.error('Streaming error:', err);
+        console.error('Polling error:', err);
         stopThinkingAnimation();
         resetStreamingPlayback();
         status.textContent = 'שגיאה';

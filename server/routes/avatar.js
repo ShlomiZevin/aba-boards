@@ -5,9 +5,13 @@ const openaiService = require('../services/openai');
 const elevenlabsService = require('../services/elevenlabs');
 const lipsyncService = require('../services/lipsync');
 
-// Per-user conversation history (keyed by oderId, clears after 1 day)
+// Per-user conversation history (keyed by userId, clears after 1 day)
 const conversations = new Map();
 const CONV_TTL = 24 * 60 * 60 * 1000; // 1 day
+
+// Per-session audio queues for polling (keyed by sessionId)
+const audioQueues = new Map();
+const SESSION_TTL = 5 * 60 * 1000; // 5 minutes
 
 function getConversation(userId) {
   if (!userId) return [];
@@ -179,7 +183,22 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
   res.flushHeaders();
 
   const sendEvent = (event, data) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    const eventData = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+
+    // Force immediate write to socket
+    const written = res.write(eventData);
+
+    if (event === 'audio') {
+      console.log(`📤 Sent audio event for sentence ${data.sentenceIndex}, size: ${eventData.length} bytes, write returned: ${written}`);
+    } else {
+      console.log(`📤 Sent ${event} event, size: ${eventData.length} bytes`);
+    }
+
+    // CRITICAL: Flush the socket immediately to prevent buffering
+    // This ensures events are sent right away, not batched
+    if (res.flush && typeof res.flush === 'function') {
+      res.flush();
+    }
   };
 
   try {
@@ -241,56 +260,84 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
         continue;
       }
 
-      // 3. Stream TTS for this sentence
-      let audioChunkIndex = 0;
+      // 3. Generate complete TTS audio for this sentence (no streaming chunks)
       const useTimestamps = lipSyncMethod === 'timestamps';
 
       try {
         if (useTimestamps) {
-          // Stream with timestamps for precise lip-sync
-          for await (const chunk of elevenlabsService.streamSpeechWithTimestamps(sentence, voiceId, speed)) {
-            if (firstAudioTime === null) {
-              firstAudioTime = Date.now() - totalStart;
-              console.log(`First audio chunk at: ${firstAudioTime}ms`);
-            }
+          // Generate complete audio with timestamps for precise lip-sync
+          const result = await elevenlabsService.generateSpeechWithTimestamps(sentence, voiceId, speed);
 
-            // Generate lip-sync data from alignment if available
-            let lipSyncData = null;
-            if (chunk.alignment) {
-              lipSyncData = lipsyncService.generateTimestampLipSync(chunk.alignment, mouthShapeCount);
-            }
-
-            sendEvent('audio', {
-              audioBase64: chunk.audioBase64,
-              lipSyncData,
-              sentenceIndex,
-              chunkIndex: audioChunkIndex++,
-              isFinal: chunk.isFinal
-            });
+          if (firstAudioTime === null) {
+            firstAudioTime = Date.now() - totalStart;
+            console.log(`First audio at: ${firstAudioTime}ms`);
           }
+
+          // DEBUG: Save audio file to disk
+          const fs = require('fs');
+          const path = require('path');
+          const debugDir = path.join(__dirname, '../debug-audio');
+          if (!fs.existsSync(debugDir)) {
+            fs.mkdirSync(debugDir, { recursive: true });
+          }
+          const timestamp = Date.now();
+          const audioFilePath = path.join(debugDir, `sentence_${sentenceIndex}_${timestamp}.ogg`);
+          fs.writeFileSync(audioFilePath, result.audioBuffer);
+          console.log(`✓ Saved audio file: ${audioFilePath}`);
+          console.log(`  Sentence: "${sentence.substring(0, 50)}${sentence.length > 50 ? '...' : ''}"`);
+          console.log(`  Audio size: ${result.audioBuffer.length} bytes, Base64 length: ${result.audioBase64.length}`);
+
+          // Generate lip-sync data from alignment if available
+          let lipSyncData = null;
+          if (result.alignment) {
+            lipSyncData = lipsyncService.generateTimestampLipSync(result.alignment, mouthShapeCount);
+          }
+
+          // Send complete sentence audio as single chunk
+          sendEvent('audio', {
+            audioBase64: result.audioBase64,
+            lipSyncData,
+            sentenceIndex,
+            chunkIndex: 0,
+            isFinal: true
+          });
         } else {
-          // Stream without timestamps, use amplitude-based lip-sync
-          for await (const chunk of elevenlabsService.streamSpeech(sentence, voiceId, speed)) {
-            if (firstAudioTime === null) {
-              firstAudioTime = Date.now() - totalStart;
-              console.log(`First audio chunk at: ${firstAudioTime}ms`);
-            }
+          // Generate complete audio without timestamps, use amplitude-based lip-sync
+          const result = await elevenlabsService.generateSpeech(sentence, voiceId, speed);
 
-            // Generate amplitude-based lip-sync from audio chunk
-            const audioBuffer = Buffer.from(chunk.audioBase64, 'base64');
-            const lipSyncData = lipsyncService.generateAmplitudeLipSync(audioBuffer, mouthShapeCount);
-
-            sendEvent('audio', {
-              audioBase64: chunk.audioBase64,
-              lipSyncData,
-              sentenceIndex,
-              chunkIndex: audioChunkIndex++,
-              isFinal: false
-            });
+          if (firstAudioTime === null) {
+            firstAudioTime = Date.now() - totalStart;
+            console.log(`First audio at: ${firstAudioTime}ms`);
           }
+
+          // DEBUG: Save audio file to disk
+          const fs = require('fs');
+          const path = require('path');
+          const debugDir = path.join(__dirname, '../debug-audio');
+          if (!fs.existsSync(debugDir)) {
+            fs.mkdirSync(debugDir, { recursive: true });
+          }
+          const timestamp = Date.now();
+          const audioFilePath = path.join(debugDir, `sentence_${sentenceIndex}_${timestamp}.ogg`);
+          fs.writeFileSync(audioFilePath, result.audioBuffer);
+          console.log(`✓ Saved audio file: ${audioFilePath}`);
+          console.log(`  Sentence: "${sentence.substring(0, 50)}${sentence.length > 50 ? '...' : ''}"`);
+          console.log(`  Audio size: ${result.audioBuffer.length} bytes, Base64 length: ${result.audioBase64.length}`);
+
+          // Generate amplitude-based lip-sync from complete audio
+          const lipSyncData = lipsyncService.generateAmplitudeLipSync(result.audioBuffer, mouthShapeCount);
+
+          // Send complete sentence audio as single chunk
+          sendEvent('audio', {
+            audioBase64: result.audioBase64,
+            lipSyncData,
+            sentenceIndex,
+            chunkIndex: 0,
+            isFinal: true
+          });
         }
       } catch (ttsError) {
-        console.error('TTS streaming error for sentence:', sentence, ttsError);
+        console.error('TTS generation error for sentence:', sentence, ttsError);
         sendEvent('tts-error', { error: ttsError.message, sentenceIndex });
       }
 
@@ -330,6 +377,200 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
   }
 
   res.end();
+});
+
+/**
+ * POST /api/avatar/converse-poll-start
+ * Start a polling-based conversation session
+ * Returns sessionId for subsequent polling
+ */
+router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb' }), async (req, res) => {
+  try {
+    const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const mouthShapeCount = parseInt(req.query.mouthShapeCount) || 6;
+    const lipSyncMethod = req.query.lipSyncMethod || 'timestamps';
+    const voiceId = req.query.voiceId || null;
+    const userId = req.query.userId || null;
+    const speed = parseFloat(req.query.speed) || 1.0;
+
+    const audioBuffer = req.body;
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      return res.status(400).json({ error: 'Audio data is required' });
+    }
+
+    // Initialize session queue
+    const sessionQueue = {
+      created: Date.now(),
+      chunks: [],
+      textChunks: [],
+      isComplete: false,
+      transcript: null,
+      error: null
+    };
+    audioQueues.set(sessionId, sessionQueue);
+
+    // Start processing in background
+    (async () => {
+      try {
+        const totalStart = Date.now();
+
+        // 1. Transcribe audio
+        const transcribeStart = Date.now();
+        const userText = await openaiService.transcribeAudio(audioBuffer, 'recording.webm');
+        const transcribeTime = Date.now() - transcribeStart;
+
+        console.log('=== Polling-based Converse ===');
+        console.log('Session:', sessionId);
+        console.log('User said:', userText);
+        console.log(`Transcription time: ${transcribeTime}ms`);
+
+        if (!userText || userText.trim() === '') {
+          sessionQueue.error = 'Could not transcribe audio';
+          sessionQueue.isComplete = true;
+          return;
+        }
+
+        sessionQueue.transcript = { userText, transcribeTime };
+
+        // 2. Stream LLM response sentence by sentence
+        const conversationHistory = getConversation(userId);
+        const personality = req.query.personality || 'default';
+        let fullResponse = '';
+        let sentenceIndex = 0;
+        let firstAudioTime = null;
+
+        for await (const sentence of openaiService.streamDinosaurResponse(userText, conversationHistory, personality)) {
+          if (!sentence || sentence.trim() === '') continue;
+
+          fullResponse += (fullResponse ? ' ' : '') + sentence;
+
+          // Add text chunk to queue
+          sessionQueue.textChunks.push({ text: sentence, index: sentenceIndex });
+
+          const sentenceStart = Date.now();
+
+          try {
+            // Generate audio for this sentence
+            if (lipSyncMethod === 'timestamps') {
+              const result = await elevenlabsService.generateSpeechWithTimestamps(sentence, voiceId, speed);
+
+              if (firstAudioTime === null) {
+                firstAudioTime = Date.now() - totalStart;
+                console.log(`First audio at: ${firstAudioTime}ms`);
+              }
+
+              let lipSyncData = null;
+              if (result.alignment) {
+                lipSyncData = lipsyncService.generateTimestampLipSync(result.alignment, mouthShapeCount);
+              }
+
+              // Add audio chunk to queue
+              sessionQueue.chunks.push({
+                audioBase64: result.audioBase64,
+                lipSyncData,
+                sentenceIndex,
+                chunkIndex: 0,
+                isFinal: true
+              });
+
+              console.log(`✓ Queued audio for sentence ${sentenceIndex}, queue length: ${sessionQueue.chunks.length}`);
+            } else {
+              const result = await elevenlabsService.generateSpeech(sentence, voiceId, speed);
+
+              if (firstAudioTime === null) {
+                firstAudioTime = Date.now() - totalStart;
+                console.log(`First audio at: ${firstAudioTime}ms`);
+              }
+
+              const lipSyncData = lipsyncService.generateAmplitudeLipSync(result.audioBuffer, mouthShapeCount);
+
+              sessionQueue.chunks.push({
+                audioBase64: result.audioBase64,
+                lipSyncData,
+                sentenceIndex,
+                chunkIndex: 0,
+                isFinal: true
+              });
+
+              console.log(`✓ Queued audio for sentence ${sentenceIndex}, queue length: ${sessionQueue.chunks.length}`);
+            }
+          } catch (ttsError) {
+            console.error('TTS generation error for sentence:', sentence, ttsError);
+          }
+
+          const sentenceTime = Date.now() - sentenceStart;
+          console.log(`Sentence ${sentenceIndex} processed in ${sentenceTime}ms`);
+          sentenceIndex++;
+        }
+
+        // Add to conversation history
+        addToConversation(userId, userText, fullResponse);
+
+        const totalTime = Date.now() - totalStart;
+        console.log('=== Polling Session Complete ===');
+        console.log(`Total time: ${totalTime}ms`);
+        console.log(`Sentences: ${sentenceIndex}`);
+        console.log('================================');
+
+        sessionQueue.isComplete = true;
+        sessionQueue.metrics = {
+          transcribeTime,
+          firstAudioTime,
+          totalTime,
+          sentenceCount: sentenceIndex
+        };
+
+      } catch (err) {
+        console.error('Error in polling session:', err);
+        sessionQueue.error = err.message;
+        sessionQueue.isComplete = true;
+      }
+    })();
+
+    // Return session ID immediately
+    res.json({ sessionId });
+
+  } catch (err) {
+    console.error('Error starting polling session:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/avatar/converse-poll
+ * Poll for new audio chunks from an active session
+ */
+router.get('/converse-poll', (req, res) => {
+  const sessionId = req.query.sessionId;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required' });
+  }
+
+  const sessionQueue = audioQueues.get(sessionId);
+
+  if (!sessionQueue) {
+    return res.status(404).json({ error: 'Session not found or expired' });
+  }
+
+  // Return all available data
+  const response = {
+    transcript: sessionQueue.transcript,
+    textChunks: sessionQueue.textChunks.splice(0), // Take all text chunks
+    audioChunks: sessionQueue.chunks.splice(0), // Take all audio chunks
+    isComplete: sessionQueue.isComplete,
+    error: sessionQueue.error,
+    metrics: sessionQueue.metrics
+  };
+
+  // Clean up completed sessions
+  if (sessionQueue.isComplete && sessionQueue.chunks.length === 0 && sessionQueue.textChunks.length === 0) {
+    audioQueues.delete(sessionId);
+    console.log(`Session ${sessionId} cleaned up`);
+  }
+
+  res.json(response);
 });
 
 /**
