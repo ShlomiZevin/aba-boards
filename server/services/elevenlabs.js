@@ -46,6 +46,7 @@ async function generateSpeech(text, voiceId = null, speed = 1.0) {
       body: JSON.stringify({
         text,
         model_id: 'eleven_v3',
+        output_format: 'mp3_22050_32',
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75
@@ -80,6 +81,7 @@ async function generateSpeechWithTimestamps(text, voiceId = null, speed = 1.0) {
   const requestBody = {
     text,
     model_id: 'eleven_v3',
+    output_format: 'mp3_22050_32',
     voice_settings: {
       speed: speed,
       stability: 0.5,
@@ -148,6 +150,8 @@ async function* streamSpeechWithTimestamps(text, voiceId = null, speed = 1.0) {
   const requestBody = {
     text,
     model_id: 'eleven_v3',
+    output_format: 'mp3_22050_32',
+    auto_mode: true,
     voice_settings: {
       stability: 0.5,
       similarity_boost: 0.75
@@ -260,6 +264,7 @@ async function* streamSpeech(text, voiceId = null, speed = 1.0) {
     body: JSON.stringify({
       text,
       model_id: 'eleven_v3',
+      output_format: 'mp3_22050_32',
       voice_settings: {
         stability: 0.5,
         similarity_boost: 0.75
