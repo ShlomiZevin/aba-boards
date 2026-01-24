@@ -72,6 +72,7 @@
         <p style="text-align: center; color: #666;">לחץ על הכפתור כדי להוסיף את לני למערכת</p>
 
         <button onclick="initializeDatabase()">אתחל מסד נתונים עם לני</button>
+        <button onclick="addKidsForDino()" style="background: #4CAF50;">הוסף מאיר ויעל לדינו</button>
         <button onclick="window.location.href='admin.html'" style="background: #6c757d;">עבור לעמוד ניהול</button>
 
         <div id="status"></div>
@@ -149,6 +150,90 @@
                     <strong>שגיאה!</strong><br>
                     ${error.message}<br><br>
                     <small>נא לוודא שהגדרת את Firestore בפרויקט Firebase שלך.</small>
+                `;
+            }
+        }
+
+        async function addKidsForDino() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'info';
+            statusDiv.textContent = 'מוסיף מאיר ויעל למערכת...';
+
+            try {
+                // מאיר's data
+                const meirData = {
+                    name: 'מאיר',
+                    personalInfo: `בן 8 וחצי.
+יש לו 4 אחים כולל הוא.
+אחת תינוקת בגן בת 3.
+אחת רוני בכיתה ח בת 13 וחצי.
+אח שלו זה דניאל בכיתה ז בן 12 וחצי.
+אמא שלו זאת מיטל.
+אבא שלו זה אשר.
+קוראים לך מאיר המהיר הכי טוב בעיר.
+השם משפחה שלך זה לוי.
+החברים הכי טובים שלך זה עומר ואלירז.
+ואתה לא נבחרת למצטיינים.
+אתה בכיתה ג'2
+עומר רואה דרדסים ואתה אומר לעומר שיש דרדסים חדש כל משפחת זוין קוראת לך מאיר המהיר הכי טוב בעיר.
+אתה גר במאיר דנקנר אחד.
+אתה בקומה 18.
+ויש לך 29 קומות קולל קומה 0.
+ו4 מינוסים.`,
+                    tasks: [],
+                    completedTasks: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                // יעל's data
+                const yaelData = {
+                    name: 'יעל',
+                    personalInfo: `שמות האחים נעה נדב
+שמות ההורים אדווה ואהרון
+מאכל אהוב המבורגר וסושי
+חוגגת בחודש אדר
+עוד חודשיים היא בת 12
+בקרוב היא נוסעת לאילת
+החברה הכי טובה שלה זאת נגה
+היא בכיתה ו
+בבית ספר נווה אברהם
+שנה הבא היא הולכת לבית ספר ישורון
+גיל האחים נדב 15 נעה עוד מעט 18
+גרה באסירי ציון 3 קומה 1
+יש לה כלב שקוראים לו בטן
+בשבת יש לה אורחים ושמם ריי ומיה
+האמא ( אדווה ) עובדת בבילינסון
+והאבא ( אהרון ) עורך דין
+היא אוהבת בית ספר אבל רק את ההפסקות
+משפחה שניה משפחת זוין
+חיה אהובה כלב
+יש לה בנות דודות שקוראים להן הודיה ומוריה
+הם עשו עכשיו שיפוץ בשירותים
+נולדה בשנת 2014`,
+                    tasks: [],
+                    completedTasks: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                // Add both kids to Firestore
+                await db.collection('kids').doc('מאיר').set(meirData);
+                await db.collection('kids').doc('יעל').set(yaelData);
+
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `
+                    <strong>הצלחה! 🎉</strong><br>
+                    מאיר ויעל נוספו למערכת דינו.<br><br>
+                    <a href="../server/public/dino.html?kid=מאיר" style="color: #667eea; font-weight: bold;" target="_blank">פתח דינו עם מאיר</a><br>
+                    <a href="../server/public/dino.html?kid=יעל" style="color: #667eea; font-weight: bold;" target="_blank">פתח דינו עם יעל</a>
+                `;
+
+            } catch (error) {
+                console.error('Error adding kids:', error);
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `
+                    <strong>שגיאה!</strong><br>
+                    ${error.message}
                 `;
             }
         }

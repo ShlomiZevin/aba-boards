@@ -29,13 +29,6 @@ function extractCompleteSentences(text) {
   const sentences = [];
   let remaining = text.trim(); // Trim whitespace at start
 
-  console.log('=== extractCompleteSentences DEBUG ===');
-  console.log('Input text:', text);
-  console.log('Text length:', text.length);
-  console.log('Trimmed text:', remaining);
-  console.log('Trimmed length:', remaining.length);
-  console.log('Character codes of first 100 chars:', remaining.substring(0, 100).split('').map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
-
   // Regex to find sentence boundaries - now includes comma
   // Looks for: content followed by sentence-ending punctuation and optional whitespace
   const sentenceEndPattern = /^(.*?[.!?,\u05C3])\s*/s; // Added 's' flag for dotall mode
@@ -45,19 +38,10 @@ function extractCompleteSentences(text) {
   while ((match = remaining.match(sentenceEndPattern)) !== null) {
     iteration++;
     const sentence = match[1].trim();
-    console.log(`Iteration ${iteration}: matched "${sentence}" (length: ${sentence.length})`);
-    console.log(`  Matched text: "${match[0]}"`);
-    console.log(`  Match[1]: "${match[1]}"`);
-    console.log(`  Remaining length: ${remaining.length} -> ${remaining.length - match[0].length}`);
 
     // Only add if it has actual speakable content (not just emojis/whitespace)
     if (sentence && hasSpeakableContent(sentence)) {
       sentences.push(sentence);
-      console.log(`  ✓ Added sentence ${sentences.length}`);
-    } else if (sentence) {
-      console.log(`  ✗ Skipped (no speakable content)`);
-      // If it's just emoji/punctuation, prepend to remaining to merge with next sentence
-      // But don't keep accumulating - just skip empty ones
     }
     remaining = remaining.slice(match[0].length).trim(); // Trim after slicing
 
@@ -67,9 +51,6 @@ function extractCompleteSentences(text) {
       break;
     }
   }
-
-  console.log(`Final: ${sentences.length} sentences, remaining: "${remaining}"`);
-  console.log('======================================');
 
   return { complete: sentences, remaining };
 }
@@ -153,10 +134,23 @@ async function generateDinosaurResponse(userMessage, conversationHistory = [], p
  * @param {string} userMessage - User's message
  * @param {Array} conversationHistory - Previous messages for context
  * @param {string} personality - Which personality to use
+ * @param {string} kidDetails - Optional kid personality/details to incorporate into prompt
  * @yields {string} - Complete sentences as they become available
  */
-async function* streamDinosaurResponse(userMessage, conversationHistory = [], personality = 'default') {
-  const systemPrompt = PROMPTS[personality] || PROMPTS.default;
+async function* streamDinosaurResponse(userMessage, conversationHistory = [], personality = 'default', kidDetails = null) {
+  let systemPrompt = PROMPTS[personality] || PROMPTS.default;
+
+  // If kidDetails provided, append it to the system prompt
+  if (kidDetails) {
+    systemPrompt += `\n\n**פרטים על הילד שאתה מדבר איתו:**\n${kidDetails}\n\n**חשוב מאוד:**
+- אתה מכיר את הילד הזה היטב! זה לא המפגש הראשון שלכם.
+- השתמש בשם שלו/שלה בתשובה שלך
+- דבר איתו/איתה כמו חבר ותיק שיודע הכל עליו/עליה
+- תהיה חם ואישי, תראה שאתה באמת מכיר ואכפת לך
+- תמיד תזכיר פרטים שאתה יודע לגביה
+- שים לב אם זה זכר או נקבה ותענה בהתאם
+- לכלב של יעל קוראים בוטן לא בטן`;
+  }
 
   const messages = [
     { role: 'system', content: systemPrompt },

@@ -208,6 +208,7 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
     const userId = req.query.userId || null;
     const personality = req.query.personality || 'default';
     const speed = parseFloat(req.query.speed) || 1.0;
+    const kidDetails = req.query.kidDetails || null; // Kid personality/details from Firestore
 
     const audioBuffer = req.body;
 
@@ -227,6 +228,10 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
     console.log('=== Streaming Converse ===');
     console.log('User said:', userText);
     console.log(`Transcription time: ${transcribeTime}ms`);
+    console.log('Kid details received:', kidDetails ? 'YES' : 'NO');
+    if (kidDetails) {
+      console.log('Kid details preview:', kidDetails.substring(0, 100) + '...');
+    }
 
     if (!userText || userText.trim() === '') {
       sendEvent('error', { error: 'Could not transcribe audio' });
@@ -245,7 +250,7 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
 
     const llmStart = Date.now();
 
-    for await (const sentence of openaiService.streamDinosaurResponse(userText, history, personality)) {
+    for await (const sentence of openaiService.streamDinosaurResponse(userText, history, personality, kidDetails)) {
       const sentenceStart = Date.now();
       fullResponse += (fullResponse ? ' ' : '') + sentence;
 
@@ -392,6 +397,7 @@ router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb'
     const voiceId = req.query.voiceId || null;
     const userId = req.query.userId || null;
     const speed = parseFloat(req.query.speed) || 1.0;
+    const kidDetails = req.query.kidDetails || null; // Kid personality/details from Firestore
 
     const audioBuffer = req.body;
 
@@ -440,7 +446,12 @@ router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb'
         let sentenceIndex = 0;
         let firstAudioTime = null;
 
-        for await (const sentence of openaiService.streamDinosaurResponse(userText, conversationHistory, personality)) {
+        console.log('Kid details received:', kidDetails ? 'YES' : 'NO');
+        if (kidDetails) {
+          console.log('Kid details preview:', kidDetails.substring(0, 100) + '...');
+        }
+
+        for await (const sentence of openaiService.streamDinosaurResponse(userText, conversationHistory, personality, kidDetails)) {
           if (!sentence || sentence.trim() === '') continue;
 
           fullResponse += (fullResponse ? ' ' : '') + sentence;
