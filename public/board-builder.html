@@ -49,36 +49,37 @@
             gap: 10px;
         }
 
+        /* Override theme button styles for board-builder page */
         .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 10px;
+            padding: 10px 20px !important;
+            border: none !important;
+            border-radius: 12px !important;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: bold !important;
             transition: all 0.3s ease;
             text-decoration: none;
             display: inline-block;
-            font-size: 14px;
+            font-size: 14px !important;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
         }
 
         .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
+            background: #f0f0f0 !important;
+            color: #333 !important;
         }
 
         .btn-success {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%) !important;
+            color: white !important;
         }
 
         /* Main Layout */
@@ -116,7 +117,7 @@
         .palette-item {
             background: #f8f9fa;
             border: 2px dashed #ddd;
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 15px;
             margin-bottom: 10px;
             cursor: grab;
@@ -168,7 +169,7 @@
             height: 400px;
             color: #999;
             border: 3px dashed #ddd;
-            border-radius: 15px;
+            border-radius: 12px;
             margin: 20px;
         }
 
@@ -181,7 +182,7 @@
         .drop-zone {
             min-height: 100px;
             border: 2px dashed transparent;
-            border-radius: 10px;
+            border-radius: 12px;
             transition: all 0.3s ease;
             padding: 10px;
         }
@@ -228,7 +229,7 @@
             background: #667eea;
             color: white;
             padding: 3px 10px;
-            border-radius: 15px;
+            border-radius: 12px;
             font-size: 0.75em;
             font-weight: bold;
         }
@@ -380,7 +381,7 @@
             width: 100%;
             padding: 10px;
             border: 2px solid #eee;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 14px;
             direction: rtl;
         }
@@ -430,7 +431,7 @@
             gap: 4px;
             background: #f8f9fa;
             padding: 5px 10px;
-            border-radius: 15px;
+            border-radius: 12px;
             font-size: 0.85em;
         }
 
@@ -444,7 +445,7 @@
             width: 60px;
             height: 60px;
             border: 2px solid #eee;
-            border-radius: 10px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -530,7 +531,7 @@
             font-size: 2em;
             cursor: pointer;
             border: 2px solid #eee;
-            border-radius: 10px;
+            border-radius: 12px;
             transition: all 0.3s ease;
         }
 
@@ -552,27 +553,286 @@
         .color-schema-option:has(input:checked) {
             border-color: #667eea !important;
             background: #f0f0ff;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
         }
 
-        /* Responsive */
-        @media (max-width: 900px) {
+        .color-schema-option {
+            transition: all 0.2s ease;
+        }
+
+        .color-schema-option:hover {
+            border-color: #a0aec0;
+        }
+
+        /* Responsive - Tablet */
+        @media (max-width: 1024px) {
+            .palette {
+                width: 240px;
+            }
+
+            .config-panel {
+                width: 300px;
+            }
+        }
+
+        /* Responsive - Mobile */
+        @media (max-width: 768px) {
+            .top-bar {
+                padding: 12px 16px;
+                flex-direction: column;
+                gap: 12px;
+                position: relative;
+            }
+
+            .top-bar h1 {
+                font-size: 1.1em;
+                text-align: center;
+                order: 1;
+            }
+
+            .top-bar-buttons {
+                order: 2;
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .top-bar-buttons .btn {
+                padding: 10px 8px;
+                font-size: 12px;
+                text-align: center;
+                justify-content: center;
+            }
+
             .builder-container {
                 flex-direction: column;
+                height: auto;
+                min-height: calc(100vh - 120px);
             }
 
+            /* Palette becomes horizontal scrollable strip on mobile */
             .palette {
                 width: 100%;
-                max-height: 200px;
+                max-height: none;
+                padding: 12px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
 
+            .palette h3 {
+                display: none;
+            }
+
+            .palette-section {
+                margin-bottom: 0;
+            }
+
+            /* Kid settings section - collapsible on mobile */
+            .palette-section:first-child {
+                display: none;
+            }
+
+            .palette-section h4 {
+                display: none;
+            }
+
+            /* Horizontal layout for palette items */
+            .palette-section:not(:first-child) {
+                display: inline-flex;
+                gap: 10px;
+                white-space: nowrap;
+            }
+
+            .palette-item {
+                min-width: 80px;
+                padding: 10px;
+                margin-bottom: 0;
+                flex-shrink: 0;
+            }
+
+            .palette-item .icon {
+                font-size: 1.5em;
+                margin-bottom: 4px;
+            }
+
+            .palette-item .label {
+                font-size: 0.7em;
+            }
+
+            /* Canvas area */
+            .canvas-container {
+                padding: 12px;
+                flex: 1;
+            }
+
+            .canvas {
+                padding: 16px;
+                border-radius: 20px;
+                min-height: auto;
+            }
+
+            .canvas-empty {
+                height: 250px;
+                margin: 10px;
+            }
+
+            .canvas-empty .icon {
+                font-size: 3em;
+            }
+
+            /* Board items */
+            .board-item {
+                padding: 12px;
+                border-radius: 12px;
+                margin-bottom: 10px;
+            }
+
+            .board-item-header {
+                margin-bottom: 8px;
+            }
+
+            .board-item-type {
+                font-size: 0.65em;
+                padding: 2px 8px;
+            }
+
+            .board-item-content {
+                gap: 10px;
+            }
+
+            .board-item-icon {
+                font-size: 1.5em;
+                width: 40px;
+            }
+
+            .board-item-icon img {
+                width: 40px;
+                height: 40px;
+            }
+
+            .board-item-title {
+                font-size: 0.95em;
+            }
+
+            .board-item-subtitle {
+                font-size: 0.75em;
+            }
+
+            /* Config panel - slide up from bottom */
             .config-panel {
                 width: 100%;
                 position: fixed;
                 bottom: 0;
                 left: 0;
                 right: 0;
-                max-height: 50vh;
+                max-height: 70vh;
                 border-radius: 20px 20px 0 0;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+                z-index: 200;
+                padding: 16px;
+            }
+
+            .config-panel h3 {
+                font-size: 1.1em;
+                margin-bottom: 16px;
+                padding-bottom: 12px;
+            }
+
+            .config-group {
+                margin-bottom: 16px;
+            }
+
+            .config-group label {
+                font-size: 0.85em;
+            }
+
+            .config-group input,
+            .config-group select,
+            .config-group textarea {
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            .days-selector {
+                gap: 6px;
+            }
+
+            .day-checkbox {
+                padding: 4px 8px;
+                font-size: 0.8em;
+            }
+
+            .emoji-picker-trigger {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5em;
+            }
+
+            /* Modal adjustments */
+            .modal-content {
+                padding: 20px;
+                border-radius: 20px;
+                max-width: 95%;
+            }
+
+            .emoji-grid {
+                grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+                gap: 8px;
+            }
+
+            .emoji-item {
+                width: 45px;
+                height: 45px;
+                font-size: 1.5em;
+            }
+
+            /* Add mobile settings toggle button */
+            .mobile-settings-toggle {
+                display: block;
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-weight: bold;
+                font-size: 14px;
+                cursor: pointer;
+                margin-bottom: 12px;
+            }
+
+            /* Drop zone indicator on mobile */
+            .drop-zone {
+                min-height: 150px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 400px) {
+            .top-bar-buttons {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .top-bar-buttons .btn:first-child {
+                grid-column: span 2;
+            }
+
+            .board-item-actions button {
+                font-size: 1em;
+                padding: 4px;
+            }
+
+            .config-panel {
+                max-height: 80vh;
+            }
+        }
+
+        /* Desktop - hide mobile elements */
+        @media (min-width: 769px) {
+            .mobile-settings-toggle {
+                display: none;
             }
         }
     </style>
@@ -615,13 +875,13 @@
                     <!-- Daily Reward -->
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">פרס יומי:</label>
-                        <input type="number" id="dailyReward" placeholder="0.50" step="0.01" min="0" value="0.50" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 8px;">
+                        <input type="number" id="dailyReward" placeholder="0.50" step="0.01" min="0" value="0.50" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px;">
                     </div>
 
                     <!-- Coin Style -->
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">סוג מטבע:</label>
-                        <select id="coinStyle" onchange="toggleCoinImageInput()" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 8px;">
+                        <select id="coinStyle" onchange="toggleCoinImageInput()" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px;">
                             <option value="dollar">דולר ($)</option>
                             <option value="shekel">שקל (₪)</option>
                             <option value="custom">תמונה מותאמת</option>
@@ -646,22 +906,22 @@
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 8px; font-size: 0.85em; color: #666;">ערכת צבעים:</label>
                         <div class="color-schema-options" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                            <label class="color-schema-option" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid #eee; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                            <label class="color-schema-option" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
                                 <input type="radio" name="colorSchema" value="purple" checked style="display: none;">
                                 <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #A8D5E5 0%, #89C4B8 100%); flex-shrink: 0;"></div>
                                 <span style="font-size: 0.8em; font-weight: bold; color: #333;">טורקיז</span>
                             </label>
-                            <label class="color-schema-option" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid #eee; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                            <label class="color-schema-option" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
                                 <input type="radio" name="colorSchema" value="pink" style="display: none;">
                                 <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #F5C6AA 0%, #E8A07E 100%); flex-shrink: 0;"></div>
                                 <span style="font-size: 0.8em; font-weight: bold; color: #333;">אפרסק</span>
                             </label>
-                            <label class="color-schema-option" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid #eee; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                            <label class="color-schema-option" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
                                 <input type="radio" name="colorSchema" value="blue" style="display: none;">
                                 <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #B8D4E8 0%, #C5B8E8 100%); flex-shrink: 0;"></div>
                                 <span style="font-size: 0.8em; font-weight: bold; color: #333;">לבנדר</span>
                             </label>
-                            <label class="color-schema-option" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid #eee; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                            <label class="color-schema-option" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 2px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
                                 <input type="radio" name="colorSchema" value="dark" style="display: none;">
                                 <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #3D5A6C 0%, #2C4A52 100%); flex-shrink: 0;"></div>
                                 <span style="font-size: 0.8em; font-weight: bold; color: #333;">כהה</span>
@@ -731,6 +991,10 @@
 
             <!-- Canvas Area -->
             <div class="canvas-container">
+                <!-- Mobile Settings Button -->
+                <button class="mobile-settings-toggle" onclick="openMobileSettings()">
+                    ⚙️ הגדרות ילד (תמונה, צבעים, ועוד)
+                </button>
                 <div class="canvas">
                     <div id="boardItems" class="drop-zone">
                         <div id="emptyState" class="canvas-empty">
@@ -788,6 +1052,99 @@
                 <button class="close-btn" onclick="closeEmojiPicker()">×</button>
             </div>
             <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+    </div>
+
+    <!-- Mobile Settings Modal -->
+    <div id="mobileSettingsModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>⚙️ הגדרות ילד</h3>
+                <button class="close-btn" onclick="closeMobileSettings()">×</button>
+            </div>
+            <div id="mobileSettingsContent">
+                <!-- Kid Image -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">תמונת פרופיל:</label>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="kidImageUploadMobile" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('kidImageUploadMobile').click()">📤 העלה תמונה</button>
+                        <div id="imagePreviewMobile" style="display: none; position: relative;">
+                            <img id="previewImgMobile" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid #667eea;">
+                            <button type="button" onclick="removeImage()" style="position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; border-radius: 50%; background: #ff6b6b; color: white; border: none; cursor: pointer; font-size: 12px;">×</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Reward -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">פרס יומי:</label>
+                    <input type="number" id="dailyRewardMobile" placeholder="0.50" step="0.01" min="0" value="0.50" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px;">
+                </div>
+
+                <!-- Coin Style -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">סוג מטבע:</label>
+                    <select id="coinStyleMobile" onchange="toggleCoinImageInputMobile()" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px;">
+                        <option value="dollar">דולר ($)</option>
+                        <option value="shekel">שקל (₪)</option>
+                        <option value="custom">תמונה מותאמת</option>
+                    </select>
+                </div>
+
+                <!-- Coin Image (for custom) -->
+                <div id="coinImageGroupMobile" style="display: none; margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">תמונת מטבע:</label>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="coinImageUploadMobile" accept="image/*" style="display: none;" onchange="handleCoinImageUpload(event)">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('coinImageUploadMobile').click()">📤 העלה</button>
+                        <div id="coinImagePreviewMobile" style="display: none; position: relative;">
+                            <img id="coinPreviewImgMobile" style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%; border: 2px solid #ffd700;">
+                            <button type="button" onclick="removeCoinImage()" style="position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; border-radius: 50%; background: #ff6b6b; color: white; border: none; cursor: pointer; font-size: 12px;">×</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Color Schema -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">ערכת צבעים:</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 2px solid #eee; border-radius: 12px; cursor: pointer;">
+                            <input type="radio" name="colorSchemaMobile" value="purple" checked style="display: none;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #A8D5E5 0%, #89C4B8 100%); flex-shrink: 0;"></div>
+                            <span style="font-size: 0.9em; font-weight: bold;">טורקיז</span>
+                        </label>
+                        <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 2px solid #eee; border-radius: 12px; cursor: pointer;">
+                            <input type="radio" name="colorSchemaMobile" value="pink" style="display: none;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #F5C6AA 0%, #E8A07E 100%); flex-shrink: 0;"></div>
+                            <span style="font-size: 0.9em; font-weight: bold;">אפרסק</span>
+                        </label>
+                        <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 2px solid #eee; border-radius: 12px; cursor: pointer;">
+                            <input type="radio" name="colorSchemaMobile" value="blue" style="display: none;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #B8D4E8 0%, #C5B8E8 100%); flex-shrink: 0;"></div>
+                            <span style="font-size: 0.9em; font-weight: bold;">לבנדר</span>
+                        </label>
+                        <label class="color-schema-option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 2px solid #eee; border-radius: 12px; cursor: pointer;">
+                            <input type="radio" name="colorSchemaMobile" value="dark" style="display: none;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #3D5A6C 0%, #2C4A52 100%); flex-shrink: 0;"></div>
+                            <span style="font-size: 0.9em; font-weight: bold;">כהה</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Show Dino -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 12px; background: #f8f9fa; border-radius: 12px;">
+                        <input type="checkbox" id="showDinoMobile" style="width: 20px; height: 20px;">
+                        <span style="font-weight: bold;">🦕 הצג דינו על הלוח</span>
+                    </label>
+                    <div style="font-size: 0.85em; color: #666; margin-top: 8px; padding-right: 10px;">דינוזאור מדבר שעוזר לילדים</div>
+                </div>
+
+                <button class="btn btn-primary" onclick="applyMobileSettings()" style="width: 100%; padding: 14px; font-size: 16px;">
+                    ✓ שמור הגדרות
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1896,12 +2253,22 @@
             document.getElementById('kidImageData').value = '';
             document.getElementById('previewImg').src = '';
             document.getElementById('imagePreview').style.display = 'none';
+            // Also clear mobile preview
+            if (document.getElementById('previewImgMobile')) {
+                document.getElementById('previewImgMobile').src = '';
+                document.getElementById('imagePreviewMobile').style.display = 'none';
+            }
         }
 
         function removeCoinImage() {
             document.getElementById('coinImageData').value = '';
             document.getElementById('coinPreviewImg').src = '';
             document.getElementById('coinImagePreview').style.display = 'none';
+            // Also clear mobile preview
+            if (document.getElementById('coinPreviewImgMobile')) {
+                document.getElementById('coinPreviewImgMobile').src = '';
+                document.getElementById('coinImagePreviewMobile').style.display = 'none';
+            }
         }
 
         // Click outside crop modal to close
@@ -2027,6 +2394,156 @@
         function previewBoard() {
             window.open(`board.html?kid=${kidId}`, '_blank');
         }
+
+        // ==================== Mobile Settings Functions ====================
+
+        function openMobileSettings() {
+            // Sync values from desktop controls to mobile controls
+            document.getElementById('dailyRewardMobile').value = document.getElementById('dailyReward').value;
+            document.getElementById('coinStyleMobile').value = document.getElementById('coinStyle').value;
+            toggleCoinImageInputMobile();
+
+            // Sync image previews
+            const kidImageData = document.getElementById('kidImageData').value;
+            if (kidImageData) {
+                document.getElementById('previewImgMobile').src = kidImageData;
+                document.getElementById('imagePreviewMobile').style.display = 'block';
+            } else {
+                document.getElementById('imagePreviewMobile').style.display = 'none';
+            }
+
+            const coinImageData = document.getElementById('coinImageData').value;
+            if (coinImageData) {
+                document.getElementById('coinPreviewImgMobile').src = coinImageData;
+                document.getElementById('coinImagePreviewMobile').style.display = 'block';
+            } else {
+                document.getElementById('coinImagePreviewMobile').style.display = 'none';
+            }
+
+            // Sync color schema
+            const colorSchema = document.querySelector('input[name="colorSchema"]:checked').value;
+            const mobileColorSchemaInput = document.querySelector(`input[name="colorSchemaMobile"][value="${colorSchema}"]`);
+            if (mobileColorSchemaInput) {
+                mobileColorSchemaInput.checked = true;
+            }
+
+            // Sync show dino
+            document.getElementById('showDinoMobile').checked = document.getElementById('showDino').checked;
+
+            document.getElementById('mobileSettingsModal').classList.add('active');
+        }
+
+        function closeMobileSettings() {
+            document.getElementById('mobileSettingsModal').classList.remove('active');
+        }
+
+        function toggleCoinImageInputMobile() {
+            const coinStyle = document.getElementById('coinStyleMobile').value;
+            const coinImageGroup = document.getElementById('coinImageGroupMobile');
+            coinImageGroup.style.display = coinStyle === 'custom' ? 'block' : 'none';
+        }
+
+        function applyMobileSettings() {
+            // Sync values from mobile controls to desktop controls
+            document.getElementById('dailyReward').value = document.getElementById('dailyRewardMobile').value;
+            document.getElementById('coinStyle').value = document.getElementById('coinStyleMobile').value;
+            toggleCoinImageInput();
+
+            // Sync color schema
+            const colorSchema = document.querySelector('input[name="colorSchemaMobile"]:checked').value;
+            const desktopColorSchemaInput = document.querySelector(`input[name="colorSchema"][value="${colorSchema}"]`);
+            if (desktopColorSchemaInput) {
+                desktopColorSchemaInput.checked = true;
+            }
+
+            // Sync show dino
+            document.getElementById('showDino').checked = document.getElementById('showDinoMobile').checked;
+
+            closeMobileSettings();
+        }
+
+        // Handle image uploads from mobile inputs
+        document.getElementById('kidImageUploadMobile')?.addEventListener('change', function(event) {
+            // Trigger the same handler as desktop
+            handleImageUpload(event);
+        });
+
+        document.getElementById('coinImageUploadMobile')?.addEventListener('change', function(event) {
+            handleCoinImageUpload(event);
+        });
+
+        // Close mobile settings modal when clicking outside
+        document.getElementById('mobileSettingsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeMobileSettings();
+            }
+        });
+
+        // Sync image previews when crop is applied (override for mobile support)
+        const originalApplyCrop = applyCrop;
+        applyCrop = function() {
+            const canvas = document.getElementById('cropCanvas');
+            const imageToUse = isCoinCrop ? currentCoinImage : currentImage;
+
+            const scaleX = imageToUse.width / canvas.width;
+            const scaleY = imageToUse.height / canvas.height;
+
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            const finalSize = 200;
+            tempCanvas.width = finalSize;
+            tempCanvas.height = finalSize;
+
+            tempCtx.drawImage(
+                imageToUse,
+                cropState.x * scaleX,
+                cropState.y * scaleY,
+                cropState.size * scaleX,
+                cropState.size * scaleY,
+                0,
+                0,
+                finalSize,
+                finalSize
+            );
+
+            // Check for transparency
+            let dataUrl;
+            const imageData = tempCtx.getImageData(0, 0, finalSize, finalSize);
+            let hasTransparency = false;
+
+            for (let i = 3; i < imageData.data.length; i += 4) {
+                if (imageData.data[i] < 255) {
+                    hasTransparency = true;
+                    break;
+                }
+            }
+
+            if (hasTransparency) {
+                dataUrl = tempCanvas.toDataURL('image/png');
+            } else {
+                dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
+            }
+
+            if (isCoinCrop) {
+                document.getElementById('coinImageData').value = dataUrl;
+                document.getElementById('coinPreviewImg').src = dataUrl;
+                document.getElementById('coinImagePreview').style.display = 'block';
+                // Also update mobile preview
+                document.getElementById('coinPreviewImgMobile').src = dataUrl;
+                document.getElementById('coinImagePreviewMobile').style.display = 'block';
+                isCoinCrop = false;
+            } else {
+                document.getElementById('kidImageData').value = dataUrl;
+                document.getElementById('previewImg').src = dataUrl;
+                document.getElementById('imagePreview').style.display = 'block';
+                // Also update mobile preview
+                document.getElementById('previewImgMobile').src = dataUrl;
+                document.getElementById('imagePreviewMobile').style.display = 'block';
+            }
+
+            closeCropModal();
+        };
     </script>
 </body>
 </html>

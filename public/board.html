@@ -536,20 +536,29 @@
             box-shadow: 0 10px 30px rgba(168, 213, 229, 0.6);
         }
 
-        /* Dino container - fixed position */
+        /* Dino container - fixed position with nice styling */
         .dino-container {
             position: fixed;
             bottom: 20px;
             left: 20px;
             width: 200px;
-            height: 280px;
+            height: 260px;
             z-index: 1000;
-            border-radius: 20px;
+            border-radius: 24px;
             overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
+            box-shadow:
+                0 10px 40px rgba(0,0,0,0.3),
+                0 0 0 4px rgba(255,255,255,0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
         }
 
+        .dino-container:hover:not(.minimized) {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow:
+                0 15px 50px rgba(0,0,0,0.35),
+                0 0 0 4px rgba(255,255,255,0.5);
+        }
 
         .dino-container iframe {
             width: 100%;
@@ -558,10 +567,21 @@
         }
 
         .dino-container.minimized {
-            width: 70px;
-            height: 70px;
+            width: 65px;
+            height: 65px;
             border-radius: 50%;
             cursor: pointer;
+            animation: dinoFloat 3s ease-in-out infinite;
+        }
+
+        .dino-container.minimized:hover {
+            transform: scale(1.15);
+            animation: none;
+        }
+
+        @keyframes dinoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
         }
 
         .dino-container.minimized iframe {
@@ -572,27 +592,57 @@
             display: none;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #89C4B8 0%, #A8D5E5 100%);
+            background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
             align-items: center;
             justify-content: center;
-            font-size: 40px;
+            font-size: 36px;
+            border-radius: 50%;
         }
 
         .dino-container.minimized .dino-toggle {
             display: flex;
         }
 
+        /* Mobile: dino on bottom right - bigger size */
         @media (max-width: 600px) {
             .dino-container {
-                width: 160px;
-                height: 240px;
-                bottom: 10px;
-                left: 10px;
+                width: 180px;
+                height: 230px;
+                bottom: 15px;
+                left: auto;
+                right: 15px;
+                border-radius: 20px;
             }
 
             .dino-container.minimized {
                 width: 60px;
                 height: 60px;
+                bottom: 15px;
+                right: 15px;
+            }
+
+            .dino-toggle {
+                font-size: 32px;
+            }
+        }
+
+        /* Very small screens - still decent size */
+        @media (max-width: 400px) {
+            .dino-container {
+                width: 160px;
+                height: 200px;
+                bottom: 10px;
+                right: 10px;
+                border-radius: 18px;
+            }
+
+            .dino-container.minimized {
+                width: 55px;
+                height: 55px;
+            }
+
+            .dino-toggle {
+                font-size: 28px;
             }
         }
 
@@ -906,7 +956,7 @@
     <!-- Dino Avatar -->
     <div class="dino-container hidden" id="dinoContainer">
         <div class="dino-toggle" onclick="toggleDino()">🦕</div>
-        <iframe id="dinoFrame" src="https://avatar-server-1018338671074.me-west1.run.app/dino.html" allow="microphone"></iframe>
+        <iframe id="dinoFrame" src="./dino.html" allow="microphone"></iframe>
     </div>
 
     <!-- Calm Down Activity Modal -->

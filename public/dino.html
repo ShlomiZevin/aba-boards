@@ -20,10 +20,6 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
       height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px;
       overflow: hidden;
       position: relative;
     }
@@ -35,76 +31,78 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.6);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 100;
+      gap: 15px;
     }
 
     .audio-unlock.hidden {
       display: none;
     }
 
+    .unlock-text {
+      color: white;
+      font-size: 14px;
+      text-align: center;
+      max-width: 90%;
+      line-height: 1.4;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
     .unlock-btn {
       background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
       border: none;
-      border-radius: 20px;
-      padding: 20px 40px;
-      font-size: 24px;
+      border-radius: 50%;
+      width: 70px;
+      height: 70px;
+      font-size: 28px;
       color: white;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-
-    .avatar-container {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      bottom: 90px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
       display: flex;
       align-items: center;
       justify-content: center;
+      animation: pulseUnlock 2s ease-in-out infinite;
     }
 
+    @keyframes pulseUnlock {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+      50% { transform: scale(1.1); box-shadow: 0 6px 30px rgba(76, 175, 80, 0.6); }
+    }
+
+    /* Dino image - centered in page */
     .avatar-image {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      border-radius: 15px;
-    }
-
-    /* Status display */
-    .status-display {
       position: absolute;
-      bottom: 60px;
-      left: 10px;
-      right: 10px;
-      font-size: 14px;
-      font-weight: bold;
-      color: #2d5a45;
-      height: 25px;
-      text-align: center;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 95%;
+      max-height: 85%;
+      object-fit: contain;
     }
 
-    /* Record button */
+    /* Mic button - on dino's belly area */
     .record-btn {
       position: absolute;
-      bottom: 5px;
+      top: 70%;
       left: 50%;
-      transform: translateX(-50%);
-      width: 50px;
-      height: 50px;
+      transform: translate(-50%, -50%);
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      border: none;
+      border: 3px solid rgba(255,255,255,0.9);
       cursor: pointer;
-      font-size: 24px;
-      transition: all 0.3s ease, transform 0.3s ease;
+      font-size: 20px;
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      z-index: 50;
     }
 
     .record-btn.idle {
@@ -114,44 +112,67 @@
     .record-btn.recording {
       background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
       animation: pulse 1s infinite;
+      border-color: rgba(255,255,255,1);
     }
 
     .record-btn.disabled {
-      background: #ccc;
+      background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
       cursor: not-allowed;
     }
 
     .record-btn:hover:not(.disabled) {
-      transform: translateX(-50%) scale(1.1);
+      transform: translate(-50%, -50%) scale(1.1);
     }
 
     .record-btn:active:not(.disabled) {
-      transform: translateX(-50%) scale(0.95);
+      transform: translate(-50%, -50%) scale(0.95);
     }
 
     @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); }
-      50% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.6); }
+      50% { box-shadow: 0 0 0 12px rgba(244, 67, 54, 0); }
     }
 
-    /* Speech bubble - shows at bottom over button area */
+    /* Status display - above mic button */
+    .status-display {
+      position: absolute;
+      top: 58%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: bold;
+      color: white;
+      background: rgba(0,0,0,0.6);
+      padding: 4px 10px;
+      border-radius: 12px;
+      z-index: 50;
+      backdrop-filter: blur(3px);
+      white-space: nowrap;
+    }
+
+    .status-display:empty {
+      display: none;
+    }
+
+    /* Speech bubble - above the mic area */
     .speech-bubble {
-      position: fixed;
-      bottom: 70px;
-      left: 5px;
-      right: 5px;
+      position: absolute;
+      top: 10%;
+      left: 10px;
+      right: 10px;
       background: rgba(255,255,255,0.95);
-      padding: 8px;
-      border-radius: 10px;
+      padding: 8px 12px;
+      border-radius: 12px;
       font-size: 11px;
       color: #333;
       opacity: 0;
       transition: opacity 0.3s ease;
-      z-index: 10;
+      z-index: 40;
       text-align: center;
       max-height: 50px;
       overflow: hidden;
       line-height: 1.3;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.2);
     }
 
     .speech-bubble.visible {
@@ -163,15 +184,21 @@
 <body>
   <!-- Mobile audio unlock overlay -->
   <div class="audio-unlock" id="audioUnlock">
-    <button class="unlock-btn" id="unlockBtn">🦕 לחץ להתחיל</button>
+    <div class="unlock-text">כדי לדבר עם דינו לחץ על הכפתור</div>
+    <button class="unlock-btn" id="unlockBtn">🎤</button>
   </div>
 
-  <div class="avatar-container">
-    <img id="avatarImage" class="avatar-image" src="./avatar/dinosaur/mouth_0.png" onerror="this.style.display='none'">
-  </div>
-  <div class="speech-bubble" id="speechBubble"></div>
-  <div class="status-display" id="status"></div>
+  <!-- Dino centered in page -->
+  <img id="avatarImage" class="avatar-image" src="./avatar/dinosaur/mouth_0.png" onerror="this.style.display='none'">
+
+  <!-- Mic button top right -->
   <button class="record-btn idle" id="recordBtn">🎤</button>
+
+  <!-- Status next to mic -->
+  <div class="status-display" id="status"></div>
+
+  <!-- Speech bubble -->
+  <div class="speech-bubble" id="speechBubble"></div>
 
   <audio id="audioPlayer"></audio>
 
