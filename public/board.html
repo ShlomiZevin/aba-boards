@@ -632,29 +632,75 @@
             overflow: visible;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             background: transparent;
+            touch-action: none;
         }
 
-        /* No hover effect - dino stays fixed */
+        .dino-container.dragging {
+            transition: none;
+            cursor: grabbing;
+        }
+
+        .dino-drag-handle {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 10px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+
+        .dino-drag-handle::before {
+            content: '⋮⋮';
+            font-size: 12px;
+            color: #666;
+            letter-spacing: 2px;
+        }
+
+        .dino-drag-handle:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .dino-container.dragging .dino-drag-handle {
+            cursor: grabbing;
+        }
 
         .dino-container iframe {
             width: 100%;
             height: 100%;
             border: none;
+            pointer-events: auto;
         }
 
         .dino-container.minimized {
             width: 65px;
             height: 65px;
             border-radius: 50%;
-            cursor: pointer;
+            cursor: grab;
             animation: dinoFloat 3s ease-in-out infinite;
             background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
             box-shadow: 0 4px 15px rgba(0,0,0,0.25);
         }
 
+        .dino-container.minimized.dragging {
+            cursor: grabbing;
+            animation: none;
+        }
+
         .dino-container.minimized:hover {
             transform: scale(1.15);
             animation: none;
+        }
+
+        .dino-container.minimized .dino-drag-handle {
+            display: none;
         }
 
         @keyframes dinoFloat {
@@ -686,20 +732,20 @@
             .dino-container {
                 width: 180px;
                 height: 230px;
-                bottom: 15px;
-                left: auto;
-                right: 15px;
             }
 
             .dino-container.minimized {
                 width: 60px;
                 height: 60px;
-                bottom: 15px;
-                right: 15px;
             }
 
             .dino-toggle {
                 font-size: 32px;
+            }
+
+            .dino-drag-handle {
+                width: 44px;
+                height: 18px;
             }
         }
 
@@ -708,8 +754,6 @@
             .dino-container {
                 width: 160px;
                 height: 200px;
-                bottom: 10px;
-                right: 10px;
             }
 
             .dino-container.minimized {
@@ -719,6 +763,11 @@
 
             .dino-toggle {
                 font-size: 28px;
+            }
+
+            .dino-drag-handle {
+                width: 40px;
+                height: 16px;
             }
         }
 
@@ -1061,6 +1110,7 @@
 
     <!-- Dino Avatar -->
     <div class="dino-container hidden" id="dinoContainer">
+        <div class="dino-drag-handle" id="dinoDragHandle"></div>
         <div class="dino-toggle" onclick="toggleDino()">🦕</div>
         <iframe id="dinoFrame" src="./dino.html" allow="microphone"></iframe>
     </div>
@@ -2198,6 +2248,113 @@
             const container = document.getElementById('dinoContainer');
             container.classList.toggle('minimized');
         }
+
+        // Dino Drag Functionality
+        (function initDinoDrag() {
+            const container = document.getElementById('dinoContainer');
+            const handle = document.getElementById('dinoDragHandle');
+
+            let isDragging = false;
+            let dragStartX, dragStartY;
+            let containerStartX, containerStartY;
+
+            function getContainerPosition() {
+                const rect = container.getBoundingClientRect();
+                return { x: rect.left, y: rect.top };
+            }
+
+            function startDrag(e) {
+                // For minimized state, the whole container is draggable
+                // For expanded state, only the handle is draggable
+                const isMinimized = container.classList.contains('minimized');
+                const target = e.target;
+
+                if (!isMinimized && target !== handle) return;
+                if (isMinimized && target.classList.contains('dino-toggle')) {
+                    // Allow click on toggle to work
+                    return;
+                }
+
+                e.preventDefault();
+                isDragging = true;
+                container.classList.add('dragging');
+
+                const pos = getContainerPosition();
+                containerStartX = pos.x;
+                containerStartY = pos.y;
+
+                if (e.type === 'touchstart') {
+                    dragStartX = e.touches[0].clientX;
+                    dragStartY = e.touches[0].clientY;
+                } else {
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+                }
+
+                // Remove bottom/left/right positioning, use top/left
+                container.style.bottom = 'auto';
+                container.style.right = 'auto';
+                container.style.left = containerStartX + 'px';
+                container.style.top = containerStartY + 'px';
+            }
+
+            function drag(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+
+                let currentX, currentY;
+                if (e.type === 'touchmove') {
+                    currentX = e.touches[0].clientX;
+                    currentY = e.touches[0].clientY;
+                } else {
+                    currentX = e.clientX;
+                    currentY = e.clientY;
+                }
+
+                const deltaX = currentX - dragStartX;
+                const deltaY = currentY - dragStartY;
+
+                let newX = containerStartX + deltaX;
+                let newY = containerStartY + deltaY;
+
+                // Keep within viewport
+                const rect = container.getBoundingClientRect();
+                const maxX = window.innerWidth - rect.width;
+                const maxY = window.innerHeight - rect.height;
+
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+
+                container.style.left = newX + 'px';
+                container.style.top = newY + 'px';
+            }
+
+            function endDrag() {
+                if (!isDragging) return;
+                isDragging = false;
+                container.classList.remove('dragging');
+            }
+
+            // Mouse events
+            handle.addEventListener('mousedown', startDrag);
+            container.addEventListener('mousedown', function(e) {
+                if (container.classList.contains('minimized')) {
+                    startDrag(e);
+                }
+            });
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', endDrag);
+
+            // Touch events
+            handle.addEventListener('touchstart', startDrag, { passive: false });
+            container.addEventListener('touchstart', function(e) {
+                if (container.classList.contains('minimized')) {
+                    startDrag(e);
+                }
+            }, { passive: false });
+            document.addEventListener('touchmove', drag, { passive: false });
+            document.addEventListener('touchend', endDrag);
+        })();
     </script>
 </body>
 </html>
