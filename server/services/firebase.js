@@ -97,6 +97,9 @@ function buildKidContext(kidData) {
     lines.push(`\nדברים לחזק ולעודד:\n${kidData.behaviorGoals}`);
   }
 
+  // Testimonies (what the kid wrote about how they completed tasks)
+  const testimonies = kidData.testimonies || {};
+
   // Today's tasks
   const tasks = extractTodaysTasks(kidData);
   if (tasks.length > 0) {
@@ -105,7 +108,12 @@ function buildKidContext(kidData) {
     lines.push(`\nהמשימות של היום:`);
     tasks.forEach(task => {
       const status = completedTasks.has(task.id) ? '✓ הושלם' : '○ טרם הושלם';
-      lines.push(`- ${task.title} (${status})`);
+      let taskLine = `- ${task.title} (${status})`;
+      // Add testimony if exists
+      if (testimonies[task.id]) {
+        taskLine += `\n  העדות של הילד: "${testimonies[task.id]}"`;
+      }
+      lines.push(taskLine);
     });
 
     const completedCount = tasks.filter(t => completedTasks.has(t.id)).length;
@@ -120,7 +128,12 @@ function buildKidContext(kidData) {
     lines.push(`\nמשימות בונוס:`);
     bonusTasks.forEach(task => {
       const status = completedBonusTasks.has(task.id) ? '✓ הושלם' : '○ טרם הושלם';
-      lines.push(`- ${task.title} (${status})`);
+      let taskLine = `- ${task.title} (${status})`;
+      // Add testimony if exists
+      if (testimonies[task.id]) {
+        taskLine += `\n  העדות של הילד: "${testimonies[task.id]}"`;
+      }
+      lines.push(taskLine);
     });
   }
 
