@@ -18,7 +18,7 @@
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
+      background: transparent;
       height: 100vh;
       overflow: hidden;
       position: relative;
@@ -85,18 +85,17 @@
       object-fit: contain;
     }
 
-    /* Mic button - on dino's belly area */
+    /* Mic button - bottom right corner near dino's hand */
     .record-btn {
       position: absolute;
-      top: 70%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 44px;
-      height: 44px;
+      bottom: 12px;
+      right: 12px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       border: 3px solid rgba(255,255,255,0.9);
       cursor: pointer;
-      font-size: 20px;
+      font-size: 22px;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
@@ -121,11 +120,11 @@
     }
 
     .record-btn:hover:not(.disabled) {
-      transform: translate(-50%, -50%) scale(1.1);
+      transform: scale(1.1);
     }
 
     .record-btn:active:not(.disabled) {
-      transform: translate(-50%, -50%) scale(0.95);
+      transform: scale(0.95);
     }
 
     @keyframes pulse {
@@ -133,12 +132,11 @@
       50% { box-shadow: 0 0 0 12px rgba(244, 67, 54, 0); }
     }
 
-    /* Status display - above mic button */
+    /* Status display - above mic button in bottom right */
     .status-display {
       position: absolute;
-      top: 58%;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: 65px;
+      right: 8px;
       font-size: 10px;
       font-weight: bold;
       color: white;
