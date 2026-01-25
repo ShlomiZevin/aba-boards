@@ -878,6 +878,24 @@
                         <input type="number" id="dailyReward" placeholder="0.50" step="0.01" min="0" value="0.50" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px;">
                     </div>
 
+                    <!-- Total Money -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">סה״כ כסף נוכחי:</label>
+                        <input type="number" id="totalMoney" placeholder="0" step="0.01" min="0" value="0" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px;">
+                    </div>
+
+                    <!-- Kid Description -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">תיאור הילד:</label>
+                        <textarea id="kidDescription" placeholder="תיאור כללי על הילד..." rows="2" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px; resize: vertical; font-family: inherit;"></textarea>
+                    </div>
+
+                    <!-- Behavior Goals -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">מטרות והתנהגויות לחיזוק:</label>
+                        <textarea id="behaviorGoals" placeholder="מטרות, התנהגויות לעבוד עליהן..." rows="2" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px; resize: vertical; font-family: inherit;"></textarea>
+                    </div>
+
                     <!-- Coin Style -->
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">סוג מטבע:</label>
@@ -1082,6 +1100,24 @@
                     <input type="number" id="dailyRewardMobile" placeholder="0.50" step="0.01" min="0" value="0.50" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px;">
                 </div>
 
+                <!-- Total Money -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">סה״כ כסף נוכחי:</label>
+                    <input type="number" id="totalMoneyMobile" placeholder="0" step="0.01" min="0" value="0" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px;">
+                </div>
+
+                <!-- Kid Description -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">תיאור הילד:</label>
+                    <textarea id="kidDescriptionMobile" placeholder="תיאור כללי על הילד..." rows="3" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px; resize: vertical; font-family: inherit;"></textarea>
+                </div>
+
+                <!-- Behavior Goals -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">מטרות והתנהגויות לחיזוק:</label>
+                    <textarea id="behaviorGoalsMobile" placeholder="מטרות, התנהגויות לעבוד עליהן..." rows="3" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px; resize: vertical; font-family: inherit;"></textarea>
+                </div>
+
                 <!-- Coin Style -->
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">סוג מטבע:</label>
@@ -1273,6 +1309,15 @@
         function loadKidSettings() {
             // Daily reward
             document.getElementById('dailyReward').value = kidData.dailyReward || 0.5;
+
+            // Total money
+            document.getElementById('totalMoney').value = kidData.totalMoney || 0;
+
+            // Kid description
+            document.getElementById('kidDescription').value = kidData.kidDescription || '';
+
+            // Behavior goals
+            document.getElementById('behaviorGoals').value = kidData.behaviorGoals || '';
 
             // Kid image
             const imageName = kidData.imageName || '';
@@ -2344,6 +2389,9 @@
 
                 // Get kid settings from palette
                 const dailyReward = parseFloat(document.getElementById('dailyReward').value) || 0.5;
+                const totalMoney = parseFloat(document.getElementById('totalMoney').value) || 0;
+                const kidDescription = document.getElementById('kidDescription').value || '';
+                const behaviorGoals = document.getElementById('behaviorGoals').value || '';
                 const coinStyle = document.getElementById('coinStyle').value;
                 const colorSchema = document.querySelector('input[name="colorSchema"]:checked').value;
                 const showDino = document.getElementById('showDino').checked;
@@ -2367,6 +2415,9 @@
                     bonusTasksHeader: bonusTasksHeader,
                     calmDownHeader: calmDownHeader,
                     // Kid settings
+                    totalMoney: totalMoney,
+                    kidDescription: kidDescription,
+                    behaviorGoals: behaviorGoals,
                     dailyReward: dailyReward,
                     imageName: imageName,
                     coinStyle: coinStyle,
@@ -2377,6 +2428,9 @@
 
                 // Update local kidData
                 kidData.dailyReward = dailyReward;
+                kidData.totalMoney = totalMoney;
+                kidData.kidDescription = kidDescription;
+                kidData.behaviorGoals = behaviorGoals;
                 kidData.imageName = imageName;
                 kidData.coinStyle = coinStyle;
                 kidData.coinImageName = coinImageName;
@@ -2400,6 +2454,9 @@
         function openMobileSettings() {
             // Sync values from desktop controls to mobile controls
             document.getElementById('dailyRewardMobile').value = document.getElementById('dailyReward').value;
+            document.getElementById('totalMoneyMobile').value = document.getElementById('totalMoney').value;
+            document.getElementById('kidDescriptionMobile').value = document.getElementById('kidDescription').value;
+            document.getElementById('behaviorGoalsMobile').value = document.getElementById('behaviorGoals').value;
             document.getElementById('coinStyleMobile').value = document.getElementById('coinStyle').value;
             toggleCoinImageInputMobile();
 
@@ -2446,6 +2503,9 @@
         function applyMobileSettings() {
             // Sync values from mobile controls to desktop controls
             document.getElementById('dailyReward').value = document.getElementById('dailyRewardMobile').value;
+            document.getElementById('totalMoney').value = document.getElementById('totalMoneyMobile').value;
+            document.getElementById('kidDescription').value = document.getElementById('kidDescriptionMobile').value;
+            document.getElementById('behaviorGoals').value = document.getElementById('behaviorGoalsMobile').value;
             document.getElementById('coinStyle').value = document.getElementById('coinStyleMobile').value;
             toggleCoinImageInput();
 

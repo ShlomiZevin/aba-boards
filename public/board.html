@@ -2112,6 +2112,9 @@
                 // Show Dino if enabled
                 if (kidData.showDino) {
                     document.getElementById('dinoContainer').classList.remove('hidden');
+                    // Pass kid parameter to dino iframe
+                    const dinoFrame = document.getElementById('dinoFrame');
+                    dinoFrame.src = `./dino.html?kid=${encodeURIComponent(kidId)}`;
                 }
 
                 document.getElementById('loadingState').classList.add('hidden');

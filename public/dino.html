@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>דינו</title>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
   <style>
     * {
       margin: 0;
@@ -206,48 +202,14 @@
     const MOUTH_SHAPE_COUNT = 6;
     const LIP_SYNC_METHOD = 'timestamps';
 
-    // Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
-      authDomain: "aba-ai-d74f5.firebaseapp.com",
-      projectId: "aba-ai-d74f5",
-      storageBucket: "aba-ai-d74f5.firebasestorage.app",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdef123456"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // Get kid name from URL parameter
+    // Get kid name from URL parameter - server will fetch full kid data from Firestore
     const urlParams = new URLSearchParams(window.location.search);
     const kidName = urlParams.get('kid');
-    let kidDetails = null;
 
-    // Fetch kid details from Firestore if kid parameter is provided
-    async function loadKidDetails() {
-      if (!kidName) {
-        console.log('No kid parameter provided');
-        return null;
-      }
-
-      try {
-        console.log('Loading details for kid:', kidName);
-        const kidDoc = await db.collection('kids').doc(kidName).get();
-
-        if (kidDoc.exists) {
-          kidDetails = kidDoc.data();
-          console.log('Kid details loaded:', kidDetails);
-          return kidDetails;
-        } else {
-          console.log('Kid not found in database:', kidName);
-          return null;
-        }
-      } catch (error) {
-        console.error('Error loading kid details:', error);
-        return null;
-      }
+    if (kidName) {
+      console.log('Kid ID from URL:', kidName, '(server will fetch full context)');
+    } else {
+      console.log('No kid parameter provided');
     }
 
     // Generate or retrieve user ID for conversation tracking
@@ -861,9 +823,9 @@
           userId: USER_ID
         });
 
-        // Add kid details if available
-        if (kidDetails && kidDetails.personalInfo) {
-          params.append('kidDetails', kidDetails.personalInfo);
+        // Add kid ID if available - server will fetch full context from Firestore
+        if (kidName) {
+          params.append('kidId', kidName);
         }
 
         // Start the session
@@ -956,7 +918,6 @@
 
     // Initialize
     (async () => {
-      await loadKidDetails();
       loadMouthImages();
       loadThinkingImages();
       loadListeningImages();

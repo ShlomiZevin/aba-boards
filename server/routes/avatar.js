@@ -4,6 +4,7 @@ const avatarService = require('../services/avatar');
 const openaiService = require('../services/openai');
 const elevenlabsService = require('../services/elevenlabs');
 const lipsyncService = require('../services/lipsync');
+const firebaseService = require('../services/firebase');
 
 // Per-user conversation history (keyed by userId, clears after 1 day)
 const conversations = new Map();
@@ -208,7 +209,7 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
     const userId = req.query.userId || null;
     const personality = req.query.personality || 'default';
     const speed = parseFloat(req.query.speed) || 1.0;
-    const kidDetails = req.query.kidDetails || null; // Kid personality/details from Firestore
+    const kidId = req.query.kidId || null; // Kid ID to fetch from Firestore
 
     const audioBuffer = req.body;
 
@@ -220,6 +221,17 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
 
     const totalStart = Date.now();
 
+    // Fetch kid data from Firestore if kidId provided
+    let kidContext = null;
+    if (kidId) {
+      console.log('Fetching kid data for:', kidId);
+      const kidData = await firebaseService.getKidData(kidId);
+      if (kidData) {
+        kidContext = firebaseService.buildKidContext(kidData);
+        console.log('Kid context built successfully');
+      }
+    }
+
     // 1. Transcribe audio (fast, non-streaming)
     const transcribeStart = Date.now();
     const userText = await openaiService.transcribeAudio(audioBuffer, 'recording.webm');
@@ -228,9 +240,9 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
     console.log('=== Streaming Converse ===');
     console.log('User said:', userText);
     console.log(`Transcription time: ${transcribeTime}ms`);
-    console.log('Kid details received:', kidDetails ? 'YES' : 'NO');
-    if (kidDetails) {
-      console.log('Kid details preview:', kidDetails.substring(0, 100) + '...');
+    console.log('Kid context available:', kidContext ? 'YES' : 'NO');
+    if (kidContext) {
+      console.log('Kid context preview:', kidContext.substring(0, 150) + '...');
     }
 
     if (!userText || userText.trim() === '') {
@@ -250,7 +262,7 @@ router.post('/converse-stream', express.raw({ type: 'audio/*', limit: '10mb' }),
 
     const llmStart = Date.now();
 
-    for await (const sentence of openaiService.streamDinosaurResponse(userText, history, personality, kidDetails)) {
+    for await (const sentence of openaiService.streamDinosaurResponse(userText, history, personality, kidContext)) {
       const sentenceStart = Date.now();
       fullResponse += (fullResponse ? ' ' : '') + sentence;
 
@@ -397,7 +409,7 @@ router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb'
     const voiceId = req.query.voiceId || null;
     const userId = req.query.userId || null;
     const speed = parseFloat(req.query.speed) || 1.0;
-    const kidDetails = req.query.kidDetails || null; // Kid personality/details from Firestore
+    const kidId = req.query.kidId || null; // Kid ID to fetch from Firestore
 
     const audioBuffer = req.body;
 
@@ -420,6 +432,19 @@ router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb'
     (async () => {
       try {
         const totalStart = Date.now();
+
+        // Fetch kid data from Firestore if kidId provided
+        let kidContext = null;
+        if (kidId) {
+          console.log('Fetching kid data for:', kidId);
+          const kidData = await firebaseService.getKidData(kidId);
+          if (kidData) {
+            kidContext = firebaseService.buildKidContext(kidData);
+            console.log('Kid context built successfully');
+          } else {
+            console.log('Kid not found:', kidId);
+          }
+        }
 
         // 1. Transcribe audio
         const transcribeStart = Date.now();
@@ -446,12 +471,12 @@ router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb'
         let sentenceIndex = 0;
         let firstAudioTime = null;
 
-        console.log('Kid details received:', kidDetails ? 'YES' : 'NO');
-        if (kidDetails) {
-          console.log('Kid details preview:', kidDetails.substring(0, 100) + '...');
+        console.log('Kid context available:', kidContext ? 'YES' : 'NO');
+        if (kidContext) {
+          console.log('Kid context preview:', kidContext.substring(0, 150) + '...');
         }
 
-        for await (const sentence of openaiService.streamDinosaurResponse(userText, conversationHistory, personality, kidDetails)) {
+        for await (const sentence of openaiService.streamDinosaurResponse(userText, conversationHistory, personality, kidContext)) {
           if (!sentence || sentence.trim() === '') continue;
 
           fullResponse += (fullResponse ? ' ' : '') + sentence;
