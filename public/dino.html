@@ -635,16 +635,17 @@
     }
 
     // Queue audio chunk - play them sequentially via HTML audio element
-    async function queueAudioChunk(audioBase64, lipSyncData, sentenceIndex) {
+    async function queueAudioChunk(audioBase64, lipSyncData, sentenceIndex, text) {
       try {
         const queueLengthBefore = audioChunksQueue.length;
         console.log(`📥 Received sentence ${sentenceIndex}, queue length before:`, queueLengthBefore);
 
-        // Store chunk with its lip sync data and sentence index
+        // Store chunk with its lip sync data, sentence index, and text
         audioChunksQueue.push({
           audioBase64,
           lipSyncData,
           sentenceIndex,
+          text,
           startTime: cumulativeDuration
         });
 
@@ -706,6 +707,14 @@
             await audioPlayer.play();
             console.log('Playback started successfully');
 
+            // Update speech bubble AFTER audio actually starts playing (sync text with audio)
+            if (chunk.text) {
+              displayedSentences.push(chunk.text);
+              // Show only the last 2 sentences
+              const displayText = displayedSentences.slice(-2).join(' ');
+              showSpeechBubble(displayText);
+            }
+
             // Animate lip sync for this chunk
             if (chunk.lipSyncData && chunk.lipSyncData.length > 0) {
               playLipSync(chunk.lipSyncData);
@@ -762,6 +771,9 @@
       currentLipSyncTimeouts = [];
     }
 
+    // Track displayed sentences for speech bubble (synced with audio playback)
+    let displayedSentences = [];
+
     // Reset streaming playback state
     function resetStreamingPlayback() {
       clearLipSyncTimeouts();
@@ -769,6 +781,7 @@
       isPlayingQueue = false;
       cumulativeDuration = 0;
       streamingComplete = false;
+      displayedSentences = [];
       setMouthShape(0);
       audioPlayer.pause();
       audioPlayer.src = '';
@@ -844,7 +857,7 @@
         console.log('✓ Session started:', sessionId);
 
         // Poll for updates
-        let speechText = '';
+        let textByIndex = {}; // Map sentence index to text
         let receivedFirstAudio = false;
         let isComplete = false;
         let receivedSentences = new Set(); // Track which sentences we've received
@@ -866,11 +879,10 @@
             console.log(`Transcription time: ${data.transcript.transcribeTime}ms`);
           }
 
-          // Handle text chunks
+          // Handle text chunks - store by index, don't display yet (wait for audio sync)
           for (const textChunk of data.textChunks) {
-            speechText += (speechText ? ' ' : '') + textChunk.text;
+            textByIndex[textChunk.index] = textChunk.text;
             stopThinkingAnimation();
-            showSpeechBubble(speechText);
             status.textContent = '';
           }
 
@@ -884,7 +896,9 @@
             // Only queue if we haven't received this sentence yet
             if (!receivedSentences.has(audioChunk.sentenceIndex)) {
               receivedSentences.add(audioChunk.sentenceIndex);
-              await queueAudioChunk(audioChunk.audioBase64, audioChunk.lipSyncData, audioChunk.sentenceIndex);
+              // Pass the text along with the audio so it displays when audio plays
+              const text = textByIndex[audioChunk.sentenceIndex] || '';
+              await queueAudioChunk(audioChunk.audioBase64, audioChunk.lipSyncData, audioChunk.sentenceIndex, text);
             }
           }
 
