@@ -142,6 +142,27 @@ function buildKidContext(kidData) {
     lines.push(`\nסכום שנחסך בקופה: ${kidData.totalMoney.toFixed(2)}`);
   }
 
+  // Goals/Rewards
+  const goals = extractGoals(kidData);
+  if (goals.length > 0) {
+    lines.push(`\nיעדים ופרסים:`);
+    const currentMoney = kidData.totalMoney || 0;
+    goals.forEach(goal => {
+      const isAchieved = currentMoney >= goal.pointsRequired;
+      const status = isAchieved ? '🏆 הושג!' : `○ חסרים עוד ${(goal.pointsRequired - currentMoney).toFixed(1)} נקודות`;
+      lines.push(`- ${goal.title} (${goal.pointsRequired} נקודות) - ${status}`);
+    });
+
+    // Highlight next goal
+    const nextGoal = goals.find(g => currentMoney < g.pointsRequired);
+    if (nextGoal) {
+      const remaining = nextGoal.pointsRequired - currentMoney;
+      lines.push(`\nהיעד הבא: "${nextGoal.title}" - חסרים ${remaining.toFixed(1)} נקודות`);
+    } else if (goals.length > 0) {
+      lines.push(`\nכל היעדים הושגו! 🎉`);
+    }
+  }
+
   return lines.join('\n');
 }
 
@@ -183,6 +204,30 @@ function extractBonusTasks(kidData) {
   });
 
   return tasks;
+}
+
+/**
+ * Extract goals/rewards from board layout
+ */
+function extractGoals(kidData) {
+  const goals = [];
+  const boardItems = kidData.boardLayout?.items || [];
+
+  boardItems.forEach(item => {
+    if (item.type === 'goal') {
+      goals.push({
+        id: item.id,
+        title: item.title || 'פרס',
+        pointsRequired: item.pointsRequired || 0,
+        icon: item.icon || '🏆'
+      });
+    }
+  });
+
+  // Sort by points required (ascending)
+  goals.sort((a, b) => a.pointsRequired - b.pointsRequired);
+
+  return goals;
 }
 
 module.exports = {
