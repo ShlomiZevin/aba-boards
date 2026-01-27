@@ -342,6 +342,17 @@
             color: #333;
         }
 
+        /* Goal Item Style */
+        .board-item.goal-item {
+            background: linear-gradient(135deg, #ffecd220 0%, #fcb69f20 100%);
+            border-color: #f093fb;
+        }
+
+        .board-item.goal-item .board-item-type {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
         /* Configuration Panel (Right Sidebar) */
         .config-panel {
             width: 350px;
@@ -1005,6 +1016,14 @@
                         <div class="label">פעילות הרגעה</div>
                     </div>
                 </div>
+
+                <div class="palette-section">
+                    <h4>יעדים ופרסים</h4>
+                    <div class="palette-item" draggable="true" data-type="goal">
+                        <div class="icon">🏆</div>
+                        <div class="label">יעד / פרס</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Canvas Area -->
@@ -1595,6 +1614,10 @@
                     item.taskData.activityType = 'paint';
                     item.taskData.activityUrl = '';
                 }
+            } else if (type === 'goal') {
+                item.icon = '🏆';
+                item.title = 'פרס חדש';
+                item.pointsRequired = 100;
             }
 
             return item;
@@ -1628,6 +1651,8 @@
                     itemEl.classList.add('progress-item');
                 } else if (item.type === 'bank') {
                     itemEl.classList.add('bank-item');
+                } else if (item.type === 'goal') {
+                    itemEl.classList.add('goal-item');
                 } else if (item.type === 'task') {
                     itemEl.classList.add(`task-${item.taskType}`);
                 }
@@ -1671,6 +1696,17 @@
                 icon = '🐷';
                 title = item.label || 'קופת החיסכון';
                 subtitle = item.showBonus ? 'כולל בונוס' : '';
+            } else if (item.type === 'goal') {
+                typeLabel = 'יעד / פרס';
+                // Handle icon display
+                if (item.icon && item.icon.startsWith('IMG:')) {
+                    const imageName = item.icon.substring(4);
+                    icon = `<img src="emojis/${imageName}" />`;
+                } else {
+                    icon = item.icon || '🏆';
+                }
+                title = item.title || 'פרס';
+                subtitle = `🎯 ${item.pointsRequired || 0} נקודות`;
             } else if (item.type === 'task') {
                 typeLabel = item.taskType === 'regular' ? 'משימה' : (item.taskType === 'bonus' ? 'בונוס' : 'הרגעה');
                 const taskData = item.taskData || {};
@@ -1779,6 +1815,29 @@
                     <div class="config-checkbox">
                         <input type="checkbox" id="configShowBonus" ${item.showBonus ? 'checked' : ''}>
                         <label for="configShowBonus">הצג בונוס יומי</label>
+                    </div>
+                `;
+            } else if (item.type === 'goal') {
+                let iconDisplay = item.icon || '🏆';
+                if (iconDisplay.startsWith('IMG:')) {
+                    const imageName = iconDisplay.substring(4);
+                    iconDisplay = `<img src="emojis/${imageName}" />`;
+                }
+                return `
+                    <div class="config-group">
+                        <label>אייקון:</label>
+                        <div class="emoji-picker-trigger" onclick="openEmojiPicker()" id="configIcon" data-icon="${item.icon || '🏆'}">
+                            ${iconDisplay}
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>שם הפרס / יעד:</label>
+                        <input type="text" id="configGoalTitle" value="${item.title || ''}" placeholder="הכנס שם פרס">
+                    </div>
+                    <div class="config-group">
+                        <label>נקודות נדרשות:</label>
+                        <input type="number" id="configPointsRequired" value="${item.pointsRequired || 100}" min="1" step="1">
+                        <small>כמות הנקודות שצריך כדי להשיג את היעד</small>
                     </div>
                 `;
             } else if (item.type === 'task') {
@@ -1893,6 +1952,10 @@
             } else if (item.type === 'bank') {
                 item.label = document.getElementById('configLabel').value;
                 item.showBonus = document.getElementById('configShowBonus').checked;
+            } else if (item.type === 'goal') {
+                item.icon = document.getElementById('configIcon').dataset.icon;
+                item.title = document.getElementById('configGoalTitle').value;
+                item.pointsRequired = parseInt(document.getElementById('configPointsRequired').value) || 100;
             } else if (item.type === 'task') {
                 const taskData = item.taskData;
                 taskData.icon = document.getElementById('configIcon').dataset.icon;

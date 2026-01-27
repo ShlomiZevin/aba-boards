@@ -292,6 +292,128 @@
             z-index: 1;
         }
 
+        .bank-extra-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px dashed rgba(232, 200, 109, 0.4);
+            position: relative;
+            z-index: 1;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .daily-potential {
+            font-size: 0.9em;
+            color: #7a6a5e;
+            text-align: center;
+        }
+
+        .daily-potential .potential-label {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .daily-potential .potential-value {
+            font-weight: 700;
+            color: #4CAF50;
+        }
+
+        .next-goal-preview {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 15px;
+        }
+
+        .next-goal-preview.hidden {
+            display: none;
+        }
+
+        .next-goal-mini {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+            border: 2px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            flex-shrink: 0;
+        }
+
+        .next-goal-mini img {
+            width: 30px;
+            height: 30px;
+            object-fit: contain;
+        }
+
+        .next-goal-info {
+            text-align: right;
+        }
+
+        .next-goal-info .goal-label {
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 2px;
+        }
+
+        .next-goal-info .goal-name {
+            font-weight: 700;
+            color: #5a4a3e;
+            font-size: 0.95em;
+        }
+
+        .next-goal-info .goal-remaining {
+            font-size: 0.85em;
+            color: #E8A86D;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 600px) {
+            .bank-extra-info {
+                margin-top: 12px;
+                padding-top: 12px;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .daily-potential {
+                font-size: 0.85em;
+            }
+
+            .next-goal-preview {
+                padding: 10px;
+                gap: 10px;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .next-goal-mini {
+                width: 40px;
+                height: 40px;
+                font-size: 1.1em;
+            }
+
+            .next-goal-mini img {
+                width: 25px;
+                height: 25px;
+            }
+
+            .next-goal-info .goal-name {
+                font-size: 0.85em;
+            }
+
+            .next-goal-info .goal-remaining {
+                font-size: 0.8em;
+            }
+        }
+
         .coins-animation {
             position: fixed;
             font-size: 3em;
@@ -621,6 +743,185 @@
         .calm-down-card:hover {
             transform: translateY(-5px) scale(1.02);
             box-shadow: 0 10px 30px rgba(168, 213, 229, 0.6);
+        }
+
+        /* Goal / Reward card styles */
+        .goals-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+            justify-items: center;
+        }
+
+        .goal-wrapper {
+            display: flex;
+            justify-content: center;
+        }
+
+        .goal-card {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+            border: 4px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.4s ease;
+            box-shadow:
+                0 8px 25px rgba(0,0,0,0.1),
+                inset 0 -3px 10px rgba(0,0,0,0.05);
+            overflow: visible;
+        }
+
+        .goal-card .goal-glow {
+            position: absolute;
+            inset: -5px;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .goal-card .goal-icon {
+            font-size: 2.2em;
+            margin-bottom: 5px;
+            filter: grayscale(50%);
+            transition: filter 0.4s ease;
+        }
+
+        .goal-card .goal-icon img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            filter: grayscale(50%);
+            transition: filter 0.4s ease;
+        }
+
+        .goal-card .goal-title {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #666;
+            text-align: center;
+            padding: 0 10px;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .goal-card .goal-points {
+            font-size: 0.75em;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .goal-card .goal-achieved-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.4s ease;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+            color: white;
+            font-size: 14px;
+        }
+
+        /* Achieved state */
+        .goal-card.achieved {
+            background: linear-gradient(145deg, #fff9e6 0%, #ffeeba 100%);
+            border-color: #ffd700;
+            box-shadow:
+                0 10px 35px rgba(255, 215, 0, 0.4),
+                0 0 20px rgba(255, 215, 0, 0.3),
+                inset 0 -3px 10px rgba(255, 200, 0, 0.2);
+            animation: goalPulse 2s ease-in-out infinite;
+        }
+
+        .goal-card.achieved .goal-glow {
+            background: radial-gradient(circle, rgba(255,215,0,0.4) 0%, transparent 70%);
+            opacity: 1;
+            animation: goalGlowPulse 2s ease-in-out infinite;
+        }
+
+        .goal-card.achieved .goal-icon {
+            filter: grayscale(0%);
+        }
+
+        .goal-card.achieved .goal-icon img {
+            filter: grayscale(0%);
+        }
+
+        .goal-card.achieved .goal-title {
+            color: #856404;
+        }
+
+        .goal-card.achieved .goal-points {
+            color: #9a7d0a;
+        }
+
+        .goal-card.achieved .goal-achieved-badge {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        @keyframes goalPulse {
+            0%, 100% { box-shadow: 0 10px 35px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 10px 40px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.5); }
+        }
+
+        @keyframes goalGlowPulse {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        @media (max-width: 600px) {
+            .goals-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+            }
+
+            .goal-card {
+                width: 100px;
+                height: 100px;
+            }
+
+            .goal-card .goal-icon {
+                font-size: 1.6em;
+                margin-bottom: 3px;
+            }
+
+            .goal-card .goal-icon img {
+                width: 35px;
+                height: 35px;
+            }
+
+            .goal-card .goal-title {
+                font-size: 0.7em;
+                max-width: 85px;
+            }
+
+            .goal-card .goal-points {
+                font-size: 0.6em;
+            }
+
+            .goal-card .goal-achieved-badge {
+                width: 22px;
+                height: 22px;
+                font-size: 11px;
+                top: -3px;
+                right: -3px;
+            }
         }
 
         /* Dino container - fixed position, transparent */
@@ -1365,6 +1666,100 @@
                 } else {
                     counter.textContent = this.formatMoneySimple(this.kidData.totalMoney);
                 }
+
+                // Update daily potential
+                this.updateDailyPotential();
+
+                // Update next goal preview
+                this.updateNextGoalPreview();
+
+                // Update goals display
+                this.updateGoalsDisplay();
+            }
+
+            calculateDailyPotential() {
+                const dailyReward = this.kidData.dailyReward || 0;
+                let minBonus = 0;
+                let maxBonus = 0;
+
+                // Get bonus tasks active today
+                const bonusTasks = this.boardLayout.filter(item => {
+                    if (item.type !== 'task' || item.taskType !== 'bonus') return false;
+                    const taskData = item.taskData;
+                    if (!taskData) return false;
+                    const activeDays = taskData.activeDays || [0, 1, 2, 3, 4, 5, 6];
+                    return activeDays.includes(this.currentDay);
+                });
+
+                bonusTasks.forEach(item => {
+                    const taskData = item.taskData;
+                    minBonus += taskData.minReward || 0;
+                    maxBonus += taskData.maxReward || 0;
+                });
+
+                return {
+                    min: dailyReward + minBonus,
+                    max: dailyReward + maxBonus
+                };
+            }
+
+            updateDailyPotential() {
+                const dailyPotentialEl = document.getElementById('dailyPotential');
+                if (!dailyPotentialEl) return;
+
+                const potential = this.calculateDailyPotential();
+                const symbol = this.getCoinSymbol();
+
+                if (potential.max === 0) {
+                    dailyPotentialEl.innerHTML = '';
+                    return;
+                }
+
+                let potentialText;
+                if (potential.min === potential.max) {
+                    potentialText = `${symbol}${potential.min.toFixed(1)}`;
+                } else {
+                    potentialText = `${symbol}${potential.min.toFixed(1)} - ${symbol}${potential.max.toFixed(1)}`;
+                }
+
+                dailyPotentialEl.innerHTML = `
+                    <div class="potential-label">אפשר להרוויח היום:</div>
+                    <div class="potential-value">${potentialText}</div>
+                `;
+            }
+
+            updateNextGoalPreview() {
+                const previewEl = document.getElementById('nextGoalPreview');
+                if (!previewEl) return;
+
+                const nextGoal = this.getNextGoal();
+                if (!nextGoal) {
+                    previewEl.classList.add('hidden');
+                    previewEl.innerHTML = '';
+                    return;
+                }
+
+                previewEl.classList.remove('hidden');
+
+                let iconDisplay;
+                if (nextGoal.icon && nextGoal.icon.startsWith('IMG:')) {
+                    const imageName = nextGoal.icon.substring(4);
+                    iconDisplay = `<img src="emojis/${imageName}" />`;
+                } else {
+                    iconDisplay = nextGoal.icon || '🏆';
+                }
+
+                const remaining = nextGoal.pointsRequired - this.kidData.totalMoney;
+                const symbol = this.getCoinSymbol();
+
+                previewEl.innerHTML = `
+                    <div class="next-goal-mini">${iconDisplay}</div>
+                    <div class="next-goal-info">
+                        <div class="goal-label">היעד הבא:</div>
+                        <div class="goal-name">${nextGoal.title}</div>
+                        <div class="goal-remaining">חסרים ${symbol}${remaining.toFixed(1)}</div>
+                    </div>
+                `;
             }
 
             findTask(taskId, taskType) {
@@ -1546,6 +1941,10 @@
                             </div>
                             <div class="money-counter" id="moneyCounter">$0</div>
                             <div class="money-label" id="moneyLabel">${this.replaceNamePlaceholder(item.label || 'קופת החיסכון')}</div>
+                            <div class="bank-extra-info">
+                                <div class="daily-potential" id="dailyPotential"></div>
+                                <div class="next-goal-preview" id="nextGoalPreview"></div>
+                            </div>
                         `;
                         boardContent.appendChild(bankSection);
 
@@ -1567,10 +1966,23 @@
 
                         const card = this.createTaskCard(taskData, item.taskType);
                         currentTasksGrid.appendChild(card);
+                    } else if (item.type === 'goal') {
+                        // Check if we need a new goals grid or reuse existing
+                        if (currentTasksType !== 'goal') {
+                            currentTasksGrid = document.createElement('div');
+                            currentTasksGrid.className = 'goals-grid';
+                            currentTasksGrid.style.marginBottom = '30px';
+                            boardContent.appendChild(currentTasksGrid);
+                            currentTasksType = 'goal';
+                        }
+
+                        const goalCard = this.createGoalCard(item);
+                        currentTasksGrid.appendChild(goalCard);
                     }
                 });
 
                 this.updateMoneyDisplay();
+                this.updateGoalsDisplay();
                 this.updateProgress(false); // Don't trigger celebration on render
             }
 
@@ -1710,6 +2122,62 @@
                 }
 
                 return card;
+            }
+
+            createGoalCard(goalItem) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'goal-wrapper';
+                wrapper.dataset.goalId = goalItem.id;
+                wrapper.dataset.pointsRequired = goalItem.pointsRequired;
+
+                const isAchieved = this.kidData.totalMoney >= goalItem.pointsRequired;
+
+                let iconDisplay;
+                if (goalItem.icon && goalItem.icon.startsWith('IMG:')) {
+                    const imageName = goalItem.icon.substring(4);
+                    const timestamp = new Date().getTime();
+                    iconDisplay = `<img src="emojis/${imageName}?t=${timestamp}" />`;
+                } else {
+                    iconDisplay = goalItem.icon || '🏆';
+                }
+
+                wrapper.innerHTML = `
+                    <div class="goal-card ${isAchieved ? 'achieved' : ''}">
+                        <div class="goal-glow"></div>
+                        <div class="goal-icon">${iconDisplay}</div>
+                        <div class="goal-title">${goalItem.title}</div>
+                        <div class="goal-points">${goalItem.pointsRequired} נקודות</div>
+                        <div class="goal-achieved-badge">✓</div>
+                    </div>
+                `;
+
+                return wrapper;
+            }
+
+            updateGoalsDisplay() {
+                const goalWrappers = document.querySelectorAll('.goal-wrapper');
+                goalWrappers.forEach(wrapper => {
+                    const pointsRequired = parseFloat(wrapper.dataset.pointsRequired);
+                    const isAchieved = this.kidData.totalMoney >= pointsRequired;
+                    const card = wrapper.querySelector('.goal-card');
+                    if (isAchieved) {
+                        card.classList.add('achieved');
+                    } else {
+                        card.classList.remove('achieved');
+                    }
+                });
+            }
+
+            getGoalsFromLayout() {
+                return this.boardLayout.filter(item => item.type === 'goal');
+            }
+
+            getNextGoal() {
+                const goals = this.getGoalsFromLayout();
+                const unachievedGoals = goals.filter(g => this.kidData.totalMoney < g.pointsRequired);
+                if (unachievedGoals.length === 0) return null;
+                // Return the goal with lowest points required that is not yet achieved
+                return unachievedGoals.sort((a, b) => a.pointsRequired - b.pointsRequired)[0];
             }
 
             updateProgress(triggerCelebration = true) {
