@@ -726,6 +726,23 @@
             background: #D4B85A;
         }
 
+        /* Queued bonus reward - task completed but money waiting for regular tasks */
+        .bonus-task-card.reward-queued {
+            background: linear-gradient(135deg, #E8E0C8 0%, #D8D0B5 100%);
+            border-color: #C4B890;
+        }
+
+        .bonus-task-card.reward-queued .bonus-reward-badge {
+            background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
+            color: white;
+            animation: pulse-queue 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-queue {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         /* Calm down task styles */
         .calm-down-card {
             background: linear-gradient(135deg, #C8E6E4 0%, #E8D5DC 100%);
@@ -1510,6 +1527,7 @@
                 this.completedTasks = new Set();
                 this.completedBonusTasks = new Set();
                 this.bonusRewardsEarned = {};
+                this.queuedBonusRewards = {}; // For 'after-regular' bonus tasks - money queued until all regular tasks done
                 this.todayRewardGiven = false;
                 this.isCelebrating = false;
 
@@ -1603,6 +1621,7 @@
                         completedTasks: [],
                         completedBonusTasks: [],
                         bonusRewardsEarned: {},
+                        queuedBonusRewards: {},
                         todayRewardGiven: false,
                         testimonies: {},
                         startedTasks: [],
@@ -1613,6 +1632,7 @@
                     this.completedTasks.clear();
                     this.completedBonusTasks.clear();
                     this.bonusRewardsEarned = {};
+                    this.queuedBonusRewards = {};
                     this.todayRewardGiven = false;
                     this.testimonies = {};
                     this.startedTasks.clear();
@@ -1627,6 +1647,7 @@
                 this.completedTasks = new Set(data.completedTasks || []);
                 this.completedBonusTasks = new Set(data.completedBonusTasks || []);
                 this.bonusRewardsEarned = data.bonusRewardsEarned || {};
+                this.queuedBonusRewards = data.queuedBonusRewards || {};
                 this.todayRewardGiven = data.todayRewardGiven || false;
                 this.testimonies = data.testimonies || {};
                 this.startedTasks = new Set(data.startedTasks || []);
@@ -1640,6 +1661,7 @@
                     completedTasks: Array.from(this.completedTasks),
                     completedBonusTasks: Array.from(this.completedBonusTasks),
                     bonusRewardsEarned: this.bonusRewardsEarned,
+                    queuedBonusRewards: this.queuedBonusRewards,
                     todayRewardGiven: this.todayRewardGiven,
                     testimonies: this.testimonies,
                     startedTasks: Array.from(this.startedTasks),
@@ -1823,14 +1845,17 @@
 
                 if (this.completedBonusTasks.has(taskId)) {
                     const rewardAmount = this.bonusRewardsEarned[taskId] || 0;
+                    const wasQueued = this.queuedBonusRewards[taskId] !== undefined;
                     this.completedBonusTasks.delete(taskId);
                     delete this.bonusRewardsEarned[taskId];
+                    delete this.queuedBonusRewards[taskId]; // Remove from queue if was queued
                     delete this.testimonies[taskId];
                     this.startedTasks.delete(taskId);
                     delete this.taskStartTimes[taskId];
                     delete this.taskDurations[taskId];
 
-                    if (rewardAmount > 0) {
+                    // Only subtract money if it was actually awarded (not just queued)
+                    if (rewardAmount > 0 && !wasQueued) {
                         await this.addMoney(-rewardAmount);
                     }
                     await this.saveState();
@@ -1869,11 +1894,77 @@
 
                 this.bonusRewardsEarned[taskId] = rewardAmount;
 
-                await this.saveState();
-                this.render();
+                // Check if this is an instant bonus or after-regular bonus
+                const bonusType = task.bonusType || 'instant'; // Default to instant
+                const allRegularTasksCompleted = this.areAllRegularTasksCompleted();
 
-                this.celebrateBonus(rewardAmount);
-                this.animateMoneyIncrease(rewardAmount);
+                if (bonusType === 'instant' || allRegularTasksCompleted) {
+                    // Award money immediately
+                    await this.saveState();
+                    this.render();
+                    this.celebrateBonus(rewardAmount);
+                    this.animateMoneyIncrease(rewardAmount);
+                } else {
+                    // Queue the reward until all regular tasks are done
+                    this.queuedBonusRewards[taskId] = rewardAmount;
+                    await this.saveState();
+                    this.render();
+                    this.celebrateBonusQueued(rewardAmount);
+                }
+            }
+
+            // Check if all regular tasks active today are completed
+            areAllRegularTasksCompleted() {
+                const regularLayoutTasks = this.boardLayout.filter(item => {
+                    if (item.type !== 'task' || item.taskType !== 'regular') return false;
+                    const taskData = item.taskData;
+                    if (!taskData) return false;
+                    const activeDays = taskData.activeDays || [0, 1, 2, 3, 4, 5, 6];
+                    return activeDays.includes(this.currentDay);
+                });
+
+                return regularLayoutTasks.length > 0 &&
+                    regularLayoutTasks.every(item => this.completedTasks.has(item.taskData.id));
+            }
+
+            // Celebration for queued bonus (task completed but money waiting)
+            celebrateBonusQueued(amount) {
+                if (this.isCelebrating) return;
+
+                this.isCelebrating = true;
+                const encouragement = document.getElementById('encouragement');
+
+                encouragement.style.animation = 'none';
+                encouragement.style.display = 'none';
+
+                const symbol = this.getCoinSymbol();
+                const coinSrc = this.getCoinImageSrc();
+                const rewardColor = this.getRewardColor();
+                const moneyDisplay = this.coinStyle === 'custom'
+                    ? `<img src="${coinSrc}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
+                    : `+${symbol}${amount.toFixed(1)}`;
+
+                encouragement.innerHTML = `
+                    <div style="font-size: 1.5em;">בונוס!</div>
+                    <div style="font-size: 1.5em; margin-top: 10px; color: ${rewardColor}; font-weight: 700;">
+                        ${moneyDisplay}
+                    </div>
+                    <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">
+                        ⏳ ממתין עד שתסיים את כל המשימות
+                    </div>
+                `;
+
+                encouragement.style.display = 'block';
+                encouragement.style.opacity = '1';
+                encouragement.style.transform = 'translate(-50%, -50%) scale(1)';
+
+                this.createConfetti(30);
+
+                setTimeout(() => {
+                    encouragement.style.display = 'none';
+                    encouragement.style.animation = '';
+                    this.isCelebrating = false;
+                }, 3000);
             }
 
             render() {
@@ -2061,9 +2152,22 @@
                     const rewardText = task.minReward === task.maxReward
                         ? `${symbol}${task.minReward.toFixed(1)}`
                         : `${symbol}${task.minReward.toFixed(1)}-${symbol}${task.maxReward.toFixed(1)}`;
-                    const earnedText = this.bonusRewardsEarned[task.id]
-                        ? ` (+${symbol}${this.bonusRewardsEarned[task.id].toFixed(1)})`
-                        : '';
+
+                    // Check if reward is queued (waiting for regular tasks to complete)
+                    const isQueued = this.queuedBonusRewards[task.id] !== undefined;
+                    let earnedText = '';
+                    if (this.bonusRewardsEarned[task.id]) {
+                        if (isQueued) {
+                            earnedText = ` (⏳ ${symbol}${this.bonusRewardsEarned[task.id].toFixed(1)})`;
+                        } else {
+                            earnedText = ` (+${symbol}${this.bonusRewardsEarned[task.id].toFixed(1)})`;
+                        }
+                    }
+
+                    // Add queued indicator class for styling
+                    if (isQueued) {
+                        card.classList.add('reward-queued');
+                    }
 
                     card.innerHTML = `
                         <div class="bonus-reward-badge">${rewardText}${earnedText}</div>
@@ -2359,40 +2463,81 @@
             async showMegaCelebration() {
                 // Only show the mega celebration once per day
                 if (this.todayRewardGiven) {
+                    // Even if reward was already given, we should still award any newly queued bonuses
+                    await this.awardQueuedBonuses();
                     return;
                 }
 
                 this.todayRewardGiven = true;
-                await this.saveState();
 
                 const dailyReward = this.kidData.dailyReward || 0.5;
                 const symbol = this.getCoinSymbol();
                 const coinSrc = this.getCoinImageSrc();
                 const rewardColor = this.getRewardColor();
+
+                // Calculate total queued bonus rewards
+                const queuedBonusTotal = Object.values(this.queuedBonusRewards).reduce((sum, amt) => sum + amt, 0);
+                const totalReward = dailyReward + queuedBonusTotal;
+
                 const rewardDisplay = this.coinStyle === 'custom'
                     ? `<img src="${coinSrc}" style="width: 35px; height: 35px; vertical-align: middle;" /> ${dailyReward.toFixed(2)}`
                     : `${symbol}${dailyReward.toFixed(2)}`;
 
-                const encouragement = document.getElementById('encouragement');
-                encouragement.innerHTML = `
+                let celebrationMessage = `
                     <div>סיימת את כל המשימות! אתה אלוף!</div>
                     <div style="font-size: 1.5em; margin-top: 20px; color: ${rewardColor}; font-weight: 700;">
                         קיבלת ${rewardDisplay} לקופת החיסכון!
                     </div>
                 `;
+
+                // If there are queued bonuses, add them to the message
+                if (queuedBonusTotal > 0) {
+                    const bonusDisplay = this.coinStyle === 'custom'
+                        ? `<img src="${coinSrc}" style="width: 30px; height: 30px; vertical-align: middle;" /> ${queuedBonusTotal.toFixed(2)}`
+                        : `${symbol}${queuedBonusTotal.toFixed(2)}`;
+                    celebrationMessage += `
+                        <div style="font-size: 1.2em; margin-top: 15px; color: ${rewardColor}; font-weight: 600;">
+                            + בונוסים שהמתינו: ${bonusDisplay}
+                        </div>
+                    `;
+                }
+
+                const encouragement = document.getElementById('encouragement');
+                encouragement.innerHTML = celebrationMessage;
                 encouragement.style.display = 'block';
 
                 this.createConfetti(100);
                 this.createStars();
                 this.createFallingCoins();
 
+                // Award the daily reward
                 setTimeout(() => {
                     this.animateMoneyIncrease(dailyReward);
                 }, 1000);
 
+                // Award queued bonuses after daily reward animation
+                if (queuedBonusTotal > 0) {
+                    setTimeout(() => {
+                        this.awardQueuedBonuses();
+                    }, 2000);
+                }
+
+                await this.saveState();
+
                 setTimeout(() => {
                     encouragement.style.display = 'none';
-                }, 4000);
+                }, queuedBonusTotal > 0 ? 5000 : 4000);
+            }
+
+            // Award all queued bonus rewards and clear the queue
+            async awardQueuedBonuses() {
+                const queuedTotal = Object.values(this.queuedBonusRewards).reduce((sum, amt) => sum + amt, 0);
+                if (queuedTotal > 0) {
+                    await this.animateMoneyIncrease(queuedTotal);
+                    this.queuedBonusRewards = {};
+                    await this.saveState();
+                    this.render(); // Re-render to update badge displays
+                }
             }
 
             createFallingCoins() {

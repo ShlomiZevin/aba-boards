@@ -1877,6 +1877,14 @@
                             <label>פרס מקסימום ($):</label>
                             <input type="number" id="configMaxReward" value="${taskData.maxReward || 0}" min="0" step="0.1">
                         </div>
+                        <div class="config-group">
+                            <label>סוג בונוס:</label>
+                            <select id="configBonusType">
+                                <option value="instant" ${(!taskData.bonusType || taskData.bonusType === 'instant') ? 'selected' : ''}>מיידי - הפרס ניתן מיד</option>
+                                <option value="after-regular" ${taskData.bonusType === 'after-regular' ? 'selected' : ''}>לאחר השלמת כל המשימות</option>
+                            </select>
+                            <small>מיידי: הילד מקבל את הכסף מיד. לאחר השלמה: הכסף ממתין עד שכל המשימות הרגילות הושלמו</small>
+                        </div>
                     `;
                 }
 
@@ -1965,6 +1973,7 @@
                 if (item.taskType === 'bonus') {
                     taskData.minReward = parseFloat(document.getElementById('configMinReward').value) || 0;
                     taskData.maxReward = parseFloat(document.getElementById('configMaxReward').value) || 0;
+                    taskData.bonusType = document.getElementById('configBonusType').value;
                 }
 
                 if (item.taskType === 'calm-down') {
