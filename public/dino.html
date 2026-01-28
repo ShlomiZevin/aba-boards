@@ -694,31 +694,40 @@
 
       // Wait for audio to be ready to play
       return new Promise((resolve) => {
+        let hasShownText = false;
         let hasStartedPlaying = false;
 
-        // When audio can start playing
+        // Use timeupdate to detect when audio is TRULY playing (currentTime advancing)
+        audioPlayer.ontimeupdate = () => {
+          if (hasShownText) return;
+          if (audioPlayer.currentTime > 0.05) { // Wait until at least 50ms of audio has played
+            hasShownText = true;
+
+            console.log('Audio confirmed playing, currentTime:', audioPlayer.currentTime);
+
+            // Update speech bubble when audio is TRULY playing
+            if (chunk.text) {
+              // Show only the current sentence
+              showSpeechBubble(chunk.text);
+            }
+
+            // Animate lip sync for this chunk (adjust for the small delay)
+            if (chunk.lipSyncData && chunk.lipSyncData.length > 0) {
+              playLipSync(chunk.lipSyncData);
+            }
+          }
+        };
+
+        // When audio can start playing, trigger play
         audioPlayer.oncanplay = async () => {
-          if (hasStartedPlaying) return; // Prevent double-play
+          if (hasStartedPlaying) return;
           hasStartedPlaying = true;
 
           console.log('Audio ready, starting playback');
 
           try {
             await audioPlayer.play();
-            console.log('Playback started successfully');
-
-            // Update speech bubble AFTER audio actually starts playing (sync text with audio)
-            if (chunk.text) {
-              displayedSentences.push(chunk.text);
-              // Show only the last 2 sentences
-              const displayText = displayedSentences.slice(-2).join(' ');
-              showSpeechBubble(displayText);
-            }
-
-            // Animate lip sync for this chunk
-            if (chunk.lipSyncData && chunk.lipSyncData.length > 0) {
-              playLipSync(chunk.lipSyncData);
-            }
+            console.log('Play() returned successfully');
           } catch (playErr) {
             console.error('**FAILED TO START PLAYBACK**:', playErr.name, playErr.message);
             // Don't skip - try to continue anyway
