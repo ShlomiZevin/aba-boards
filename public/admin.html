@@ -572,14 +572,14 @@
 
                 const taskCount = kid.tasks ? kid.tasks.length : 0;
                 const money = (kid.totalMoney || 0).toFixed(2);
-                const coinSymbol = kid.coinStyle === 'shekel' ? '₪' : '$';
+                const coinSymbol = kid.coinStyle === 'shekel' ? '₪' : kid.coinStyle === 'points' ? '' : '$';
 
                 kidDiv.innerHTML = `
                     <div class="kid-info">
                         <h3>${kid.name}</h3>
                         <div class="kid-stats">
                             <span class="kid-stat">📋 ${taskCount} משימות</span>
-                            <span class="kid-stat">💰 ${coinSymbol}${money}</span>
+                            <span class="kid-stat">💰 ${kid.coinStyle === 'points' ? money + ' נקודות' : coinSymbol + money}</span>
                         </div>
                     </div>
                     <div class="kid-links">
@@ -718,6 +718,8 @@
                     dailyReward: 0.5,
                     coinStyle: 'dollar',
                     coinImageName: '',
+                    age: '',
+                    gender: '',
                     colorSchema: 'purple',
                     headerLabel: '',
                     savingsLabel: '',

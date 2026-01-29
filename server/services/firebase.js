@@ -87,6 +87,14 @@ function buildKidContext(kidData) {
     lines.push(`שם הילד: ${kidData.name}`);
   }
 
+  if (kidData.age) {
+    lines.push(`גיל: ${kidData.age}`);
+  }
+
+  if (kidData.gender) {
+    lines.push(`מין: ${kidData.gender === 'boy' ? 'בן' : kidData.gender === 'girl' ? 'בת' : kidData.gender}`);
+  }
+
   // Personal info/profile
   if (kidData.personalInfo) {
     lines.push(`\nפרופיל הילד:\n${kidData.personalInfo}`);
@@ -137,9 +145,13 @@ function buildKidContext(kidData) {
     });
   }
 
+  // Currency label for context
+  const coinStyle = kidData.coinStyle || 'dollar';
+  const currencyLabel = coinStyle === 'shekel' ? 'ש״ח' : coinStyle === 'points' ? 'נקודות' : coinStyle === 'dollar' ? '$' : '';
+
   // Total money earned
   if (kidData.totalMoney !== undefined) {
-    lines.push(`\nסכום שנחסך בקופה: ${kidData.totalMoney.toFixed(2)}`);
+    lines.push(`\nסכום שנחסך בקופה: ${kidData.totalMoney.toFixed(2)} ${currencyLabel}`);
   }
 
   // Goals/Rewards
@@ -149,15 +161,15 @@ function buildKidContext(kidData) {
     const currentMoney = kidData.totalMoney || 0;
     goals.forEach(goal => {
       const isAchieved = currentMoney >= goal.pointsRequired;
-      const status = isAchieved ? '🏆 הושג!' : `○ חסרים עוד ${(goal.pointsRequired - currentMoney).toFixed(1)} נקודות`;
-      lines.push(`- ${goal.title} (${goal.pointsRequired} נקודות) - ${status}`);
+      const status = isAchieved ? '🏆 הושג!' : `○ חסרים עוד ${(goal.pointsRequired - currentMoney).toFixed(1)} ${currencyLabel}`;
+      lines.push(`- ${goal.title} (${goal.pointsRequired} ${currencyLabel}) - ${status}`);
     });
 
     // Highlight next goal
     const nextGoal = goals.find(g => currentMoney < g.pointsRequired);
     if (nextGoal) {
       const remaining = nextGoal.pointsRequired - currentMoney;
-      lines.push(`\nהיעד הבא: "${nextGoal.title}" - חסרים ${remaining.toFixed(1)} נקודות`);
+      lines.push(`\nהיעד הבא: "${nextGoal.title}" - חסרים ${remaining.toFixed(1)} ${currencyLabel}`);
     } else if (goals.length > 0) {
       lines.push(`\nכל היעדים הושגו! 🎉`);
     }

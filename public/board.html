@@ -1592,11 +1592,44 @@
                 switch (this.coinStyle) {
                     case 'shekel':
                         return '₪';
+                    case 'points':
                     case 'custom':
                         return '';
                     case 'dollar':
                     default:
                         return '$';
+                }
+            }
+
+            getCurrencyLabel() {
+                switch (this.coinStyle) {
+                    case 'shekel':
+                        return 'ש״ח';
+                    case 'points':
+                        return 'נקודות';
+                    case 'dollar':
+                        return '$';
+                    case 'custom':
+                        return '';
+                    default:
+                        return '$';
+                }
+            }
+
+            formatCurrencyAmount(amount, decimals = 1) {
+                const num = typeof amount === 'number' ? amount.toFixed(decimals) : amount;
+                switch (this.coinStyle) {
+                    case 'shekel':
+                        return `₪${num}`;
+                    case 'points':
+                        return `${num} נקודות`;
+                    case 'custom': {
+                        const coinSrc = this.getCoinImageSrc();
+                        return `<img src="${coinSrc}" style="width: 20px; height: 20px; vertical-align: middle; margin: 0 3px;" /> ${num}`;
+                    }
+                    case 'dollar':
+                    default:
+                        return `$${num}`;
                 }
             }
 
@@ -1610,19 +1643,17 @@
             }
 
             formatMoney(amount) {
-                const symbol = this.getCoinSymbol();
-                if (this.coinStyle === 'custom') {
-                    const coinSrc = this.getCoinImageSrc();
-                    return `<img src="${coinSrc}" style="width: 20px; height: 20px; vertical-align: middle; margin: 0 3px;" /> ${amount.toFixed(2)}`;
-                }
-                return `${symbol}${amount.toFixed(2)}`;
+                return this.formatCurrencyAmount(amount, 2);
             }
 
             formatMoneySimple(amount) {
-                const symbol = this.getCoinSymbol();
                 if (this.coinStyle === 'custom') {
                     return amount.toFixed(2);
                 }
+                if (this.coinStyle === 'points') {
+                    return `${amount.toFixed(2)} נקודות`;
+                }
+                const symbol = this.getCoinSymbol();
                 return `${symbol}${amount.toFixed(2)}`;
             }
 
@@ -1770,7 +1801,6 @@
                 if (!dailyPotentialEl) return;
 
                 const potential = this.calculateDailyPotential();
-                const symbol = this.getCoinSymbol();
 
                 if (potential.max === 0) {
                     dailyPotentialEl.innerHTML = '';
@@ -1779,9 +1809,9 @@
 
                 let potentialText;
                 if (potential.min === potential.max) {
-                    potentialText = `${symbol}${potential.min.toFixed(1)}`;
+                    potentialText = this.formatCurrencyAmount(potential.min);
                 } else {
-                    potentialText = `${symbol}${potential.min.toFixed(1)} - ${symbol}${potential.max.toFixed(1)}`;
+                    potentialText = `${this.formatCurrencyAmount(potential.min)} - ${this.formatCurrencyAmount(potential.max)}`;
                 }
 
                 dailyPotentialEl.innerHTML = `
@@ -1812,14 +1842,13 @@
                 }
 
                 const remaining = nextGoal.pointsRequired - this.kidData.totalMoney;
-                const symbol = this.getCoinSymbol();
 
                 previewEl.innerHTML = `
                     <div class="next-goal-mini">${iconDisplay}</div>
                     <div class="next-goal-info">
                         <div class="goal-label">היעד הבא:</div>
                         <div class="goal-name">${nextGoal.title}</div>
-                        <div class="goal-remaining">חסרים ${symbol}${remaining.toFixed(1)}</div>
+                        <div class="goal-remaining">חסרים ${this.formatCurrencyAmount(remaining)}</div>
                     </div>
                 `;
             }
@@ -1994,12 +2023,8 @@
                 encouragement.style.animation = 'none';
                 encouragement.style.display = 'none';
 
-                const symbol = this.getCoinSymbol();
-                const coinSrc = this.getCoinImageSrc();
                 const rewardColor = this.getRewardColor();
-                const moneyDisplay = this.coinStyle === 'custom'
-                    ? `<img src="${coinSrc}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
-                    : `+${symbol}${amount.toFixed(1)}`;
+                const moneyDisplay = `+${this.formatCurrencyAmount(amount)}`;
 
                 encouragement.innerHTML = `
                     <div style="font-size: 1.5em;">בונוס!</div>
@@ -2205,19 +2230,18 @@
                 }
 
                 if (taskType === 'bonus') {
-                    const symbol = this.getCoinSymbol();
                     const rewardText = task.minReward === task.maxReward
-                        ? `${symbol}${task.minReward.toFixed(1)}`
-                        : `${symbol}${task.minReward.toFixed(1)}-${symbol}${task.maxReward.toFixed(1)}`;
+                        ? this.formatCurrencyAmount(task.minReward)
+                        : `${this.formatCurrencyAmount(task.minReward)}-${this.formatCurrencyAmount(task.maxReward)}`;
 
                     // Check if reward is queued (waiting for regular tasks to complete)
                     const isQueued = this.queuedBonusRewards[task.id] !== undefined;
                     let earnedText = '';
                     if (this.bonusRewardsEarned[task.id]) {
                         if (isQueued) {
-                            earnedText = ` (⏳ ${symbol}${this.bonusRewardsEarned[task.id].toFixed(1)})`;
+                            earnedText = ` (⏳ ${this.formatCurrencyAmount(this.bonusRewardsEarned[task.id])})`;
                         } else {
-                            earnedText = ` (+${symbol}${this.bonusRewardsEarned[task.id].toFixed(1)})`;
+                            earnedText = ` (+${this.formatCurrencyAmount(this.bonusRewardsEarned[task.id])})`;
                         }
                     }
 
@@ -2307,7 +2331,7 @@
                         <div class="goal-glow"></div>
                         <div class="goal-icon">${iconDisplay}</div>
                         <div class="goal-title">${goalItem.title}</div>
-                        <div class="goal-points">${goalItem.pointsRequired} נקודות</div>
+                        <div class="goal-points">${this.formatCurrencyAmount(goalItem.pointsRequired, 0)}</div>
                         <div class="goal-achieved-badge">✓</div>
                     </div>
                 `;
@@ -2423,12 +2447,8 @@
                 encouragement.style.animation = 'none';
                 encouragement.style.display = 'none';
 
-                const symbol = this.getCoinSymbol();
-                const coinSrc = this.getCoinImageSrc();
                 const rewardColor = this.getRewardColor();
-                const moneyDisplay = this.coinStyle === 'custom'
-                    ? `<img src="${coinSrc}" style="width: 40px; height: 40px; vertical-align: middle;" /> +${amount.toFixed(1)}`
-                    : `+${symbol}${amount.toFixed(1)}`;
+                const moneyDisplay = `+${this.formatCurrencyAmount(amount)}`;
 
                 encouragement.innerHTML = `
                     <div style="font-size: 1.5em;">בונוס!</div>
@@ -2528,17 +2548,13 @@
                 this.todayRewardGiven = true;
 
                 const dailyReward = this.kidData.dailyReward || 0.5;
-                const symbol = this.getCoinSymbol();
-                const coinSrc = this.getCoinImageSrc();
                 const rewardColor = this.getRewardColor();
 
                 // Calculate total queued bonus rewards
                 const queuedBonusTotal = Object.values(this.queuedBonusRewards).reduce((sum, amt) => sum + amt, 0);
                 const totalReward = dailyReward + queuedBonusTotal;
 
-                const rewardDisplay = this.coinStyle === 'custom'
-                    ? `<img src="${coinSrc}" style="width: 35px; height: 35px; vertical-align: middle;" /> ${dailyReward.toFixed(2)}`
-                    : `${symbol}${dailyReward.toFixed(2)}`;
+                const rewardDisplay = this.formatCurrencyAmount(dailyReward, 2);
 
                 let celebrationMessage = `
                     <div>סיימת את כל המשימות! אתה אלוף!</div>
@@ -2549,9 +2565,7 @@
 
                 // If there are queued bonuses, add them to the message
                 if (queuedBonusTotal > 0) {
-                    const bonusDisplay = this.coinStyle === 'custom'
-                        ? `<img src="${coinSrc}" style="width: 30px; height: 30px; vertical-align: middle;" /> ${queuedBonusTotal.toFixed(2)}`
-                        : `${symbol}${queuedBonusTotal.toFixed(2)}`;
+                    const bonusDisplay = this.formatCurrencyAmount(queuedBonusTotal, 2);
                     celebrationMessage += `
                         <div style="font-size: 1.2em; margin-top: 15px; color: ${rewardColor}; font-weight: 600;">
                             + בונוסים שהמתינו: ${bonusDisplay}
@@ -2684,6 +2698,8 @@
                     if (this.coinStyle === 'custom') {
                         const coinSrc = this.getCoinImageSrc();
                         counter.innerHTML = `<img src="${coinSrc}" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 5px;" /> ${currentMoney.toFixed(2)}`;
+                    } else if (this.coinStyle === 'points') {
+                        counter.textContent = `${currentMoney.toFixed(2)} נקודות`;
                     } else {
                         const symbol = this.getCoinSymbol();
                         counter.textContent = `${symbol}${currentMoney.toFixed(2)}`;

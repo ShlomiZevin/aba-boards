@@ -895,6 +895,22 @@
                         <input type="number" id="totalMoney" placeholder="0" step="0.01" min="0" value="0" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px;">
                     </div>
 
+                    <!-- Age -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">גיל:</label>
+                        <input type="number" id="kidAge" placeholder="גיל" min="1" max="18" step="1" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px;">
+                    </div>
+
+                    <!-- Gender -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">מין:</label>
+                        <select id="kidGender" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px;">
+                            <option value="">לא נבחר</option>
+                            <option value="boy">בן</option>
+                            <option value="girl">בת</option>
+                        </select>
+                    </div>
+
                     <!-- Kid Description -->
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">תיאור הילד:</label>
@@ -913,6 +929,7 @@
                         <select id="coinStyle" onchange="toggleCoinImageInput()" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px;">
                             <option value="dollar">דולר ($)</option>
                             <option value="shekel">שקל (₪)</option>
+                            <option value="points">נקודות</option>
                             <option value="custom">תמונה מותאמת</option>
                         </select>
                     </div>
@@ -1125,6 +1142,22 @@
                     <input type="number" id="totalMoneyMobile" placeholder="0" step="0.01" min="0" value="0" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px;">
                 </div>
 
+                <!-- Age -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">גיל:</label>
+                    <input type="number" id="kidAgeMobile" placeholder="גיל" min="1" max="18" step="1" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px;">
+                </div>
+
+                <!-- Gender -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">מין:</label>
+                    <select id="kidGenderMobile" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px;">
+                        <option value="">לא נבחר</option>
+                        <option value="boy">בן</option>
+                        <option value="girl">בת</option>
+                    </select>
+                </div>
+
                 <!-- Kid Description -->
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">תיאור הילד:</label>
@@ -1143,6 +1176,7 @@
                     <select id="coinStyleMobile" onchange="toggleCoinImageInputMobile()" style="width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 16px;">
                         <option value="dollar">דולר ($)</option>
                         <option value="shekel">שקל (₪)</option>
+                        <option value="points">נקודות</option>
                         <option value="custom">תמונה מותאמת</option>
                     </select>
                 </div>
@@ -1331,6 +1365,12 @@
 
             // Total money
             document.getElementById('totalMoney').value = kidData.totalMoney || 0;
+
+            // Age
+            document.getElementById('kidAge').value = kidData.age || '';
+
+            // Gender
+            document.getElementById('kidGender').value = kidData.gender || '';
 
             // Kid description
             document.getElementById('kidDescription').value = kidData.kidDescription || '';
@@ -2464,6 +2504,8 @@
                 const totalMoney = parseFloat(document.getElementById('totalMoney').value) || 0;
                 const kidDescription = document.getElementById('kidDescription').value || '';
                 const behaviorGoals = document.getElementById('behaviorGoals').value || '';
+                const kidAge = document.getElementById('kidAge').value ? parseInt(document.getElementById('kidAge').value) : '';
+                const kidGender = document.getElementById('kidGender').value || '';
                 const coinStyle = document.getElementById('coinStyle').value;
                 const colorSchema = document.querySelector('input[name="colorSchema"]:checked').value;
                 const showDino = document.getElementById('showDino').checked;
@@ -2490,6 +2532,8 @@
                     totalMoney: totalMoney,
                     kidDescription: kidDescription,
                     behaviorGoals: behaviorGoals,
+                    age: kidAge,
+                    gender: kidGender,
                     dailyReward: dailyReward,
                     imageName: imageName,
                     coinStyle: coinStyle,
@@ -2503,6 +2547,8 @@
                 kidData.totalMoney = totalMoney;
                 kidData.kidDescription = kidDescription;
                 kidData.behaviorGoals = behaviorGoals;
+                kidData.age = kidAge;
+                kidData.gender = kidGender;
                 kidData.imageName = imageName;
                 kidData.coinStyle = coinStyle;
                 kidData.coinImageName = coinImageName;
@@ -2527,6 +2573,8 @@
             // Sync values from desktop controls to mobile controls
             document.getElementById('dailyRewardMobile').value = document.getElementById('dailyReward').value;
             document.getElementById('totalMoneyMobile').value = document.getElementById('totalMoney').value;
+            document.getElementById('kidAgeMobile').value = document.getElementById('kidAge').value;
+            document.getElementById('kidGenderMobile').value = document.getElementById('kidGender').value;
             document.getElementById('kidDescriptionMobile').value = document.getElementById('kidDescription').value;
             document.getElementById('behaviorGoalsMobile').value = document.getElementById('behaviorGoals').value;
             document.getElementById('coinStyleMobile').value = document.getElementById('coinStyle').value;
@@ -2576,6 +2624,8 @@
             // Sync values from mobile controls to desktop controls
             document.getElementById('dailyReward').value = document.getElementById('dailyRewardMobile').value;
             document.getElementById('totalMoney').value = document.getElementById('totalMoneyMobile').value;
+            document.getElementById('kidAge').value = document.getElementById('kidAgeMobile').value;
+            document.getElementById('kidGender').value = document.getElementById('kidGenderMobile').value;
             document.getElementById('kidDescription').value = document.getElementById('kidDescriptionMobile').value;
             document.getElementById('behaviorGoals').value = document.getElementById('behaviorGoalsMobile').value;
             document.getElementById('coinStyle').value = document.getElementById('coinStyleMobile').value;
