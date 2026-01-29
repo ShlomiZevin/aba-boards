@@ -1345,6 +1345,29 @@
             color: #555;
         }
 
+        /* Warning modal styles */
+        .warning-icon {
+            font-size: 3em;
+            color: #E8A07E;
+            margin-bottom: 10px;
+        }
+
+        .warning-title {
+            color: #C0392B !important;
+        }
+
+        .warning-text {
+            color: #555;
+            font-size: 1.05em;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .testimony-buttons .warning-confirm-btn {
+            background: #C0392B;
+            color: white;
+        }
+
         @media (max-width: 600px) {
             .tasks-grid {
                 grid-template-columns: 1fr;
@@ -1474,6 +1497,19 @@
         </div>
     </div>
 
+    <!-- Warning Modal for unchecking tasks with testimony -->
+    <div class="testimony-modal" id="uncheckWarningModal">
+        <div class="testimony-content">
+            <div class="warning-icon">&#9888;</div>
+            <h2 class="warning-title">שים לב!</h2>
+            <p class="warning-text">ביטול המשימה ימחק גם את העדות שכתבת.<br>לא ניתן לשחזר את העדות לאחר מכן.</p>
+            <div class="testimony-buttons" style="margin-top: 20px;">
+                <button class="cancel-btn" onclick="taskBoard.cancelUncheck()">ביטול</button>
+                <button class="warning-confirm-btn" onclick="taskBoard.confirmUncheck()">בטל משימה</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Firebase configuration
         const firebaseConfig = {
@@ -1535,6 +1571,10 @@
                 this.testimonies = {};
                 this.pendingTestimonyTaskId = null;
                 this.pendingTestimonyIsBonus = false;
+
+                // Uncheck warning tracking
+                this.pendingUncheckTaskId = null;
+                this.pendingUncheckIsBonus = false;
 
                 // Time tracking
                 this.startedTasks = new Set();
@@ -1798,14 +1838,12 @@
                 if (!task) return;
 
                 if (this.completedTasks.has(taskId)) {
-                    this.completedTasks.delete(taskId);
-                    delete this.testimonies[taskId];
-                    this.startedTasks.delete(taskId);
-                    delete this.taskStartTimes[taskId];
-                    delete this.taskDurations[taskId];
-                    await this.saveState();
-                    this.render();
-                    this.updateProgress(false); // Don't trigger celebration when uncompleting
+                    // If task has a testimony, show warning before unchecking
+                    if (this.testimonies[taskId]) {
+                        this.showUncheckWarning(taskId, false);
+                        return;
+                    }
+                    await this.performRegularUncheck(taskId);
                 } else if (task.trackTime && !this.startedTasks.has(taskId)) {
                     this.startedTasks.add(taskId);
                     this.taskStartTimes[taskId] = Date.now();
@@ -1844,22 +1882,12 @@
                 if (!task) return;
 
                 if (this.completedBonusTasks.has(taskId)) {
-                    const rewardAmount = this.bonusRewardsEarned[taskId] || 0;
-                    const wasQueued = this.queuedBonusRewards[taskId] !== undefined;
-                    this.completedBonusTasks.delete(taskId);
-                    delete this.bonusRewardsEarned[taskId];
-                    delete this.queuedBonusRewards[taskId]; // Remove from queue if was queued
-                    delete this.testimonies[taskId];
-                    this.startedTasks.delete(taskId);
-                    delete this.taskStartTimes[taskId];
-                    delete this.taskDurations[taskId];
-
-                    // Only subtract money if it was actually awarded (not just queued)
-                    if (rewardAmount > 0 && !wasQueued) {
-                        await this.addMoney(-rewardAmount);
+                    // If task has a testimony, show warning before unchecking
+                    if (this.testimonies[taskId]) {
+                        this.showUncheckWarning(taskId, true);
+                        return;
                     }
-                    await this.saveState();
-                    this.render();
+                    await this.performBonusUncheck(taskId);
                 } else if (task.trackTime && !this.startedTasks.has(taskId)) {
                     this.startedTasks.add(taskId);
                     this.taskStartTimes[taskId] = Date.now();
@@ -1881,6 +1909,35 @@
                         this.completeBonusTask(task, taskId);
                     }
                 }
+            }
+
+            async performRegularUncheck(taskId) {
+                this.completedTasks.delete(taskId);
+                delete this.testimonies[taskId];
+                this.startedTasks.delete(taskId);
+                delete this.taskStartTimes[taskId];
+                delete this.taskDurations[taskId];
+                await this.saveState();
+                this.render();
+                this.updateProgress(false);
+            }
+
+            async performBonusUncheck(taskId) {
+                const rewardAmount = this.bonusRewardsEarned[taskId] || 0;
+                const wasQueued = this.queuedBonusRewards[taskId] !== undefined;
+                this.completedBonusTasks.delete(taskId);
+                delete this.bonusRewardsEarned[taskId];
+                delete this.queuedBonusRewards[taskId];
+                delete this.testimonies[taskId];
+                this.startedTasks.delete(taskId);
+                delete this.taskStartTimes[taskId];
+                delete this.taskDurations[taskId];
+
+                if (rewardAmount > 0 && !wasQueued) {
+                    await this.addMoney(-rewardAmount);
+                }
+                await this.saveState();
+                this.render();
             }
 
             async completeBonusTask(task, taskId) {
@@ -2718,6 +2775,37 @@
             closeTestimonyReader() {
                 const modal = document.getElementById('testimonyReaderModal');
                 modal.classList.remove('active');
+            }
+
+            // Warning modal for unchecking tasks with testimony
+            showUncheckWarning(taskId, isBonus) {
+                this.pendingUncheckTaskId = taskId;
+                this.pendingUncheckIsBonus = isBonus;
+                const modal = document.getElementById('uncheckWarningModal');
+                modal.classList.add('active');
+            }
+
+            cancelUncheck() {
+                const modal = document.getElementById('uncheckWarningModal');
+                modal.classList.remove('active');
+                this.pendingUncheckTaskId = null;
+                this.pendingUncheckIsBonus = false;
+            }
+
+            async confirmUncheck() {
+                const modal = document.getElementById('uncheckWarningModal');
+                modal.classList.remove('active');
+
+                const taskId = this.pendingUncheckTaskId;
+                const isBonus = this.pendingUncheckIsBonus;
+                this.pendingUncheckTaskId = null;
+                this.pendingUncheckIsBonus = false;
+
+                if (isBonus) {
+                    await this.performBonusUncheck(taskId);
+                } else {
+                    await this.performRegularUncheck(taskId);
+                }
             }
 
             openCalmDownActivity(task) {
