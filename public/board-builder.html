@@ -526,11 +526,18 @@
             color: #666;
         }
 
+        #emojiModal > .modal-content {
+            align-self: flex-start;
+            margin-top: 10vh;
+        }
+
         .emoji-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
             gap: 10px;
             margin-top: 20px;
+            min-height: 300px;
+            align-content: start;
         }
 
         .emoji-item {
@@ -1109,6 +1116,7 @@
                 <h3>בחר אייקון</h3>
                 <button class="close-btn" onclick="closeEmojiPicker()">×</button>
             </div>
+            <input type="text" id="emojiSearch" placeholder="חיפוש..." oninput="filterEmojis(this.value)" style="width:100%;padding:10px 14px;border:2px solid #eee;border-radius:12px;font-size:1em;margin-bottom:12px;box-sizing:border-box;direction:rtl;">
             <div class="emoji-grid" id="emojiGrid"></div>
         </div>
     </div>
@@ -1262,26 +1270,47 @@
             'friendship.png','hold.png','listen.png','solving.png','strength.png'
         ];
 
-        // Emoji categories
+        // Emoji data: e = emoji, t = search tags (English + Hebrew)
         const emojis = [
-            '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘',
-            '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒',
-            '🙈', '🫣',
-            '🎯', '🎮', '🎲', '🎭', '🎨', '🎬', '🎪', '🎰', '🎸', '🎹', '🎺', '🎻', '🥁', '🎤', '🎧', '🎼',
-            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍',
-            '🧒', '👧', '👦', '👶', '🏖️', '🛝', '🤝', '👫', '👬', '👭',
-            '🌸', '🌺', '🌻', '🌷', '🌹', '🥀', '🌼', '🌱', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀',
-            '⭐', '🌟', '✨', '💫', '⚡', '🔥', '💥', '☀️', '🌙', '🌈', '☁️', '⛅', '🌤️', '⛈️', '🌩️',
-            '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
-            '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞',
-            '🍎', '🍏', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅',
-            '🥑', '🍆', '🥔', '🥕', '🌽', '🌶️', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐',
-            '🪥', '🧸', '👕', '💧', '🥪', '👟', '🧼', '🚿', '🚽', '🥤', '🛁', '🧴', '🧻', '🧹', '🧺', '🧽',
-            '⏰', '⏱️', '⌚', '📚', '📖', '✏️', '✒️', '🖊️', '🖍️', '📝', '🎒', '🎓', '📐', '📏', '📌', '📍',
-            '🛏️', '🛋️', '🪑', '🚪', '🪟', '🏠', '🏡', '🏢',
-            '📱', '💻', '🖥️', '⌨️', '🖱️', '🖨️', '📺', '📷', '📹', '🎥', '📞', '☎️', '📟', '📠', '🔋', '🔌',
-            '💰', '💵', '💴', '💶', '💷', '🪙', '💳', '🏆', '🥇', '🥈', '🥉', '🎖️', '🏅', '🎗️', '✅', '☑️',
-            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💖', '💝', '💗', '💓', '💞', '💕', '💌'
+            // Smileys & faces
+            {e:'😀',t:'smile happy grin face שמח חיוך פרצוף'},{e:'😃',t:'smile happy open face שמח חיוך'},{e:'😄',t:'smile happy eyes face שמח חיוך'},{e:'😁',t:'grin beam happy שמח חיוך'},{e:'😅',t:'smile sweat nervous שמח זיעה'},{e:'😂',t:'laugh cry tears funny צוחק דמעות מצחיק'},{e:'🤣',t:'rofl laugh rolling funny צוחק מצחיק'},{e:'😊',t:'smile blush happy shy שמח מסמיק'},{e:'😇',t:'angel halo innocent מלאך תמים'},{e:'🙂',t:'smile slight happy שמח חיוך'},{e:'🙃',t:'upside down silly הפוך משוגע'},{e:'😉',t:'wink face קריצה'},{e:'😌',t:'relieved calm peaceful רגוע שלו'},{e:'😍',t:'heart eyes love אהבה עיניים לב'},{e:'🥰',t:'love hearts smile אהבה לבבות'},{e:'😘',t:'kiss blow love נשיקה אהבה'},
+            {e:'😗',t:'kiss face נשיקה'},{e:'😙',t:'kiss smile eyes נשיקה חיוך'},{e:'😚',t:'kiss blush eyes נשיקה מסמיק'},{e:'😋',t:'yummy delicious tongue טעים לשון'},{e:'😛',t:'tongue out playful לשון שובב'},{e:'😝',t:'tongue squint playful לשון שובב'},{e:'😜',t:'wink tongue crazy לשון קריצה משוגע'},{e:'🤪',t:'zany crazy wild משוגע פרוע'},{e:'🤨',t:'raised eyebrow suspicious חשדן גבה'},{e:'🧐',t:'monocle curious smart חכם סקרן'},{e:'🤓',t:'nerd glasses smart חנון משקפיים'},{e:'😎',t:'cool sunglasses awesome מגניב משקפי שמש'},{e:'🤩',t:'star struck excited wow מרגש כוכבים'},{e:'🥳',t:'party celebrate birthday מסיבה חגיגה יום הולדת'},{e:'😏',t:'smirk sly חיוך ערמומי'},{e:'😒',t:'unamused bored annoyed משועמם מעוצבן'},
+            {e:'🙈',t:'monkey hide peek קוף מסתיר'},{e:'🫣',t:'peeking shy hide מציץ ביישן'},
+            // More faces & emotions (new)
+            {e:'😴',t:'sleep sleeping zzz tired ישן עייף שינה'},{e:'🥱',t:'yawn tired sleepy עייף פיהוק'},{e:'😤',t:'angry frustrated huff כועס מתוסכל'},{e:'😡',t:'angry mad rage כועס זועם'},{e:'🤯',t:'mind blown explode shocked מופתע מוח התפוצץ'},{e:'🥶',t:'cold freezing frozen קר קפוא'},{e:'🥵',t:'hot warm sweating חם מזיע'},{e:'😰',t:'anxious worried scared חרד מודאג'},{e:'😱',t:'scream shock horror fear צורח מזועזע פחד'},{e:'🤗',t:'hug warm embrace friendly חיבוק חם ידידותי'},{e:'🤔',t:'thinking wonder hmm חושב תוהה'},{e:'🫡',t:'salute respect honor כבוד הצדעה'},{e:'🫠',t:'melt relax happy נמס רגוע'},{e:'🥹',t:'emotional touched tears מרגש נרגש'},{e:'🫢',t:'surprised oops hand mouth מופתע אופס'},{e:'😮',t:'surprised wow open mouth מופתע וואו'},{e:'🤭',t:'giggle tee hee oops צוחק אופס'},{e:'😵‍💫',t:'dizzy confused spiral סחרחורת מבולבל'},{e:'🤐',t:'quiet silent zipper mouth שקט סגור'},{e:'🫥',t:'invisible hidden dotted נעלם'},
+            // Hand gestures (new)
+            {e:'👍',t:'thumbs up like good great approve אהבתי לייק טוב מעולה אישור'},{e:'👎',t:'thumbs down dislike bad לא טוב לא אהבתי'},{e:'👏',t:'clap bravo applause כפיים מחיאות כפיים בראבו'},{e:'🙌',t:'hands raised celebrate hooray ידיים חגיגה'},{e:'🤲',t:'palms open receive give כפות ידיים'},{e:'🤙',t:'call shaka hang loose שאקה טלפון'},{e:'✌️',t:'peace victory two שלום ניצחון'},{e:'🤞',t:'fingers crossed luck hope מזל אצבעות'},{e:'🤟',t:'love you rock hand אהבה רוק'},{e:'🤘',t:'rock metal horns רוק מטאל'},{e:'👋',t:'wave hello bye hi שלום להתראות'},{e:'🖐️',t:'hand five stop יד חמש עצור'},{e:'✋',t:'hand stop high five יד עצור'},{e:'👌',t:'ok perfect fine great אוקיי מושלם'},{e:'🤌',t:'pinched fingers italian perfect מושלם'},{e:'🫶',t:'heart hands love care אהבה לב ידיים'},{e:'💪',t:'strong muscle power flex חזק שריר כוח'},
+            // People & gestures (new)
+            {e:'🧘‍♀️',t:'yoga meditate relax calm woman יוגה מדיטציה רגוע רגיעה'},{e:'🧘‍♂️',t:'yoga meditate relax calm man יוגה מדיטציה רגוע רגיעה'},{e:'🏃‍♂️',t:'run jog exercise sport man ריצה ספורט'},{e:'🏃‍♀️',t:'run jog exercise sport woman ריצה ספורט'},{e:'🚶‍♂️',t:'walk man walking הליכה'},{e:'🚶‍♀️',t:'walk woman walking הליכה'},{e:'🤸‍♂️',t:'cartwheel gymnastics sport גלגל התעמלות'},{e:'🤸‍♀️',t:'cartwheel gymnastics sport גלגל התעמלות'},{e:'🧗‍♂️',t:'climb rock wall טיפוס קיר'},{e:'🧗‍♀️',t:'climb rock wall טיפוס קיר'},{e:'🏊‍♂️',t:'swim pool water שחייה בריכה מים'},{e:'🏊‍♀️',t:'swim pool water שחייה בריכה מים'},{e:'🚴‍♂️',t:'bike bicycle ride cycle אופניים רכיבה'},{e:'🚴‍♀️',t:'bike bicycle ride cycle אופניים רכיבה'},
+            {e:'💆‍♀️',t:'massage relax spa woman עיסוי רגיעה ספא'},{e:'💆‍♂️',t:'massage relax spa man עיסוי רגיעה ספא'},{e:'💇‍♀️',t:'haircut salon woman תספורת מספרה'},{e:'💇‍♂️',t:'haircut salon man תספורת מספרה'},{e:'🙋‍♀️',t:'raise hand question woman יד שאלה'},{e:'🙋‍♂️',t:'raise hand question man יד שאלה'},{e:'🙅‍♀️',t:'no stop cross woman לא עצור'},{e:'🙅‍♂️',t:'no stop cross man לא עצור'},{e:'🙆‍♀️',t:'ok yes gesture woman כן אוקיי'},{e:'🙆‍♂️',t:'ok yes gesture man כן אוקיי'},{e:'🤦‍♀️',t:'facepalm woman frustrated מתוסכלת'},{e:'🤦‍♂️',t:'facepalm man frustrated מתוסכל'},{e:'🤷‍♀️',t:'shrug whatever woman מה לעשות'},{e:'🤷‍♂️',t:'shrug whatever man מה לעשות'},
+            // People & family
+            {e:'🧒',t:'child kid ילד ילדה'},{e:'👧',t:'girl child ילדה'},{e:'👦',t:'boy child ילד'},{e:'👶',t:'baby infant תינוק'},{e:'👨‍👩‍👧‍👦',t:'family parents kids משפחה הורים ילדים'},{e:'👩‍👧',t:'mother daughter mom אמא בת'},{e:'👨‍👦',t:'father son dad אבא בן'},{e:'🧑‍🤝‍🧑',t:'people together friends חברים ביחד'},{e:'🏖️',t:'beach vacation relax חוף חופשה רגיעה'},{e:'🛝',t:'playground slide park מגלשה גן משחקים'},{e:'🤝',t:'handshake deal agree לחיצת יד הסכמה'},{e:'👫',t:'couple man woman holding hands זוג'},{e:'👬',t:'men holding hands friends חברים'},{e:'👭',t:'women holding hands friends חברות'},
+            // Activities & entertainment
+            {e:'🎯',t:'target goal bullseye direct hit מטרה יעד'},{e:'🎮',t:'game controller video gaming משחק בקר'},{e:'🎲',t:'dice game board game luck קוביה משחק מזל'},{e:'🎭',t:'theater drama masks performing תיאטרון מסכות'},{e:'🎨',t:'art paint palette creative אמנות ציור יצירה'},{e:'🎬',t:'movie film clapper cinema סרט קולנוע'},{e:'🎪',t:'circus tent carnival קרקס'},{e:'🎰',t:'slot machine gamble casino מכונה'},{e:'🎸',t:'guitar music rock גיטרה מוזיקה'},{e:'🎹',t:'piano keyboard music פסנתר מוזיקה'},{e:'🎺',t:'trumpet music brass חצוצרה מוזיקה'},{e:'🎻',t:'violin music fiddle כינור מוזיקה'},{e:'🥁',t:'drum music beat תוף מוזיקה'},{e:'🎤',t:'microphone sing karaoke מיקרופון שירה'},{e:'🎧',t:'headphones music listen אוזניות מוזיקה'},{e:'🎼',t:'music notes score מוזיקה תווים'},
+            // Sports
+            {e:'⚽',t:'soccer football ball sport כדורגל'},{e:'🏀',t:'basketball ball sport כדורסל'},{e:'🏈',t:'football american sport פוטבול'},{e:'⚾',t:'baseball ball sport בייסבול'},{e:'🥎',t:'softball ball sport סופטבול'},{e:'🎾',t:'tennis ball sport טניס'},{e:'🏐',t:'volleyball ball sport כדורעף'},{e:'🏉',t:'rugby ball sport רוגבי'},{e:'🥏',t:'frisbee disc sport פריזבי'},{e:'🎱',t:'billiards pool sport ביליארד'},{e:'🪀',t:'yoyo toy יויו'},{e:'🏓',t:'ping pong table tennis sport פינג פונג'},{e:'🏸',t:'badminton sport בדמינטון'},{e:'🏒',t:'hockey ice sport הוקי'},{e:'🏑',t:'field hockey sport הוקי'},{e:'🥍',t:'lacrosse sport לקרוס'},
+            // Nature & flowers
+            {e:'🌸',t:'blossom flower cherry sakura פרח דובדבן'},{e:'🌺',t:'hibiscus flower tropical פרח טרופי'},{e:'🌻',t:'sunflower flower yellow חמנייה פרח'},{e:'🌷',t:'tulip flower spring צבעוני פרח אביב'},{e:'🌹',t:'rose flower red love ורד פרח אהבה'},{e:'🥀',t:'wilted flower dead נבל פרח'},{e:'🌼',t:'blossom flower yellow פרח'},{e:'🌱',t:'seedling plant grow sprout נבט צמח'},{e:'🌲',t:'evergreen tree pine עץ אורן'},{e:'🌳',t:'tree deciduous nature עץ טבע'},{e:'🌴',t:'palm tree tropical דקל'},{e:'🌵',t:'cactus desert קקטוס מדבר'},{e:'🌾',t:'rice wheat grain חיטה שיבולת'},{e:'🌿',t:'herb plant leaf עשב צמח'},{e:'☘️',t:'shamrock clover luck תלתן מזל'},{e:'🍀',t:'four leaf clover luck תלתן מזל'},
+            // Sky & weather
+            {e:'⭐',t:'star shine כוכב'},{e:'🌟',t:'star glow shine כוכב זוהר'},{e:'✨',t:'sparkle shine magic ניצוץ קסם'},{e:'💫',t:'dizzy star shooting כוכב'},{e:'⚡',t:'lightning bolt electric ברק חשמל'},{e:'🔥',t:'fire hot flame אש חם להבה'},{e:'💥',t:'boom explosion crash פיצוץ'},{e:'☀️',t:'sun sunny bright warm שמש בהיר חם'},{e:'🌙',t:'moon night crescent ירח לילה'},{e:'🌈',t:'rainbow colors קשת צבעים'},{e:'☁️',t:'cloud sky ענן שמיים'},{e:'⛅',t:'cloud sun partly cloudy ענן שמש'},{e:'🌤️',t:'sun cloud bright שמש ענן'},{e:'⛈️',t:'storm thunder rain סערה רעם גשם'},{e:'🌩️',t:'lightning storm cloud ברק סערה'},
+            // Animals
+            {e:'🐶',t:'dog puppy pet כלב גור חיית מחמד'},{e:'🐱',t:'cat kitten pet חתול גור חיית מחמד'},{e:'🐭',t:'mouse face עכבר'},{e:'🐹',t:'hamster pet face אוגר'},{e:'🐰',t:'rabbit bunny ארנב'},{e:'🦊',t:'fox face שועל'},{e:'🐻',t:'bear face דוב'},{e:'🐼',t:'panda bear פנדה'},{e:'🐨',t:'koala bear face קואלה'},{e:'🐯',t:'tiger face cat נמר'},{e:'🦁',t:'lion king face אריה מלך'},{e:'🐮',t:'cow face פרה'},{e:'🐷',t:'pig face חזיר'},{e:'🐸',t:'frog face צפרדע'},{e:'🐵',t:'monkey face קוף'},{e:'🐔',t:'chicken hen rooster תרנגולת'},
+            {e:'🐧',t:'penguin bird פינגווין'},{e:'🐦',t:'bird ציפור'},{e:'🐤',t:'chick baby bird אפרוח'},{e:'🦆',t:'duck bird ברווז'},{e:'🦅',t:'eagle bird נשר'},{e:'🦉',t:'owl bird night ינשוף'},{e:'🦇',t:'bat night עטלף'},{e:'🐺',t:'wolf face זאב'},{e:'🐗',t:'boar pig חזיר בר'},{e:'🐴',t:'horse face סוס'},{e:'🦄',t:'unicorn magic חד קרן'},{e:'🐝',t:'bee honey דבורה דבש'},{e:'🐛',t:'bug caterpillar זחל'},{e:'🦋',t:'butterfly insect פרפר'},{e:'🐌',t:'snail slow חילזון'},{e:'🐞',t:'ladybug insect חיפושית'},
+            // Food & fruit
+            {e:'🍎',t:'apple red fruit תפוח אדום פרי'},{e:'🍏',t:'apple green fruit תפוח ירוק'},{e:'🍊',t:'orange tangerine fruit תפוז'},{e:'🍋',t:'lemon yellow fruit לימון'},{e:'🍌',t:'banana fruit בננה'},{e:'🍉',t:'watermelon fruit אבטיח'},{e:'🍇',t:'grapes fruit ענבים'},{e:'🍓',t:'strawberry fruit תות'},{e:'🍈',t:'melon fruit מלון'},{e:'🍒',t:'cherries fruit דובדבן'},{e:'🍑',t:'peach fruit אפרסק'},{e:'🥭',t:'mango fruit מנגו'},{e:'🍍',t:'pineapple fruit אננס'},{e:'🥥',t:'coconut fruit קוקוס'},{e:'🥝',t:'kiwi fruit קיווי'},{e:'🍅',t:'tomato vegetable עגבנייה'},
+            {e:'🥑',t:'avocado fruit אבוקדו'},{e:'🍆',t:'eggplant aubergine חציל'},{e:'🥔',t:'potato vegetable תפוח אדמה'},{e:'🥕',t:'carrot vegetable גזר'},{e:'🌽',t:'corn maize vegetable תירס'},{e:'🌶️',t:'pepper hot chili פלפל חריף'},{e:'🥒',t:'cucumber vegetable מלפפון'},{e:'🥬',t:'leafy green lettuce vegetable חסה'},{e:'🥦',t:'broccoli vegetable ברוקולי'},{e:'🧄',t:'garlic vegetable שום'},{e:'🧅',t:'onion vegetable בצל'},{e:'🍄',t:'mushroom fungus פטריה'},{e:'🥜',t:'peanut nut בוטן'},{e:'🌰',t:'chestnut nut ערמון'},{e:'🍞',t:'bread food לחם אוכל'},{e:'🥐',t:'croissant pastry bread קרואסון'},
+            // Daily routine objects
+            {e:'🪥',t:'toothbrush teeth brush clean מברשת שיניים ניקוי'},{e:'🧸',t:'teddy bear toy doll דובי צעצוע'},{e:'👕',t:'shirt clothes tshirt חולצה בגדים'},{e:'💧',t:'water drop droplet מים טיפה'},{e:'🥪',t:'sandwich food lunch סנדוויץ אוכל ארוחה'},{e:'👟',t:'shoe sneaker running נעל נעליים'},{e:'🧼',t:'soap clean wash סבון ניקוי'},{e:'🚿',t:'shower bath clean water מקלחת'},{e:'🚽',t:'toilet bathroom שירותים'},{e:'🥤',t:'drink cup straw juice שתייה כוס'},{e:'🛁',t:'bath tub clean water אמבטיה'},{e:'🧴',t:'lotion cream bottle קרם בקבוק'},{e:'🧻',t:'toilet paper roll נייר טואלט'},{e:'🧹',t:'broom sweep clean מטאטא ניקוי'},{e:'🧺',t:'basket laundry סל כביסה'},{e:'🧽',t:'sponge clean wash ספוג ניקוי'},
+            // School & time
+            {e:'⏰',t:'alarm clock time wake up שעון מעורר זמן'},{e:'⏱️',t:'stopwatch timer time שעון עצר זמן'},{e:'⌚',t:'watch time שעון יד'},{e:'📚',t:'books study read school ספרים לימוד קריאה בית ספר'},{e:'📖',t:'book read open ספר קריאה'},{e:'✏️',t:'pencil write draw עיפרון כתיבה ציור'},{e:'✒️',t:'pen ink write עט דיו'},{e:'🖊️',t:'pen write עט כתיבה'},{e:'🖍️',t:'crayon draw color צבע ציור'},{e:'📝',t:'note write memo פתק כתיבה'},{e:'🎒',t:'backpack school bag תיק בית ספר'},{e:'🎓',t:'graduation cap school תואר כובע'},{e:'📐',t:'triangle ruler math מדידה מתמטיקה'},{e:'📏',t:'ruler measure straight סרגל מדידה'},{e:'📌',t:'pin push נעץ סיכה'},{e:'📍',t:'pin location מיקום סיכה'},
+            // Home & furniture
+            {e:'🛏️',t:'bed sleep rest room מיטה שינה חדר'},{e:'🛋️',t:'couch sofa living room ספה סלון'},{e:'🪑',t:'chair seat sit כיסא ישיבה'},{e:'🚪',t:'door entrance exit דלת כניסה'},{e:'🪟',t:'window view חלון'},{e:'🏠',t:'house home בית'},{e:'🏡',t:'house garden home בית גינה'},{e:'🏢',t:'building office בניין משרד'},
+            // Electronics
+            {e:'📱',t:'phone mobile smartphone טלפון נייד'},{e:'💻',t:'laptop computer מחשב נייד'},{e:'🖥️',t:'computer desktop screen מחשב מסך'},{e:'⌨️',t:'keyboard type מקלדת הקלדה'},{e:'🖱️',t:'mouse computer click עכבר מחשב'},{e:'🖨️',t:'printer print מדפסת'},{e:'📺',t:'television tv screen טלוויזיה מסך'},{e:'📷',t:'camera photo picture מצלמה תמונה'},{e:'📹',t:'video camera record וידאו מצלמה'},{e:'🎥',t:'movie camera film סרט מצלמה'},{e:'📞',t:'phone telephone call טלפון שיחה'},{e:'☎️',t:'telephone phone call טלפון'},{e:'📟',t:'pager beeper איתורית'},{e:'📠',t:'fax machine פקס'},{e:'🔋',t:'battery power charge סוללה'},{e:'🔌',t:'plug electric power שקע חשמל'},
+            // Money & awards
+            {e:'💰',t:'money bag rich כסף שק עשיר'},{e:'💵',t:'dollar money bill כסף דולר שטר'},{e:'💴',t:'yen money bill כסף ין'},{e:'💶',t:'euro money bill כסף יורו'},{e:'💷',t:'pound money bill כסף לירה'},{e:'🪙',t:'coin money מטבע כסף'},{e:'💳',t:'credit card payment כרטיס אשראי'},{e:'🏆',t:'trophy winner champion cup גביע מנצח אלוף'},{e:'🥇',t:'gold medal first winner מדליה זהב ראשון'},{e:'🥈',t:'silver medal second מדליה כסף שני'},{e:'🥉',t:'bronze medal third מדליה ארד שלישי'},{e:'🎖️',t:'medal military award מדליה פרס'},{e:'🏅',t:'medal sports award מדליה ספורט'},{e:'🎗️',t:'ribbon awareness סרט'},{e:'✅',t:'check mark done complete סימון בוצע'},{e:'☑️',t:'check box done complete סימון בוצע'},
+            // Hearts
+            {e:'❤️',t:'heart love red לב אהבה אדום'},{e:'🧡',t:'heart orange love לב כתום'},{e:'💛',t:'heart yellow love לב צהוב'},{e:'💚',t:'heart green love לב ירוק'},{e:'💙',t:'heart blue love לב כחול'},{e:'💜',t:'heart purple love לב סגול'},{e:'🖤',t:'heart black love לב שחור'},{e:'🤍',t:'heart white love לב לבן'},{e:'🤎',t:'heart brown love לב חום'},{e:'💖',t:'heart sparkle love לב ניצוץ'},{e:'💝',t:'heart ribbon gift לב סרט מתנה'},{e:'💗',t:'heart growing love לב גדל'},{e:'💓',t:'heart beating love לב פועם'},{e:'💞',t:'hearts revolving love לבבות'},{e:'💕',t:'hearts two love לבבות'},{e:'💌',t:'love letter envelope מכתב אהבה'}
         ];
 
         // State
@@ -1846,7 +1875,10 @@
                 return `
                     <div class="config-group">
                         <label>טקסט הכותרת:</label>
-                        <input type="text" id="configText" value="${item.text || ''}" placeholder="הכנס טקסט">
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <input type="text" id="configText" value="${item.text || ''}" placeholder="הכנס טקסט" style="flex:1;">
+                            <button type="button" onclick="openEmojiPickerForInput('configText')" style="width:36px;height:36px;border:2px solid #eee;border-radius:10px;background:white;font-size:1.2em;cursor:pointer;flex-shrink:0;" title="הוסף אימוג׳י">😀</button>
+                        </div>
                         <small>השתמש ב-[שם] להכללת שם הילד</small>
                     </div>
                     <div class="config-group">
@@ -2158,32 +2190,80 @@
         function initEmojiGrid() {
             const emojiGrid = document.getElementById('emojiGrid');
 
-            emojis.forEach(emoji => {
-                const emojiItem = document.createElement('div');
-                emojiItem.className = 'emoji-item';
-                emojiItem.textContent = emoji;
-                emojiItem.onclick = () => selectEmoji(emoji);
-                emojiGrid.appendChild(emojiItem);
+            emojis.forEach(item => {
+                const emojiEl = document.createElement('div');
+                emojiEl.className = 'emoji-item';
+                emojiEl.textContent = item.e;
+                emojiEl.dataset.tags = item.t;
+                emojiEl.dataset.emoji = item.e;
+                emojiEl.onclick = () => selectEmoji(item.e);
+                emojiGrid.appendChild(emojiEl);
             });
 
             emojiImages.forEach(imageName => {
-                const emojiItem = document.createElement('div');
-                emojiItem.className = 'emoji-item';
-                emojiItem.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
-                emojiItem.onclick = () => selectEmoji(`IMG:${imageName}`);
-                emojiGrid.appendChild(emojiItem);
+                const emojiEl = document.createElement('div');
+                emojiEl.className = 'emoji-item';
+                emojiEl.dataset.tags = imageName.replace('.png', '').replace(/-/g, ' ');
+                emojiEl.innerHTML = `<img src="emojis/${imageName}" style="width: 40px; height: 40px; object-fit: contain;" />`;
+                emojiEl.onclick = () => selectEmoji(`IMG:${imageName}`);
+                emojiGrid.appendChild(emojiEl);
             });
         }
 
+        function filterEmojis(query) {
+            const items = document.querySelectorAll('#emojiGrid .emoji-item');
+            const q = query.trim().toLowerCase();
+            items.forEach(item => {
+                if (!q) {
+                    item.style.display = '';
+                    return;
+                }
+                const tags = (item.dataset.tags || '').toLowerCase();
+                const emoji = item.dataset.emoji || '';
+                item.style.display = (tags.includes(q) || emoji.includes(q)) ? '' : 'none';
+            });
+        }
+
+        let emojiInsertTargetInput = null; // When set, emoji will be inserted into this input field
+
         function openEmojiPicker() {
+            emojiInsertTargetInput = null;
+            const searchInput = document.getElementById('emojiSearch');
+            searchInput.value = '';
+            filterEmojis('');
             document.getElementById('emojiModal').classList.add('active');
+            searchInput.focus();
+        }
+
+        function openEmojiPickerForInput(inputId) {
+            emojiInsertTargetInput = inputId;
+            const searchInput = document.getElementById('emojiSearch');
+            searchInput.value = '';
+            filterEmojis('');
+            document.getElementById('emojiModal').classList.add('active');
+            searchInput.focus();
         }
 
         function closeEmojiPicker() {
             document.getElementById('emojiModal').classList.remove('active');
+            emojiInsertTargetInput = null;
         }
 
         function selectEmoji(emoji) {
+            if (emojiInsertTargetInput) {
+                // Insert emoji into target text input
+                const input = document.getElementById(emojiInsertTargetInput);
+                if (input && !emoji.startsWith('IMG:')) {
+                    const start = input.selectionStart || input.value.length;
+                    const end = input.selectionEnd || input.value.length;
+                    input.value = input.value.substring(0, start) + emoji + input.value.substring(end);
+                    input.focus();
+                    const newPos = start + emoji.length;
+                    input.setSelectionRange(newPos, newPos);
+                }
+                closeEmojiPicker();
+                return;
+            }
             const configIcon = document.getElementById('configIcon');
             if (configIcon) {
                 configIcon.dataset.icon = emoji;
