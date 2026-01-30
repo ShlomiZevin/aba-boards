@@ -1032,6 +1032,10 @@
                         <div class="icon">🧘</div>
                         <div class="label">פעילות הרגעה</div>
                     </div>
+                    <div class="palette-item" draggable="true" data-type="task" data-task-type="composite">
+                        <div class="icon">📦</div>
+                        <div class="label">משימה עם תתי-משימות</div>
+                    </div>
                 </div>
 
                 <div class="palette-section">
@@ -1653,6 +1657,11 @@
                 } else if (taskType === 'calm-down') {
                     item.taskData.activityType = 'paint';
                     item.taskData.activityUrl = '';
+                } else if (taskType === 'composite') {
+                    item.taskData.subtasks = [
+                        { id: 1, title: 'תת-משימה 1' },
+                        { id: 2, title: 'תת-משימה 2' }
+                    ];
                 }
             } else if (type === 'goal') {
                 item.icon = '🏆';
@@ -1748,7 +1757,7 @@
                 title = item.title || 'פרס';
                 subtitle = `🎯 ${item.pointsRequired || 0} נקודות`;
             } else if (item.type === 'task') {
-                typeLabel = item.taskType === 'regular' ? 'משימה' : (item.taskType === 'bonus' ? 'בונוס' : 'הרגעה');
+                typeLabel = item.taskType === 'regular' ? 'משימה' : (item.taskType === 'bonus' ? 'בונוס' : (item.taskType === 'composite' ? 'משימה מורכבת' : 'הרגעה'));
                 const taskData = item.taskData || {};
 
                 // Handle icon display
@@ -1778,6 +1787,10 @@
                         'link': '🔗 קישור'
                     };
                     subtitleParts.push(activityTypes[taskData.activityType] || '');
+                }
+                if (item.taskType === 'composite') {
+                    const subtaskCount = taskData.subtasks?.length || 0;
+                    subtitleParts.push(`📦 ${subtaskCount} תתי-משימות`);
                 }
                 subtitle = subtitleParts.join(' | ');
             }
@@ -1899,12 +1912,37 @@
                         <label>שם המשימה:</label>
                         <input type="text" id="configTitle" value="${taskData.title || ''}" placeholder="הכנס שם משימה">
                     </div>
+                `;
+
+                // Quantity field (not for composite tasks)
+                if (item.taskType !== 'composite') {
+                    html += `
                     <div class="config-group">
                         <label>כמות:</label>
                         <input type="number" id="configQuantity" value="${taskData.quantity || 1}" min="1" placeholder="1">
                         <small>מספר פעמים שהמשימה תופיע</small>
                     </div>
-                `;
+                    `;
+                }
+
+                // Composite task - subtasks editor
+                if (item.taskType === 'composite') {
+                    const subtasks = taskData.subtasks || [];
+                    html += `
+                    <div class="config-group">
+                        <label>תתי-משימות:</label>
+                        <div id="subtasksConfigList">
+                            ${subtasks.map((st, i) => `
+                                <div class="subtask-config-row" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+                                    <input type="text" value="${st.title || ''}" class="subtask-input" placeholder="תת-משימה ${i + 1}" style="flex: 1; padding: 8px; border: 2px solid #eee; border-radius: 10px; font-size: 14px; direction: rtl;">
+                                    <button type="button" onclick="removeSubtaskConfig(${i})" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #ff6b6b; color: white; cursor: pointer; font-size: 14px; flex-shrink: 0;">✕</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" onclick="addSubtaskConfig()" class="btn btn-secondary" style="font-size: 12px; padding: 8px 14px; margin-top: 4px;">+ הוסף תת-משימה</button>
+                    </div>
+                    `;
+                }
 
                 // Bonus-specific fields
                 if (item.taskType === 'bonus') {
@@ -2008,7 +2046,18 @@
                 const taskData = item.taskData;
                 taskData.icon = document.getElementById('configIcon').dataset.icon;
                 taskData.title = document.getElementById('configTitle').value;
-                taskData.quantity = parseInt(document.getElementById('configQuantity').value) || 1;
+
+                if (item.taskType !== 'composite') {
+                    taskData.quantity = parseInt(document.getElementById('configQuantity').value) || 1;
+                }
+
+                if (item.taskType === 'composite') {
+                    const subtaskInputs = document.querySelectorAll('#subtasksConfigList .subtask-input');
+                    taskData.subtasks = Array.from(subtaskInputs).map((input, i) => ({
+                        id: i + 1,
+                        title: input.value.trim() || `תת-משימה ${i + 1}`
+                    }));
+                }
 
                 if (item.taskType === 'bonus') {
                     taskData.minReward = parseFloat(document.getElementById('configMinReward').value) || 0;
@@ -2047,6 +2096,42 @@
                 el.style.outline = 'none';
             });
             selectedItemIndex = null;
+        }
+
+        // Subtask config helpers
+        function addSubtaskConfig() {
+            const list = document.getElementById('subtasksConfigList');
+            if (!list) return;
+            const count = list.querySelectorAll('.subtask-config-row').length;
+            const row = document.createElement('div');
+            row.className = 'subtask-config-row';
+            row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
+            row.innerHTML = `
+                <input type="text" value="" class="subtask-input" placeholder="תת-משימה ${count + 1}" style="flex: 1; padding: 8px; border: 2px solid #eee; border-radius: 10px; font-size: 14px; direction: rtl;">
+                <button type="button" onclick="removeSubtaskConfig(${count})" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #ff6b6b; color: white; cursor: pointer; font-size: 14px; flex-shrink: 0;">✕</button>
+            `;
+            list.appendChild(row);
+        }
+
+        function removeSubtaskConfig(index) {
+            const list = document.getElementById('subtasksConfigList');
+            if (!list) return;
+            const rows = list.querySelectorAll('.subtask-config-row');
+            if (rows.length <= 1) {
+                alert('חייבת להיות לפחות תת-משימה אחת');
+                return;
+            }
+            if (rows[index]) {
+                rows[index].remove();
+            }
+            // Re-index remove buttons
+            const remaining = list.querySelectorAll('.subtask-config-row');
+            remaining.forEach((row, i) => {
+                const btn = row.querySelector('button');
+                if (btn) btn.setAttribute('onclick', `removeSubtaskConfig(${i})`);
+                const input = row.querySelector('input');
+                if (input && !input.value) input.placeholder = `תת-משימה ${i + 1}`;
+            });
         }
 
         // Delete item

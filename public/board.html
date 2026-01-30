@@ -743,6 +743,97 @@
             50% { opacity: 0.7; }
         }
 
+        /* Subtask progress badge */
+        .subtask-progress-badge {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background: var(--primary-color, #5BA4B5);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: bold;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+            z-index: 1;
+        }
+
+        .task-card.completed .subtask-progress-badge {
+            background: var(--card-completed-text, #1A3A42);
+            opacity: 0.7;
+        }
+
+        /* Subtask popup styles */
+        .subtasks-popup {
+            text-align: right;
+            direction: rtl;
+        }
+
+        .subtasks-list {
+            max-height: 60vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border: 2px solid transparent;
+            user-select: none;
+        }
+
+        .subtask-item:hover {
+            background: #ececec;
+        }
+
+        .subtask-item:active {
+            background: #e4e4e4;
+        }
+
+        .subtask-item.completed {
+            background: linear-gradient(135deg, var(--card-completed-start, #D4EEF5), var(--card-completed-end, #C0E8E0));
+            border-color: var(--primary-color, #5BA4B5);
+        }
+
+        .subtask-check {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s ease, border-color 0.15s ease;
+            font-size: 12px;
+            color: transparent;
+        }
+
+        .subtask-item.completed .subtask-check {
+            background: var(--primary-color, #5BA4B5);
+            border-color: var(--primary-color, #5BA4B5);
+            color: white;
+        }
+
+        .subtask-title {
+            font-size: 0.95em;
+            font-weight: 500;
+            color: #333;
+            flex: 1;
+        }
+
+        .subtask-item.completed .subtask-title {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
         /* Calm down task styles */
         .calm-down-card {
             background: linear-gradient(135deg, #C8E6E4 0%, #E8D5DC 100%);
@@ -1510,6 +1601,17 @@
         </div>
     </div>
 
+    <!-- Subtasks Modal -->
+    <div class="testimony-modal" id="subtasksModal">
+        <div class="testimony-content subtasks-popup" style="max-width: 400px; width: 88%;">
+            <h2 id="subtasksTitle" style="margin-bottom: 10px; font-size: 1.2em;"></h2>
+            <div id="subtasksListPopup" class="subtasks-list"></div>
+            <div class="testimony-buttons" style="margin-top: 12px;">
+                <button class="submit-btn" onclick="taskBoard.closeSubtasksPopup()">סגור</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Firebase configuration
         const firebaseConfig = {
@@ -1580,6 +1682,10 @@
                 this.startedTasks = new Set();
                 this.taskStartTimes = {};
                 this.taskDurations = {};
+
+                // Subtask tracking
+                this.completedSubtasks = {};
+                this.currentSubtaskParentId = null;
 
                 // Coin style configuration
                 this.coinStyle = kidData.coinStyle || 'dollar';
@@ -1698,6 +1804,7 @@
                         startedTasks: [],
                         taskStartTimes: {},
                         taskDurations: {},
+                        completedSubtasks: {},
                         lastResetDate: today
                     });
                     this.completedTasks.clear();
@@ -1709,6 +1816,7 @@
                     this.startedTasks.clear();
                     this.taskStartTimes = {};
                     this.taskDurations = {};
+                    this.completedSubtasks = {};
                 }
             }
 
@@ -1724,6 +1832,7 @@
                 this.startedTasks = new Set(data.startedTasks || []);
                 this.taskStartTimes = data.taskStartTimes || {};
                 this.taskDurations = data.taskDurations || {};
+                this.completedSubtasks = data.completedSubtasks || {};
                 this.kidData.totalMoney = data.totalMoney || 0;
             }
 
@@ -1737,7 +1846,8 @@
                     testimonies: this.testimonies,
                     startedTasks: Array.from(this.startedTasks),
                     taskStartTimes: this.taskStartTimes,
-                    taskDurations: this.taskDurations
+                    taskDurations: this.taskDurations,
+                    completedSubtasks: this.completedSubtasks
                 });
             }
 
@@ -1999,10 +2109,10 @@
                 }
             }
 
-            // Check if all regular tasks active today are completed
+            // Check if all regular (and composite) tasks active today are completed
             areAllRegularTasksCompleted() {
                 const regularLayoutTasks = this.boardLayout.filter(item => {
-                    if (item.type !== 'task' || item.taskType !== 'regular') return false;
+                    if (item.type !== 'task' || (item.taskType !== 'regular' && item.taskType !== 'composite')) return false;
                     const taskData = item.taskData;
                     if (!taskData) return false;
                     const activeDays = taskData.activeDays || [0, 1, 2, 3, 4, 5, 6];
@@ -2128,13 +2238,15 @@
                         const activeDays = taskData.activeDays || [0, 1, 2, 3, 4, 5, 6];
                         if (!activeDays.includes(this.currentDay)) return;
 
-                        if (currentTasksType !== item.taskType) {
+                        // Composite tasks use the same grid as regular tasks
+                        const gridType = item.taskType === 'composite' ? 'regular' : item.taskType;
+                        if (currentTasksType !== gridType) {
                             currentTasksGrid = document.createElement('div');
-                            currentTasksGrid.className = item.taskType === 'bonus' ? 'bonus-tasks-grid' :
-                                                        item.taskType === 'calm-down' ? 'calm-down-grid' : 'tasks-grid';
+                            currentTasksGrid.className = gridType === 'bonus' ? 'bonus-tasks-grid' :
+                                                        gridType === 'calm-down' ? 'calm-down-grid' : 'tasks-grid';
                             currentTasksGrid.style.marginBottom = '30px';
                             boardContent.appendChild(currentTasksGrid);
-                            currentTasksType = item.taskType;
+                            currentTasksType = gridType;
                         }
 
                         const card = this.createTaskCard(taskData, item.taskType);
@@ -2181,6 +2293,13 @@
                     }
                 } else if (taskType === 'calm-down') {
                     card.className = 'calm-down-card';
+                } else if (taskType === 'composite') {
+                    card.className = 'task-card';
+                    const completedSubs = (this.completedSubtasks[task.id] || []).length;
+                    const totalSubs = (task.subtasks || []).length;
+                    if (totalSubs > 0 && completedSubs >= totalSubs) {
+                        card.classList.add('completed');
+                    }
                 } else {
                     card.className = 'task-card';
                     if (this.completedTasks.has(task.id)) {
@@ -2204,6 +2323,29 @@
                     `;
                     card.style.cursor = 'pointer';
                     card.addEventListener('click', () => this.openCalmDownActivity(task));
+                    return card;
+                }
+
+                // Composite task (task with subtasks)
+                if (taskType === 'composite' && task.subtasks && task.subtasks.length > 0) {
+                    const completedCount = (this.completedSubtasks[task.id] || []).length;
+                    const totalCount = task.subtasks.length;
+                    const testimonyBadge = task.requiresTestimony ? '<div class="testimony-badge">📝</div>' : '';
+                    const hasTestimony = this.testimonies[task.id];
+                    const testimonyIndicator = hasTestimony ? '<div class="testimony-indicator" title="לחץ לקריאת העדות">💬</div>' : '';
+
+                    card.innerHTML = `
+                        <div class="subtask-progress-badge">${completedCount}/${totalCount}</div>
+                        ${testimonyBadge}
+                        ${testimonyIndicator}
+                        <div class="checkmark">✓</div>
+                        <div class="task-icon">${iconDisplay}</div>
+                        <div class="task-title">${task.title}</div>
+                    `;
+
+                    card.style.cursor = 'pointer';
+                    card.addEventListener('click', () => this.openSubtasksPopup(task));
+
                     return card;
                 }
 
@@ -2367,7 +2509,7 @@
 
             updateProgress(triggerCelebration = true) {
                 const regularLayoutTasks = this.boardLayout.filter(item => {
-                    if (item.type !== 'task' || item.taskType !== 'regular') return false;
+                    if (item.type !== 'task' || (item.taskType !== 'regular' && item.taskType !== 'composite')) return false;
                     const taskData = item.taskData;
                     if (!taskData) return false;
                     const activeDays = taskData.activeDays || [0, 1, 2, 3, 4, 5, 6];
@@ -2726,7 +2868,9 @@
 
                 input.value = '';
 
-                const task = this.findTask(taskId, isBonus ? 'bonus' : 'regular');
+                const task = isBonus
+                    ? this.findTask(taskId, 'bonus')
+                    : (this.findTask(taskId, 'regular') || this.findTask(taskId, 'composite'));
 
                 if (task) {
                     document.getElementById('testimonyTitle').textContent = `ספר לנו איך השלמת: ${task.title}`;
@@ -2774,7 +2918,7 @@
                 const testimony = this.testimonies[taskId];
                 if (!testimony) return;
 
-                const task = this.findTask(taskId, 'regular') || this.findTask(taskId, 'bonus');
+                const task = this.findTask(taskId, 'regular') || this.findTask(taskId, 'composite') || this.findTask(taskId, 'bonus');
 
                 const modal = document.getElementById('testimonyReaderModal');
                 const titleEl = document.getElementById('testimonyReaderTitle');
@@ -2791,6 +2935,98 @@
             closeTestimonyReader() {
                 const modal = document.getElementById('testimonyReaderModal');
                 modal.classList.remove('active');
+            }
+
+            // Subtask popup functions
+            openSubtasksPopup(task) {
+                this.currentSubtaskParentId = task.id;
+                this.currentSubtaskTask = task;
+
+                const modal = document.getElementById('subtasksModal');
+                const titleEl = document.getElementById('subtasksTitle');
+                titleEl.textContent = task.title;
+
+                this.renderSubtaskItems(task);
+                modal.classList.add('active');
+            }
+
+            renderSubtaskItems(task) {
+                const listEl = document.getElementById('subtasksListPopup');
+                const completedIds = this.completedSubtasks[task.id] || [];
+
+                listEl.innerHTML = task.subtasks.map(subtask => {
+                    const isCompleted = completedIds.includes(subtask.id);
+                    return `
+                        <div class="subtask-item ${isCompleted ? 'completed' : ''}" onclick="taskBoard.toggleSubtask(${task.id}, ${subtask.id})">
+                            <div class="subtask-check">${isCompleted ? '✓' : ''}</div>
+                            <div class="subtask-title">${subtask.title}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            async toggleSubtask(parentTaskId, subtaskId) {
+                if (this.isParentMode) return;
+
+                const task = this.findTask(parentTaskId, 'composite');
+                if (!task) return;
+
+                // Initialize array if needed
+                if (!this.completedSubtasks[parentTaskId]) {
+                    this.completedSubtasks[parentTaskId] = [];
+                }
+
+                const idx = this.completedSubtasks[parentTaskId].indexOf(subtaskId);
+                const wasAllCompleted = this.completedSubtasks[parentTaskId].length >= task.subtasks.length;
+
+                if (idx >= 0) {
+                    // Uncheck subtask
+                    this.completedSubtasks[parentTaskId].splice(idx, 1);
+                } else {
+                    // Check subtask
+                    this.completedSubtasks[parentTaskId].push(subtaskId);
+                }
+
+                const isNowAllCompleted = this.completedSubtasks[parentTaskId].length >= task.subtasks.length;
+
+                // Handle parent task completion state
+                if (isNowAllCompleted && !wasAllCompleted) {
+                    // All subtasks now completed
+                    if (task.requiresTestimony) {
+                        // Close subtask popup, show testimony modal
+                        this.closeSubtasksPopup();
+                        this.showTestimonyModal(parentTaskId, false);
+                        await this.saveState();
+                        return;
+                    }
+                    this.completedTasks.add(parentTaskId);
+                    this.celebrate();
+                } else if (!isNowAllCompleted && wasAllCompleted) {
+                    // Was completed, now unchecked one
+                    this.completedTasks.delete(parentTaskId);
+                    // Remove testimony if exists
+                    if (this.testimonies[parentTaskId]) {
+                        delete this.testimonies[parentTaskId];
+                    }
+                }
+
+                await this.saveState();
+                this.renderSubtaskItems(task);
+                this.render();
+                this.updateProgress();
+
+                // Re-open the popup since render() rebuilds the DOM
+                if (document.getElementById('subtasksModal').classList.contains('active')) {
+                    // Popup is still open, re-render its contents
+                    this.renderSubtaskItems(task);
+                }
+            }
+
+            closeSubtasksPopup() {
+                const modal = document.getElementById('subtasksModal');
+                modal.classList.remove('active');
+                this.currentSubtaskParentId = null;
+                this.currentSubtaskTask = null;
             }
 
             // Warning modal for unchecking tasks with testimony
