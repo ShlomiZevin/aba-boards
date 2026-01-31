@@ -161,6 +161,44 @@
             border-top: none;
             border-radius: 0 0 35px 35px;
             background: transparent;
+            transition: all 0.6s ease;
+        }
+
+        /* Inhale mouth - open wide like smelling a flower */
+        .mouth.inhale {
+            width: 22px;
+            height: 22px;
+            border: 4px solid #d4856a;
+            border-top: 4px solid #d4856a;
+            border-radius: 50%;
+            background: #c96b55;
+            bottom: 32px;
+            animation: inhalemouth 4s ease-in-out;
+        }
+
+        @keyframes inhalemouth {
+            0% { width: 22px; height: 16px; }
+            50% { width: 26px; height: 26px; }
+            100% { width: 22px; height: 22px; }
+        }
+
+        /* Exhale mouth - pursed lips like blowing a candle */
+        .mouth.exhale {
+            width: 14px;
+            height: 14px;
+            border: 4px solid #d4856a;
+            border-top: 4px solid #d4856a;
+            border-radius: 50%;
+            background: #c96b55;
+            bottom: 35px;
+            animation: exhalemouth 4s ease-in-out;
+        }
+
+        @keyframes exhalemouth {
+            0% { width: 14px; height: 14px; }
+            30% { width: 12px; height: 16px; }
+            70% { width: 10px; height: 14px; }
+            100% { width: 14px; height: 14px; }
         }
 
         /* Cheeks (blush) */
@@ -256,6 +294,166 @@
             font-size: 28px;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
             transition: all 0.3s ease;
+        }
+
+        /* Breathing objects - flower and candle */
+        .breathing-object {
+            position: absolute;
+            font-size: 80px;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+        }
+
+        .breathing-object.flower {
+            bottom: 40%;
+            left: 50%;
+            transform: translateX(-50%) scale(0.7);
+        }
+
+        .breathing-object.flower.active {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+
+        .breathing-object.candle {
+            bottom: 40%;
+            left: 50%;
+            transform: translateX(-50%) scale(0.7);
+        }
+
+        .breathing-object.candle.active {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+
+        /* Instruction text */
+        .breathing-instruction {
+            position: absolute;
+            bottom: 24%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            font-weight: bold;
+            color: #2e7d32;
+            text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            z-index: 50;
+            white-space: nowrap;
+        }
+
+        .breathing-instruction.active {
+            opacity: 1;
+        }
+
+        .breathing-instruction.exhale-text {
+            color: #e65100;
+        }
+
+        /* Candle flame flicker when active */
+        .candle.active {
+            animation: flicker 0.3s infinite alternate;
+        }
+
+        /* Candle blown out - dimmed, no flame effect */
+        .breathing-object.candle.blown-out {
+            animation: none;
+            transform: translateX(-50%) scale(1);
+            opacity: 0.7;
+            filter: brightness(0.5) grayscale(0.6);
+            transition: filter 0.5s ease, opacity 0.5s ease;
+        }
+
+        @keyframes flicker {
+            0% { transform: translateX(-50%) scale(1) rotate(-1deg); }
+            100% { transform: translateX(-50%) scale(1.02) rotate(1deg); }
+        }
+
+        /* Smoke wisps from blown-out candle */
+        .smoke-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(180, 180, 180, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 52;
+            animation: smokeRise 1.8s ease-out forwards;
+        }
+
+        @keyframes smokeRise {
+            0% {
+                opacity: 0.6;
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                opacity: 0.4;
+                transform: translate(var(--smoke-x, 8px), -30px) scale(1.5);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--smoke-x, 12px), -60px) scale(2);
+            }
+        }
+
+        /* Flower gentle sway when active */
+        .flower.active {
+            animation: sway 2s infinite ease-in-out;
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: translateX(-50%) scale(1) rotate(-2deg); }
+            50% { transform: translateX(-50%) scale(1) rotate(2deg); }
+        }
+
+        /* Blow effect - small circles floating away */
+        .blow-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 51;
+            animation: blowAway 2s ease-out forwards;
+        }
+
+        @keyframes blowAway {
+            0% {
+                opacity: 0.8;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--blow-x, 60px), var(--blow-y, -80px)) scale(0.3);
+            }
+        }
+
+        /* Smell effect - wavy lines rising from flower */
+        .smell-particle {
+            position: absolute;
+            font-size: 20px;
+            pointer-events: none;
+            z-index: 51;
+            opacity: 0;
+            animation: smellRise 2.5s ease-out forwards;
+        }
+
+        @keyframes smellRise {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) scale(0.5);
+            }
+            30% {
+                opacity: 0.7;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--smell-x, 10px), -80px) scale(1);
+            }
         }
 
         /* Floating clouds background */
@@ -552,6 +750,11 @@
         <!-- Ground -->
         <div class="ground"></div>
 
+        <!-- Breathing objects -->
+        <div class="breathing-object flower" id="flower">🌸</div>
+        <div class="breathing-object candle" id="candle">🕯️</div>
+        <div class="breathing-instruction" id="instruction"></div>
+
         <!-- Glow effect -->
         <div class="glow" id="glow"></div>
 
@@ -594,6 +797,11 @@
         const playBtn = document.getElementById('playBtn');
         const character = document.getElementById('character');
         const butterflies = document.getElementById('butterflies');
+        const flower = document.getElementById('flower');
+        const candle = document.getElementById('candle');
+        const instruction = document.getElementById('instruction');
+        const mouth = document.querySelector('.mouth');
+        let candleBlowTimeout = null;
 
         // Breathing timing
         const INHALE_TIME = 4000;
@@ -628,21 +836,133 @@
             oscillator.stop(now + duration);
         }
 
+        // Show smell particles rising from flower
+        function showSmellParticles() {
+            const scene = document.querySelector('.breathing-scene');
+            const flowerRect = flower.getBoundingClientRect();
+            const centerX = flowerRect.left + flowerRect.width / 2;
+            const centerY = flowerRect.top;
+
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'smell-particle';
+                    particle.textContent = '~';
+                    particle.style.left = (centerX + (Math.random() - 0.5) * 40) + 'px';
+                    particle.style.top = (centerY - 10) + 'px';
+                    particle.style.setProperty('--smell-x', ((Math.random() - 0.5) * 30) + 'px');
+                    particle.style.color = 'rgba(255, 182, 193, 0.7)';
+                    scene.appendChild(particle);
+                    setTimeout(() => particle.remove(), 2500);
+                }, i * 400);
+            }
+        }
+
+        // Show blow particles from candle
+        function showBlowParticles() {
+            const scene = document.querySelector('.breathing-scene');
+            const candleRect = candle.getBoundingClientRect();
+            const centerX = candleRect.left + candleRect.width / 2;
+            const centerY = candleRect.top;
+
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'blow-particle';
+                    particle.style.left = (centerX + (Math.random() - 0.5) * 20) + 'px';
+                    particle.style.top = (centerY + 5) + 'px';
+                    particle.style.setProperty('--blow-x', ((Math.random() - 0.5) * 80) + 'px');
+                    particle.style.setProperty('--blow-y', (-50 - Math.random() * 60) + 'px');
+                    scene.appendChild(particle);
+                    setTimeout(() => particle.remove(), 2000);
+                }, i * 300);
+            }
+        }
+
+        // Show smoke particles when candle is blown out
+        function showSmokeParticles() {
+            const scene = document.querySelector('.breathing-scene');
+            const candleRect = candle.getBoundingClientRect();
+            const centerX = candleRect.left + candleRect.width / 2;
+            const centerY = candleRect.top + 5;
+
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'smoke-particle';
+                    particle.style.left = (centerX + (Math.random() - 0.5) * 15) + 'px';
+                    particle.style.top = centerY + 'px';
+                    particle.style.setProperty('--smoke-x', ((Math.random() - 0.5) * 20) + 'px');
+                    scene.appendChild(particle);
+                    setTimeout(() => particle.remove(), 1800);
+                }, i * 200);
+            }
+        }
+
+        // Show/hide breathing objects
+        function showFlower() {
+            // Reset candle state
+            if (candleBlowTimeout) {
+                clearTimeout(candleBlowTimeout);
+                candleBlowTimeout = null;
+            }
+            candle.classList.remove('active', 'blown-out');
+            flower.classList.add('active');
+            instruction.textContent = '🌸 תריח את הפרח';
+            instruction.className = 'breathing-instruction active';
+            // Set mouth to inhale (open, smelling)
+            mouth.className = 'mouth inhale';
+            showSmellParticles();
+        }
+
+        function showCandle() {
+            flower.classList.remove('active');
+            candle.classList.remove('blown-out');
+            candle.classList.add('active');
+            instruction.textContent = '🕯️ תנשוף על הנר';
+            instruction.className = 'breathing-instruction exhale-text active';
+            // Set mouth to exhale (pursed, blowing)
+            mouth.className = 'mouth exhale';
+            showBlowParticles();
+
+            // After 1.5 seconds, blow out the candle
+            candleBlowTimeout = setTimeout(() => {
+                candle.classList.remove('active');
+                candle.classList.add('blown-out');
+                instruction.textContent = '💨 כיבית את הנר!';
+                showSmokeParticles();
+            }, 1500);
+        }
+
+        function hideBreathingObjects() {
+            if (candleBlowTimeout) {
+                clearTimeout(candleBlowTimeout);
+                candleBlowTimeout = null;
+            }
+            flower.classList.remove('active');
+            candle.classList.remove('active', 'blown-out');
+            instruction.classList.remove('active');
+            // Reset mouth to default smile
+            mouth.className = 'mouth';
+        }
+
         // Breathing animation loop
         async function breathe() {
             while (true) {
                 if (isBreathing) {
-                    // Inhale
+                    // Inhale - smell the flower
                     body.className = 'body inhale';
                     glow.className = 'glow inhale';
+                    showFlower();
                     playChime(523, 0.8); // C5
                     await wait(INHALE_TIME);
 
                     if (!isBreathing) continue;
 
-                    // Exhale
+                    // Exhale - blow the candle
                     body.className = 'body exhale';
                     glow.className = 'glow exhale';
+                    showCandle();
                     playChime(392, 0.8); // G4
                     await wait(EXHALE_TIME);
                 } else {
@@ -676,6 +996,7 @@
                 butterflies.classList.remove('breathing');
                 body.className = 'body';
                 glow.className = 'glow';
+                hideBreathingObjects();
             }
         }
 
