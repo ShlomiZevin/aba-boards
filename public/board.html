@@ -1691,7 +1691,153 @@
                 this.coinStyle = kidData.coinStyle || 'dollar';
                 this.coinImageName = kidData.coinImageName || '';
 
+                // Sound configuration (default to true for backwards compatibility)
+                this.soundsEnabled = kidData.soundsEnabled !== false;
+                this.initSounds();
+
                 this.init();
+            }
+
+            // Initialize sound system with Web Audio API for reliable playback
+            initSounds() {
+                this.audioContext = null;
+                this.sounds = {};
+
+                // Only initialize if sounds are enabled
+                if (!this.soundsEnabled) return;
+
+                // Sound definitions using oscillator-based synthesis (no external files needed)
+                this.soundDefinitions = {
+                    // Task completion - cheerful ascending arpeggio
+                    taskComplete: { type: 'arpeggio', notes: [523.25, 659.25, 783.99], duration: 0.15 },
+                    // Bonus task - coin/cha-ching sound
+                    bonusComplete: { type: 'coin', baseFreq: 1200, duration: 0.3 },
+                    // Subtask tick - quick tick sound
+                    subtaskComplete: { type: 'tick', freq: 880, duration: 0.08 },
+                    // All tasks done - BIG victory celebration fanfare!
+                    allComplete: { type: 'victory' },
+                    // Button click - soft pop
+                    click: { type: 'pop', freq: 600, duration: 0.05 },
+                    // Testimony submitted - gentle chime
+                    testimony: { type: 'chime', notes: [659.25, 783.99], duration: 0.2 },
+                    // Start timer - gentle ascending
+                    timerStart: { type: 'ascending', notes: [440, 554.37], duration: 0.1 }
+                };
+            }
+
+            // Lazy-init audio context on first user interaction
+            ensureAudioContext() {
+                if (!this.soundsEnabled) return false;
+                if (!this.audioContext) {
+                    try {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    } catch (e) {
+                        console.warn('Web Audio API not supported');
+                        return false;
+                    }
+                }
+                // Resume if suspended (browser autoplay policy)
+                if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+                return true;
+            }
+
+            // Play a synthesized sound
+            playSound(soundName) {
+                if (!this.soundsEnabled || !this.ensureAudioContext()) return;
+
+                const def = this.soundDefinitions[soundName];
+                if (!def) return;
+
+                const ctx = this.audioContext;
+                const now = ctx.currentTime;
+
+                try {
+                    switch (def.type) {
+                        case 'arpeggio':
+                            def.notes.forEach((freq, i) => {
+                                this.playTone(freq, now + i * def.duration, def.duration * 0.9, 0.3);
+                            });
+                            break;
+                        case 'coin':
+                            // Metallic coin sound
+                            this.playTone(def.baseFreq, now, 0.1, 0.4, 'square');
+                            this.playTone(def.baseFreq * 1.5, now + 0.05, 0.15, 0.3, 'square');
+                            this.playTone(def.baseFreq * 2, now + 0.1, 0.2, 0.2, 'sine');
+                            break;
+                        case 'tick':
+                            this.playTone(def.freq, now, def.duration, 0.2, 'square');
+                            break;
+                        case 'victory':
+                            // Epic victory celebration! Multiple layers of sound
+                            // Layer 1: Triumphant brass-like fanfare (C-E-G-C chord progression)
+                            const fanfare = [
+                                { freq: 523.25, time: 0, dur: 0.2 },      // C5
+                                { freq: 659.25, time: 0.15, dur: 0.2 },   // E5
+                                { freq: 783.99, time: 0.3, dur: 0.2 },    // G5
+                                { freq: 1046.50, time: 0.45, dur: 0.4 },  // C6 (hold)
+                            ];
+                            fanfare.forEach(n => {
+                                this.playTone(n.freq, now + n.time, n.dur, 0.35, 'sawtooth');
+                                this.playTone(n.freq * 0.5, now + n.time, n.dur, 0.2, 'triangle'); // octave below
+                            });
+
+                            // Layer 2: Sparkle/twinkle effect
+                            const sparkles = [392, 523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+                            sparkles.forEach((freq, i) => {
+                                this.playTone(freq, now + 0.6 + i * 0.08, 0.15, 0.2, 'sine');
+                            });
+
+                            // Layer 3: Final triumphant chord
+                            setTimeout(() => {
+                                if (this.audioContext) {
+                                    const chordTime = this.audioContext.currentTime;
+                                    // C major chord with octaves
+                                    [261.63, 329.63, 392, 523.25, 659.25, 783.99].forEach(freq => {
+                                        this.playTone(freq, chordTime, 0.8, 0.25, 'triangle');
+                                    });
+                                }
+                            }, 1200);
+                            break;
+                        case 'pop':
+                            this.playTone(def.freq, now, def.duration, 0.15, 'sine');
+                            break;
+                        case 'chime':
+                            def.notes.forEach((freq, i) => {
+                                this.playTone(freq, now + i * def.duration, def.duration * 2, 0.25, 'sine');
+                            });
+                            break;
+                        case 'ascending':
+                            def.notes.forEach((freq, i) => {
+                                this.playTone(freq, now + i * def.duration, def.duration * 0.9, 0.2);
+                            });
+                            break;
+                    }
+                } catch (e) {
+                    console.warn('Error playing sound:', e);
+                }
+            }
+
+            // Helper to play a single tone
+            playTone(frequency, startTime, duration, volume = 0.3, waveType = 'sine') {
+                const ctx = this.audioContext;
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+
+                oscillator.type = waveType;
+                oscillator.frequency.setValueAtTime(frequency, startTime);
+
+                // Envelope for smooth sound
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                oscillator.start(startTime);
+                oscillator.stop(startTime + duration + 0.1);
             }
 
             getCoinSymbol() {
@@ -1984,6 +2130,8 @@
                     }
                     await this.performRegularUncheck(taskId);
                 } else if (task.trackTime && !this.startedTasks.has(taskId)) {
+                    // Play timer start sound
+                    this.playSound('timerStart');
                     this.startedTasks.add(taskId);
                     this.taskStartTimes[taskId] = Date.now();
                     await this.saveState();
@@ -2028,6 +2176,8 @@
                     }
                     await this.performBonusUncheck(taskId);
                 } else if (task.trackTime && !this.startedTasks.has(taskId)) {
+                    // Play timer start sound
+                    this.playSound('timerStart');
                     this.startedTasks.add(taskId);
                     this.taskStartTimes[taskId] = Date.now();
                     await this.saveState();
@@ -2126,6 +2276,9 @@
             // Celebration for queued bonus (task completed but money waiting)
             celebrateBonusQueued(amount) {
                 if (this.isCelebrating) return;
+
+                // Play bonus/coin sound
+                this.playSound('bonusComplete');
 
                 this.isCelebrating = true;
                 const encouragement = document.getElementById('encouragement');
@@ -2558,6 +2711,9 @@
             }
 
             celebrate() {
+                // Play task completion sound
+                this.playSound('taskComplete');
+
                 const msg = encouragementMessages[Math.floor(Math.random() * encouragementMessages.length)];
                 const encouragement = document.getElementById('encouragement');
                 encouragement.textContent = msg;
@@ -2582,6 +2738,9 @@
 
             celebrateBonus(amount) {
                 if (this.isCelebrating) return;
+
+                // Play bonus/coin sound
+                this.playSound('bonusComplete');
 
                 this.isCelebrating = true;
                 const encouragement = document.getElementById('encouragement');
@@ -2686,6 +2845,9 @@
                     await this.awardQueuedBonuses();
                     return;
                 }
+
+                // Play triumphant fanfare for completing all tasks!
+                this.playSound('allComplete');
 
                 this.todayRewardGiven = true;
 
@@ -2895,6 +3057,9 @@
                     return;
                 }
 
+                // Play testimony chime sound
+                this.playSound('testimony');
+
                 const taskId = this.pendingTestimonyTaskId;
                 const isBonus = this.pendingTestimonyIsBonus;
 
@@ -2939,6 +3104,9 @@
 
             // Subtask popup functions
             openSubtasksPopup(task) {
+                // Play click sound when opening popup
+                this.playSound('click');
+
                 this.currentSubtaskParentId = task.id;
                 this.currentSubtaskTask = task;
 
@@ -2983,7 +3151,8 @@
                     // Uncheck subtask
                     this.completedSubtasks[parentTaskId].splice(idx, 1);
                 } else {
-                    // Check subtask
+                    // Check subtask - play tick sound
+                    this.playSound('subtaskComplete');
                     this.completedSubtasks[parentTaskId].push(subtaskId);
                 }
 
@@ -3061,6 +3230,9 @@
             }
 
             openCalmDownActivity(task) {
+                // Play click sound when opening activity
+                this.playSound('click');
+
                 const modal = document.getElementById('calmDownModal');
                 const frame = document.getElementById('calmDownFrame');
                 const title = document.getElementById('calmDownTitle');

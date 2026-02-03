@@ -989,6 +989,14 @@
                         </label>
                         <div style="font-size: 0.8em; color: #666; margin-top: 5px; margin-right: 28px;">דינוזאור מדבר שעוזר לילדים</div>
                     </div>
+
+                    <div style="margin-top: 15px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="soundsEnabled" style="width: 18px; height: 18px;">
+                            <span style="font-weight: bold;">🔊 הפעל צלילים</span>
+                        </label>
+                        <div style="font-size: 0.8em; color: #666; margin-top: 5px; margin-right: 28px;">צלילים מהנים בעת השלמת משימות</div>
+                    </div>
                 </div>
 
                 <h3>🧩 רכיבים</h3>
@@ -1242,6 +1250,15 @@
                     <div style="font-size: 0.85em; color: #666; margin-top: 8px; padding-right: 10px;">דינוזאור מדבר שעוזר לילדים</div>
                 </div>
 
+                <!-- Sounds Enabled -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 12px; background: #f8f9fa; border-radius: 12px;">
+                        <input type="checkbox" id="soundsEnabledMobile" style="width: 20px; height: 20px;">
+                        <span style="font-weight: bold;">🔊 הפעל צלילים</span>
+                    </label>
+                    <div style="font-size: 0.85em; color: #666; margin-top: 8px; padding-right: 10px;">צלילים מהנים בעת השלמת משימות</div>
+                </div>
+
                 <button class="btn btn-primary" onclick="applyMobileSettings()" style="width: 100%; padding: 14px; font-size: 16px;">
                     ✓ שמור הגדרות
                 </button>
@@ -1456,6 +1473,9 @@
 
             // Show Dino setting
             document.getElementById('showDino').checked = kidData.showDino || false;
+
+            // Sounds Enabled setting
+            document.getElementById('soundsEnabled').checked = kidData.soundsEnabled !== false; // Default to true
         }
 
         // Toggle coin image input visibility
@@ -2676,6 +2696,7 @@
                 const coinStyle = document.getElementById('coinStyle').value;
                 const colorSchema = document.querySelector('input[name="colorSchema"]:checked').value;
                 const showDino = document.getElementById('showDino').checked;
+                const soundsEnabled = document.getElementById('soundsEnabled').checked;
 
                 // Get kid image - prefer uploaded data, fall back to existing
                 let imageName = document.getElementById('kidImageData').value || kidData.imageName || '';
@@ -2706,7 +2727,8 @@
                     coinStyle: coinStyle,
                     coinImageName: coinImageName,
                     colorSchema: colorSchema,
-                    showDino: showDino
+                    showDino: showDino,
+                    soundsEnabled: soundsEnabled
                 });
 
                 // Update local kidData
@@ -2721,6 +2743,7 @@
                 kidData.coinImageName = coinImageName;
                 kidData.colorSchema = colorSchema;
                 kidData.showDino = showDino;
+                kidData.soundsEnabled = soundsEnabled;
 
                 alert('הלוח נשמר בהצלחה!');
             } catch (error) {
@@ -2774,6 +2797,9 @@
             // Sync show dino
             document.getElementById('showDinoMobile').checked = document.getElementById('showDino').checked;
 
+            // Sync sounds enabled
+            document.getElementById('soundsEnabledMobile').checked = document.getElementById('soundsEnabled').checked;
+
             document.getElementById('mobileSettingsModal').classList.add('active');
         }
 
@@ -2807,6 +2833,9 @@
 
             // Sync show dino
             document.getElementById('showDino').checked = document.getElementById('showDinoMobile').checked;
+
+            // Sync sounds enabled
+            document.getElementById('soundsEnabled').checked = document.getElementById('soundsEnabledMobile').checked;
 
             closeMobileSettings();
         }
