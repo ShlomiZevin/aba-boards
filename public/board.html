@@ -1701,10 +1701,14 @@
             // Initialize sound system with Web Audio API for reliable playback
             initSounds() {
                 this.audioContext = null;
+                this.audioContextReady = false;
                 this.sounds = {};
 
                 // Only initialize if sounds are enabled
                 if (!this.soundsEnabled) return;
+
+                // Set up audio unlock for mobile browsers
+                this.initAudioOnInteraction();
 
                 // Sound definitions using oscillator-based synthesis (no external files needed)
                 this.soundDefinitions = {
@@ -1725,7 +1729,38 @@
                 };
             }
 
-            // Lazy-init audio context on first user interaction
+            // Initialize audio context on first user touch/click (required for mobile)
+            initAudioOnInteraction() {
+                if (!this.soundsEnabled || this.audioContextReady) return;
+
+                const initAudio = () => {
+                    if (this.audioContextReady) return;
+                    try {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        // Play a silent sound to unlock audio on iOS
+                        const silentOsc = this.audioContext.createOscillator();
+                        const silentGain = this.audioContext.createGain();
+                        silentGain.gain.value = 0;
+                        silentOsc.connect(silentGain);
+                        silentGain.connect(this.audioContext.destination);
+                        silentOsc.start();
+                        silentOsc.stop(this.audioContext.currentTime + 0.001);
+                        this.audioContextReady = true;
+                    } catch (e) {
+                        console.warn('Web Audio API not supported');
+                    }
+                    // Remove listeners after init
+                    document.removeEventListener('touchstart', initAudio);
+                    document.removeEventListener('touchend', initAudio);
+                    document.removeEventListener('click', initAudio);
+                };
+
+                document.addEventListener('touchstart', initAudio, { once: true });
+                document.addEventListener('touchend', initAudio, { once: true });
+                document.addEventListener('click', initAudio, { once: true });
+            }
+
+            // Ensure audio context is ready
             ensureAudioContext() {
                 if (!this.soundsEnabled) return false;
                 if (!this.audioContext) {
@@ -1740,12 +1775,26 @@
                 if (this.audioContext.state === 'suspended') {
                     this.audioContext.resume();
                 }
-                return true;
+                return this.audioContext.state === 'running' || this.audioContext.state === 'suspended';
             }
 
             // Play a synthesized sound
             playSound(soundName) {
-                if (!this.soundsEnabled || !this.ensureAudioContext()) return;
+                if (!this.soundsEnabled) return;
+
+                // Try to ensure audio context
+                if (!this.audioContext) {
+                    try {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    } catch (e) {
+                        return;
+                    }
+                }
+
+                // Resume if needed (this works because playSound is called from user interaction)
+                if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
 
                 const def = this.soundDefinitions[soundName];
                 if (!def) return;
