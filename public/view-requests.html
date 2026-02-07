@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בקשות ליצירת לוחות - Admin</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        }
+
+        .header h1 {
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 1.75em;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-section {
+            background: white;
+            padding: 16px 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-section label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .filter-section select {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            background: white;
+            cursor: pointer;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .label {
+            color: #718096;
+            font-size: 0.95em;
+        }
+
+        .requests-list {
+            display: grid;
+            gap: 16px;
+        }
+
+        .request-card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .request-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+
+        .request-card.expanded {
+            cursor: default;
+        }
+
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            gap: 16px;
+        }
+
+        .request-header-left {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex: 1;
+        }
+
+        .child-image-container {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+        }
+
+        .child-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .request-main-info {
+            flex: 1;
+        }
+
+        .request-child-name {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #4a5568;
+            margin-bottom: 4px;
+        }
+
+        .request-parent-name {
+            color: #718096;
+            font-size: 0.95em;
+        }
+
+        .request-status {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-processing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .request-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+
+        .request-details {
+            display: none;
+            border-top: 2px solid #f0f4f8;
+            padding-top: 20px;
+            margin-top: 16px;
+        }
+
+        .request-card.expanded .request-details {
+            display: block;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-title {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 1.05em;
+        }
+
+        .detail-content {
+            color: #718096;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .detail-item {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .detail-item-label {
+            font-size: 0.85em;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .detail-item-value {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .detail-image-container {
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .detail-child-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 12px;
+            border: 3px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.95em;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+
+        .empty-state {
+            background: white;
+            padding: 60px 20px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-text {
+            color: #718096;
+            font-size: 1.05em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .request-card {
+                padding: 16px;
+            }
+
+            .request-header {
+                flex-direction: column;
+            }
+
+            .request-status {
+                align-self: flex-start;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 בקשות ליצירת לוחות</h1>
+            <div class="header-actions">
+                <a href="admin.html" class="back-link">← חזרה לניהול ילדים</a>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <label for="statusFilter">סינון לפי סטטוס:</label>
+            <select id="statusFilter">
+                <option value="all">הכל</option>
+                <option value="pending">ממתין לטיפול</option>
+                <option value="processing">בטיפול</option>
+                <option value="completed">הושלם</option>
+            </select>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number" id="totalRequests">0</div>
+                <div class="label">סה"כ בקשות</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="pendingRequests">0</div>
+                <div class="label">ממתינות לטיפול</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="processingRequests">0</div>
+                <div class="label">בטיפול</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="completedRequests">0</div>
+                <div class="label">הושלמו</div>
+            </div>
+        </div>
+
+        <div id="loadingIndicator" class="loading">
+            טוען בקשות...
+        </div>
+
+        <div id="requestsList" class="requests-list" style="display: none;">
+            <!-- Requests will be inserted here -->
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-title">אין בקשות עדיין</div>
+            <div class="empty-state-text">כשיגיעו בקשות חדשות, הן יופיעו כאן</div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC7KAzFyfW3XOhWUTxEhZwwmm6gFoScGmA",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "1082667726849",
+            appId: "1:1082667726849:web:4f0fbc34a5f13ca99dbdde"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let allRequests = [];
+
+        // Load requests from Firestore
+        async function loadRequests() {
+            try {
+                const snapshot = await db.collection('boardRequests')
+                    .orderBy('submittedAt', 'desc')
+                    .get();
+
+                allRequests = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                updateStats();
+                displayRequests();
+
+                document.getElementById('loadingIndicator').style.display = 'none';
+
+            } catch (error) {
+                console.error('Error loading requests:', error);
+                document.getElementById('loadingIndicator').innerHTML =
+                    '❌ שגיאה בטעינת הבקשות. אנא רעננו את הדף.';
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = allRequests.length;
+            const pending = allRequests.filter(r => r.status === 'pending').length;
+            const processing = allRequests.filter(r => r.status === 'processing').length;
+            const completed = allRequests.filter(r => r.status === 'completed').length;
+
+            document.getElementById('totalRequests').textContent = total;
+            document.getElementById('pendingRequests').textContent = pending;
+            document.getElementById('processingRequests').textContent = processing;
+            document.getElementById('completedRequests').textContent = completed;
+        }
+
+        // Display requests based on filter
+        function displayRequests() {
+            const filter = document.getElementById('statusFilter').value;
+            const requestsList = document.getElementById('requestsList');
+            const emptyState = document.getElementById('emptyState');
+
+            let filteredRequests = allRequests;
+            if (filter !== 'all') {
+                filteredRequests = allRequests.filter(r => r.status === filter);
+            }
+
+            if (filteredRequests.length === 0) {
+                requestsList.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            requestsList.style.display = 'grid';
+            emptyState.style.display = 'none';
+
+            requestsList.innerHTML = filteredRequests.map(request => createRequestCard(request)).join('');
+
+            // Add click handlers for expanding cards
+            document.querySelectorAll('.request-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (!e.target.closest('.action-buttons')) {
+                        this.classList.toggle('expanded');
+                    }
+                });
+            });
+        }
+
+        // Create request card HTML
+        function createRequestCard(request) {
+            const statusLabels = {
+                pending: 'ממתין לטיפול',
+                processing: 'בטיפול',
+                completed: 'הושלם'
+            };
+
+            const statusClass = `status-${request.status || 'pending'}`;
+            const submittedDate = request.submittedAt ?
+                new Date(request.submittedAt.toDate()).toLocaleDateString('he-IL') :
+                'לא ידוע';
+
+            const coinStyleLabels = {
+                points: 'נקודות ⭐',
+                shekel: 'שקלים ₪',
+                dollar: 'דולרים $'
+            };
+
+            const colorSchemaLabels = {
+                purple: 'טורקיז 💜',
+                pink: 'אפרסק 🩷',
+                blue: 'לבנדר 💙',
+                dark: 'כהה 🖤'
+            };
+
+            return `
+                <div class="request-card" data-id="${request.id}">
+                    <div class="request-header">
+                        <div class="request-header-left">
+                            ${request.childImage ? `
+                                <div class="child-image-container">
+                                    <img src="${request.childImage}" alt="${request.childName}" class="child-image">
+                                </div>
+                            ` : `
+                                <div class="child-image-container">
+                                    👤
+                                </div>
+                            `}
+                            <div class="request-main-info">
+                                <div class="request-child-name">${request.childName || 'לא צוין'}</div>
+                                <div class="request-parent-name">הורה: ${request.parentName || 'לא צוין'}</div>
+                            </div>
+                        </div>
+                        <div class="request-status ${statusClass}">
+                            ${statusLabels[request.status] || 'ממתין'}
+                        </div>
+                    </div>
+
+                    <div class="request-meta">
+                        <div class="meta-item">
+                            📧 ${request.email || 'אין אימייל'}
+                        </div>
+                        ${request.phone ? `<div class="meta-item">📱 ${request.phone}</div>` : ''}
+                        <div class="meta-item">
+                            👧👦 גיל ${request.age || '?'}
+                        </div>
+                        <div class="meta-item">
+                            📅 ${submittedDate}
+                        </div>
+                    </div>
+
+                    <div class="request-details">
+                        ${request.childImage ? `
+                            <div class="detail-section">
+                                <div class="detail-title">תמונת הילד/ה</div>
+                                <div class="detail-image-container">
+                                    <img src="${request.childImage}" alt="${request.childName}" class="detail-child-image">
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-item-label">מגדר</div>
+                                <div class="detail-item-value">${request.gender === 'boy' ? 'בן' : request.gender === 'girl' ? 'בת' : 'לא צוין'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">סוג מטבע</div>
+                                <div class="detail-item-value">${coinStyleLabels[request.coinStyle] || 'לא צוין'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">פרס יומי</div>
+                                <div class="detail-item-value">${request.dailyReward || 0}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">צבע עיצוב</div>
+                                <div class="detail-item-value">${colorSchemaLabels[request.colorSchema] || 'לא צוין'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">דינו</div>
+                                <div class="detail-item-value">${request.showDino ? '✅ מופעל' : '❌ כבוי'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">צלילים</div>
+                                <div class="detail-item-value">${request.soundsEnabled ? '✅ מופעל' : '❌ כבוי'}</div>
+                            </div>
+                        </div>
+
+                        ${request.childDescription ? `
+                            <div class="detail-section">
+                                <div class="detail-title">תיאור הילד/ה</div>
+                                <div class="detail-content">${request.childDescription}</div>
+                            </div>
+                        ` : ''}
+
+                        ${request.tasks ? `
+                            <div class="detail-section">
+                                <div class="detail-title">משימות יומיומיות</div>
+                                <div class="detail-content">${request.tasks}</div>
+                            </div>
+                        ` : ''}
+
+                        ${request.behaviorGoals ? `
+                            <div class="detail-section">
+                                <div class="detail-title">יעדים התנהגותיים</div>
+                                <div class="detail-content">${request.behaviorGoals}</div>
+                            </div>
+                        ` : ''}
+
+                        ${request.rewards ? `
+                            <div class="detail-section">
+                                <div class="detail-title">פרסים ויעדים</div>
+                                <div class="detail-content">${request.rewards}</div>
+                            </div>
+                        ` : ''}
+
+                        ${request.additionalNotes ? `
+                            <div class="detail-section">
+                                <div class="detail-title">הערות נוספות</div>
+                                <div class="detail-content">${request.additionalNotes}</div>
+                            </div>
+                        ` : ''}
+
+                        <div class="action-buttons">
+                            ${request.status === 'pending' ? `
+                                <button class="btn btn-primary" onclick="updateStatus('${request.id}', 'processing')">
+                                    התחל טיפול 🚀
+                                </button>
+                            ` : ''}
+                            ${request.status === 'processing' ? `
+                                <button class="btn btn-success" onclick="updateStatus('${request.id}', 'completed')">
+                                    סמן כהושלם ✅
+                                </button>
+                            ` : ''}
+                            ${request.status === 'completed' && !request.createdBoardId ? `
+                                <button class="btn btn-secondary" onclick="linkBoard('${request.id}')">
+                                    קשר ללוח קיים 🔗
+                                </button>
+                            ` : ''}
+                            ${request.createdBoardId ? `
+                                <a href="board.html?kid=${request.createdBoardId}" class="btn btn-primary" target="_blank">
+                                    צפה בלוח 👀
+                                </a>
+                            ` : ''}
+                            <button class="btn btn-secondary" onclick="copyEmail('${request.email}')">
+                                העתק אימייל 📋
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update request status
+        async function updateStatus(requestId, newStatus) {
+            try {
+                await db.collection('boardRequests').doc(requestId).update({
+                    status: newStatus
+                });
+
+                // Reload requests
+                await loadRequests();
+            } catch (error) {
+                console.error('Error updating status:', error);
+                alert('שגיאה בעדכון הסטטוס');
+            }
+        }
+
+        // Link to existing board
+        async function linkBoard(requestId) {
+            const boardId = prompt('הכנס את ה-ID של הלוח שנוצר:');
+            if (boardId && boardId.trim()) {
+                try {
+                    await db.collection('boardRequests').doc(requestId).update({
+                        createdBoardId: boardId.trim()
+                    });
+
+                    await loadRequests();
+                } catch (error) {
+                    console.error('Error linking board:', error);
+                    alert('שגיאה בקישור הלוח');
+                }
+            }
+        }
+
+        // Copy email to clipboard
+        function copyEmail(email) {
+            navigator.clipboard.writeText(email).then(() => {
+                alert('האימייל הועתק ללוח! ✅');
+            }).catch(err => {
+                console.error('Error copying email:', err);
+            });
+        }
+
+        // Filter change handler
+        document.getElementById('statusFilter').addEventListener('change', displayRequests);
+
+        // Load requests on page load
+        loadRequests();
+
+        // Real-time updates
+        db.collection('boardRequests').onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added' || change.type === 'modified') {
+                    // Reload all requests when there's a change
+                    loadRequests();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

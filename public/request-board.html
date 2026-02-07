@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בקשה ליצירת לוח משימות - Doing</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .form-container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        }
+
+        .header h1 {
+            color: #4a5568;
+            margin-bottom: 12px;
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .form-card {
+            background: white;
+            padding: 32px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            margin-bottom: 24px;
+        }
+
+        .form-section {
+            margin-bottom: 32px;
+        }
+
+        .form-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            color: #4a5568;
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f0f4f8;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #4a5568;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .label-description {
+            display: block;
+            color: #718096;
+            font-weight: 400;
+            font-size: 0.9em;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="number"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-item:hover {
+            background: #edf2f7;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-left: 12px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .success-message {
+            background: #48bb78;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+            margin-top: 20px;
+            font-size: 1.1em;
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+
+        .success-message.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-message {
+            background: #f56565;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+            display: none;
+            font-size: 0.95em;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .required {
+            color: #e53e3e;
+        }
+
+        .image-upload-container {
+            margin-top: 12px;
+        }
+
+        .image-upload-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .image-upload-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .image-upload-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .image-upload-input {
+            display: none;
+        }
+
+        .image-preview {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .image-preview.show {
+            display: flex;
+        }
+
+        .preview-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .preview-info {
+            flex: 1;
+        }
+
+        .preview-name {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 4px;
+        }
+
+        .preview-size {
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        .remove-image-btn {
+            padding: 8px 12px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+
+        .remove-image-btn:hover {
+            background: #e53e3e;
+        }
+
+        /* Crop Modal Styles */
+        .crop-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crop-modal.active {
+            display: flex;
+        }
+
+        .crop-modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .crop-modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .crop-modal-header h3 {
+            margin: 0;
+            font-size: 1.3em;
+        }
+
+        .crop-close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.8em;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .crop-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .crop-container {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .crop-canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        #cropCanvas {
+            max-width: 100%;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            display: block;
+        }
+
+        #cropBox {
+            position: absolute;
+            border: 3px solid #ffd700;
+            cursor: move;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #ffd700;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+
+        .resize-nw {
+            top: -10px;
+            left: -10px;
+            cursor: nw-resize;
+        }
+
+        .resize-ne {
+            top: -10px;
+            right: -10px;
+            cursor: ne-resize;
+        }
+
+        .resize-sw {
+            bottom: -10px;
+            left: -10px;
+            cursor: sw-resize;
+        }
+
+        .resize-se {
+            bottom: -10px;
+            right: -10px;
+            cursor: se-resize;
+        }
+
+        .crop-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .btn-crop-primary {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1em;
+        }
+
+        .btn-crop-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-crop-secondary {
+            padding: 12px 24px;
+            background: #718096;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1em;
+        }
+
+        .btn-crop-secondary:hover {
+            background: #4a5568;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .header p {
+                font-size: 1em;
+            }
+
+            .form-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <div class="header">
+            <h1>🎯 בקשה ליצירת לוח משימות</h1>
+            <p>מלאו את הפרטים הבאים ואני אכין עבורכם לוח משימות מותאם אישית לילד/ה שלכם</p>
+        </div>
+
+        <form id="boardRequestForm" class="form-card">
+            <!-- Parent Contact Information -->
+            <div class="form-section">
+                <h3 class="section-title">👤 פרטי יצירת קשר</h3>
+
+                <div class="form-group">
+                    <label>
+                        שם מלא <span class="required">*</span>
+                        <span class="label-description">השם שלכם כדי שנוכל ליצור איתכם קשר</span>
+                    </label>
+                    <input type="text" id="parentName" name="parentName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        אימייל <span class="required">*</span>
+                        <span class="label-description">נשלח אליכם את קישור הלוח כשהוא יהיה מוכן</span>
+                    </label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        טלפון (אופציונלי)
+                        <span class="label-description">במקרה שנצטרך להבהיר פרטים נוספים</span>
+                    </label>
+                    <input type="text" id="phone" name="phone">
+                </div>
+            </div>
+
+            <!-- Child Information -->
+            <div class="form-section">
+                <h3 class="section-title">👧👦 פרטי הילד/ה</h3>
+
+                <div class="form-group">
+                    <label>
+                        שם הילד/ה <span class="required">*</span>
+                        <span class="label-description">השם שיוצג בלוח המשימות</span>
+                    </label>
+                    <input type="text" id="childName" name="childName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        גיל <span class="required">*</span>
+                        <span class="label-description">כדי להתאים את רמת הקושי והעיצוב</span>
+                    </label>
+                    <input type="number" id="age" name="age" min="1" max="18" required>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        מגדר <span class="required">*</span>
+                    </label>
+                    <select id="gender" name="gender" required>
+                        <option value="">בחרו...</option>
+                        <option value="boy">בן</option>
+                        <option value="girl">בת</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        תיאור קצר של הילד/ה (אופציונלי)
+                        <span class="label-description">תחומי עניין, מה אוהב/ת, דברים שחשוב לדעת</span>
+                    </label>
+                    <textarea id="childDescription" name="childDescription" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        תמונת הילד/ה (אופציונלי)
+                        <span class="label-description">תמונה שתופיע בלוח המשימות - מומלץ תמונת פנים מחייכת</span>
+                    </label>
+                    <div class="image-upload-container">
+                        <div class="image-upload-wrapper">
+                            <label for="childImage" class="image-upload-label">
+                                📷 בחר תמונה
+                            </label>
+                            <input type="file" id="childImage" name="childImage" class="image-upload-input" accept="image/*">
+                        </div>
+                        <div id="imagePreview" class="image-preview">
+                            <img id="previewImg" class="preview-img" src="" alt="תצוגה מקדימה">
+                            <div class="preview-info">
+                                <div class="preview-name" id="previewName"></div>
+                                <div class="preview-size" id="previewSize"></div>
+                            </div>
+                            <button type="button" class="remove-image-btn" id="removeImageBtn">הסר</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks & Goals -->
+            <div class="form-section">
+                <h3 class="section-title">✅ משימות ויעדים</h3>
+
+                <div class="form-group">
+                    <label>
+                        אילו משימות יומיומיות תרצו שהילד/ה יבצע? <span class="required">*</span>
+                        <span class="label-description">לדוגמה: צחצוח שיניים, סידור החדר, שיעורי בית, האכלת הכלב, וכו'. כתבו כל משימה בשורה נפרדת</span>
+                    </label>
+                    <textarea id="tasks" name="tasks" rows="5" placeholder="צחצוח שיניים&#10;סידור המיטה&#10;שיעורי בית&#10;..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        יעדים התנהגותיים שתרצו לחזק
+                        <span class="label-description">למשל: שיפור סבלנות, מעבר בין פעילויות, התמדה במשימות, ויסות רגשי וכו'</span>
+                    </label>
+                    <textarea id="behaviorGoals" name="behaviorGoals" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        מה הפרסים/יעדים שהילד/ה עובד/ת למענם?
+                        <span class="label-description">למשל: צעצוע מסוים, טיול למקום אהוב, זמן מסך נוסף וכו'. כתבו כל פרס בשורה נפרדת</span>
+                    </label>
+                    <textarea id="rewards" name="rewards" rows="3" placeholder="צעצוע חדש - 50 נקודות&#10;טיול לפארק - 30 נקודות&#10;..."></textarea>
+                </div>
+            </div>
+
+            <!-- Preferences -->
+            <div class="form-section">
+                <h3 class="section-title">⚙️ העדפות</h3>
+
+                <div class="form-group">
+                    <label>
+                        סוג מטבע/נקודות <span class="required">*</span>
+                        <span class="label-description">מה הילד/ה יצבור על ביצוע משימות?</span>
+                    </label>
+                    <select id="coinStyle" name="coinStyle" required>
+                        <option value="points" selected>נקודות ⭐</option>
+                        <option value="shekel">שקלים ₪</option>
+                        <option value="dollar">דולרים $</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        פרס יומי
+                        <span class="label-description">כמה נקודות/כסף הילד/ה מקבל/ת על השלמת כל המשימות ביום?</span>
+                    </label>
+                    <input type="number" id="dailyReward" name="dailyReward" value="0.5" step="0.1" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        צבע עיצוב <span class="required">*</span>
+                    </label>
+                    <select id="colorSchema" name="colorSchema" required>
+                        <option value="purple" selected>טורקיז 💜</option>
+                        <option value="pink">אפרסק 🩷</option>
+                        <option value="blue">לבנדר 💙</option>
+                        <option value="dark">כהה 🖤</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="margin-bottom: 12px;">תכונות נוספות:</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="showDino" name="showDino" checked>
+                            <label for="showDino">הצג את דינו - החבר הדינוזאור המדבר 🦕</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="soundsEnabled" name="soundsEnabled" checked>
+                            <label for="soundsEnabled">הפעל צלילים והשמעות 🔊</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Notes -->
+            <div class="form-section">
+                <h3 class="section-title">💬 הערות נוספות</h3>
+
+                <div class="form-group">
+                    <label>
+                        יש משהו נוסף שחשוב שנדע?
+                        <span class="label-description">כל מידע נוסף שיעזור לנו ליצור את הלוח המושלם</span>
+                    </label>
+                    <textarea id="additionalNotes" name="additionalNotes" rows="3"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                שלח בקשה 🚀
+            </button>
+
+            <div class="error-message" id="errorMessage"></div>
+        </form>
+
+        <div class="success-message" id="successMessage">
+            ✅ הבקשה נשלחה בהצלחה!<br>
+            נחזור אליכם בקרוב עם הלוח המוכן 🎉
+        </div>
+    </div>
+
+    <!-- Crop Modal -->
+    <div id="cropModal" class="crop-modal">
+        <div class="crop-modal-content">
+            <div class="crop-modal-header">
+                <h3>חתוך תמונה</h3>
+                <button class="crop-close-btn" onclick="closeCropModal()">×</button>
+            </div>
+            <div class="crop-container">
+                <div class="crop-canvas-wrapper">
+                    <canvas id="cropCanvas"></canvas>
+                    <div id="cropBox">
+                        <div class="resize-handle resize-nw"></div>
+                        <div class="resize-handle resize-ne"></div>
+                        <div class="resize-handle resize-sw"></div>
+                        <div class="resize-handle resize-se"></div>
+                    </div>
+                </div>
+                <div class="crop-actions">
+                    <button class="btn btn-crop-primary" onclick="applyCrop()">✂️ חתוך</button>
+                    <button class="btn btn-crop-secondary" onclick="closeCropModal()">ביטול</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC7KAzFyfW3XOhWUTxEhZwwmm6gFoScGmA",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "1082667726849",
+            appId: "1:1082667726849:web:4f0fbc34a5f13ca99dbdde"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Image upload handling with crop functionality
+        let childImageData = null;
+        let currentImage = null;
+        let cropState = {
+            isDragging: false,
+            isResizing: false,
+            resizeHandle: null,
+            x: 0,
+            y: 0,
+            size: 100,
+            minSize: 50,
+            startX: 0,
+            startY: 0,
+            startSize: 0,
+            startCropX: 0,
+            startCropY: 0
+        };
+
+        const imageInput = document.getElementById('childImage');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const previewName = document.getElementById('previewName');
+        const previewSize = document.getElementById('previewSize');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                alert('אנא בחר קובץ תמונה בלבד');
+                imageInput.value = '';
+                return;
+            }
+
+            // Check file size (max 5MB before crop)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('התמונה גדולה מדי. גודל מקסימלי: 5MB');
+                imageInput.value = '';
+                return;
+            }
+
+            // Load image and show crop modal
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    currentImage = img;
+                    showCropModal(file.name);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        removeImageBtn.addEventListener('click', function() {
+            childImageData = null;
+            imageInput.value = '';
+            imagePreview.classList.remove('show');
+            previewImg.src = '';
+            previewName.textContent = '';
+            previewSize.textContent = '';
+        });
+
+        function showCropModal(fileName) {
+            const modal = document.getElementById('cropModal');
+            const canvas = document.getElementById('cropCanvas');
+            const ctx = canvas.getContext('2d');
+            const cropBox = document.getElementById('cropBox');
+
+            const isMobile = window.innerWidth <= 600;
+            const maxSize = isMobile ? Math.min(window.innerWidth - 60, 400) : 500;
+            let width = currentImage.width;
+            let height = currentImage.height;
+
+            if (width > maxSize || height > maxSize) {
+                if (width > height) {
+                    height = (height / width) * maxSize;
+                    width = maxSize;
+                } else {
+                    width = (width / height) * maxSize;
+                    height = maxSize;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(currentImage, 0, 0, width, height);
+
+            const cropSize = Math.min(width, height) * 0.7;
+            cropState.size = cropSize;
+            cropState.x = (width - cropSize) / 2;
+            cropState.y = (height - cropSize) / 2;
+
+            updateCropBox();
+
+            cropBox.onmousedown = startDrag;
+            cropBox.ontouchstart = startDrag;
+
+            const handles = cropBox.querySelectorAll('.resize-handle');
+            handles.forEach(handle => {
+                handle.onmousedown = (e) => startResize(e, handle.classList[1]);
+                handle.ontouchstart = (e) => startResize(e, handle.classList[1]);
+            });
+
+            document.onmousemove = handleMove;
+            document.onmouseup = stopDragOrResize;
+            document.ontouchmove = handleMove;
+            document.ontouchend = stopDragOrResize;
+
+            modal.classList.add('active');
+
+            // Store filename for later
+            modal.dataset.fileName = fileName;
+        }
+
+        function updateCropBox() {
+            const cropBox = document.getElementById('cropBox');
+            cropBox.style.left = cropState.x + 'px';
+            cropBox.style.top = cropState.y + 'px';
+            cropBox.style.width = cropState.size + 'px';
+            cropBox.style.height = cropState.size + 'px';
+        }
+
+        function startDrag(e) {
+            if (e.target.classList.contains('resize-handle')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            cropState.isDragging = true;
+
+            const cropBox = document.getElementById('cropBox');
+            const rect = cropBox.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            cropState.startX = clientX - rect.left;
+            cropState.startY = clientY - rect.top;
+        }
+
+        function startResize(e, handle) {
+            e.preventDefault();
+            e.stopPropagation();
+            cropState.isResizing = true;
+            cropState.resizeHandle = handle;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            cropState.startX = clientX;
+            cropState.startY = clientY;
+            cropState.startSize = cropState.size;
+            cropState.startCropX = cropState.x;
+            cropState.startCropY = cropState.y;
+        }
+
+        function handleMove(e) {
+            if (cropState.isDragging) {
+                dragCropBox(e);
+            } else if (cropState.isResizing) {
+                resizeCropBox(e);
+            }
+        }
+
+        function dragCropBox(e) {
+            e.preventDefault();
+
+            const canvas = document.getElementById('cropCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            let newX = clientX - canvasRect.left - cropState.startX;
+            let newY = clientY - canvasRect.top - cropState.startY;
+
+            newX = Math.max(0, Math.min(newX, canvas.width - cropState.size));
+            newY = Math.max(0, Math.min(newY, canvas.height - cropState.size));
+
+            cropState.x = newX;
+            cropState.y = newY;
+            updateCropBox();
+        }
+
+        function resizeCropBox(e) {
+            e.preventDefault();
+
+            const canvas = document.getElementById('cropCanvas');
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const deltaX = clientX - cropState.startX;
+            const deltaY = clientY - cropState.startY;
+
+            let newSize = cropState.startSize;
+            let newX = cropState.startCropX;
+            let newY = cropState.startCropY;
+
+            switch(cropState.resizeHandle) {
+                case 'resize-se':
+                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(deltaX, deltaY));
+                    break;
+                case 'resize-sw':
+                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(-deltaX, deltaY));
+                    newX = cropState.startCropX - (newSize - cropState.startSize);
+                    break;
+                case 'resize-ne':
+                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(deltaX, -deltaY));
+                    newY = cropState.startCropY - (newSize - cropState.startSize);
+                    break;
+                case 'resize-nw':
+                    newSize = Math.max(cropState.minSize, cropState.startSize + Math.max(-deltaX, -deltaY));
+                    newX = cropState.startCropX - (newSize - cropState.startSize);
+                    newY = cropState.startCropY - (newSize - cropState.startSize);
+                    break;
+            }
+
+            newX = Math.max(0, Math.min(newX, canvas.width - newSize));
+            newY = Math.max(0, Math.min(newY, canvas.height - newSize));
+            newSize = Math.min(newSize, canvas.width - newX, canvas.height - newY);
+
+            cropState.size = newSize;
+            cropState.x = newX;
+            cropState.y = newY;
+            updateCropBox();
+        }
+
+        function stopDragOrResize() {
+            cropState.isDragging = false;
+            cropState.isResizing = false;
+            cropState.resizeHandle = null;
+        }
+
+        function applyCrop() {
+            const canvas = document.getElementById('cropCanvas');
+            const modal = document.getElementById('cropModal');
+
+            const scaleX = currentImage.width / canvas.width;
+            const scaleY = currentImage.height / canvas.height;
+
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            const finalSize = 200;
+            tempCanvas.width = finalSize;
+            tempCanvas.height = finalSize;
+
+            tempCtx.drawImage(
+                currentImage,
+                cropState.x * scaleX,
+                cropState.y * scaleY,
+                cropState.size * scaleX,
+                cropState.size * scaleY,
+                0,
+                0,
+                finalSize,
+                finalSize
+            );
+
+            // Check for transparency
+            let dataUrl;
+            const imageData = tempCtx.getImageData(0, 0, finalSize, finalSize);
+            let hasTransparency = false;
+
+            for (let i = 3; i < imageData.data.length; i += 4) {
+                if (imageData.data[i] < 255) {
+                    hasTransparency = true;
+                    break;
+                }
+            }
+
+            if (hasTransparency) {
+                dataUrl = tempCanvas.toDataURL('image/png');
+            } else {
+                dataUrl = tempCanvas.toDataURL('image/jpeg', 0.85);
+            }
+
+            // Set the cropped image
+            childImageData = dataUrl;
+            previewImg.src = dataUrl;
+            previewName.textContent = modal.dataset.fileName;
+
+            // Calculate approximate size
+            const base64Length = dataUrl.length - (dataUrl.indexOf(',') + 1);
+            const sizeInBytes = (base64Length * 3) / 4;
+            previewSize.textContent = `${(sizeInBytes / 1024).toFixed(1)} KB`;
+
+            imagePreview.classList.add('show');
+
+            closeCropModal();
+        }
+
+        function closeCropModal() {
+            const modal = document.getElementById('cropModal');
+            modal.classList.remove('active');
+            imageInput.value = ''; // Reset file input
+
+            // Clean up event listeners
+            document.onmousemove = null;
+            document.onmouseup = null;
+            document.ontouchmove = null;
+            document.ontouchend = null;
+        }
+
+        // Form submission handler
+        document.getElementById('boardRequestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const form = document.getElementById('boardRequestForm');
+
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'שולח...';
+            errorMessage.classList.remove('show');
+            successMessage.classList.remove('show');
+
+            try {
+                // Collect form data
+                const formData = {
+                    // Parent info
+                    parentName: document.getElementById('parentName').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    phone: document.getElementById('phone').value.trim(),
+
+                    // Child info
+                    childName: document.getElementById('childName').value.trim(),
+                    age: parseInt(document.getElementById('age').value),
+                    gender: document.getElementById('gender').value,
+                    childDescription: document.getElementById('childDescription').value.trim(),
+                    childImage: childImageData, // base64 image data
+
+                    // Tasks and goals
+                    tasks: document.getElementById('tasks').value.trim(),
+                    behaviorGoals: document.getElementById('behaviorGoals').value.trim(),
+                    rewards: document.getElementById('rewards').value.trim(),
+
+                    // Preferences
+                    coinStyle: document.getElementById('coinStyle').value,
+                    dailyReward: parseFloat(document.getElementById('dailyReward').value) || 0.5,
+                    colorSchema: document.getElementById('colorSchema').value,
+                    showDino: document.getElementById('showDino').checked,
+                    soundsEnabled: document.getElementById('soundsEnabled').checked,
+
+                    // Additional
+                    additionalNotes: document.getElementById('additionalNotes').value.trim(),
+
+                    // Metadata
+                    status: 'pending', // pending, processing, completed
+                    submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdBoardId: null
+                };
+
+                // Save to Firestore
+                await db.collection('boardRequests').add(formData);
+
+                // Show success message
+                successMessage.classList.add('show');
+                form.reset();
+
+                // Reset image preview
+                childImageData = null;
+                imagePreview.classList.remove('show');
+                previewImg.src = '';
+
+                // Scroll to success message
+                successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                errorMessage.textContent = 'אופס! משהו השתבש. אנא נסו שוב.';
+                errorMessage.classList.add('show');
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'שלח בקשה 🚀';
+            }
+        });
+
+        // Auto-resize textareas
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+        });
+    </script>
+</body>
+</html>

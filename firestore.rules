@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Kids collection - existing rules
+    match /kids/{kidId} {
+      // Anyone can read kid data
+      allow read: if true;
+
+      // Anyone can update tasks and progress
+      // Note: In a real production app, you'd want to add authentication
+      allow write: if true;
+    }
+
+    // Board Requests collection - for customer form submissions
+    match /boardRequests/{requestId} {
+      // Anyone can create a new board request (for the public form)
+      allow create: if true;
+
+      // Only allow reading all requests (for admin view)
+      // In production, you should add authentication here
+      allow read: if true;
+
+      // Allow updates (for admin to change status, link boards, etc.)
+      // In production, you should add authentication here
+      allow update: if true;
+
+      // Prevent deletion for safety
+      allow delete: if false;
+    }
+  }
+}
