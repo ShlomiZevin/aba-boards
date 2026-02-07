@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Demo Stats</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generate Demo Stats for תמר</h1>
+
+        <div class="info">
+            <strong>This script will:</strong>
+            <ul>
+                <li>Generate 90 days of demo stats data (from Nov 9, 2025 to Feb 7, 2026)</li>
+                <li>Create realistic patterns with weekday/weekend variations</li>
+                <li>Mix of regular task completions and bonus rewards</li>
+                <li>Some days with no activity (realistic gaps)</li>
+            </ul>
+        </div>
+
+        <button id="generateBtn" onclick="generateDemoStats()">Generate Demo Stats</button>
+
+        <div id="status" class="status" style="display: none;"></div>
+
+        <h3 style="margin-top: 30px;">Generated Data Preview:</h3>
+        <pre id="preview">Click the button to generate data...</pre>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const KID_ID = 'תמר'; // The kid ID for תמר
+
+        function generateDemoStats() {
+            const btn = document.getElementById('generateBtn');
+            const status = document.getElementById('status');
+            const preview = document.getElementById('preview');
+
+            btn.disabled = true;
+            status.style.display = 'block';
+            status.className = 'status';
+            status.textContent = 'Generating demo stats...';
+
+            // Generate 90 days of data ending on Feb 7, 2026
+            const endDate = new Date('2026-02-07');
+            const dailyStats = {};
+
+            for (let i = 89; i >= 0; i--) {
+                const date = new Date(endDate);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+
+                // Simulate realistic patterns:
+                // - Higher activity on weekdays
+                // - Some days with no activity (about 15%)
+                // - Gradual improvement over time (kid getting better)
+
+                const progressFactor = 1 + (90 - i) / 180; // Slight improvement over time
+                const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; // Friday/Saturday in Israel
+                const skipChance = Math.random();
+
+                // Skip some days (no activity)
+                if (skipChance < 0.15) {
+                    continue;
+                }
+
+                // Regular points: 2 when all tasks completed (תמר's daily reward)
+                // Higher chance of completion as time goes on, lower on weekends
+                const regularCompletionChance = isWeekend ? 0.5 : 0.75;
+                const adjustedChance = Math.min(regularCompletionChance * progressFactor, 0.95);
+                const completedRegular = Math.random() < adjustedChance;
+                const regularPoints = completedRegular ? 2 : 0;
+
+                // Bonus points: 0, 1, 2, or 3 per day for תמר
+                let bonusPoints = 0;
+                if (completedRegular || Math.random() < 0.4) {
+                    // Random discrete bonus: 0, 1, 2, or 3
+                    bonusPoints = Math.floor(Math.random() * 4);
+                }
+
+                // Only add if there's some activity
+                if (regularPoints > 0 || bonusPoints > 0) {
+                    dailyStats[dateStr] = {
+                        regularPoints: regularPoints,
+                        bonusPoints: bonusPoints,
+                        lastUpdated: firebase.firestore.Timestamp.fromDate(date)
+                    };
+                }
+            }
+
+            // Show preview
+            const sortedDates = Object.keys(dailyStats).sort();
+            let previewText = `Total days with activity: ${sortedDates.length}\n\n`;
+            previewText += 'Sample data (last 10 days):\n';
+            previewText += '─'.repeat(50) + '\n';
+
+            const last10 = sortedDates.slice(-10);
+            last10.forEach(date => {
+                const d = dailyStats[date];
+                const total = (d.regularPoints + d.bonusPoints).toFixed(1);
+                previewText += `${date}: Regular=${d.regularPoints}, Bonus=${d.bonusPoints}, Total=${total}\n`;
+            });
+
+            // Calculate totals
+            let totalRegular = 0;
+            let totalBonus = 0;
+            sortedDates.forEach(date => {
+                totalRegular += dailyStats[date].regularPoints;
+                totalBonus += dailyStats[date].bonusPoints;
+            });
+
+            previewText += '\n' + '─'.repeat(50) + '\n';
+            previewText += `\nSummary:\n`;
+            previewText += `Total Regular Points: ${totalRegular.toFixed(1)}\n`;
+            previewText += `Total Bonus Points: ${totalBonus.toFixed(1)}\n`;
+            previewText += `Grand Total: ${(totalRegular + totalBonus).toFixed(1)}\n`;
+
+            preview.textContent = previewText;
+
+            // Save to Firestore
+            const statsData = {
+                kidId: KID_ID,
+                dailyStats: dailyStats
+            };
+
+            db.collection('kidStats').doc(KID_ID).set(statsData)
+                .then(() => {
+                    status.textContent = '✅ Demo stats generated successfully! You can now view them in the stats page.';
+                    btn.disabled = false;
+                })
+                .catch((error) => {
+                    status.className = 'status error';
+                    status.textContent = '❌ Error: ' + error.message;
+                    btn.disabled = false;
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</body>
+</html>

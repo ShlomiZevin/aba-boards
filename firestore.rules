@@ -12,6 +12,16 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // Kid Stats collection - for ABA instructor dashboard
+    match /kidStats/{kidId} {
+      // Anyone can read stats
+      allow read: if true;
+
+      // Anyone can write stats (updated from board.html when tasks are completed)
+      // Note: In a real production app, you'd want to add authentication
+      allow write: if true;
+    }
+
     // Board Requests collection - for customer form submissions
     match /boardRequests/{requestId} {
       // Anyone can create a new board request (for the public form)

@@ -2054,6 +2054,52 @@
                 this.updateMoneyDisplay();
             }
 
+            // Update stats for the ABA instructor dashboard
+            async updateStats(regularPoints, bonusPoints) {
+                const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+                const statsRef = db.collection('kidStats').doc(this.kidId);
+
+                try {
+                    await db.runTransaction(async (transaction) => {
+                        const doc = await transaction.get(statsRef);
+                        let data = doc.exists ? doc.data() : { kidId: this.kidId, dailyStats: {} };
+
+                        if (!data.dailyStats) {
+                            data.dailyStats = {};
+                        }
+                        if (!data.dailyStats[today]) {
+                            data.dailyStats[today] = { regularPoints: 0, bonusPoints: 0 };
+                        }
+
+                        // Update with latest values (replacing, not adding)
+                        data.dailyStats[today].regularPoints = regularPoints;
+                        data.dailyStats[today].bonusPoints = bonusPoints;
+                        data.dailyStats[today].lastUpdated = firebase.firestore.FieldValue.serverTimestamp();
+
+                        transaction.set(statsRef, data, { merge: true });
+                    });
+                } catch (error) {
+                    console.error('Error updating stats:', error);
+                }
+            }
+
+            // Calculate today's earned points for stats tracking
+            calculateTodayPoints() {
+                // Regular points: dailyReward if all tasks completed today
+                const regularPoints = this.todayRewardGiven ? (this.kidData.dailyReward || 0.5) : 0;
+
+                // Bonus points: sum of all bonus rewards earned today (excluding queued ones that weren't awarded yet)
+                let bonusPoints = 0;
+                for (const taskId in this.bonusRewardsEarned) {
+                    // Only count if it was actually awarded (not in queued)
+                    if (!this.queuedBonusRewards[taskId]) {
+                        bonusPoints += this.bonusRewardsEarned[taskId];
+                    }
+                }
+
+                return { regularPoints, bonusPoints };
+            }
+
             updateMoneyDisplay() {
                 const counter = document.getElementById('moneyCounter');
                 if (!counter) return;
@@ -2276,6 +2322,10 @@
                 }
                 await this.saveState();
                 this.render();
+
+                // Update stats after bonus is removed
+                const { regularPoints, bonusPoints } = this.calculateTodayPoints();
+                this.updateStats(regularPoints, bonusPoints);
             }
 
             async completeBonusTask(task, taskId) {
@@ -2903,8 +2953,9 @@
                 const dailyReward = this.kidData.dailyReward || 0.5;
                 const rewardColor = this.getRewardColor();
 
-                // Calculate total queued bonus rewards
+                // Calculate total queued bonus rewards and clear immediately to prevent double-award on refresh
                 const queuedBonusTotal = Object.values(this.queuedBonusRewards).reduce((sum, amt) => sum + amt, 0);
+                this.queuedBonusRewards = {}; // Clear now, animate later
                 const totalReward = dailyReward + queuedBonusTotal;
 
                 const rewardDisplay = this.formatCurrencyAmount(dailyReward, 2);
@@ -2942,7 +2993,7 @@
                 // Award queued bonuses after daily reward animation
                 if (queuedBonusTotal > 0) {
                     setTimeout(() => {
-                        this.awardQueuedBonuses();
+                        this.animateMoneyIncrease(queuedBonusTotal);
                     }, 2000);
                 }
 
@@ -3064,6 +3115,10 @@
                     } else {
                         this.addMoney(amount);
                         counter.style.transform = 'scale(1)';
+
+                        // Update stats after money is added
+                        const points = this.calculateTodayPoints();
+                        this.updateStats(points.regularPoints, points.bonusPoints);
                     }
                 };
 
