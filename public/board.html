@@ -1687,6 +1687,9 @@
                 this.completedSubtasks = {};
                 this.currentSubtaskParentId = null;
 
+                // Task processing lock to prevent race conditions
+                this.processingTasks = new Set();
+
                 // Coin style configuration
                 this.coinStyle = kidData.coinStyle || 'dollar';
                 this.coinImageName = kidData.coinImageName || '';
@@ -2056,7 +2059,7 @@
 
             // Update stats for the ABA instructor dashboard
             async updateStats(regularPoints, bonusPoints) {
-                const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+                const today = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD" in local timezone
                 const statsRef = db.collection('kidStats').doc(this.kidId);
 
                 try {
@@ -2213,9 +2216,13 @@
 
             async toggleTask(taskId) {
                 if (this.isParentMode) return;
+                if (this.processingTasks.has(taskId)) return;
 
                 const task = this.findTask(taskId, 'regular');
                 if (!task) return;
+
+                this.processingTasks.add(taskId);
+                try {
 
                 if (this.completedTasks.has(taskId)) {
                     // If task has a testimony, show warning before unchecking
@@ -2255,13 +2262,20 @@
                         this.updateProgress();
                     }
                 }
+                } finally {
+                    this.processingTasks.delete(taskId);
+                }
             }
 
             async toggleBonusTask(taskId) {
                 if (this.isParentMode) return;
+                if (this.processingTasks.has(taskId)) return;
 
                 const task = this.findTask(taskId, 'bonus');
                 if (!task) return;
+
+                this.processingTasks.add(taskId);
+                try {
 
                 if (this.completedBonusTasks.has(taskId)) {
                     // If task has a testimony, show warning before unchecking
@@ -2292,6 +2306,9 @@
                     } else {
                         this.completeBonusTask(task, taskId);
                     }
+                }
+                } finally {
+                    this.processingTasks.delete(taskId);
                 }
             }
 
@@ -2956,6 +2973,10 @@
                 // Calculate total queued bonus rewards and clear immediately to prevent double-award on refresh
                 const queuedBonusTotal = Object.values(this.queuedBonusRewards).reduce((sum, amt) => sum + amt, 0);
                 this.queuedBonusRewards = {}; // Clear now, animate later
+
+                // Save state immediately after clearing queue to prevent double-award on refresh
+                await this.saveState();
+
                 const totalReward = dailyReward + queuedBonusTotal;
 
                 const rewardDisplay = this.formatCurrencyAmount(dailyReward, 2);
@@ -3087,9 +3108,13 @@
                 }
             }
 
-            animateMoneyIncrease(amount) {
+            async animateMoneyIncrease(amount) {
+                // Add money FIRST to prevent double-award bug
+                await this.addMoney(amount);
+
                 const counter = document.getElementById('moneyCounter');
-                const startMoney = this.kidData.totalMoney;
+                const startMoney = this.kidData.totalMoney - amount;
+                const targetMoney = this.kidData.totalMoney;
                 const duration = 1500;
                 const startTime = Date.now();
 
@@ -3113,10 +3138,9 @@
                     if (progress < 1) {
                         requestAnimationFrame(animate);
                     } else {
-                        this.addMoney(amount);
                         counter.style.transform = 'scale(1)';
 
-                        // Update stats after money is added
+                        // Update stats after animation completes
                         const points = this.calculateTodayPoints();
                         this.updateStats(points.regularPoints, points.bonusPoints);
                     }
