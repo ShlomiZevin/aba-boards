@@ -853,10 +853,109 @@
                 display: none;
             }
         }
+
+        /* PIN Lock Screen */
+        .pin-lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+
+        .pin-lock-screen.hidden {
+            display: none;
+        }
+
+        .pin-container {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+        }
+
+        .pin-container h2 {
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 1.5em;
+        }
+
+        .pin-container p {
+            color: #718096;
+            margin-bottom: 20px;
+        }
+
+        .pin-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 2em;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            letter-spacing: 12px;
+            font-family: monospace;
+        }
+
+        .pin-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .pin-submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .pin-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .pin-error {
+            color: #e53e3e;
+            margin-top: 12px;
+            font-weight: 500;
+            min-height: 24px;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
     </style>
 </head>
 <body class="doing-theme">
-    <div id="loadingState" class="loading">טוען...</div>
+    <!-- PIN Lock Screen -->
+    <div id="pinLockScreen" class="pin-lock-screen">
+        <div class="pin-container">
+            <h2>🔒 הגנת לוח</h2>
+            <p>הזן קוד PIN (4 ספרות)</p>
+            <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="••••" autofocus>
+            <button class="pin-submit-btn" onclick="checkPin()">כניסה</button>
+            <p id="pinError" class="pin-error"></p>
+        </div>
+    </div>
+
+    <div id="loadingState" class="loading" style="display: none;">טוען...</div>
 
     <div id="builderApp" style="display: none;">
         <!-- Top Bar -->
@@ -996,6 +1095,13 @@
                             <span style="font-weight: bold;">🔊 הפעל צלילים</span>
                         </label>
                         <div style="font-size: 0.8em; color: #666; margin-top: 5px; margin-right: 28px;">צלילים מהנים בעת השלמת משימות</div>
+                    </div>
+
+                    <!-- Builder PIN -->
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #eee;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.85em; color: #666;">🔒 קוד PIN לעריכה:</label>
+                        <input type="text" id="builderPin" placeholder="1234" maxlength="4" pattern="[0-9]*" inputmode="numeric" value="1234" style="width: 100%; padding: 8px; border: 2px solid #eee; border-radius: 12px; text-align: center; font-size: 1.2em; letter-spacing: 8px; font-family: monospace;">
+                        <div style="font-size: 0.75em; color: #999; margin-top: 5px;">4 ספרות בלבד. קוד זה נדרש כדי לערוך את הלוח.</div>
                     </div>
                 </div>
 
@@ -1365,23 +1471,100 @@
 
         if (!kidId) {
             alert('לא נבחר ילד');
-            window.location.href = 'admin.html';
+            window.location.href = 'index.html';
         }
 
-        // Initialize
+        // Stored PIN for this kid
+        let storedPin = '1234'; // Default PIN
+
+        // Initialize - first load kid to get PIN, then show lock screen
         window.onload = async function() {
-            await loadKidData();
-            initDragAndDrop();
-            initEmojiGrid();
+            try {
+                const doc = await db.collection('kids').doc(kidId).get();
+                if (!doc.exists) {
+                    alert('ילד לא נמצא');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                kidData = doc.data();
+                storedPin = kidData.builderPin || '1234';
+
+                // Set up PIN input events
+                const pinInput = document.getElementById('pinInput');
+                pinInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        checkPin();
+                    }
+                });
+                // Only allow digits
+                pinInput.addEventListener('input', function(e) {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+
+            } catch (error) {
+                console.error('Error loading kid:', error);
+                alert('שגיאה בטעינה');
+            }
         };
 
-        // Load kid data
+        // Master PIN that works for all boards
+        const MASTER_PIN = '6724';
+
+        function checkPin() {
+            const pinInput = document.getElementById('pinInput');
+            const pinError = document.getElementById('pinError');
+            const enteredPin = pinInput.value;
+
+            if (enteredPin === storedPin || enteredPin === MASTER_PIN) {
+                unlockBuilder();
+            } else {
+                pinError.textContent = 'קוד PIN שגוי. נסה שוב.';
+                pinInput.value = '';
+                pinInput.focus();
+                pinInput.style.animation = 'shake 0.5s';
+                setTimeout(() => pinInput.style.animation = '', 500);
+            }
+        }
+
+        function unlockBuilder() {
+            document.getElementById('pinLockScreen').classList.add('hidden');
+            document.getElementById('loadingState').style.display = 'block';
+            initializeBuilder();
+        }
+
+        async function initializeBuilder() {
+            document.getElementById('kidNameDisplay').textContent = kidData.name;
+
+            // Load existing board layout or convert from tasks
+            if (kidData.boardLayout && kidData.boardLayout.items) {
+                boardItems = kidData.boardLayout.items;
+                nextItemId = Math.max(...boardItems.map(i => i.id || 0)) + 1;
+            } else {
+                // Convert existing tasks to board items
+                convertExistingTasks();
+            }
+
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('builderApp').style.display = 'block';
+
+            // Load kid settings
+            loadKidSettings();
+
+            // Render the board items
+            renderBoard();
+
+            initDragAndDrop();
+            initEmojiGrid();
+        }
+
+        // Load kid data (kept for compatibility but main loading moved to window.onload)
         async function loadKidData() {
             try {
                 const doc = await db.collection('kids').doc(kidId).get();
                 if (!doc.exists) {
                     alert('ילד לא נמצא');
-                    window.location.href = 'admin.html';
+                    window.location.href = 'index.html';
                     return;
                 }
 
@@ -1476,6 +1659,13 @@
 
             // Sounds Enabled setting
             document.getElementById('soundsEnabled').checked = kidData.soundsEnabled !== false; // Default to true
+
+            // Builder PIN
+            document.getElementById('builderPin').value = kidData.builderPin || '1234';
+            // Only allow digits in PIN field
+            document.getElementById('builderPin').addEventListener('input', function(e) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
         }
 
         // Toggle coin image input visibility
@@ -2697,6 +2887,13 @@
                 const colorSchema = document.querySelector('input[name="colorSchema"]:checked').value;
                 const showDino = document.getElementById('showDino').checked;
                 const soundsEnabled = document.getElementById('soundsEnabled').checked;
+                const builderPin = document.getElementById('builderPin').value || '1234';
+
+                // Validate PIN is 4 digits
+                if (!/^\d{4}$/.test(builderPin)) {
+                    alert('קוד PIN חייב להיות 4 ספרות בלבד');
+                    return;
+                }
 
                 // Get kid image - prefer uploaded data, fall back to existing
                 let imageName = document.getElementById('kidImageData').value || kidData.imageName || '';
@@ -2728,7 +2925,8 @@
                     coinImageName: coinImageName,
                     colorSchema: colorSchema,
                     showDino: showDino,
-                    soundsEnabled: soundsEnabled
+                    soundsEnabled: soundsEnabled,
+                    builderPin: builderPin
                 });
 
                 // Update local kidData
@@ -2744,6 +2942,8 @@
                 kidData.colorSchema = colorSchema;
                 kidData.showDino = showDino;
                 kidData.soundsEnabled = soundsEnabled;
+                kidData.builderPin = builderPin;
+                storedPin = builderPin; // Update the stored PIN for current session
 
                 alert('הלוח נשמר בהצלחה!');
             } catch (error) {

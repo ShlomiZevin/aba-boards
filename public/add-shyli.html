@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הוספת שי-לי למערכת</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #f5576c;
+            text-align: center;
+        }
+        .kid-info {
+            background: #fff5f5;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .kid-info h3 {
+            margin-top: 0;
+            color: #f5576c;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ffe0e0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .tasks-list, .rewards-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .tasks-list h4, .rewards-list h4 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .task-item, .reward-item {
+            padding: 8px 12px;
+            background: white;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌸 הוספת שי-לי למערכת 🌸</h1>
+
+        <div class="kid-info">
+            <h3>פרטי הילדה</h3>
+            <div class="info-row"><span>שם:</span><span>שי-לי</span></div>
+            <div class="info-row"><span>גיל:</span><span>10</span></div>
+            <div class="info-row"><span>מגדר:</span><span>בת</span></div>
+            <div class="info-row"><span>ערכת צבעים:</span><span>ורוד</span></div>
+            <div class="info-row"><span>סוג מטבע:</span><span>נקודות</span></div>
+            <div class="info-row"><span>פרס יומי:</span><span>5 נקודות</span></div>
+            <div class="info-row"><span>דינו:</span><span>✅ כן</span></div>
+            <div class="info-row"><span>צלילים:</span><span>✅ כן</span></div>
+        </div>
+
+        <div class="tasks-list">
+            <h4>משימות יומיות (14)</h4>
+            <div class="task-item">🛏️ לסדר את המיטה</div>
+            <div class="task-item">⏰ לצאת בזמן לבית הספר</div>
+            <div class="task-item">🍱 קופסת אוכל בכיור</div>
+            <div class="task-item">💧 בקבוק מים מלא במקרר</div>
+            <div class="task-item">🎒 תיק במקום</div>
+            <div class="task-item">👟 נעליים במקום</div>
+            <div class="task-item">📚 שיעורי בית</div>
+            <div class="task-item">🧹 מטלה יומית</div>
+            <div class="task-item">🍎 לאכול פרי</div>
+            <div class="task-item">🥗 לחתוך סלט (לפחות 2 ירקות)</div>
+            <div class="task-item">🍬 לאכול רק ממתק 1 ביום</div>
+            <div class="task-item">🍽️ לפנות כלים אחרי הארוחה</div>
+            <div class="task-item">👕 בגדים בסל כביסה</div>
+            <div class="task-item">🏠 להשאיר בית מסודר</div>
+        </div>
+
+        <div class="rewards-list">
+            <h4>פרסים (9)</h4>
+            <div class="reward-item">🎬 15 נק' - לבחור סרט לערב משפחתי</div>
+            <div class="reward-item">🍝 20 נק' - לבחור ארוחת ערב</div>
+            <div class="reward-item">💆 20 נק' - ספא מפנק</div>
+            <div class="reward-item">🎲 20 נק' - משחק קופסה עם הורה</div>
+            <div class="reward-item">🍦 30 נק' - גלידה עם הורה</div>
+            <div class="reward-item">🧁 60 נק' - אפייה משותפת</div>
+            <div class="reward-item">👧 80 נק' - ערב בנות (פיג'מות, סרט, פופקורן)</div>
+            <div class="reward-item">🧺 500 נק' - פיקניק</div>
+            <div class="reward-item">🎉 1000 נק' - יום הכן</div>
+        </div>
+
+        <button onclick="addShyli()">🌟 הוסף את שי-לי למערכת</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function addShyli() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'info';
+            statusDiv.textContent = 'מוסיף את שי-לי למערכת...';
+
+            const kidId = 'shyli';
+
+            try {
+                // Check if שי-לי already exists
+                const existingDoc = await db.collection('kids').doc(kidId).get();
+                if (existingDoc.exists) {
+                    statusDiv.className = 'error';
+                    statusDiv.textContent = 'שי-לי כבר קיימת במערכת! אנא מחק אותה קודם מעמוד הניהול.';
+                    return;
+                }
+
+                // Board layout with all tasks and goals
+                const boardLayout = {
+                    items: [
+                        // Bank (piggy bank)
+                        {
+                            id: 1,
+                            type: 'bank',
+                            label: 'קופת החיסכון של שי-לי'
+                        },
+                        // Progress bar
+                        {
+                            id: 2,
+                            type: 'progress',
+                            title: 'ההתקדמות שלי היום'
+                        },
+                        // Regular tasks header
+                        {
+                            id: 3,
+                            type: 'header',
+                            size: 'medium',
+                            text: '✨ המשימות שלי ✨'
+                        },
+                        // Task 1
+                        {
+                            id: 4,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 1,
+                                icon: '🛏️',
+                                title: 'לסדר את המיטה',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 2
+                        {
+                            id: 5,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 2,
+                                icon: '⏰',
+                                title: 'לצאת בזמן לבית הספר',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4] // Sunday-Thursday (school days)
+                            }
+                        },
+                        // Task 3
+                        {
+                            id: 6,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 3,
+                                icon: '🍱',
+                                title: 'קופסת אוכל בכיור',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4] // School days
+                            }
+                        },
+                        // Task 4
+                        {
+                            id: 7,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 4,
+                                icon: '💧',
+                                title: 'בקבוק מים מלא במקרר',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 5
+                        {
+                            id: 8,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 5,
+                                icon: '🎒',
+                                title: 'תיק במקום',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 6
+                        {
+                            id: 9,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 6,
+                                icon: '👟',
+                                title: 'נעליים במקום',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 7
+                        {
+                            id: 10,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 7,
+                                icon: '📚',
+                                title: 'שיעורי בית',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4] // School days
+                            }
+                        },
+                        // Task 8
+                        {
+                            id: 11,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 8,
+                                icon: '🧹',
+                                title: 'מטלה יומית',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 9
+                        {
+                            id: 12,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 9,
+                                icon: '🍎',
+                                title: 'לאכול פרי',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 10
+                        {
+                            id: 13,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 10,
+                                icon: '🥗',
+                                title: 'לחתוך סלט (לפחות 2 ירקות)',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 11
+                        {
+                            id: 14,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 11,
+                                icon: '🍬',
+                                title: 'לאכול רק ממתק 1 ביום',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 12
+                        {
+                            id: 15,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 12,
+                                icon: '🍽️',
+                                title: 'לפנות כלים אחרי הארוחה',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 13
+                        {
+                            id: 16,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 13,
+                                icon: '👕',
+                                title: 'בגדים בסל כביסה',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 14
+                        {
+                            id: 17,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 14,
+                                icon: '🏠',
+                                title: 'להשאיר בית מסודר',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Calm down header
+                        {
+                            id: 18,
+                            type: 'header',
+                            size: 'medium',
+                            text: '🧘 פינת ההרגעה 🧘'
+                        },
+                        // Calm down - Paint
+                        {
+                            id: 19,
+                            type: 'task',
+                            taskType: 'calm-down',
+                            taskData: {
+                                id: 15,
+                                icon: '🎨',
+                                title: 'לוח ציור',
+                                type: 'calm-down',
+                                activityType: 'paint',
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Goals header
+                        {
+                            id: 20,
+                            type: 'header',
+                            size: 'medium',
+                            text: '🎁 הפרסים שלי 🎁'
+                        },
+                        // Goal 1 - 15 points
+                        {
+                            id: 21,
+                            type: 'goal',
+                            icon: '🎬',
+                            title: 'לבחור סרט לערב משפחתי',
+                            pointsRequired: 15
+                        },
+                        // Goal 2 - 20 points
+                        {
+                            id: 22,
+                            type: 'goal',
+                            icon: '🍝',
+                            title: 'לבחור ארוחת ערב',
+                            pointsRequired: 20
+                        },
+                        // Goal 3 - 20 points
+                        {
+                            id: 23,
+                            type: 'goal',
+                            icon: '💆',
+                            title: 'ספא מפנק',
+                            pointsRequired: 20
+                        },
+                        // Goal 4 - 20 points
+                        {
+                            id: 24,
+                            type: 'goal',
+                            icon: '🎲',
+                            title: 'משחק קופסה עם הורה',
+                            pointsRequired: 20
+                        },
+                        // Goal 5 - 30 points
+                        {
+                            id: 25,
+                            type: 'goal',
+                            icon: '🍦',
+                            title: 'גלידה עם הורה',
+                            pointsRequired: 30
+                        },
+                        // Goal 6 - 60 points
+                        {
+                            id: 26,
+                            type: 'goal',
+                            icon: '🧁',
+                            title: 'אפייה משותפת',
+                            pointsRequired: 60
+                        },
+                        // Goal 7 - 80 points
+                        {
+                            id: 27,
+                            type: 'goal',
+                            icon: '👧',
+                            title: 'ערב בנות - פיג\'מות, סרט, פופקורן',
+                            pointsRequired: 80
+                        },
+                        // Goal 8 - 500 points
+                        {
+                            id: 28,
+                            type: 'goal',
+                            icon: '🧺',
+                            title: 'פיקניק',
+                            pointsRequired: 500
+                        },
+                        // Goal 9 - 1000 points
+                        {
+                            id: 29,
+                            type: 'goal',
+                            icon: '🎉',
+                            title: 'יום הכן',
+                            pointsRequired: 1000
+                        }
+                    ]
+                };
+
+                // Create tasks array for backward compatibility
+                const tasks = boardLayout.items
+                    .filter(item => item.type === 'task' && item.taskType === 'regular')
+                    .map(item => item.taskData);
+
+                // Create שי-לי's complete data
+                const shyliData = {
+                    name: 'שי-לי',
+                    imageName: '',
+                    age: 10,
+                    gender: 'girl',
+                    kidDescription: 'אוהבת לשחק עם חברות, זמן מסך, זמן איכות עם ההורים ומשפחתי',
+                    behaviorGoals: '',
+                    personalInfo: '',
+
+                    // Board
+                    tasks: tasks,
+                    boardLayout: boardLayout,
+
+                    // State
+                    completedTasks: [],
+                    completedBonusTasks: [],
+                    bonusRewardsEarned: {},
+                    totalMoney: 0,
+
+                    // Rewards
+                    dailyReward: 5,
+                    coinStyle: 'points',
+                    coinImageName: '',
+
+                    // Display
+                    colorSchema: 'pink',
+                    headerLabel: '',
+                    savingsLabel: 'הנקודות שלי',
+                    regularTasksHeader: '✨ המשימות שלי ✨',
+                    bonusTasksHeader: '💰 משימות בונוס 💰',
+                    calmDownHeader: '🧘 פינת ההרגעה 🧘',
+
+                    // Features
+                    showDino: true,
+                    soundsEnabled: true,
+                    builderPin: '1234',
+
+                    // Timestamps
+                    todayRewardGiven: false,
+                    lastResetDate: new Date().toDateString(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
+                    // Parent info (for reference)
+                    parentInfo: {
+                        parentName: 'רחלי דנוך',
+                        email: 'Racheli.vag@gmail.com',
+                        phone: '0504731907'
+                    }
+                };
+
+                await db.collection('kids').doc(kidId).set(shyliData);
+
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `
+                    <strong>הצלחה! 🎉</strong><br>
+                    שי-לי נוספה למערכת עם ${tasks.length} משימות ו-9 פרסים!<br><br>
+                    <a href="board.html?kid=${kidId}" style="color: #f5576c; font-weight: bold;">🌸 לחצי כאן לעבור ללוח של שי-לי</a><br><br>
+                    <a href="board-builder.html?kid=${kidId}" style="color: #667eea; font-weight: bold;">🛠️ עריכת הלוח בבונה הלוחות</a><br><br>
+                `;
+
+            } catch (error) {
+                console.error('Error adding שי-לי:', error);
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `
+                    <strong>שגיאה!</strong><br>
+                    ${error.message}<br><br>
+                    <small>נא לוודא שהגדרת את Firestore בפרויקט Firebase שלך.</small>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

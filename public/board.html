@@ -1698,7 +1698,22 @@
                 this.soundsEnabled = kidData.soundsEnabled !== false;
                 this.initSounds();
 
+                // Check if kid's name contains Arabic letters
+                this.isArabic = this.containsArabic(kidData.name);
+
                 this.init();
+            }
+
+            // Check if text contains Arabic letters
+            containsArabic(text) {
+                if (!text) return false;
+                const arabicPattern = /[\u0600-\u06FF]/;
+                return arabicPattern.test(text);
+            }
+
+            // Get localized label based on language
+            getLabel(hebrewText, arabicText) {
+                return this.isArabic ? arabicText : hebrewText;
             }
 
             // Initialize sound system with Web Audio API for reliable playback
@@ -1910,7 +1925,7 @@
                     case 'shekel':
                         return 'ש״ח';
                     case 'points':
-                        return 'נקודות';
+                        return this.getLabel('נקודות', 'نقاط');
                     case 'dollar':
                         return '$';
                     case 'custom':
@@ -1926,7 +1941,7 @@
                     case 'shekel':
                         return `₪${num}`;
                     case 'points':
-                        return `${num} נקודות`;
+                        return `${num} ${this.getLabel('נקודות', 'نقاط')}`;
                     case 'custom': {
                         const coinSrc = this.getCoinImageSrc();
                         return `<img src="${coinSrc}" style="width: 20px; height: 20px; vertical-align: middle; margin: 0 3px;" /> ${num}`;
@@ -1955,7 +1970,7 @@
                     return amount.toFixed(2);
                 }
                 if (this.coinStyle === 'points') {
-                    return `${amount.toFixed(2)} נקודות`;
+                    return `${amount.toFixed(2)} ${this.getLabel('נקודות', 'نقاط')}`;
                 }
                 const symbol = this.getCoinSymbol();
                 return `${symbol}${amount.toFixed(2)}`;
@@ -2169,7 +2184,7 @@
                 }
 
                 dailyPotentialEl.innerHTML = `
-                    <div class="potential-label">אפשר להרוויח היום:</div>
+                    <div class="potential-label">${this.getLabel('אפשר להרוויח היום:', 'يمكن كسب اليوم:')}</div>
                     <div class="potential-value">${potentialText}</div>
                 `;
             }
@@ -2200,9 +2215,9 @@
                 previewEl.innerHTML = `
                     <div class="next-goal-mini">${iconDisplay}</div>
                     <div class="next-goal-info">
-                        <div class="goal-label">היעד הבא:</div>
+                        <div class="goal-label">${this.getLabel('היעד הבא:', 'الهدف التالي:')}</div>
                         <div class="goal-name">${nextGoal.title}</div>
-                        <div class="goal-remaining">חסרים ${this.formatCurrencyAmount(remaining)}</div>
+                        <div class="goal-remaining">${this.getLabel('חסרים', 'ينقص')} ${this.formatCurrencyAmount(remaining)}</div>
                     </div>
                 `;
             }
@@ -3128,7 +3143,7 @@
                         const coinSrc = this.getCoinImageSrc();
                         counter.innerHTML = `<img src="${coinSrc}" style="width: 30px; height: 30px; vertical-align: middle; margin: 0 5px;" /> ${currentMoney.toFixed(2)}`;
                     } else if (this.coinStyle === 'points') {
-                        counter.textContent = `${currentMoney.toFixed(2)} נקודות`;
+                        counter.textContent = `${currentMoney.toFixed(2)} ${this.getLabel('נקודות', 'نقاط')}`;
                     } else {
                         const symbol = this.getCoinSymbol();
                         counter.textContent = `${symbol}${currentMoney.toFixed(2)}`;

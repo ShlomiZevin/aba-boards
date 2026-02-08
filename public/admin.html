@@ -463,10 +463,116 @@
                 padding: 12px 14px;
             }
         }
+
+        /* PIN Lock Screen */
+        .pin-lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+
+        .pin-lock-screen.hidden {
+            display: none;
+        }
+
+        .pin-container {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+        }
+
+        .pin-logo {
+            margin-bottom: 20px;
+        }
+
+        .pin-container h2 {
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 1.5em;
+        }
+
+        .pin-container p {
+            color: #718096;
+            margin-bottom: 20px;
+        }
+
+        .pin-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.5em;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            letter-spacing: 8px;
+            font-family: monospace;
+        }
+
+        .pin-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .pin-submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .pin-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .pin-error {
+            color: #e53e3e;
+            margin-top: 12px;
+            font-weight: 500;
+            min-height: 24px;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
     </style>
 </head>
 <body class="doing-theme">
-    <div id="loadingState" class="loading">טוען...</div>
+    <!-- PIN Lock Screen -->
+    <div id="pinLockScreen" class="pin-lock-screen">
+        <div class="pin-container">
+            <div class="pin-logo">
+                <img src="doing-logo-transparent2.png" alt="Doing" style="max-height: 80px;">
+            </div>
+            <h2>כניסת מנהל</h2>
+            <p>הזן קוד PIN להמשך</p>
+            <input type="password" id="pinInput" class="pin-input" maxlength="10" placeholder="קוד PIN" autofocus>
+            <button class="pin-submit-btn" onclick="checkPin()">כניסה</button>
+            <p id="pinError" class="pin-error"></p>
+        </div>
+    </div>
+
+    <div id="loadingState" class="loading" style="display: none;">טוען...</div>
 
     <div id="adminContainer" class="admin-container" style="display: none;">
         <div class="admin-header">
@@ -525,6 +631,57 @@
     </div>
 
     <script>
+        // Admin PIN Code
+        const ADMIN_PIN = '6724908';
+        const PIN_SESSION_KEY = 'adminPinVerified';
+
+        // Check PIN on Enter key
+        document.addEventListener('DOMContentLoaded', function() {
+            const pinInput = document.getElementById('pinInput');
+            if (pinInput) {
+                pinInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        checkPin();
+                    }
+                });
+            }
+
+            // Check if already verified in this session
+            if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true') {
+                unlockAdmin();
+            }
+        });
+
+        function checkPin() {
+            const pinInput = document.getElementById('pinInput');
+            const pinError = document.getElementById('pinError');
+            const enteredPin = pinInput.value;
+
+            if (enteredPin === ADMIN_PIN) {
+                sessionStorage.setItem(PIN_SESSION_KEY, 'true');
+                unlockAdmin();
+            } else {
+                pinError.textContent = 'קוד PIN שגוי. נסה שוב.';
+                pinInput.value = '';
+                pinInput.focus();
+                // Shake animation
+                pinInput.style.animation = 'shake 0.5s';
+                setTimeout(() => pinInput.style.animation = '', 500);
+            }
+        }
+
+        function unlockAdmin() {
+            document.getElementById('pinLockScreen').classList.add('hidden');
+            document.getElementById('loadingState').style.display = 'block';
+            initializeAdmin();
+        }
+
+        async function initializeAdmin() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('adminContainer').style.display = 'block';
+            await loadKidsList();
+        }
+
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
@@ -540,13 +697,6 @@
         const db = firebase.firestore();
 
         let kidToDelete = null;
-
-        // Initialize
-        window.onload = async function() {
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('adminContainer').style.display = 'block';
-            await loadKidsList();
-        };
 
         // Load kids list
         async function loadKidsList() {
@@ -727,6 +877,7 @@
                     regularTasksHeader: 'המשימות שלי',
                     bonusTasksHeader: '💰 משימות בונוס 💰',
                     calmDownHeader: '🧘 פינת ההרגעה 🧘',
+                    builderPin: '1234',
                     todayRewardGiven: false,
                     lastResetDate: new Date().toDateString(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -788,12 +939,13 @@
                     bonusTasksHeader: kidData.bonusTasksHeader || '',
                     calmDownHeader: kidData.calmDownHeader || '',
                     showDino: kidData.showDino || false,
+                    builderPin: '1234', // Reset PIN for copied kid
                     todayRewardGiven: false,
                     lastResetDate: new Date().toDateString(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                alert(`הלוח הועתק בהצלחה!\nנוצר לוח חדש עבור ${newName}`);
+                alert(`הלוח הועתק בהצלחה!\nנוצר לוח חדש עבור ${newName}\n\nקוד PIN לעריכה: 1234`);
                 await loadKidsList();
             } catch (error) {
                 console.error('Error copying kid:', error);
