@@ -38,5 +38,22 @@ service cloud.firestore {
       // Prevent deletion for safety
       allow delete: if false;
     }
+
+    // Invite Tokens collection - for parent self-service links
+    match /inviteTokens/{tokenId} {
+      // Anyone can read tokens (to validate them)
+      allow read: if true;
+
+      // Anyone can create tokens (admin generates them)
+      // In production, you should restrict this to authenticated admins
+      allow create: if true;
+
+      // Anyone can update tokens (to mark as used)
+      // In production, you should add validation
+      allow update: if true;
+
+      // Prevent deletion for safety
+      allow delete: if false;
+    }
   }
 }

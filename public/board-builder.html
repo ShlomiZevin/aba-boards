@@ -962,7 +962,7 @@
         <div class="top-bar">
             <h1>🎨 בונה לוחות - <span id="kidNameDisplay">טוען...</span></h1>
             <div class="top-bar-buttons">
-                <a href="admin.html" class="btn btn-secondary">← חזרה לניהול</a>
+                <button class="btn btn-secondary" onclick="helpMeBuild()" id="helpMeBuildBtn" style="background: #ff9800 !important; color: white !important;">📝 שיבנו עבורי</button>
                 <button class="btn btn-primary" onclick="previewBoard()">👁️ תצוגה מקדימה</button>
                 <button class="btn btn-success" onclick="saveBoard()">💾 שמור לוח</button>
             </div>
@@ -2955,6 +2955,21 @@
         // Preview board
         function previewBoard() {
             window.open(`board.html?kid=${kidId}`, '_blank');
+        }
+
+        // Help me build - redirect to form
+        function helpMeBuild() {
+            if (!kidData) return;
+
+            const params = new URLSearchParams({
+                name: kidData.name || '',
+                age: kidData.age || '',
+                gender: kidData.gender || ''
+            });
+
+            if (confirm('תועברו לטופס בקשה ליצירת לוח. צוות המומחים שלנו יבנה עבורכם את הלוח.\n\nלהמשיך?')) {
+                window.location.href = `request-board.html?${params.toString()}`;
+            }
         }
 
         // ==================== Mobile Settings Functions ====================

@@ -590,6 +590,28 @@
             </div>
             <div id="kidsList"></div>
         </div>
+
+        <!-- Invite Link Generator -->
+        <div class="kids-list" style="margin-top: 24px;">
+            <div class="kids-list-header">
+                <h2>🔗 יצירת קישור הזמנה להורים</h2>
+            </div>
+            <p style="color: #666; margin-bottom: 20px;">
+                צרו קישור חד-פעמי לשליחה להורים. הם יוכלו לבנות לוח בעצמם או למלא טופס ואנחנו נבנה עבורם.
+            </p>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                <button class="btn btn-primary" onclick="generateInviteLink()" style="white-space: nowrap;">
+                    ✨ צור קישור חדש
+                </button>
+                <div id="inviteLinkContainer" style="display: none; flex: 1; min-width: 200px;">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="inviteLinkInput" readonly style="flex: 1; padding: 12px; border: 2px solid #667eea; border-radius: 8px; font-size: 14px; direction: ltr;">
+                        <button class="btn btn-secondary" onclick="copyInviteLink()" style="white-space: nowrap;">📋 העתק</button>
+                    </div>
+                </div>
+            </div>
+            <div id="inviteLinkStatus" style="margin-top: 15px; display: none;"></div>
+        </div>
     </div>
 
     <!-- Add Kid Modal -->
@@ -994,6 +1016,77 @@
         document.getElementById('newKidName').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') addNewKid();
         });
+
+        // ==================== Invite Link Functions ====================
+
+        // Generate a random token
+        function generateToken() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+            let token = '';
+            for (let i = 0; i < 12; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        }
+
+        // Generate invite link
+        async function generateInviteLink() {
+            const statusDiv = document.getElementById('inviteLinkStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<span style="color: #667eea;">יוצר קישור...</span>';
+
+            try {
+                const token = generateToken();
+
+                // Save token to Firestore
+                await db.collection('inviteTokens').doc(token).set({
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    used: false,
+                    usedAt: null,
+                    kidId: null,
+                    method: null
+                });
+
+                // Generate the full URL
+                const baseUrl = window.location.origin + window.location.pathname.replace('admin.html', '');
+                const inviteUrl = `${baseUrl}add-kid.html?token=${token}`;
+
+                // Show the link
+                document.getElementById('inviteLinkInput').value = inviteUrl;
+                document.getElementById('inviteLinkContainer').style.display = 'block';
+
+                statusDiv.innerHTML = '<span style="color: #4CAF50;">✓ קישור נוצר בהצלחה! העתיקו ושלחו להורים.</span>';
+
+            } catch (error) {
+                console.error('Error generating invite link:', error);
+                statusDiv.innerHTML = '<span style="color: #ff6b6b;">שגיאה ביצירת קישור: ' + error.message + '</span>';
+            }
+        }
+
+        // Copy invite link to clipboard
+        async function copyInviteLink() {
+            const input = document.getElementById('inviteLinkInput');
+            const statusDiv = document.getElementById('inviteLinkStatus');
+
+            try {
+                await navigator.clipboard.writeText(input.value);
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = '<span style="color: #4CAF50;">✓ הקישור הועתק ללוח!</span>';
+
+                // Flash the input to show it was copied
+                input.style.background = '#e8f5e9';
+                setTimeout(() => {
+                    input.style.background = '';
+                }, 500);
+
+            } catch (error) {
+                // Fallback for older browsers
+                input.select();
+                document.execCommand('copy');
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = '<span style="color: #4CAF50;">✓ הקישור הועתק!</span>';
+            }
+        }
     </script>
 </body>
 </html>

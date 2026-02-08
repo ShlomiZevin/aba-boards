@@ -749,6 +749,26 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Get URL params for pre-filled data
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteToken = urlParams.get('token');
+        const prefillName = urlParams.get('name');
+        const prefillAge = urlParams.get('age');
+        const prefillGender = urlParams.get('gender');
+
+        // Pre-fill form fields if coming from add-kid page
+        document.addEventListener('DOMContentLoaded', () => {
+            if (prefillName) {
+                document.getElementById('childName').value = prefillName;
+            }
+            if (prefillAge) {
+                document.getElementById('age').value = prefillAge;
+            }
+            if (prefillGender) {
+                document.getElementById('gender').value = prefillGender;
+            }
+        });
+
         // Image upload handling with crop functionality
         let childImageData = null;
         let currentImage = null;
@@ -1100,11 +1120,25 @@
                     // Metadata
                     status: 'pending', // pending, processing, completed
                     submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    createdBoardId: null
+                    createdBoardId: null,
+                    inviteToken: inviteToken || null
                 };
 
                 // Save to Firestore
                 await db.collection('boardRequests').add(formData);
+
+                // Mark token as used if present
+                if (inviteToken) {
+                    try {
+                        await db.collection('inviteTokens').doc(inviteToken).update({
+                            used: true,
+                            usedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            method: 'form-request'
+                        });
+                    } catch (tokenError) {
+                        console.log('Token update skipped:', tokenError);
+                    }
+                }
 
                 // Show success message
                 successMessage.classList.add('show');

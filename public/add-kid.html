@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>יצירת לוח משימות חדש</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .gender-options {
+            display: flex;
+            gap: 15px;
+        }
+
+        .gender-option {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .gender-option:hover {
+            border-color: #667eea;
+        }
+
+        .gender-option.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+        }
+
+        .gender-option .icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 30px 0;
+        }
+
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .divider-text {
+            padding: 0 15px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .options-title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .option-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .option-btn {
+            padding: 20px;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .option-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .option-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .option-btn.build-myself {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .option-btn.fill-form {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .option-btn .btn-icon {
+            font-size: 1.5em;
+        }
+
+        .option-btn .btn-content {
+            text-align: right;
+        }
+
+        .option-btn .btn-title {
+            display: block;
+        }
+
+        .option-btn .btn-subtitle {
+            display: block;
+            font-size: 0.75em;
+            font-weight: normal;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            display: none;
+            text-align: center;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Token used/invalid state */
+        .token-invalid {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .token-invalid .icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .token-invalid h2 {
+            color: #721c24;
+            margin-bottom: 15px;
+        }
+
+        .token-invalid p {
+            color: #666;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading state -->
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p>טוען...</p>
+        </div>
+
+        <!-- Token invalid/used state -->
+        <div id="tokenInvalid" class="token-invalid hidden">
+            <div class="icon">🔒</div>
+            <h2>הקישור אינו תקף</h2>
+            <p>קישור זה כבר נוצל או שאינו קיים.<br>אנא פנה לקבלת קישור חדש.</p>
+        </div>
+
+        <!-- Main form -->
+        <div id="mainForm" class="hidden">
+            <h1>יצירת לוח משימות</h1>
+            <p class="subtitle">בואו ניצור לוח משימות מדהים לילד שלכם!</p>
+
+            <div class="form-group">
+                <label for="childName">שם הילד/ה</label>
+                <input type="text" id="childName" placeholder="לדוגמה: יוסי" required>
+            </div>
+
+            <div class="form-group">
+                <label for="childAge">גיל</label>
+                <input type="number" id="childAge" min="2" max="18" placeholder="לדוגמה: 7" required>
+            </div>
+
+            <div class="form-group">
+                <label>מגדר</label>
+                <div class="gender-options">
+                    <div class="gender-option" data-gender="boy" onclick="selectGender('boy')">
+                        <div class="icon">👦</div>
+                        <div>בן</div>
+                    </div>
+                    <div class="gender-option" data-gender="girl" onclick="selectGender('girl')">
+                        <div class="icon">👧</div>
+                        <div>בת</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider">
+                <div class="divider-line"></div>
+                <div class="divider-text">איך תרצו להמשיך?</div>
+                <div class="divider-line"></div>
+            </div>
+
+            <p class="options-title">בחרו את הדרך המתאימה לכם</p>
+
+            <div class="option-buttons">
+                <button class="option-btn build-myself" onclick="buildMyself()" id="buildMyselfBtn" disabled>
+                    <span class="btn-icon">🛠️</span>
+                    <span class="btn-content">
+                        <span class="btn-title">אבנה בעצמי</span>
+                        <span class="btn-subtitle">עברו לבונה הלוחות והתאימו את הלוח בעצמכם</span>
+                    </span>
+                </button>
+
+                <button class="option-btn fill-form" onclick="fillForm()" id="fillFormBtn" disabled>
+                    <span class="btn-icon">📝</span>
+                    <span class="btn-content">
+                        <span class="btn-title">מלאו טופס ונבנה עבורכם</span>
+                        <span class="btn-subtitle">ספרו לנו על הילד והמשימות ואנחנו נבנה את הלוח</span>
+                    </span>
+                </button>
+            </div>
+
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let selectedGender = null;
+        let currentToken = null;
+
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!token) {
+                // No token - show invalid state
+                showInvalidToken();
+                return;
+            }
+
+            currentToken = token;
+
+            try {
+                // Check if token is valid
+                const tokenDoc = await db.collection('inviteTokens').doc(token).get();
+
+                if (!tokenDoc.exists) {
+                    showInvalidToken();
+                    return;
+                }
+
+                const tokenData = tokenDoc.data();
+
+                if (tokenData.used) {
+                    showInvalidToken();
+                    return;
+                }
+
+                // Token is valid - show form
+                showMainForm();
+
+            } catch (error) {
+                console.error('Error checking token:', error);
+                showInvalidToken();
+            }
+        });
+
+        function showInvalidToken() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('tokenInvalid').classList.remove('hidden');
+            document.getElementById('mainForm').classList.add('hidden');
+        }
+
+        function showMainForm() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('tokenInvalid').classList.add('hidden');
+            document.getElementById('mainForm').classList.remove('hidden');
+        }
+
+        function selectGender(gender) {
+            selectedGender = gender;
+
+            // Update UI
+            document.querySelectorAll('.gender-option').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelector(`[data-gender="${gender}"]`).classList.add('selected');
+
+            // Enable buttons if form is valid
+            checkFormValidity();
+        }
+
+        function checkFormValidity() {
+            const name = document.getElementById('childName').value.trim();
+            const age = document.getElementById('childAge').value;
+            const isValid = name && age && selectedGender;
+
+            document.getElementById('buildMyselfBtn').disabled = !isValid;
+            document.getElementById('fillFormBtn').disabled = !isValid;
+        }
+
+        // Add event listeners for form validation
+        document.getElementById('childName').addEventListener('input', checkFormValidity);
+        document.getElementById('childAge').addEventListener('input', checkFormValidity);
+
+        function getDefaultBoardLayout(kidName, gender) {
+            const isBoy = gender === 'boy';
+            return {
+                items: [
+                    // Bank
+                    {
+                        id: 1,
+                        type: 'bank',
+                        label: `קופת החיסכון של ${kidName}`
+                    },
+                    // Progress bar
+                    {
+                        id: 2,
+                        type: 'progress',
+                        title: 'ההתקדמות שלי היום'
+                    },
+                    // Tasks header
+                    {
+                        id: 3,
+                        type: 'header',
+                        size: 'medium',
+                        text: '✨ המשימות שלי ✨'
+                    },
+                    // Sample task 1
+                    {
+                        id: 4,
+                        type: 'task',
+                        taskType: 'regular',
+                        taskData: {
+                            id: 1,
+                            icon: '🪥',
+                            title: 'צחצוח שיניים',
+                            type: 'regular',
+                            requiresTestimony: false,
+                            trackTime: false,
+                            activeDays: [0, 1, 2, 3, 4, 5, 6]
+                        }
+                    },
+                    // Sample task 2
+                    {
+                        id: 5,
+                        type: 'task',
+                        taskType: 'regular',
+                        taskData: {
+                            id: 2,
+                            icon: '🛏️',
+                            title: 'סידור המיטה',
+                            type: 'regular',
+                            requiresTestimony: false,
+                            trackTime: false,
+                            activeDays: [0, 1, 2, 3, 4, 5, 6]
+                        }
+                    },
+                    // Sample task 3
+                    {
+                        id: 6,
+                        type: 'task',
+                        taskType: 'regular',
+                        taskData: {
+                            id: 3,
+                            icon: '🎒',
+                            title: 'הכנת התיק',
+                            type: 'regular',
+                            requiresTestimony: false,
+                            trackTime: false,
+                            activeDays: [0, 1, 2, 3, 4]
+                        }
+                    },
+                    // Goals header
+                    {
+                        id: 7,
+                        type: 'header',
+                        size: 'medium',
+                        text: '🎁 הפרסים שלי 🎁'
+                    },
+                    // Sample goal 1
+                    {
+                        id: 8,
+                        type: 'goal',
+                        icon: '🍦',
+                        title: 'גלידה',
+                        pointsRequired: 20
+                    },
+                    // Sample goal 2
+                    {
+                        id: 9,
+                        type: 'goal',
+                        icon: '🎬',
+                        title: 'לבחור סרט',
+                        pointsRequired: 30
+                    }
+                ]
+            };
+        }
+
+        async function buildMyself() {
+            const name = document.getElementById('childName').value.trim();
+            const age = parseInt(document.getElementById('childAge').value);
+
+            if (!name || !age || !selectedGender) {
+                showStatus('אנא מלאו את כל השדות', 'error');
+                return;
+            }
+
+            showStatus('יוצר את הלוח...', 'info');
+
+            try {
+                // Generate kid ID from name
+                const kidId = name.toLowerCase().replace(/[^a-zא-ת0-9]/g, '') + '_' + Date.now();
+
+                const boardLayout = getDefaultBoardLayout(name, selectedGender);
+
+                // Create tasks array for backward compatibility
+                const tasks = boardLayout.items
+                    .filter(item => item.type === 'task' && item.taskType === 'regular')
+                    .map(item => item.taskData);
+
+                // Create kid data
+                const kidData = {
+                    name: name,
+                    imageName: '',
+                    age: age,
+                    gender: selectedGender,
+                    kidDescription: '',
+                    behaviorGoals: '',
+                    personalInfo: '',
+
+                    // Board
+                    tasks: tasks,
+                    boardLayout: boardLayout,
+
+                    // State
+                    completedTasks: [],
+                    completedBonusTasks: [],
+                    bonusRewardsEarned: {},
+                    totalMoney: 0,
+
+                    // Rewards
+                    dailyReward: 1,
+                    coinStyle: 'points',
+                    coinImageName: '',
+
+                    // Display
+                    colorSchema: 'blue',
+                    headerLabel: '',
+                    savingsLabel: 'הנקודות שלי',
+                    regularTasksHeader: '✨ המשימות שלי ✨',
+                    bonusTasksHeader: '💰 משימות בונוס 💰',
+                    calmDownHeader: '🧘 פינת ההרגעה 🧘',
+
+                    // Features
+                    showDino: true,
+                    soundsEnabled: true,
+                    builderPin: '1234',
+
+                    // Timestamps
+                    todayRewardGiven: false,
+                    lastResetDate: new Date().toDateString(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
+                    // Track that this was self-built
+                    selfBuilt: true,
+                    inviteToken: currentToken
+                };
+
+                // Save kid to database
+                await db.collection('kids').doc(kidId).set(kidData);
+
+                // Mark token as used
+                await db.collection('inviteTokens').doc(currentToken).update({
+                    used: true,
+                    usedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    kidId: kidId,
+                    method: 'self-build'
+                });
+
+                // Show PIN info before redirecting
+                alert(`הלוח נוצר בהצלחה! 🎉\n\nכעת תועברו לבונה הלוחות.\n\n🔐 קוד הגישה הראשוני: 1234\n\nתוכלו לשנות את הקוד בהגדרות הלוח.`);
+
+                // Redirect to board builder
+                window.location.href = `board-builder.html?kid=${kidId}&welcome=true`;
+
+            } catch (error) {
+                console.error('Error creating kid:', error);
+                showStatus('שגיאה ביצירת הלוח: ' + error.message, 'error');
+            }
+        }
+
+        async function fillForm() {
+            const name = document.getElementById('childName').value.trim();
+            const age = parseInt(document.getElementById('childAge').value);
+
+            if (!name || !age || !selectedGender) {
+                showStatus('אנא מלאו את כל השדות', 'error');
+                return;
+            }
+
+            // Redirect to form page with pre-filled data
+            const params = new URLSearchParams({
+                token: currentToken,
+                name: name,
+                age: age,
+                gender: selectedGender
+            });
+
+            window.location.href = `request-board.html?${params.toString()}`;
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+            statusDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
