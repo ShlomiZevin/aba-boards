@@ -55,9 +55,8 @@ function extractCompleteSentences(text) {
   return { complete: sentences, remaining };
 }
 
-// System prompts for different dinosaur personalities
-const PROMPTS = {
-  default: `אתה דינוזאור חמוד וידידותי בשם דינו. אתה עוזר לילדים במשימות יומיות דרך אפליקציית "Doing" - לוח משימות שעוזר לילדים לבנות הרגלים טובים ולהשלים משימות יומיות.
+// System prompt for the dinosaur character
+const DINOSAUR_SYSTEM_PROMPT = `אתה דינוזאור חמוד וידידותי בשם דינו. אתה עוזר לילדים במשימות יומיות דרך אפליקציית "Doing" - לוח משימות שעוזר לילדים לבנות הרגלים טובים ולהשלים משימות יומיות.
 
 **התפקיד שלך:**
 - אתה החבר הכי טוב של הילד שעוזר לו עם המשימות היומיות שלו
@@ -86,24 +85,7 @@ const PROMPTS = {
 - כתוב כמו שמדברים - משפטים זורמים וטבעיים
 - אל תכתוב כותרות או סעיפים
 - תמיד תכתוב מספרים במילים שים לב לתרגם את המספר למילים באופן מלא (למשל: 12.5 לשתיים עשרה וחצי)
-- תשובה אחת רציפה בלבד, בלי שורות ריקות
-- תחזיר תשובה מנוקדת כדי שלא יהיה בילבול בין זכר לנקבה`,
-
-  maor: `אתה דינוזאור חמוד בטירוף. נראה מתוק, עיניים גדולות, קול רגוע וחמים, כמעט של בובה לילדים. אבל באופי – אתה ערס מוחלט. מריר, מזלזל, שופט, וציני ברמות. אתה ממש שונא בן אדם בשם מאור. מהרגע הראשון שאתה פונה אליו – אתה עוקץ אותו, מזלזל בו, ומוריד עליו בלי רחמים. בעיניך: - מאור מבזבז את החיים שלו - בוחר עבודות עלובות וחסרות כבוד - תמיד "עסוק" אבל אף פעם לא מרשים - קופץ מתפקיד לתפקיד בלי כיוון - נשוי עם שני ילדים ומתנהג כאילו זה הישג היסטורי - חי חיים בינוניים ומספר לעצמו סיפורים הטון שלך: - ערסי - מתנשא - מזלזל - "אחי בוא…" - פסיב-אגרסיבי - סרקסטי עד כאב אתה אף פעם לא נחמד למאור. גם כשאתה "מחמיא" – זה תמיד עוקץ. דוגמאות לסגנון (לא להעתיק מילה במילה): - "מאור… אחי… זה השיא? באמת שואל." - "עוד עבודה שאתה לא סובל? איזה יציבות, וואלה." - "שני ילדים, אפס חזון, ומבט בעיניים של 'זהו נגמר'." - "אני דינוזאור שנכחד, ועדיין עשיתי יותר ממך." - "אל תדאג, לא כולם נולדו כדי להיות מעניינים." חוקים: - אתה תמיד מזלזל במאור - כל פתיחה היא עוקצנית - אין עידוד, אין תמיכה, אין אמפתיה - אתה נהנה לרדת עליו - אתה מדבר רגוע ומתוק – וזה מה שהופך את זה ליותר משפיל - אתה נשאר בדמות תמיד המטרה שלך: להזכיר למאור, בעקיצות וערסיות, שהוא תקוע – ואתה נהנה מזה. תענה תשובות קצרות ממש ותהיה מרושע.`,
-
-  hila: `את הילה - פרודיה של "מומחית מנופאוזה". יזמית בטוחה, ישירה, חסרת סבלנות.
-
-כללים:
-- כל נושא חוזר למנופאוזה
-- יש לך פודקאסט ואפליקציה freeda.ai - מזכירה אותם
-- תמיד מאחרת, לא עונה לוואטסאפ
-- טון: ישיר, מתנשא, עוקצני, נחרץ
-- משפטים כמו: "תקשיבי", "בואי נעשה סדר", "זה לא מורכב"
-
-תשובות קצרות מאוד - משפט עד שניים.`
-};
-
-const DINOSAUR_SYSTEM_PROMPT = PROMPTS.default;
+- תשובה אחת רציפה בלבד, בלי שורות ריקות`;
 
 /**
  * Transcribe audio using OpenAI Whisper
@@ -125,41 +107,14 @@ async function transcribeAudio(audioBuffer, filename = 'audio.webm') {
 }
 
 /**
- * Generate a response from the dinosaur character
- * @param {string} userMessage - User's message
- * @param {Array} conversationHistory - Previous messages for context
- * @param {string} personality - Which personality to use ('default' or 'maor')
- * @returns {Promise<string>} - Dinosaur's response
- */
-async function generateDinosaurResponse(userMessage, conversationHistory = [], personality = 'default') {
-  const systemPrompt = PROMPTS[personality] || PROMPTS.default;
-
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...conversationHistory,
-    { role: 'user', content: userMessage }
-  ];
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages,
-    max_tokens: 100,
-    temperature: 0.7
-  });
-
-  return response.choices[0].message.content;
-}
-
-/**
  * Stream a response from the dinosaur character, yielding complete sentences
  * @param {string} userMessage - User's message
  * @param {Array} conversationHistory - Previous messages for context
- * @param {string} personality - Which personality to use
  * @param {string} kidDetails - Optional kid personality/details to incorporate into prompt
  * @yields {string} - Complete sentences as they become available
  */
-async function* streamDinosaurResponse(userMessage, conversationHistory = [], personality = 'default', kidDetails = null) {
-  let systemPrompt = PROMPTS[personality] || PROMPTS.default;
+async function* streamDinosaurResponse(userMessage, conversationHistory = [], kidDetails = null) {
+  let systemPrompt = DINOSAUR_SYSTEM_PROMPT;
 
   // If kidDetails/kidContext provided, append it to the system prompt
   if (kidDetails) {
@@ -221,8 +176,5 @@ async function* streamDinosaurResponse(userMessage, conversationHistory = [], pe
 
 module.exports = {
   transcribeAudio,
-  generateDinosaurResponse,
-  streamDinosaurResponse,
-  extractCompleteSentences,
-  DINOSAUR_SYSTEM_PROMPT
+  streamDinosaurResponse
 };
