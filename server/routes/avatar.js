@@ -125,7 +125,7 @@ router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb'
           fullResponse += (fullResponse ? ' ' : '') + sentence;
 
           // Add nikud to the sentence for better TTS pronunciation
-          const sentenceWithNikud = await nakdanService.addNikud(sentence);
+          const sentenceWithNikud = sentence;//await nakdanService.addNikud(sentence);
           console.log(`Nikud: "${sentence}" -> "${sentenceWithNikud}"`);
 
           // Add text chunk to queue (with nikud for display)
