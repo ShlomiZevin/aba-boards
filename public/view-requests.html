@@ -209,14 +209,31 @@
             color: #92400e;
         }
 
-        .status-processing {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
         .status-completed {
             background: #d1fae5;
             color: #065f46;
+        }
+
+        .copy-success {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #48bb78;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
         }
 
         .request-meta {
@@ -422,7 +439,6 @@
             <select id="statusFilter">
                 <option value="all">הכל</option>
                 <option value="pending">ממתין לטיפול</option>
-                <option value="processing">בטיפול</option>
                 <option value="completed">הושלם</option>
             </select>
         </div>
@@ -435,10 +451,6 @@
             <div class="stat-card">
                 <div class="number" id="pendingRequests">0</div>
                 <div class="label">ממתינות לטיפול</div>
-            </div>
-            <div class="stat-card">
-                <div class="number" id="processingRequests">0</div>
-                <div class="label">בטיפול</div>
             </div>
             <div class="stat-card">
                 <div class="number" id="completedRequests">0</div>
@@ -506,12 +518,10 @@
         function updateStats() {
             const total = allRequests.length;
             const pending = allRequests.filter(r => r.status === 'pending').length;
-            const processing = allRequests.filter(r => r.status === 'processing').length;
             const completed = allRequests.filter(r => r.status === 'completed').length;
 
             document.getElementById('totalRequests').textContent = total;
             document.getElementById('pendingRequests').textContent = pending;
-            document.getElementById('processingRequests').textContent = processing;
             document.getElementById('completedRequests').textContent = completed;
         }
 
@@ -551,7 +561,6 @@
         function createRequestCard(request) {
             const statusLabels = {
                 pending: 'ממתין לטיפול',
-                processing: 'בטיפול',
                 completed: 'הושלם'
             };
 
@@ -683,13 +692,16 @@
 
                         <div class="action-buttons">
                             ${request.status === 'pending' ? `
-                                <button class="btn btn-primary" onclick="updateStatus('${request.id}', 'processing')">
+                                <button class="btn btn-primary" onclick="startProcess('${request.id}')">
                                     התחל טיפול 🚀
                                 </button>
                             ` : ''}
-                            ${request.status === 'processing' ? `
-                                <button class="btn btn-success" onclick="updateStatus('${request.id}', 'completed')">
-                                    סמן כהושלם ✅
+                            ${request.status === 'completed' ? `
+                                <button class="btn btn-success" onclick="copyJsonAgain('${request.id}')">
+                                    העתק JSON שוב 📋
+                                </button>
+                                <button class="btn btn-primary" onclick="prepareCustomerMessage('${request.id}')">
+                                    הכן הודעה ללקוח 💬
                                 </button>
                             ` : ''}
                             ${request.status === 'completed' && !request.createdBoardId ? `
@@ -711,18 +723,127 @@
             `;
         }
 
-        // Update request status
-        async function updateStatus(requestId, newStatus) {
+        // Start process - copy JSON to clipboard and mark as completed
+        async function startProcess(requestId) {
             try {
+                // Find the request
+                const request = allRequests.find(r => r.id === requestId);
+                if (!request) return;
+
+                // Create a clean JSON object with all the kid data
+                const kidJson = {
+                    childName: request.childName,
+                    age: request.age,
+                    gender: request.gender,
+                    childDescription: request.childDescription || '',
+                    behaviorGoals: request.behaviorGoals || '',
+                    tasks: request.tasks || '',
+                    rewards: request.rewards || '',
+                    additionalNotes: request.additionalNotes || '',
+                    dailyReward: request.dailyReward || 1,
+                    coinStyle: request.coinStyle || 'points',
+                    colorSchema: request.colorSchema || 'blue',
+                    showDino: request.showDino !== false,
+                    soundsEnabled: request.soundsEnabled !== false,
+                    childImage: request.childImage || null,
+                    parentInfo: {
+                        parentName: request.parentName,
+                        email: request.email,
+                        phone: request.phone
+                    },
+                    inviteToken: request.inviteToken || null
+                };
+
+                // Copy to clipboard
+                const jsonString = JSON.stringify(kidJson, null, 2);
+                await navigator.clipboard.writeText(jsonString);
+
+                // Show success notification
+                showCopySuccess('JSON הועתק ללוח! ✅');
+
+                // Update status to completed
                 await db.collection('boardRequests').doc(requestId).update({
-                    status: newStatus
+                    status: 'completed'
                 });
 
                 // Reload requests
                 await loadRequests();
             } catch (error) {
-                console.error('Error updating status:', error);
-                alert('שגיאה בעדכון הסטטוס');
+                console.error('Error starting process:', error);
+                alert('שגיאה בהעתקת הנתונים');
+            }
+        }
+
+        // Show copy success notification
+        function showCopySuccess(message) {
+            const notification = document.createElement('div');
+            notification.className = 'copy-success';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 2000);
+        }
+
+        // Copy JSON again for completed requests
+        async function copyJsonAgain(requestId) {
+            try {
+                const request = allRequests.find(r => r.id === requestId);
+                if (!request) return;
+
+                const kidJson = {
+                    childName: request.childName,
+                    age: request.age,
+                    gender: request.gender,
+                    childDescription: request.childDescription || '',
+                    behaviorGoals: request.behaviorGoals || '',
+                    tasks: request.tasks || '',
+                    rewards: request.rewards || '',
+                    additionalNotes: request.additionalNotes || '',
+                    dailyReward: request.dailyReward || 1,
+                    coinStyle: request.coinStyle || 'points',
+                    colorSchema: request.colorSchema || 'blue',
+                    showDino: request.showDino !== false,
+                    soundsEnabled: request.soundsEnabled !== false,
+                    childImage: request.childImage || null,
+                    parentInfo: {
+                        parentName: request.parentName,
+                        email: request.email,
+                        phone: request.phone
+                    },
+                    inviteToken: request.inviteToken || null
+                };
+
+                const jsonString = JSON.stringify(kidJson, null, 2);
+                await navigator.clipboard.writeText(jsonString);
+                showCopySuccess('JSON הועתק ללוח! ✅');
+            } catch (error) {
+                console.error('Error copying JSON:', error);
+                alert('שגיאה בהעתקת הנתונים');
+            }
+        }
+
+        // Prepare customer message
+        async function prepareCustomerMessage(requestId) {
+            try {
+                const request = allRequests.find(r => r.id === requestId);
+                if (!request) return;
+
+                const kidUrlName = prompt('הכנס את שם ה-URL של הילד (kid ID):');
+                if (!kidUrlName || !kidUrlName.trim()) return;
+
+                const kidUrl = kidUrlName.trim();
+                const childName = request.childName || 'הילד';
+
+                const message = `הלוח של ${childName}: https://aba-ai-d74f5.web.app/board.html?kid=${kidUrl}
+לוח ניהול של ${childName}: https://aba-ai-d74f5.web.app/board-builder.html?kid=${kidUrl} (סיסמה: 1234. ניתן לשנות בלוח)`;
+
+                await navigator.clipboard.writeText(message);
+                showCopySuccess('הודעה ללקוח הועתקה! ✅');
+            } catch (error) {
+                console.error('Error preparing message:', error);
+                alert('שגיאה ביצירת ההודעה');
             }
         }
 

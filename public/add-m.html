@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הוספת מ. למערכת</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #5BA3E0 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #5BA3E0;
+            text-align: center;
+        }
+        .kid-info {
+            background: #f0f7ff;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .kid-info h3 {
+            margin-top: 0;
+            color: #5BA3E0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #d5e5f5;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .tasks-list, .rewards-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .tasks-list h4, .rewards-list h4 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .task-item, .reward-item {
+            padding: 8px 12px;
+            background: white;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #5BA3E0 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .behavior-goals {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .behavior-goals h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .description {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .description h4 {
+            margin-top: 0;
+            color: #0c5460;
+        }
+        .special-note {
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid #f5c6cb;
+        }
+        .special-note h4 {
+            margin-top: 0;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💙 הוספת מ. למערכת 💙</h1>
+
+        <div class="kid-info">
+            <h3>פרטי הילד</h3>
+            <div class="info-row"><span>שם:</span><span>מ.</span></div>
+            <div class="info-row"><span>גיל:</span><span>11</span></div>
+            <div class="info-row"><span>מגדר:</span><span>בן</span></div>
+            <div class="info-row"><span>ערכת צבעים:</span><span>כחול</span></div>
+            <div class="info-row"><span>סוג מטבע:</span><span>שקל</span></div>
+            <div class="info-row"><span>פרס יומי:</span><span>5 ש"ח</span></div>
+            <div class="info-row"><span>דינו:</span><span>✅ כן</span></div>
+            <div class="info-row"><span>צלילים:</span><span>✅ כן</span></div>
+        </div>
+
+        <div class="description">
+            <h4>📝 תיאור</h4>
+            <p>בן 11, חרדות ועם בעיית קשב וריכוז. על הרצף. חובט בראשו ובמרפקו בעת דרישה של הקשבה לימודית. דורש סרט בצפייה במחשב. קושי במעברים - קשה לו לעזוב נדנדה בהפסקה בחצר, בסיום הפסקה שיחזור לכיתה - צועק, משתטח על הדשא, חוזר בליווי סיוע מהצוות.</p>
+        </div>
+
+        <div class="behavior-goals">
+            <h4>🎯 יעדים התנהגותיים</h4>
+            <p>ויסות רגשי, התמדה בהקשבה בשיעורים, שיפור בסבלנות ואיפוק, מעבר בין פעילויות</p>
+        </div>
+
+        <div class="special-note">
+            <h4>⚠️ הערות מיוחדות מההורים</h4>
+            <p>הורים ביקשו כרטיסיית ניווט ויזואלית לסייעת - "תסריט חברתי מקוצר" לשימוש בזמן לחץ. הכרטיסייה תכלול:</p>
+            <ul>
+                <li>צד א': "כשקשה לי" - אפשרויות: לבקש הפסקה, לבקש עזרה, לשתות מים, לנשום עמוק</li>
+                <li>צד ב': "קודם... ואחר כך..." - מבנה וביטחון</li>
+            </ul>
+        </div>
+
+        <div class="tasks-list">
+            <h4>משימות יומיות (4)</h4>
+            <div class="task-item">👂 הקשבה בשיעור</div>
+            <div class="task-item">🏫 חזרה מהחצר בסיום ההפסקה</div>
+            <div class="task-item">🧘 שלא יחבוט בראשו</div>
+            <div class="task-item">😌 ללא צעקות ושלא ישתטח ברצפה/דשא</div>
+        </div>
+
+        <div class="rewards-list">
+            <h4>פרסים (5)</h4>
+            <div class="reward-item">📺 10 ש"ח - זמן מסך בזמן פנוי</div>
+            <div class="reward-item">🍬 15 ש"ח - מחזק אכילי</div>
+            <div class="reward-item">🎁 20 ש"ח - מחזק מוחשי</div>
+            <div class="reward-item">🎨 25 ש"ח - יצירה אומנות</div>
+            <div class="reward-item">🎢 30 ש"ח - יציאה לחצר לנדנדה</div>
+        </div>
+
+        <button onclick="addM()">🌟 הוסף את מ. למערכת</button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function addM() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'info';
+            statusDiv.textContent = 'מוסיף את מ. למערכת...';
+
+            const kidId = 'm_special';
+
+            try {
+                // Check if מ. already exists
+                const existingDoc = await db.collection('kids').doc(kidId).get();
+                if (existingDoc.exists) {
+                    statusDiv.className = 'error';
+                    statusDiv.textContent = 'מ. כבר קיים במערכת! אנא מחק אותו קודם מעמוד הניהול.';
+                    return;
+                }
+
+                // Board layout with all tasks and goals
+                const boardLayout = {
+                    items: [
+                        // Bank (piggy bank)
+                        {
+                            id: 1,
+                            type: 'bank',
+                            label: 'הקופה של מ.'
+                        },
+                        // Progress bar
+                        {
+                            id: 2,
+                            type: 'progress',
+                            title: 'ההתקדמות שלי היום'
+                        },
+                        // Regular tasks header
+                        {
+                            id: 3,
+                            type: 'header',
+                            size: 'medium',
+                            text: '✨ המשימות שלי ✨'
+                        },
+                        // Task 1 - הקשבה בשיעור
+                        {
+                            id: 4,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 1,
+                                icon: '👂',
+                                title: 'הקשבה בשיעור',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4] // School days
+                            }
+                        },
+                        // Task 2 - חזרה מהחצר
+                        {
+                            id: 5,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 2,
+                                icon: '🏫',
+                                title: 'חזרה מהחצר בסיום ההפסקה',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4] // School days
+                            }
+                        },
+                        // Task 3 - לא לחבוט
+                        {
+                            id: 6,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 3,
+                                icon: '🧘',
+                                title: 'שלא יחבוט בראשו',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Task 4 - ללא צעקות
+                        {
+                            id: 7,
+                            type: 'task',
+                            taskType: 'regular',
+                            taskData: {
+                                id: 4,
+                                icon: '😌',
+                                title: 'ללא צעקות ושלא ישתטח ברצפה/דשא',
+                                type: 'regular',
+                                requiresTestimony: false,
+                                trackTime: false,
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Calm down header
+                        {
+                            id: 8,
+                            type: 'header',
+                            size: 'medium',
+                            text: '🧘 כשקשה לי - אני יכול לבחור 🧘'
+                        },
+                        // Calm down - Breathing
+                        {
+                            id: 9,
+                            type: 'task',
+                            taskType: 'calm-down',
+                            taskData: {
+                                id: 5,
+                                icon: '🌬️',
+                                title: 'לנשום עמוק',
+                                type: 'calm-down',
+                                activityType: 'breathing',
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Calm down - Water
+                        {
+                            id: 10,
+                            type: 'task',
+                            taskType: 'calm-down',
+                            taskData: {
+                                id: 6,
+                                icon: '💧',
+                                title: 'לשתות מים',
+                                type: 'calm-down',
+                                activityType: 'sensory',
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Calm down - Break
+                        {
+                            id: 11,
+                            type: 'task',
+                            taskType: 'calm-down',
+                            taskData: {
+                                id: 7,
+                                icon: '⏸️',
+                                title: 'לבקש הפסקה',
+                                type: 'calm-down',
+                                activityType: 'sensory',
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Calm down - Help
+                        {
+                            id: 12,
+                            type: 'task',
+                            taskType: 'calm-down',
+                            taskData: {
+                                id: 8,
+                                icon: '🙋',
+                                title: 'לבקש עזרה',
+                                type: 'calm-down',
+                                activityType: 'sensory',
+                                activeDays: [0, 1, 2, 3, 4, 5, 6]
+                            }
+                        },
+                        // Goals header
+                        {
+                            id: 13,
+                            type: 'header',
+                            size: 'medium',
+                            text: '🎁 הפרסים שלי 🎁'
+                        },
+                        // Goal 1 - 10 shekel - זמן מסך
+                        {
+                            id: 14,
+                            type: 'goal',
+                            icon: '📺',
+                            title: 'זמן מסך בזמן פנוי',
+                            pointsRequired: 10
+                        },
+                        // Goal 2 - 15 shekel - מחזק אכילי
+                        {
+                            id: 15,
+                            type: 'goal',
+                            icon: '🍬',
+                            title: 'מחזק אכילי',
+                            pointsRequired: 15
+                        },
+                        // Goal 3 - 20 shekel - מחזק מוחשי
+                        {
+                            id: 16,
+                            type: 'goal',
+                            icon: '🎁',
+                            title: 'מחזק מוחשי',
+                            pointsRequired: 20
+                        },
+                        // Goal 4 - 25 shekel - יצירה
+                        {
+                            id: 17,
+                            type: 'goal',
+                            icon: '🎨',
+                            title: 'יצירה אומנות',
+                            pointsRequired: 25
+                        },
+                        // Goal 5 - 30 shekel - נדנדה
+                        {
+                            id: 18,
+                            type: 'goal',
+                            icon: '🎢',
+                            title: 'יציאה לחצר לנדנדה',
+                            pointsRequired: 30
+                        }
+                    ]
+                };
+
+                // Create tasks array for backward compatibility
+                const tasks = boardLayout.items
+                    .filter(item => item.type === 'task' && item.taskType === 'regular')
+                    .map(item => item.taskData);
+
+                // Create מ.'s complete data
+                const mData = {
+                    name: 'מ.',
+                    imageName: '',
+                    age: 11,
+                    gender: 'boy',
+                    kidDescription: 'בן 11, חרדות ועם בעיית קשב וריכוז. על הרצף. חובט בראשו ובמרפקו בעת דרישה של הקשבה לימודית. דורש סרט בצפייה במחשב. קושי במעברים - קשה לו לעזוב נדנדה בהפסקה בחצר, בסיום הפסקה שיחזור לכיתה - צועק, משתטח על הדשא, חוזר בליווי סיוע מהצוות.',
+                    behaviorGoals: 'ויסות רגשי, התמדה בהקשבה בשיעורים, שיפור בסבלנות ואיפוק, מעבר בין פעילויות',
+                    personalInfo: 'ילד על הרצף עם חרדות ובעיית קשב וריכוז. זקוק לכרטיסיית ניווט ויזואלית לסייעת.',
+
+                    // Board
+                    tasks: tasks,
+                    boardLayout: boardLayout,
+
+                    // State
+                    completedTasks: [],
+                    completedBonusTasks: [],
+                    bonusRewardsEarned: {},
+                    totalMoney: 0,
+
+                    // Rewards
+                    dailyReward: 5,
+                    coinStyle: 'shekel',
+                    coinImageName: '',
+
+                    // Display
+                    colorSchema: 'blue',
+                    headerLabel: '',
+                    savingsLabel: 'הכסף שלי',
+                    regularTasksHeader: '✨ המשימות שלי ✨',
+                    bonusTasksHeader: '💰 משימות בונוס 💰',
+                    calmDownHeader: '🧘 כשקשה לי - אני יכול לבחור 🧘',
+
+                    // Features
+                    showDino: true,
+                    soundsEnabled: true,
+                    builderPin: '1234',
+
+                    // Timestamps
+                    todayRewardGiven: false,
+                    lastResetDate: new Date().toDateString(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
+                    // Parent info (for reference)
+                    parentInfo: {
+                        parentName: 'אורלי ברוך',
+                        email: 'orlybaruch420@gmail.com',
+                        phone: '0587044008'
+                    }
+                };
+
+                await db.collection('kids').doc(kidId).set(mData);
+
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `
+                    <strong>הצלחה! 🎉</strong><br>
+                    מ. נוסף למערכת עם ${tasks.length} משימות ו-5 פרסים!<br><br>
+                    <strong>הערה:</strong> הלוח כולל גם פינת הרגעה מיוחדת עם 4 אפשרויות: נשימה, מים, הפסקה, עזרה<br><br>
+                    <a href="board.html?kid=${kidId}" style="color: #5BA3E0; font-weight: bold;">💙 לחץ כאן לעבור ללוח של מ.</a><br><br>
+                    <a href="board-builder.html?kid=${kidId}" style="color: #667eea; font-weight: bold;">🛠️ עריכת הלוח בבונה הלוחות</a><br><br>
+                `;
+
+            } catch (error) {
+                console.error('Error adding מ.:', error);
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `
+                    <strong>שגיאה!</strong><br>
+                    ${error.message}<br><br>
+                    <small>נא לוודא שהגדרת את Firestore בפרויקט Firebase שלך.</small>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
