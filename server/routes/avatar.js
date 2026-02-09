@@ -4,6 +4,7 @@ const openaiService = require('../services/openai');
 const elevenlabsService = require('../services/elevenlabs');
 const lipsyncService = require('../services/lipsync');
 const firebaseService = require('../services/firebase');
+const nakdanService = require('../services/nakdan');
 
 // Per-user conversation history (keyed by userId, clears after 1 day)
 const conversations = new Map();
@@ -123,15 +124,19 @@ router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb'
 
           fullResponse += (fullResponse ? ' ' : '') + sentence;
 
-          // Add text chunk to queue
-          sessionQueue.textChunks.push({ text: sentence, index: sentenceIndex });
+          // Add nikud to the sentence for better TTS pronunciation
+          const sentenceWithNikud = await nakdanService.addNikud(sentence);
+          console.log(`Nikud: "${sentence}" -> "${sentenceWithNikud}"`);
+
+          // Add text chunk to queue (with nikud for display)
+          sessionQueue.textChunks.push({ text: sentenceWithNikud, index: sentenceIndex });
 
           const sentenceStart = Date.now();
 
           try {
-            // Generate audio for this sentence
+            // Generate audio for this sentence (using nikud version)
             if (lipSyncMethod === 'timestamps') {
-              const result = await elevenlabsService.generateSpeechWithTimestamps(sentence, voiceId, speed);
+              const result = await elevenlabsService.generateSpeechWithTimestamps(sentenceWithNikud, voiceId, speed);
 
               if (firstAudioTime === null) {
                 firstAudioTime = Date.now() - totalStart;
@@ -154,7 +159,7 @@ router.post('/converse-poll-start', express.raw({ type: 'audio/*', limit: '10mb'
 
               console.log(`✓ Queued audio for sentence ${sentenceIndex}, queue length: ${sessionQueue.chunks.length}`);
             } else {
-              const result = await elevenlabsService.generateSpeech(sentence, voiceId, speed);
+              const result = await elevenlabsService.generateSpeech(sentenceWithNikud, voiceId, speed);
 
               if (firstAudioTime === null) {
                 firstAudioTime = Date.now() - totalStart;
