@@ -1,0 +1,185 @@
+const express = require('express');
+const router = express.Router();
+const therapyService = require('../services/therapy');
+
+// Error handler wrapper
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
+
+// ==================== KIDS ====================
+
+router.get('/kids', asyncHandler(async (req, res) => {
+  const kids = await therapyService.getAllKids();
+  res.json(kids);
+}));
+
+router.get('/kids/:kidId', asyncHandler(async (req, res) => {
+  const kid = await therapyService.getKidById(req.params.kidId);
+  if (!kid) {
+    return res.status(404).json({ error: 'Kid not found' });
+  }
+  res.json(kid);
+}));
+
+// ==================== PRACTITIONERS ====================
+
+router.get('/kids/:kidId/practitioners', asyncHandler(async (req, res) => {
+  const practitioners = await therapyService.getPractitionersForKid(req.params.kidId);
+  res.json(practitioners);
+}));
+
+router.post('/kids/:kidId/practitioners', asyncHandler(async (req, res) => {
+  // TODO: Get adminId from auth when implemented
+  const adminId = 'michal-super-admin';
+  const practitioner = await therapyService.addPractitionerToKid(
+    req.params.kidId,
+    req.body,
+    adminId
+  );
+  res.status(201).json(practitioner);
+}));
+
+router.put('/practitioners/:id', asyncHandler(async (req, res) => {
+  const practitioner = await therapyService.updatePractitioner(req.params.id, req.body);
+  res.json(practitioner);
+}));
+
+router.delete('/practitioners/:id', asyncHandler(async (req, res) => {
+  await therapyService.deletePractitioner(req.params.id);
+  res.status(204).send();
+}));
+
+router.get('/practitioners/my-therapists', asyncHandler(async (req, res) => {
+  // TODO: Get adminId from auth when implemented
+  const adminId = 'michal-super-admin';
+  const therapists = await therapyService.getMyTherapists(adminId);
+  res.json(therapists);
+}));
+
+// ==================== PARENTS ====================
+
+router.get('/kids/:kidId/parents', asyncHandler(async (req, res) => {
+  const parents = await therapyService.getParentsForKid(req.params.kidId);
+  res.json(parents);
+}));
+
+router.post('/kids/:kidId/parents', asyncHandler(async (req, res) => {
+  const parent = await therapyService.addParentToKid(req.params.kidId, req.body);
+  res.status(201).json(parent);
+}));
+
+router.put('/parents/:id', asyncHandler(async (req, res) => {
+  const parent = await therapyService.updateParent(req.params.id, req.body);
+  res.json(parent);
+}));
+
+router.delete('/parents/:id', asyncHandler(async (req, res) => {
+  await therapyService.deleteParent(req.params.id);
+  res.status(204).send();
+}));
+
+// ==================== GOALS ====================
+
+router.get('/kids/:kidId/goals', asyncHandler(async (req, res) => {
+  const goals = await therapyService.getGoalsForKid(req.params.kidId);
+  res.json(goals);
+}));
+
+router.post('/kids/:kidId/goals', asyncHandler(async (req, res) => {
+  const goal = await therapyService.addGoalToKid(req.params.kidId, req.body);
+  res.status(201).json(goal);
+}));
+
+router.put('/goals/:id', asyncHandler(async (req, res) => {
+  const goal = await therapyService.updateGoal(req.params.id, req.body);
+  res.json(goal);
+}));
+
+router.delete('/goals/:id', asyncHandler(async (req, res) => {
+  await therapyService.deleteGoal(req.params.id);
+  res.status(204).send();
+}));
+
+router.get('/goals/library', asyncHandler(async (req, res) => {
+  const search = req.query.search || '';
+  if (search.length < 3) {
+    return res.json([]);
+  }
+  const results = await therapyService.searchGoalsLibrary(search);
+  res.json(results);
+}));
+
+// ==================== SESSIONS ====================
+
+router.get('/kids/:kidId/sessions', asyncHandler(async (req, res) => {
+  const filters = {
+    from: req.query.from,
+    to: req.query.to,
+    status: req.query.status,
+  };
+  const sessions = await therapyService.getSessionsForKid(req.params.kidId, filters);
+  res.json(sessions);
+}));
+
+router.post('/kids/:kidId/sessions', asyncHandler(async (req, res) => {
+  const session = await therapyService.scheduleSession(req.params.kidId, req.body);
+  res.status(201).json(session);
+}));
+
+router.put('/sessions/:id', asyncHandler(async (req, res) => {
+  const session = await therapyService.updateSession(req.params.id, req.body);
+  res.json(session);
+}));
+
+router.delete('/sessions/:id', asyncHandler(async (req, res) => {
+  await therapyService.deleteSession(req.params.id);
+  res.status(204).send();
+}));
+
+router.get('/sessions/alerts', asyncHandler(async (req, res) => {
+  const alerts = await therapyService.getSessionAlerts();
+  res.json(alerts);
+}));
+
+// ==================== FORMS ====================
+
+router.get('/kids/:kidId/forms', asyncHandler(async (req, res) => {
+  const forms = await therapyService.getFormsForKid(req.params.kidId);
+  res.json(forms);
+}));
+
+router.get('/forms/:id', asyncHandler(async (req, res) => {
+  const form = await therapyService.getFormById(req.params.id);
+  if (!form) {
+    return res.status(404).json({ error: 'Form not found' });
+  }
+  res.json(form);
+}));
+
+router.get('/sessions/:sessionId/form', asyncHandler(async (req, res) => {
+  const form = await therapyService.getFormForSession(req.params.sessionId);
+  if (!form) {
+    return res.status(404).json({ error: 'Form not found' });
+  }
+  res.json(form);
+}));
+
+router.post('/forms', asyncHandler(async (req, res) => {
+  const form = await therapyService.submitForm(req.body);
+  res.status(201).json(form);
+}));
+
+router.post('/forms/create-link', asyncHandler(async (req, res) => {
+  const { kidId, sessionId } = req.body;
+  const link = await therapyService.createFormLink(kidId, sessionId);
+  res.json(link);
+}));
+
+// Error handling middleware
+router.use((err, req, res, next) => {
+  console.error('Therapy API Error:', err);
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
+module.exports = router;

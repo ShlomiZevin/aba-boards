@@ -55,5 +55,55 @@ service cloud.firestore {
       // Prevent deletion for safety
       allow delete: if false;
     }
+
+    // ==================== THERAPY CENTER COLLECTIONS ====================
+    // Note: These are accessed via server-side Firebase Admin SDK
+    // which bypasses these rules. Rules here for documentation/future use.
+
+    // Practitioners collection (therapists + admins)
+    match /practitioners/{practitionerId} {
+      allow read, write: if true;
+    }
+
+    // Kid-Practitioner junction table
+    match /kidPractitioners/{linkId} {
+      allow read, write: if true;
+    }
+
+    // Parents collection
+    match /parents/{parentId} {
+      allow read, write: if true;
+    }
+
+    // Goal categories (pre-seeded)
+    match /goalCategories/{categoryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Goals per kid
+    match /goals/{goalId} {
+      allow read, write: if true;
+    }
+
+    // Goals library (for autocomplete)
+    match /goalsLibrary/{itemId} {
+      allow read, write: if true;
+    }
+
+    // Sessions
+    match /sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
+    // Session forms
+    match /sessionForms/{formId} {
+      allow read, write: if true;
+    }
+
+    // Form tokens
+    match /formTokens/{tokenId} {
+      allow read, write: if true;
+    }
   }
 }

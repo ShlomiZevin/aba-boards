@@ -5,6 +5,8 @@ const cors = require('cors');
 const path = require('path');
 
 const avatarRoutes = require('./routes/avatar');
+const therapyRoutes = require('./routes/therapy');
+const { initializeSuperAdmin, initializeGoalCategories } = require('./services/therapy');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +20,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API Routes
 app.use('/api/avatar', avatarRoutes);
+app.use('/api/therapy', therapyRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -25,7 +28,16 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Avatar server running on http://localhost:${PORT}`);
+app.listen(PORT, async () => {
+  console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Test page: http://localhost:${PORT}/test-avatar.html`);
+  console.log(`Therapy API: http://localhost:${PORT}/api/therapy`);
+
+  // Initialize therapy data
+  try {
+    await initializeSuperAdmin();
+    await initializeGoalCategories();
+  } catch (err) {
+    console.error('Failed to initialize therapy data:', err.message);
+  }
 });

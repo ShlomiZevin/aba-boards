@@ -1,0 +1,13 @@
+{
+  "name": "aba-boards",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:therapy": "cd therapy-center && npm run dev",
+    "dev:server": "cd server && npm start",
+    "build:therapy": "cd therapy-center && npm run build",
+    "deploy": "node deploy.js",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules"
+  }
+}
