@@ -27,9 +27,22 @@ function KidCard({ kid }: { kid: Kid }) {
         </div>
       </Link>
       <div className="kid-card-actions">
-        <a href={`/board.html?kid=${kid.id}`} className="kid-action-btn" title="לוח">📱</a>
-        <a href={`/board-builder.html?kid=${kid.id}`} className="kid-action-btn" title="בנה לוח">🎨</a>
-        <a href={`/stats.html?kid=${kid.id}`} className="kid-action-btn" title="סטטיסטיקה">📊</a>
+        <Link to={`/kid/${kid.id}`} className="kid-action-btn with-label">
+          <span className="action-icon">🏠</span>
+          <span className="action-label">דף ילד</span>
+        </Link>
+        <a href={`/board.html?kid=${kid.id}`} className="kid-action-btn with-label">
+          <span className="action-icon">📱</span>
+          <span className="action-label">לוח</span>
+        </a>
+        <a href={`/board-builder.html?kid=${kid.id}`} className="kid-action-btn with-label">
+          <span className="action-icon">🎨</span>
+          <span className="action-label">בנה לוח</span>
+        </a>
+        <a href={`/stats.html?kid=${kid.id}`} className="kid-action-btn with-label">
+          <span className="action-icon">📊</span>
+          <span className="action-label">סטטיסטיקה</span>
+        </a>
       </div>
     </div>
   );

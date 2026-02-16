@@ -178,12 +178,16 @@ body {
 
 .kid-action-btn {
   flex: 1;
-  padding: 10px;
+  padding: 10px 6px;
   text-align: center;
   text-decoration: none;
   font-size: 1.15em;
   transition: all 0.2s ease;
   border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .kid-action-btn:first-child {
@@ -192,6 +196,30 @@ body {
 
 .kid-action-btn:hover {
   background: #f1f5f9;
+}
+
+.kid-action-btn.with-label .action-icon {
+  font-size: 1em;
+  line-height: 1;
+}
+
+.kid-action-btn.with-label .action-label {
+  font-size: 0.65em;
+  color: #64748b;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.kid-action-btn.with-label:hover .action-label {
+  opacity: 1;
+  max-height: 20px;
+}
+
+.kid-card-container:hover .kid-action-btn.with-label .action-label {
+  opacity: 1;
+  max-height: 20px;
 }
 
 /* Kid Card */
