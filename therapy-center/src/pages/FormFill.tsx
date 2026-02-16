@@ -243,7 +243,7 @@ export default function FormFill() {
           </Link>
         </div>
         <h1 style={{ fontSize: '1.4em', fontWeight: 700, color: '#2d3748', margin: 0 }}>
-          {isEditMode ? 'עריכת טופס' : 'טופס פגישה'} {kid ? `- ${kid.name}` : ''}
+          {isEditMode ? 'עריכת טופס' : 'טופס טיפול'} {kid ? `- ${kid.name}` : ''}
         </h1>
       </div>
 
@@ -251,7 +251,7 @@ export default function FormFill() {
 
         <form onSubmit={handleSubmit}>
           {/* Basic Info */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+          <div className="form-row-2">
             <div className="form-group">
               <label>מטפלת *</label>
               <select
@@ -271,7 +271,7 @@ export default function FormFill() {
             </div>
 
             <div className="form-group">
-              <label>תאריך הפגישה *</label>
+              <label>תאריך הטיפול *</label>
               <input
                 type="date"
                 value={sessionDate}
@@ -281,23 +281,36 @@ export default function FormFill() {
             </div>
           </div>
 
-          {/* Structured Fields */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-            <div className="form-group">
-              <label>שיתוף פעולה: {cooperation}%</label>
-              <div className="slider-container">
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  step="5"
-                  value={cooperation}
-                  onChange={(e) => setCooperation(Number(e.target.value))}
-                />
-                <span className="slider-value">{cooperation}%</span>
-              </div>
+          {/* Cooperation - Mobile friendly percentage selector */}
+          <div className="form-group">
+            <label>שיתוף פעולה</label>
+            <div className="percentage-selector">
+              {[20, 40, 60, 80, 100].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  className={`percentage-btn ${cooperation === val ? 'active' : ''}`}
+                  onClick={() => setCooperation(val)}
+                >
+                  {val}%
+                </button>
+              ))}
             </div>
+            <div className="slider-container mobile-hidden">
+              <input
+                type="range"
+                min="10"
+                max="100"
+                step="5"
+                value={cooperation}
+                onChange={(e) => setCooperation(Number(e.target.value))}
+              />
+              <span className="slider-value">{cooperation}%</span>
+            </div>
+          </div>
 
+          {/* Duration Fields */}
+          <div className="form-row-2">
             <div className="form-group">
               <label>משך הטיפול (דקות)</label>
               <input

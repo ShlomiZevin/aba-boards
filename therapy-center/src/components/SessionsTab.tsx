@@ -55,7 +55,7 @@ function ScheduleModal({ onClose, onSchedule, therapists }: ScheduleModalProps) 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>תזמון פגישה חדשה</h3>
+        <h3>תזמון טיפול חדשה</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>תאריך</label>
@@ -227,7 +227,7 @@ export default function SessionsTab({ kidId }: { kidId: string }) {
     const startDate = toDate(s.scheduledDate);
     return {
       id: s.id,
-      title: therapists.find((t: Practitioner) => t.id === s.therapistId)?.name || 'פגישה',
+      title: therapists.find((t: Practitioner) => t.id === s.therapistId)?.name || 'טיפול',
       start: startDate,
       end: new Date(startDate.getTime() + 60 * 60 * 1000),
       resource: s,
@@ -235,7 +235,7 @@ export default function SessionsTab({ kidId }: { kidId: string }) {
   });
 
   if (isLoading) {
-    return <div className="loading">טוען פגישות...</div>;
+    return <div className="loading">טוען טיפולים...</div>;
   }
 
   // Count pending forms
@@ -272,7 +272,7 @@ export default function SessionsTab({ kidId }: { kidId: string }) {
             onClick={() => setShowScheduleModal(true)}
             className="btn-primary btn-small"
           >
-            + פגישה חדשה
+            + טיפול חדשה
           </button>
         </div>
       </div>
@@ -280,7 +280,7 @@ export default function SessionsTab({ kidId }: { kidId: string }) {
       {/* Pending alert */}
       {pendingCount > 0 && (
         <div className="pending-alert">
-          {pendingCount} פגישות ממתינות לטופס
+          {pendingCount} טיפולים ממתינים לטופס
         </div>
       )}
 
@@ -289,7 +289,7 @@ export default function SessionsTab({ kidId }: { kidId: string }) {
         <div>
           {sessions.length === 0 ? (
             <div className="empty-state">
-              <p>אין פגישות</p>
+              <p>אין טיפולים</p>
             </div>
           ) : (
             sessions
@@ -354,8 +354,8 @@ export default function SessionsTab({ kidId }: { kidId: string }) {
       {/* Delete Confirmation Modal */}
       {sessionToDelete && (
         <ConfirmModal
-          title="מחיקת פגישה"
-          message={`האם למחוק את הפגישה מתאריך ${format(
+          title="מחיקת טיפול"
+          message={`האם למחוק את הטיפול מתאריך ${format(
             toDate(sessionToDelete.scheduledDate),
             'dd/MM/yyyy'
           )}?`}

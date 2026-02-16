@@ -673,6 +673,69 @@ body {
   text-align: right;
 }
 
+/* Form Rows - Responsive */
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* Percentage Selector - Mobile Friendly */
+.percentage-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.percentage-btn {
+  flex: 1;
+  min-width: 50px;
+  padding: 12px 8px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.percentage-btn:hover {
+  border-color: #667eea;
+  background: #f8fafc;
+}
+
+.percentage-btn.active {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+/* Hide slider on mobile, show on desktop */
+.mobile-hidden {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-hidden {
+    display: flex;
+  }
+
+  .percentage-selector {
+    display: none;
+  }
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -2012,12 +2075,67 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
+  body {
+    padding: 12px;
+  }
+
+  .container {
+    max-width: 100%;
+  }
+
   .kids-grid {
     grid-template-columns: 1fr;
   }
 
   .form-view-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Form responsive */
+  .form-row-2,
+  .form-row-3 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    padding: 14px 16px;
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-actions button,
+  .form-actions a {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rich-editor {
+    min-height: auto;
+  }
+
+  .rich-editor-content {
+    min-height: 80px;
+  }
+
+  .content-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .kid-header-card {
+    padding: 16px;
+    border-radius: 16px;
   }
 
   .kid-detail-header {

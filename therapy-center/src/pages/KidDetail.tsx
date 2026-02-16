@@ -200,7 +200,7 @@ export default function KidDetail() {
     if (isMultiple) {
       return {
         id: dateKey,
-        title: `${daySessions.length} פגישות`,
+        title: `${daySessions.length} טיפולים`,
         start: startDate,
         end: new Date(startDate.getTime() + 60 * 60 * 1000),
         resource: { isMultiple: true, sessions: daySessions, allHaveForms, someHaveForms },
@@ -209,7 +209,7 @@ export default function KidDetail() {
       const therapist = practitioners.find((t: Practitioner) => t.id === daySessions[0].therapistId);
       return {
         id: daySessions[0].id,
-        title: therapist?.name || 'פגישה',
+        title: therapist?.name || 'טיפול',
         start: startDate,
         end: new Date(startDate.getTime() + 60 * 60 * 1000),
         resource: daySessions[0],
@@ -272,9 +272,9 @@ export default function KidDetail() {
             {kid.age && <div className="kid-header-age">גיל {kid.age}</div>}
             <div className="kid-header-stats">
               <span>{activeGoals.length} מטרות פעילות</span>
-              <span>{sessions.length} פגישות</span>
+              <span>{sessions.length} טיפולים</span>
               {pendingSessions.length > 0 && (
-                <span className="pending-badge">{pendingSessions.length} ממתינות לטופס</span>
+                <span className="pending-badge">{pendingSessions.length} ממתינים לטופס</span>
               )}
             </div>
           </div>
@@ -413,7 +413,7 @@ export default function KidDetail() {
       {/* Sessions Section - Full Width */}
       <div className="content-card sessions-section">
         <div className="sessions-header">
-          <h3>פגישות</h3>
+          <h3>טיפולים</h3>
           <div className="sessions-actions">
             <button
               onClick={() => navigate(`/form/new?kidId=${kidId}`)}
@@ -425,14 +425,14 @@ export default function KidDetail() {
               onClick={() => setShowScheduleSession(true)}
               className="btn-primary btn-small"
             >
-              + פגישה חדשה
+              + טיפול חדשה
             </button>
           </div>
         </div>
 
         {pendingSessions.length > 0 && (
           <div className="pending-alert">
-            {pendingSessions.length} פגישות ממתינות לטופס
+            {pendingSessions.length} טיפולים ממתינים לטופס
           </div>
         )}
 
@@ -471,7 +471,7 @@ export default function KidDetail() {
                         setShowDaySessions(true);
                       }}
                     >
-                      <div className="calendar-event-title">{daySessions.length} פגישות</div>
+                      <div className="calendar-event-title">{daySessions.length} טיפולים</div>
                       <div className={`calendar-event-status ${allHaveForms ? 'has-form' : someHaveForms ? 'partial' : 'no-form'}`}>
                         {allHaveForms ? '✓ כל הטפסים מולאו' : someHaveForms ? '⚠ חלק מולאו' : '+ ממתין למילוי'}
                       </div>
@@ -533,9 +533,9 @@ export default function KidDetail() {
 
         {/* Recent Sessions List */}
         <div className="recent-sessions">
-          <h4>פגישות אחרונות</h4>
+          <h4>טיפולים אחרונות</h4>
           {sessions.length === 0 ? (
-            <p className="empty-text">אין פגישות</p>
+            <p className="empty-text">אין טיפולים</p>
           ) : (
             <div className="sessions-list">
               {sessions
@@ -674,7 +674,7 @@ export default function KidDetail() {
 
       {/* Schedule Session Modal */}
       {showScheduleSession && (
-        <AddModal title="תזמון פגישה חדשה" onClose={() => setShowScheduleSession(false)}>
+        <AddModal title="תזמון טיפול חדשה" onClose={() => setShowScheduleSession(false)}>
           <form onSubmit={(e) => {
             e.preventDefault();
             scheduleSessionMutation.mutate({
@@ -722,8 +722,8 @@ export default function KidDetail() {
       {/* Delete Session Modal */}
       {sessionToDelete && (
         <ConfirmModal
-          title="מחיקת פגישה"
-          message={`האם למחוק את הפגישה מתאריך ${format(toDate(sessionToDelete.scheduledDate), 'dd/MM/yyyy')}?`}
+          title="מחיקת טיפול"
+          message={`האם למחוק את הטיפול מתאריך ${format(toDate(sessionToDelete.scheduledDate), 'dd/MM/yyyy')}?`}
           confirmText="מחק"
           confirmStyle="danger"
           onConfirm={() => deleteSessionMutation.mutate(sessionToDelete.id)}
@@ -748,8 +748,8 @@ export default function KidDetail() {
                 }}
               >
                 <span className="date-action-icon">📅</span>
-                <span className="date-action-label">תזמן פגישה</span>
-                <span className="date-action-desc">הוסף פגישה ללוח השנה</span>
+                <span className="date-action-label">תזמן טיפול</span>
+                <span className="date-action-desc">הוסף טיפול ללוח השנה</span>
               </button>
               <button
                 className="date-action-btn form"
@@ -760,7 +760,7 @@ export default function KidDetail() {
               >
                 <span className="date-action-icon">📝</span>
                 <span className="date-action-label">מלא טופס</span>
-                <span className="date-action-desc">מלא טופס פגישה ישירות</span>
+                <span className="date-action-desc">מלא טופס טיפול ישירות</span>
               </button>
             </div>
             <button
@@ -778,7 +778,7 @@ export default function KidDetail() {
       {showDaySessions && selectedDate && (
         <div className="modal-overlay" onClick={() => setShowDaySessions(false)}>
           <div className="modal day-sessions-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>פגישות ב-{format(selectedDate, 'dd/MM/yyyy')}</h3>
+            <h3>טיפולים ב-{format(selectedDate, 'dd/MM/yyyy')}</h3>
             <div className="day-sessions-list">
               {daySessionsList.map((session) => {
                 const therapist = practitioners.find((t: Practitioner) => t.id === session.therapistId);
@@ -797,7 +797,7 @@ export default function KidDetail() {
                     }}
                   >
                     <div className="day-session-info">
-                      <span className="day-session-therapist">{therapist?.name || 'פגישה'}</span>
+                      <span className="day-session-therapist">{therapist?.name || 'טיפול'}</span>
                       <span className="day-session-time">
                         {format(toDate(session.scheduledDate), 'HH:mm')}
                       </span>
