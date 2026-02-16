@@ -480,6 +480,25 @@
             background: #4a5568;
         }
 
+        .additional-badge {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-weight: 600;
+            font-size: 1em;
+            display: inline-block;
+        }
+
+        .additional-badge span {
+            margin-left: 5px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
         @media (max-width: 640px) {
             body {
                 padding: 12px;
@@ -508,6 +527,10 @@
         <div class="header">
             <h1>🎯 בקשה ליצירת לוח משימות</h1>
             <p>מלאו את הפרטים הבאים ואני אכין עבורכם לוח משימות מותאם אישית לילד/ה שלכם</p>
+            <!-- Additional board indicator -->
+            <div id="additionalBoardBadge" class="additional-badge hidden">
+                <span>🎯</span> זוהי בקשה ללוח נוסף
+            </div>
         </div>
 
         <form id="boardRequestForm" class="form-card">
@@ -755,6 +778,7 @@
         const prefillName = urlParams.get('name');
         const prefillAge = urlParams.get('age');
         const prefillGender = urlParams.get('gender');
+        const isAdditionalBoard = urlParams.get('additional') === 'true';
 
         // Pre-fill form fields if coming from add-kid page
         document.addEventListener('DOMContentLoaded', () => {
@@ -766,6 +790,11 @@
             }
             if (prefillGender) {
                 document.getElementById('gender').value = prefillGender;
+            }
+
+            // Show additional board badge if this is an additional board request
+            if (isAdditionalBoard) {
+                document.getElementById('additionalBoardBadge').classList.remove('hidden');
             }
         });
 
@@ -1121,7 +1150,8 @@
                     status: 'pending', // pending, processing, completed
                     submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     createdBoardId: null,
-                    inviteToken: inviteToken || null
+                    inviteToken: inviteToken || null,
+                    isAdditionalBoard: isAdditionalBoard
                 };
 
                 // Save to Firestore

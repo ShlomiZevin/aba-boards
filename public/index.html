@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doing - לוח משימות לילדים</title>
+    <title>Doing - לוח משימות חכם לילדים</title>
 
     <!-- Prevent caching -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
         * {
@@ -30,11 +34,11 @@
 
         .container {
             background: white;
-            padding: 40px;
-            border-radius: 20px;
+            padding: 50px 40px;
+            border-radius: 24px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             text-align: center;
-            max-width: 500px;
+            max-width: 440px;
             width: 100%;
         }
 
@@ -43,83 +47,318 @@
             margin-bottom: 20px;
         }
 
-        h1 {
-            color: #667eea;
-            font-size: 2em;
-            margin-bottom: 10px;
+        .headline {
+            color: #1a1a2e;
+            font-size: 1.5em;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 16px;
         }
 
-        p {
+        .tagline {
             color: #666;
-            font-size: 1.1em;
-            margin-bottom: 30px;
-        }
-
-        .message {
-            background: #f5f0ff;
-            padding: 20px;
-            border-radius: 12px;
+            font-size: 1.05em;
+            line-height: 1.8;
             margin-bottom: 20px;
-        }
-
-        .message h3 {
-            color: #764ba2;
-            margin-bottom: 10px;
-        }
-
-        .message p {
-            margin-bottom: 0;
-            font-size: 1em;
+            text-align: center;
         }
 
         .links {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 8px;
         }
 
-        a {
+        .btn-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        a, .link-btn {
             display: block;
-            padding: 15px 25px;
+            width: 100%;
+            padding: 18px 25px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             text-decoration: none;
-            border-radius: 10px;
+            border-radius: 14px;
             font-size: 1.1em;
             font-weight: bold;
             transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            text-align: center;
         }
 
-        a:hover {
+        a:hover, .link-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
         }
 
-        a.secondary {
-            background: #f0f0f0;
+        a.secondary, .link-btn.secondary {
+            background: white;
             color: #667eea;
+            border: 2px solid #667eea;
+            padding: 16px 25px;
         }
 
-        a.secondary:hover {
+        a.secondary:hover, .link-btn.secondary:hover {
+            background: #f8f5ff;
+        }
+
+        .micro-copy {
+            color: #888;
+            font-size: 0.85em;
+            margin-top: 6px;
+            margin-bottom: 12px;
+        }
+
+        .trust-signal {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 0.8em;
+            line-height: 1.5;
+        }
+
+        /* Existing board card */
+        .board-card {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid #4CAF50;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .board-card h3 {
+            color: #2e7d32;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .board-card .kid-name {
+            font-size: 1.5em;
+            color: #1b5e20;
+            font-weight: bold;
+            margin-bottom: 18px;
+        }
+
+        .board-card .board-links {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .board-card .board-links a {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 15px;
+            font-size: 0.95em;
+        }
+
+        .board-card .board-links a.builder-link {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            border: none;
+        }
+
+        .board-card .board-links a.builder-link:hover {
+            box-shadow: 0 5px 20px rgba(255, 152, 0, 0.4);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .divider-line {
+            flex: 1;
+            height: 1px;
             background: #e0e0e0;
+        }
+
+        .divider-text {
+            padding: 0 15px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        /* Loading state */
+        .loading {
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 35px 25px;
+            }
+
+            .logo {
+                width: 160px;
+            }
+
+            .headline {
+                font-size: 1.3em;
+            }
+
+            .description {
+                font-size: 0.9em;
+            }
+
+            .trust-signal {
+                font-size: 0.75em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <img src="doing-logo-transparent2.png" alt="Doing" class="logo">
-        <h1>Doing</h1>
-        <p>מערכת לוחות משימות לילדים</p>
 
-        <div class="message">
-            <h3>ברוכים הבאים!</h3>
-            <p>כדי לגשת ללוח משימות, יש צורך בקישור ייעודי עם מזהה הילד.</p>
+        <!-- Loading state -->
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
         </div>
 
-        <div class="links">
-            <a href="request-board.html">בקשת לוח חדש</a>
-            <a href="add-kid.html" class="secondary">יצירת לוח עצמאית</a>
+        <!-- Content shown after loading -->
+        <div id="mainContent" class="hidden">
+            <!-- Existing board card - shown only if user has a board -->
+            <div id="existingBoardCard" class="board-card hidden">
+                <h3>הלוח שלך</h3>
+                <div class="kid-name" id="kidNameDisplay">טוען...</div>
+                <div class="board-links">
+                    <a href="#" id="boardLink">לוח המשימות</a>
+                    <a href="#" id="builderLink" class="builder-link">עריכת הלוח</a>
+                </div>
+            </div>
+
+            <!-- Divider shown when user has a board -->
+            <div id="boardDivider" class="divider hidden">
+                <div class="divider-line"></div>
+                <div class="divider-text">רוצים לוח נוסף?</div>
+                <div class="divider-line"></div>
+            </div>
+
+            <!-- Content for new users -->
+            <div id="newUserContent">
+                <p class="tagline">לוח משימות ויזואלי וחכם שהופך את סדר היום של הילד למשחק מעצים. בעזרת דמות AI מלווה, הילדים מבצעים משימות, צוברים חיזוקים ולומדים עצמאות.</p>
+                <h1 class="headline">הגיע הזמן להפסיק לרדוף<br>ולהתחיל ליהנות.</h1>
+            </div>
+
+            <div class="links">
+                <div class="btn-wrapper">
+                    <a href="add-kid.html" id="createBoardLink">אני רוצה ליצור לוח בעצמי</a>
+                    <span class="micro-copy">מהיר, פשוט וחווייתי</span>
+                </div>
+                <div class="btn-wrapper">
+                    <a href="request-board.html" id="requestBoardLink" class="secondary">אשמח שתבנו עבורי לוח</a>
+                    <span class="micro-copy">נאפיין יחד את המטרות והחיזוקים</span>
+                </div>
+            </div>
+
+            <p id="trustSignal" class="trust-signal">פותח על ידי מנתחת התנהגות (ABA) לחיזוק העצמאות והוויסות.</p>
         </div>
     </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",
+            authDomain: "aba-ai-d74f5.firebaseapp.com",
+            projectId: "aba-ai-d74f5",
+            storageBucket: "aba-ai-d74f5.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const loadingState = document.getElementById('loadingState');
+            const mainContent = document.getElementById('mainContent');
+            const existingBoardCard = document.getElementById('existingBoardCard');
+            const boardDivider = document.getElementById('boardDivider');
+            const newUserContent = document.getElementById('newUserContent');
+            const trustSignal = document.getElementById('trustSignal');
+            const createBoardLink = document.getElementById('createBoardLink');
+            const requestBoardLink = document.getElementById('requestBoardLink');
+
+            // Check if user has created a board
+            const savedKidId = localStorage.getItem('createdKidId');
+            const usedToken = localStorage.getItem('addKidTokenUsed');
+
+            if (savedKidId) {
+                // User has a board - fetch kid data and show board card
+                try {
+                    const kidDoc = await db.collection('kids').doc(savedKidId).get();
+
+                    if (kidDoc.exists) {
+                        const kidData = kidDoc.data();
+
+                        // Show the board card
+                        document.getElementById('kidNameDisplay').textContent = kidData.name || 'הילד שלי';
+                        document.getElementById('boardLink').href = `board.html?kid=${savedKidId}`;
+                        document.getElementById('builderLink').href = `board-builder.html?kid=${savedKidId}`;
+
+                        existingBoardCard.classList.remove('hidden');
+                        boardDivider.classList.remove('hidden');
+                        newUserContent.classList.add('hidden');
+                        trustSignal.classList.add('hidden');
+
+                        // Hide the self-create option (they already used it)
+                        createBoardLink.parentElement.classList.add('hidden');
+
+                        // Update request link to indicate it's an additional board
+                        requestBoardLink.textContent = 'בקשת לוח נוסף';
+                        requestBoardLink.href = 'request-board.html?additional=true';
+                        requestBoardLink.classList.remove('secondary');
+                        requestBoardLink.nextElementSibling.textContent = 'לילד/ה נוסף/ת';
+                    } else {
+                        // Kid doesn't exist anymore - clear localStorage
+                        localStorage.removeItem('createdKidId');
+                        localStorage.removeItem('addKidTokenUsed');
+                    }
+                } catch (error) {
+                    console.error('Error fetching kid data:', error);
+                    // On error, still show the basic view
+                }
+            } else if (usedToken) {
+                // User used their token but we don't have the kidId stored
+                // Hide the self-create option
+                createBoardLink.parentElement.classList.add('hidden');
+                requestBoardLink.textContent = 'בקשת לוח';
+                requestBoardLink.href = 'request-board.html?additional=true';
+                requestBoardLink.classList.remove('secondary');
+            }
+
+            // Show main content and hide loading
+            loadingState.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+        });
+    </script>
 </body>
 </html>

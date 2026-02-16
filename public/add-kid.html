@@ -219,12 +219,30 @@
         }
 
         .token-invalid h2 {
-            color: #721c24;
+            color: #2e7d32;
             margin-bottom: 15px;
         }
 
         .token-invalid p {
             color: #666;
+            margin-bottom: 25px;
+        }
+
+        .request-link {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .request-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
         }
 
         .hidden {
@@ -262,9 +280,10 @@
 
         <!-- Token invalid/used state -->
         <div id="tokenInvalid" class="token-invalid hidden">
-            <div class="icon">🔒</div>
-            <h2>הקישור אינו תקף</h2>
-            <p>קישור זה כבר נוצל או שאינו קיים.<br>אנא פנה לקבלת קישור חדש.</p>
+            <div class="icon">✅</div>
+            <h2>כבר יצרתם לוח</h2>
+            <p>ניתן ליצור לוח אחד בלבד באופן עצמאי.<br>רוצים לוח נוסף? מלאו טופס ונבנה עבורכם.</p>
+            <a href="request-board.html?additional=true" class="request-link">בקשת לוח נוסף</a>
         </div>
 
         <!-- Main form -->
@@ -638,6 +657,8 @@
 
                 // Mark in localStorage that this browser has used their one-time access
                 localStorage.setItem('addKidTokenUsed', currentToken);
+                // Also store the kidId so we can show the board on the home page
+                localStorage.setItem('createdKidId', kidId);
 
                 // Show PIN info before redirecting
                 alert(`הלוח נוצר בהצלחה! 🎉\n\nכעת תועברו לבונה הלוחות.\n\n🔐 קוד הגישה הראשוני: 1234\n\nתוכלו לשנות את הקוד בהגדרות הלוח.`);
