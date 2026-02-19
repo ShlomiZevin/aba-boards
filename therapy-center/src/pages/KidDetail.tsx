@@ -29,7 +29,15 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-const DnDCalendar = withDragAndDrop(Calendar);
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  resource: Session | { isMultiple: true; sessions: Session[]; allHaveForms: boolean; someHaveForms: boolean };
+}
+
+const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
 
 // Quick Action Link Component
 function QuickActionLink({ href, label, icon, color }: { href: string; label: string; icon: string; color: string }) {
@@ -356,7 +364,7 @@ export default function KidDetail() {
   }, {});
 
   // Calendar events - one per day (grouped if multiple)
-  const calendarEvents = Object.entries(sessionsByDate).map(([dateKey, daySessions]) => {
+  const calendarEvents: CalendarEvent[] = Object.entries(sessionsByDate).map(([dateKey, daySessions]) => {
     const startDate = toDate(daySessions[0].scheduledDate);
     const isMultiple = daySessions.length > 1;
     const allHaveForms = daySessions.every(s => s.formId);
@@ -668,11 +676,10 @@ export default function KidDetail() {
             onNavigate={(newDate) => setCalendarDate(newDate)}
             selectable
             draggableAccessor={() => !isTherapistView}
-            onEventDrop={({ event, start }: { event: object; start: Date | string }) => {
+            onEventDrop={({ event, start }: { event: CalendarEvent; start: Date | string }) => {
               if (isTherapistView) return;
-              const calEvent = event as { resource: Session | { isMultiple: boolean; sessions: Session[] } };
-              const resource = calEvent.resource;
-              if ('isMultiple' in resource && resource.isMultiple) return; // skip multi-day groups
+              const { resource } = event;
+              if ('isMultiple' in resource && resource.isMultiple) return;
               const session = resource as Session;
               const oldDate = toDate(session.scheduledDate);
               const newStart = new Date(start);

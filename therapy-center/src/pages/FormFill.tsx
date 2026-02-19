@@ -80,7 +80,7 @@ export default function FormFill() {
     // Build field values from form data
     const values: Record<string, string | number> = {};
     for (const section of template) {
-      const knownValue = (form as Record<string, unknown>)[section.id];
+      const knownValue = (form as unknown as Record<string, unknown>)[section.id];
       if (knownValue !== undefined) {
         values[section.id] = knownValue as string | number;
       } else if (form.customFields?.[section.id] !== undefined) {

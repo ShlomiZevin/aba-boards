@@ -129,7 +129,7 @@ export default function FormView() {
 
   // Get value for a field from form data
   const getFieldValue = (section: FormTemplateSection): string | number | undefined => {
-    const knownValue = (form as Record<string, unknown>)[section.id];
+    const knownValue = (form as unknown as Record<string, unknown>)[section.id];
     if (knownValue !== undefined) return knownValue as string | number;
     if (form.customFields?.[section.id] !== undefined) return form.customFields[section.id];
     return undefined;

@@ -70,14 +70,9 @@ export default function GoalsWeeklyTable({
     return sDate >= sunday && sDate <= saturdayEnd && sDate <= formDate;
   });
   const formsSessionIds = new Set(weekForms.map((f: SessionForm) => f.sessionId).filter(Boolean));
-  const allFormIds = new Set(weekForms.map((f: SessionForm) => f.id));
   const unfilledSessions = weekSessions.filter((s: Session) =>
     !s.formId && !formsSessionIds.has(s.id)
-  ).filter((s: Session) => {
-    // Don't show the current session being filled
-    if (currentFormId) return true;
-    return true;
-  });
+  );
 
   // Group goals by category
   const goalsByCategory = GOAL_CATEGORIES.map(cat => ({
