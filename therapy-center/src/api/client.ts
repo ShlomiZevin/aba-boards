@@ -68,6 +68,11 @@ export const practitionersApi = {
     }),
   delete: (id: string) =>
     fetchApi<void>(`/practitioners/${id}`, { method: 'DELETE' }),
+  linkExisting: (kidId: string, practitionerId: string) =>
+    fetchApi<void>(`/kids/${kidId}/practitioners/link`, {
+      method: 'POST',
+      body: JSON.stringify({ practitionerId }),
+    }),
   getMyTherapists: () => fetchApi<Practitioner[]>('/practitioners/my-therapists'),
   getKidsForPractitioner: (practitionerId: string) =>
     fetchApi<Kid[]>(`/practitioners/${practitionerId}/kids`),

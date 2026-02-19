@@ -114,6 +114,32 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Admin quick links */}
+      {!isTherapistView && (
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <Link
+            to="/practitioners"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              background: 'white',
+              border: '2px solid #667eea',
+              borderRadius: '12px',
+              color: '#667eea',
+              fontWeight: 600,
+              fontSize: '0.95em',
+              textDecoration: 'none',
+              boxShadow: '0 2px 6px rgba(102,126,234,0.15)',
+            }}
+          >
+            <span>👥</span>
+            <span>ניהול אנשי צוות</span>
+          </Link>
+        </div>
+      )}
+
       {/* Kids Section */}
       <div className="content-card">
         <div className="content-card-header">

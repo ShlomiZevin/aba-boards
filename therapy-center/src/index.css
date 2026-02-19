@@ -443,6 +443,50 @@ body {
   font-size: 0.85em;
 }
 
+/* Picker list item — used in the existing-practitioner picker */
+.picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: right;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.picker-item:hover {
+  border-color: #667eea;
+  background: #f0f1ff;
+}
+
+.picker-item:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.picker-item-name {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.95em;
+}
+
+.picker-item-sub {
+  font-size: 0.78em;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.picker-item-type {
+  font-size: 0.78em;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
 .btn-icon {
   padding: 8px;
   background: none;

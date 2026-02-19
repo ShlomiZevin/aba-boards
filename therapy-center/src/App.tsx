@@ -7,6 +7,7 @@ import KidDetail from './pages/KidDetail';
 import GoalsPage from './pages/GoalsPage';
 import FormFill from './pages/FormFill';
 import FormView from './pages/FormView';
+import AllPractitioners from './pages/AllPractitioners';
 import './index.css';
 
 // Scroll to top on route change
@@ -60,6 +61,8 @@ function App() {
           <Route path="/form/new" element={<FormFill />} />
           <Route path="/form/:formId/edit" element={<FormFill />} />
           <Route path="/form/:formId/view" element={<FormView />} />
+
+          <Route path="/practitioners" element={<AllPractitioners />} />
 
           {/* Therapist routes */}
           <Route path="/t/:practitionerId/*" element={<TherapistRoutes />} />

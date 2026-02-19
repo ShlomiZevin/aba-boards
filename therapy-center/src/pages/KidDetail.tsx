@@ -164,6 +164,7 @@ export default function KidDetail() {
   // State
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [showAddPractitioner, setShowAddPractitioner] = useState(false);
+  const [showNewPractitionerForm, setShowNewPractitionerForm] = useState(false);
   const [showAddParent, setShowAddParent] = useState(false);
   const [showScheduleSession, setShowScheduleSession] = useState(false);
   const [showDateActions, setShowDateActions] = useState(false);
@@ -221,14 +222,33 @@ export default function KidDetail() {
     enabled: !!kidId,
   });
 
+  const { data: myTherapistsRes } = useQuery({
+    queryKey: ['myTherapists'],
+    queryFn: () => practitionersApi.getMyTherapists(),
+    enabled: showAddPractitioner,
+    staleTime: 0,
+  });
+
   // Mutations
   const addPractitionerMutation = useMutation({
     mutationFn: (data: { name: string; mobile?: string; email?: string; type: PractitionerType }) =>
       practitionersApi.add(kidId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['practitioners', kidId] });
+      queryClient.invalidateQueries({ queryKey: ['myTherapists'] });
       setShowAddPractitioner(false);
+      setShowNewPractitionerForm(false);
       resetForm();
+    },
+  });
+
+  const linkExistingMutation = useMutation({
+    mutationFn: (practitionerId: string) =>
+      practitionersApi.linkExisting(kidId!, practitionerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['practitioners', kidId] });
+      setShowAddPractitioner(false);
+      setShowNewPractitionerForm(false);
     },
   });
 
@@ -513,10 +533,17 @@ export default function KidDetail() {
                 {practitioners.map((p: Practitioner) => (
                   <div key={p.id} className="team-member">
                     <div>
-                      <span className="team-name">{p.name}</span>
-                      <span className="team-type">{p.type}</span>
-                      {copiedLinkId === p.id && (
-                        <span style={{ color: '#48bb78', fontSize: '0.8em', marginRight: '8px' }}>הקישור הועתק!</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span className="team-name">{p.name}</span>
+                        <span className="team-type">{p.type}</span>
+                        {copiedLinkId === p.id && (
+                          <span style={{ color: '#48bb78', fontSize: '0.8em' }}>הקישור הועתק!</span>
+                        )}
+                      </div>
+                      {(p.mobile || p.email) && (
+                        <div style={{ fontSize: '0.8em', color: '#94a3b8', marginTop: '2px' }}>
+                          {[p.mobile, p.email].filter(Boolean).join(' · ')}
+                        </div>
                       )}
                     </div>
                     {!isTherapistView ? (
@@ -561,7 +588,13 @@ export default function KidDetail() {
                   <div key={p.id} className="team-member">
                     <div>
                       <span className="team-name">{p.name}</span>
-                      {p.mobile && <a href={`tel:${p.mobile}`} className="team-contact">{p.mobile}</a>}
+                      {(p.mobile || p.email) && (
+                        <div style={{ fontSize: '0.8em', color: '#94a3b8', marginTop: '2px' }}>
+                          {p.mobile && <a href={`tel:${p.mobile}`} style={{ color: '#94a3b8', textDecoration: 'none' }}>{p.mobile}</a>}
+                          {p.mobile && p.email && ' · '}
+                          {p.email && <a href={`mailto:${p.email}`} style={{ color: '#94a3b8', textDecoration: 'none' }}>{p.email}</a>}
+                        </div>
+                      )}
                     </div>
                     {!isTherapistView && (
                       <div style={{ display: 'flex', gap: '4px' }}>
@@ -878,52 +911,99 @@ export default function KidDetail() {
       {!isTherapistView && (
         <>
           {/* Add Practitioner Modal */}
-          {showAddPractitioner && (
-            <AddModal title="הוספת איש צוות" onClose={() => { setShowAddPractitioner(false); resetForm(); }}>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                addPractitionerMutation.mutate({
-                  name: newName,
-                  mobile: newMobile || undefined,
-                  email: newEmail || undefined,
-                  type: newType,
-                });
-              }}>
-                <div className="form-group">
-                  <label>שם</label>
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-                <div className="form-group">
-                  <label>סוג</label>
-                  <select value={newType} onChange={(e) => setNewType(e.target.value as PractitionerType)}>
-                    <option value="מטפלת">מטפלת</option>
-                    <option value="מנתחת התנהגות">מנתחת התנהגות</option>
-                    <option value="מדריכת הורים">מדריכת הורים</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>טלפון (לא חובה)</label>
-                  <input type="tel" value={newMobile} onChange={(e) => setNewMobile(e.target.value)} dir="ltr" />
-                </div>
-                <div className="form-group">
-                  <label>אימייל (לא חובה)</label>
-                  <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} dir="ltr" />
-                </div>
-                <div className="modal-actions">
-                  <button type="button" onClick={() => { setShowAddPractitioner(false); resetForm(); }} className="btn-secondary">
-                    ביטול
+          {showAddPractitioner && (() => {
+            const linkedIds = new Set(practitioners.map((p: Practitioner) => p.id));
+            const available = (myTherapistsRes?.data || []).filter((p: Practitioner) => !linkedIds.has(p.id));
+            return (
+              <AddModal title="הוספת איש צוות" onClose={() => { setShowAddPractitioner(false); setShowNewPractitionerForm(false); resetForm(); }}>
+                {/* Pick existing */}
+                {!showNewPractitionerForm && available.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '0.9em', color: '#64748b', marginBottom: '8px' }}>בחר מאיש צוות קיים:</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {available.map((p: Practitioner) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className="picker-item"
+                          onClick={() => linkExistingMutation.mutate(p.id)}
+                          disabled={linkExistingMutation.isPending}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div className="picker-item-name">{p.name}</div>
+                            {(p.mobile || p.email) && (
+                              <div className="picker-item-sub">
+                                {[p.mobile, p.email].filter(Boolean).join(' · ')}
+                              </div>
+                            )}
+                          </div>
+                          <span className="picker-item-type">{p.type}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ textAlign: 'center', margin: '12px 0', color: '#a0aec0', fontSize: '0.85em' }}>— או —</div>
+                  </div>
+                )}
+
+                {/* Create new */}
+                {(!showNewPractitionerForm && available.length > 0) ? (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ width: '100%' }}
+                    onClick={() => setShowNewPractitionerForm(true)}
+                  >
+                    + הוסף חדש
                   </button>
-                  <button type="submit" className="btn-primary">הוסף</button>
-                </div>
-              </form>
-            </AddModal>
-          )}
+                ) : (
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    addPractitionerMutation.mutate({
+                      name: newName,
+                      mobile: newMobile || undefined,
+                      email: newEmail || undefined,
+                      type: newType,
+                    });
+                  }}>
+                    <div className="form-group">
+                      <label>שם</label>
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>סוג</label>
+                      <select value={newType} onChange={(e) => setNewType(e.target.value as PractitionerType)}>
+                        <option value="מטפלת">מטפלת</option>
+                        <option value="מנתחת התנהגות">מנתחת התנהגות</option>
+                        <option value="מדריכת הורים">מדריכת הורים</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>טלפון (לא חובה)</label>
+                      <input type="tel" value={newMobile} onChange={(e) => setNewMobile(e.target.value)} dir="ltr" />
+                    </div>
+                    <div className="form-group">
+                      <label>אימייל (לא חובה)</label>
+                      <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} dir="ltr" />
+                    </div>
+                    <div className="modal-actions">
+                      <button type="button" onClick={() => { setShowAddPractitioner(false); setShowNewPractitionerForm(false); resetForm(); }} className="btn-secondary">
+                        ביטול
+                      </button>
+                      <button type="submit" className="btn-primary" disabled={addPractitionerMutation.isPending}>
+                        {addPractitionerMutation.isPending ? 'מוסיף...' : 'הוסף'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </AddModal>
+            );
+          })()}
 
           {/* Add Parent Modal */}
           {showAddParent && (

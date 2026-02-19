@@ -61,6 +61,16 @@ router.post('/kids/:kidId/practitioners', asyncHandler(async (req, res) => {
   res.status(201).json(practitioner);
 }));
 
+router.post('/kids/:kidId/practitioners/link', asyncHandler(async (req, res) => {
+  const adminId = 'michal-super-admin';
+  await therapyService.linkExistingPractitionerToKid(
+    req.params.kidId,
+    req.body.practitionerId,
+    adminId
+  );
+  res.status(204).send();
+}));
+
 router.put('/practitioners/:id', asyncHandler(async (req, res) => {
   const practitioner = await therapyService.updatePractitioner(req.params.id, req.body);
   res.json(practitioner);

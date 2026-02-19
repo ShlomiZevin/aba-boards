@@ -172,6 +172,30 @@ async function getPractitionersForKid(kidId) {
   return practitioners;
 }
 
+async function linkExistingPractitionerToKid(kidId, practitionerId, addedBy) {
+  const db = getDb();
+
+  // No-op if already linked
+  const existing = await db.collection('kidPractitioners')
+    .where('kidId', '==', kidId)
+    .where('practitionerId', '==', practitionerId)
+    .get();
+  if (!existing.empty) return;
+
+  const practDoc = await db.collection('practitioners').doc(practitionerId).get();
+  if (!practDoc.exists) throw new Error('Practitioner not found');
+  const pract = practDoc.data();
+
+  const linkId = uuidv4();
+  await db.collection('kidPractitioners').doc(linkId).set({
+    kidId,
+    practitionerId,
+    role: pract.type === 'מטפלת' ? 'therapist' : 'admin',
+    addedAt: new Date(),
+    addedBy: addedBy || null,
+  });
+}
+
 async function addPractitionerToKid(kidId, data, addedBy) {
   const db = getDb();
   const practitionerId = uuidv4();
@@ -236,7 +260,6 @@ async function getMyTherapists(adminId) {
   const db = getDb();
   const snapshot = await db.collection('practitioners')
     .where('createdBy', '==', adminId)
-    .where('type', '==', 'מטפלת')
     .get();
 
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -718,6 +741,7 @@ module.exports = {
   getKidsForPractitioner,
   getPractitionersForKid,
   addPractitionerToKid,
+  linkExistingPractitionerToKid,
   updatePractitioner,
   deletePractitioner,
   getMyTherapists,
