@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { formsApi, kidsApi, practitionersApi } from '../api/client';
+import { formsApi, kidsApi, practitionersApi, goalsApi, formTemplateApi } from '../api/client';
+import ConfirmModal from '../components/ConfirmModal';
 import { toDate } from '../utils/date';
-import { GOAL_CATEGORIES } from '../types';
+import { DEFAULT_FORM_TEMPLATE } from '../types';
+import type { Goal, FormTemplateSection } from '../types';
+import GoalsWeeklyTable from '../components/GoalsWeeklyTable';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -31,6 +35,8 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 export default function FormView() {
   const { formId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showDeleteForm, setShowDeleteForm] = useState(false);
 
   const { data: formRes, isLoading } = useQuery({
     queryKey: ['form', formId],
@@ -52,9 +58,33 @@ export default function FormView() {
     enabled: !!form?.kidId,
   });
 
+  const { data: allGoalsRes } = useQuery({
+    queryKey: ['goals', form?.kidId],
+    queryFn: () => goalsApi.getForKid(form!.kidId),
+    enabled: !!form?.kidId,
+  });
+
+  const { data: templateRes } = useQuery({
+    queryKey: ['formTemplate', form?.kidId],
+    queryFn: () => formTemplateApi.get(form!.kidId),
+    enabled: !!form?.kidId,
+  });
+
+  const deleteFormMutation = useMutation({
+    mutationFn: () => formsApi.delete(formId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['forms'] });
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      navigate(form?.kidId ? `/kid/${form.kidId}` : '/');
+    },
+  });
+
   const kid = kidRes?.data;
   const practitioners = practitionersRes?.data || [];
+  const allGoals = (allGoalsRes?.data || []).filter((g: Goal) => g.isActive);
   const therapist = practitioners.find((p) => p.id === form?.practitionerId);
+  const template: FormTemplateSection[] = (templateRes?.data?.sections || DEFAULT_FORM_TEMPLATE)
+    .sort((a: FormTemplateSection, b: FormTemplateSection) => a.order - b.order);
 
   if (isLoading) {
     return (
@@ -79,21 +109,20 @@ export default function FormView() {
 
   const dateStr = format(toDate(form.sessionDate), 'dd/MM/yyyy');
 
-  // Group goals by category
-  const goalsByCategory = GOAL_CATEGORIES.reduce(
-    (acc, cat) => {
-      acc[cat.id] = form.goalsWorkedOn.filter((g) => g.categoryId === cat.id);
-      return acc;
-    },
-    {} as Record<string, typeof form.goalsWorkedOn>
-  );
+  // Get value for a field from form data
+  const getFieldValue = (section: FormTemplateSection): string | number | undefined => {
+    const knownValue = (form as Record<string, unknown>)[section.id];
+    if (knownValue !== undefined) return knownValue as string | number;
+    if (form.customFields?.[section.id] !== undefined) return form.customFields[section.id];
+    return undefined;
+  };
 
-  const cooperationColor =
-    form.cooperation >= 70
-      ? '#388E3C'
-      : form.cooperation >= 50
-        ? '#F57C00'
-        : '#D32F2F';
+  // Separate stat fields (percentage/number with values) from text fields for the stats bar
+  const statFields = template.filter(s => s.type === 'percentage' || s.type === 'number');
+  const textFields = template.filter(s => s.type === 'text');
+
+  // goals worked on as a Set for the table
+  const workedOnIds = new Set(form.goalsWorkedOn.map(g => g.goalId));
 
   return (
     <div className="container">
@@ -123,14 +152,22 @@ export default function FormView() {
             >
               הדפס
             </button>
+            <button
+              onClick={() => setShowDeleteForm(true)}
+              className="btn-small"
+              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1em', padding: '6px 8px' }}
+              title="מחק טופס"
+            >
+              🗑
+            </button>
           </div>
         </div>
       </div>
 
       <div className="content-card">
 
-        {/* Basic Info */}
-        <div className="form-view-stats">
+        {/* Stats Bar - date, therapist, and number/percentage fields */}
+        <div className="form-view-stats" style={{ gridTemplateColumns: `repeat(${Math.min(statFields.length + 2, 4)}, 1fr)` }}>
           <div className="stat">
             <div className="stat-label">תאריך</div>
             <div className="stat-value">{dateStr}</div>
@@ -139,73 +176,49 @@ export default function FormView() {
             <div className="stat-label">מטפלת</div>
             <div className="stat-value">{therapist?.name || '-'}</div>
           </div>
-          <div className="stat">
-            <div className="stat-label">משך הטיפול</div>
-            <div className="stat-value">{form.sessionDuration} דקות</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">שיתוף פעולה</div>
-            <div className="stat-value" style={{ color: cooperationColor }}>
-              {form.cooperation}%
-            </div>
-          </div>
+          {statFields.map(section => {
+            const value = getFieldValue(section);
+            if (value === undefined) return null;
+            const isPercentage = section.type === 'percentage';
+            const numVal = value as number;
+            const color = isPercentage
+              ? (numVal >= 70 ? '#388E3C' : numVal >= 50 ? '#F57C00' : '#D32F2F')
+              : undefined;
+            return (
+              <div key={section.id} className="stat">
+                <div className="stat-label">{section.label}</div>
+                <div className="stat-value" style={color ? { color } : undefined}>
+                  {isPercentage ? `${numVal}%` : `${numVal}`}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Fields */}
+        {/* Text Fields */}
         <div>
-          <FieldRow label="משך ישיבה">
-            <div className="form-field-value">{form.sittingDuration} דקות</div>
-          </FieldRow>
-          <FieldRow label="מצב רוח">
-            <RichTextDisplay html={form.mood} />
-          </FieldRow>
-          <FieldRow label="רמת ריכוז / עייפות">
-            <RichTextDisplay html={form.concentrationLevel} />
-          </FieldRow>
-          <FieldRow label="מחזקים (חדשים)">
-            <RichTextDisplay html={form.newReinforcers} />
-          </FieldRow>
-          <FieldRow label="מילים שהפיק">
-            <RichTextDisplay html={form.wordsProduced} />
-          </FieldRow>
-          <FieldRow label="פעילות בהפסקות">
-            <RichTextDisplay html={form.breakActivities} />
-          </FieldRow>
-          <FieldRow label="פעילות סוף שיעור">
-            <RichTextDisplay html={form.endOfSessionActivity} />
-          </FieldRow>
-          <FieldRow label="הצלחות">
-            <RichTextDisplay html={form.successes} />
-          </FieldRow>
-          <FieldRow label="קשיים">
-            <RichTextDisplay html={form.difficulties} />
-          </FieldRow>
-          <FieldRow label="הערות">
-            <RichTextDisplay html={form.notes} />
-          </FieldRow>
+          {textFields.map(section => {
+            const value = getFieldValue(section);
+            return (
+              <FieldRow key={section.id} label={section.label}>
+                <RichTextDisplay html={(value as string) || ''} />
+              </FieldRow>
+            );
+          })}
         </div>
 
         {/* Goals */}
         <div className="goals-list">
           <h4>מטרות שעבדנו עליהן</h4>
 
-          {GOAL_CATEGORIES.map((cat) => {
-            const catGoals = goalsByCategory[cat.id] || [];
-            if (catGoals.length === 0) return null;
-
-            return (
-              <div key={cat.id} className="goals-category">
-                <div className="goals-category-name" style={{ color: cat.color }}>
-                  {cat.nameHe}
-                </div>
-                <ul>
-                  {catGoals.map((g, idx) => (
-                    <li key={idx}>{g.goalTitle}</li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+          <GoalsWeeklyTable
+            kidId={form.kidId}
+            goals={allGoals}
+            selectedGoals={workedOnIds}
+            currentFormDate={format(toDate(form.sessionDate), 'yyyy-MM-dd')}
+            currentFormId={form.id}
+            practitioners={practitioners}
+          />
 
           {form.additionalGoals.length > 0 && (
             <div className="goals-category">
@@ -230,6 +243,18 @@ export default function FormView() {
           נוצר ב-{format(toDate(form.createdAt), 'dd/MM/yyyy HH:mm')}
         </div>
       </div>
+
+      {/* Delete Form Confirmation */}
+      {showDeleteForm && (
+        <ConfirmModal
+          title="מחיקת טופס"
+          message={`האם למחוק את הטופס מתאריך ${dateStr}?\nהטיפול יחזור לסטטוס "ממתין לטופס".`}
+          confirmText={deleteFormMutation.isPending ? 'מוחק...' : 'מחק טופס'}
+          confirmStyle="danger"
+          onConfirm={() => deleteFormMutation.mutate()}
+          onCancel={() => setShowDeleteForm(false)}
+        />
+      )}
     </div>
   );
 }

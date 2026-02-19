@@ -9,6 +9,7 @@ import { toDate } from '../utils/date';
 import { GOAL_CATEGORIES } from '../types';
 import type { Practitioner, Parent, Goal, GoalCategoryId, Session, PractitionerType } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
+import FormTemplateEditor from '../components/FormTemplateEditor';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const BASE = import.meta.env.BASE_URL;
@@ -58,6 +59,87 @@ function AddModal({
   );
 }
 
+// Edit Practitioner Form
+function EditPractitionerForm({
+  practitioner,
+  onSave,
+  onCancel,
+}: {
+  practitioner: Practitioner;
+  onSave: (data: Partial<Practitioner>) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(practitioner.name);
+  const [mobile, setMobile] = useState(practitioner.mobile || '');
+  const [email, setEmail] = useState(practitioner.email || '');
+  const [type, setType] = useState<PractitionerType>(practitioner.type);
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSave({ name, mobile: mobile || undefined, email: email || undefined, type }); }}>
+      <div className="form-group">
+        <label>שם</label>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+      </div>
+      <div className="form-group">
+        <label>סוג</label>
+        <select value={type} onChange={(e) => setType(e.target.value as PractitionerType)}>
+          <option value="מטפלת">מטפלת</option>
+          <option value="מנתחת התנהגות">מנתחת התנהגות</option>
+          <option value="מדריכת הורים">מדריכת הורים</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label>טלפון (לא חובה)</label>
+        <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} dir="ltr" />
+      </div>
+      <div className="form-group">
+        <label>אימייל (לא חובה)</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
+      </div>
+      <div className="modal-actions">
+        <button type="button" onClick={onCancel} className="btn-secondary">ביטול</button>
+        <button type="submit" className="btn-primary">שמור</button>
+      </div>
+    </form>
+  );
+}
+
+// Edit Parent Form
+function EditParentForm({
+  parent,
+  onSave,
+  onCancel,
+}: {
+  parent: Parent;
+  onSave: (data: Partial<Parent>) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(parent.name);
+  const [mobile, setMobile] = useState(parent.mobile || '');
+  const [email, setEmail] = useState(parent.email || '');
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSave({ name, mobile: mobile || undefined, email: email || undefined }); }}>
+      <div className="form-group">
+        <label>שם</label>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+      </div>
+      <div className="form-group">
+        <label>טלפון (לא חובה)</label>
+        <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} dir="ltr" />
+      </div>
+      <div className="form-group">
+        <label>אימייל (לא חובה)</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
+      </div>
+      <div className="modal-actions">
+        <button type="button" onClick={onCancel} className="btn-secondary">ביטול</button>
+        <button type="submit" className="btn-primary">שמור</button>
+      </div>
+    </form>
+  );
+}
+
 export default function KidDetail() {
   const { kidId } = useParams<{ kidId: string }>();
   const navigate = useNavigate();
@@ -73,6 +155,10 @@ export default function KidDetail() {
   const [showDaySessions, setShowDaySessions] = useState(false);
   const [daySessionsList, setDaySessionsList] = useState<Session[]>([]);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
+  const [editingPractitioner, setEditingPractitioner] = useState<Practitioner | null>(null);
+  const [editingParent, setEditingParent] = useState<Parent | null>(null);
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
+  const [showDeleteKid, setShowDeleteKid] = useState(false);
 
   // Form state for modals
   const [newName, setNewName] = useState('');
@@ -145,6 +231,24 @@ export default function KidDetail() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parents', kidId] }),
   });
 
+  const updatePractitionerMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Practitioner> }) =>
+      practitionersApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['practitioners', kidId] });
+      setEditingPractitioner(null);
+    },
+  });
+
+  const updateParentMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Parent> }) =>
+      parentsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parents', kidId] });
+      setEditingParent(null);
+    },
+  });
+
   const scheduleSessionMutation = useMutation({
     mutationFn: (data: { scheduledDate: string; therapistId?: string }) =>
       sessionsApi.schedule(kidId!, data),
@@ -162,6 +266,14 @@ export default function KidDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
       setSessionToDelete(null);
+    },
+  });
+
+  const deleteKidMutation = useMutation({
+    mutationFn: () => kidsApi.delete(kidId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kids'] });
+      navigate('/');
     },
   });
 
@@ -252,11 +364,19 @@ export default function KidDetail() {
     <div className="container">
       {/* Kid Profile Header - Combined logo, back, and kid info */}
       <div className="kid-header-card">
-        <div className="kid-header-top">
+        <div className="kid-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Link to="/" className="kid-header-back">
             <span className="back-arrow">←</span>
             <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
           </Link>
+          <button
+            onClick={() => setShowDeleteKid(true)}
+            className="delete-btn-small"
+            title="מחק ילד"
+            style={{ width: '30px', height: '30px', fontSize: '1em' }}
+          >
+            🗑
+          </button>
         </div>
         <div className="kid-header-profile">
           <img
@@ -326,12 +446,15 @@ export default function KidDetail() {
                       <span className="team-name">{p.name}</span>
                       <span className="team-type">{p.type}</span>
                     </div>
-                    <button
-                      onClick={() => deletePractitionerMutation.mutate(p.id)}
-                      className="delete-btn-small"
-                    >
-                      ✕
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button onClick={() => setEditingPractitioner(p)} className="edit-btn-small">✎</button>
+                      <button
+                        onClick={() => deletePractitionerMutation.mutate(p.id)}
+                        className="delete-btn-small"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -354,12 +477,15 @@ export default function KidDetail() {
                       <span className="team-name">{p.name}</span>
                       {p.mobile && <a href={`tel:${p.mobile}`} className="team-contact">{p.mobile}</a>}
                     </div>
-                    <button
-                      onClick={() => deleteParentMutation.mutate(p.id)}
-                      className="delete-btn-small"
-                    >
-                      ✕
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button onClick={() => setEditingParent(p)} className="edit-btn-small">✎</button>
+                      <button
+                        onClick={() => deleteParentMutation.mutate(p.id)}
+                        className="delete-btn-small"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -416,6 +542,13 @@ export default function KidDetail() {
           <h3>טיפולים</h3>
           <div className="sessions-actions">
             <button
+              onClick={() => setShowTemplateEditor(true)}
+              className="btn-secondary btn-small"
+              style={{ color: '#64748b', borderColor: '#e2e8f0' }}
+            >
+              תבנית טופס
+            </button>
+            <button
               onClick={() => navigate(`/form/new?kidId=${kidId}`)}
               className="btn-secondary btn-small"
             >
@@ -425,7 +558,7 @@ export default function KidDetail() {
               onClick={() => setShowScheduleSession(true)}
               className="btn-primary btn-small"
             >
-              + טיפול חדשה
+              + טיפול חדש
             </button>
           </div>
         </div>
@@ -463,7 +596,7 @@ export default function KidDetail() {
                   const { sessions: daySessions, allHaveForms, someHaveForms } = resource;
                   return (
                     <div
-                      className="calendar-event calendar-event-multiple"
+                      className="calendar-event"
                       onClick={(e) => {
                         e.stopPropagation();
                         setDaySessionsList(daySessions);
@@ -471,10 +604,10 @@ export default function KidDetail() {
                         setShowDaySessions(true);
                       }}
                     >
-                      <div className="calendar-event-title">{daySessions.length} טיפולים</div>
-                      <div className={`calendar-event-status ${allHaveForms ? 'has-form' : someHaveForms ? 'partial' : 'no-form'}`}>
-                        {allHaveForms ? '✓ כל הטפסים מולאו' : someHaveForms ? '⚠ חלק מולאו' : '+ ממתין למילוי'}
-                      </div>
+                      <span className="calendar-event-indicator">
+                        {allHaveForms ? '✓' : someHaveForms ? '⚠' : '✎'}
+                      </span>
+                      <span className="calendar-event-title">{daySessions.length} טיפולים</span>
                     </div>
                   );
                 }
@@ -494,10 +627,8 @@ export default function KidDetail() {
                       }
                     }}
                   >
-                    <div className="calendar-event-title">{event.title}</div>
-                    <div className={`calendar-event-status ${hasForm ? 'has-form' : 'no-form'}`}>
-                      {hasForm ? '✓ צפה בטופס' : '+ מלא טופס'}
-                    </div>
+                    <span className="calendar-event-indicator">{hasForm ? '✓' : '✎'}</span>
+                    <span className="calendar-event-title">{event.title}</span>
                   </div>
                 );
               },
@@ -533,7 +664,7 @@ export default function KidDetail() {
 
         {/* Recent Sessions List */}
         <div className="recent-sessions">
-          <h4>טיפולים אחרונות</h4>
+          <h4>טיפולים אחרונים</h4>
           {sessions.length === 0 ? (
             <p className="empty-text">אין טיפולים</p>
           ) : (
@@ -672,9 +803,31 @@ export default function KidDetail() {
         </AddModal>
       )}
 
+      {/* Edit Practitioner Modal */}
+      {editingPractitioner && (
+        <AddModal title="עריכת איש צוות" onClose={() => setEditingPractitioner(null)}>
+          <EditPractitionerForm
+            practitioner={editingPractitioner}
+            onSave={(data) => updatePractitionerMutation.mutate({ id: editingPractitioner.id, data })}
+            onCancel={() => setEditingPractitioner(null)}
+          />
+        </AddModal>
+      )}
+
+      {/* Edit Parent Modal */}
+      {editingParent && (
+        <AddModal title="עריכת הורה" onClose={() => setEditingParent(null)}>
+          <EditParentForm
+            parent={editingParent}
+            onSave={(data) => updateParentMutation.mutate({ id: editingParent.id, data })}
+            onCancel={() => setEditingParent(null)}
+          />
+        </AddModal>
+      )}
+
       {/* Schedule Session Modal */}
       {showScheduleSession && (
-        <AddModal title="תזמון טיפול חדשה" onClose={() => setShowScheduleSession(false)}>
+        <AddModal title="תזמון טיפול חדש" onClose={() => setShowScheduleSession(false)}>
           <form onSubmit={(e) => {
             e.preventDefault();
             scheduleSessionMutation.mutate({
@@ -731,6 +884,18 @@ export default function KidDetail() {
         />
       )}
 
+      {/* Delete Kid Modal */}
+      {showDeleteKid && (
+        <ConfirmModal
+          title="מחיקת ילד"
+          message={`האם למחוק את ${kid.name} וכל המידע הקשור? (מטפלות, הורים, מטרות, טיפולים, טפסים)\nפעולה זו אינה הפיכה!`}
+          confirmText={deleteKidMutation.isPending ? 'מוחק...' : 'מחק הכל'}
+          confirmStyle="danger"
+          onConfirm={() => deleteKidMutation.mutate()}
+          onCancel={() => setShowDeleteKid(false)}
+        />
+      )}
+
       {/* Date Actions Modal - when clicking empty date in calendar */}
       {showDateActions && selectedDate && (
         <div className="modal-overlay" onClick={() => setShowDateActions(false)}>
@@ -770,6 +935,16 @@ export default function KidDetail() {
             >
               ביטול
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Form Template Editor Modal */}
+      {showTemplateEditor && kidId && (
+        <div className="modal-overlay" onClick={() => setShowTemplateEditor(false)}>
+          <div className="modal" style={{ maxWidth: '550px' }} onClick={(e) => e.stopPropagation()}>
+            <h3>ערוך תבנית טופס</h3>
+            <FormTemplateEditor kidId={kidId} onClose={() => setShowTemplateEditor(false)} />
           </div>
         </div>
       )}

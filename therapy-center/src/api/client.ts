@@ -6,6 +6,7 @@ import type {
   GoalLibraryItem,
   Session,
   SessionForm,
+  FormTemplate,
   ApiResponse,
 } from '../types';
 
@@ -42,6 +43,13 @@ async function fetchApi<T>(
 export const kidsApi = {
   getAll: () => fetchApi<Kid[]>('/kids'),
   getById: (kidId: string) => fetchApi<Kid>(`/kids/${kidId}`),
+  create: (data: { name: string; age?: number | string; gender?: string }) =>
+    fetchApi<Kid>('/kids', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  delete: (kidId: string) =>
+    fetchApi<void>(`/kids/${kidId}`, { method: 'DELETE' }),
 };
 
 // Practitioners API
@@ -126,8 +134,23 @@ export const sessionsApi = {
 };
 
 // Forms API
+export const formTemplateApi = {
+  get: (kidId: string) =>
+    fetchApi<FormTemplate>(`/kids/${kidId}/form-template`),
+  update: (kidId: string, template: FormTemplate) =>
+    fetchApi<FormTemplate>(`/kids/${kidId}/form-template`, {
+      method: 'PUT',
+      body: JSON.stringify(template),
+    }),
+};
+
 export const formsApi = {
-  getForKid: (kidId: string) => fetchApi<SessionForm[]>(`/kids/${kidId}/forms`),
+  getForKid: (kidId: string, filters?: { weekOf?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.weekOf) params.append('weekOf', filters.weekOf);
+    const query = params.toString();
+    return fetchApi<SessionForm[]>(`/kids/${kidId}/forms${query ? `?${query}` : ''}`);
+  },
   getById: (id: string) => fetchApi<SessionForm>(`/forms/${id}`),
   getForSession: (sessionId: string) =>
     fetchApi<SessionForm>(`/sessions/${sessionId}/form`),
@@ -141,6 +164,8 @@ export const formsApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  delete: (id: string) =>
+    fetchApi<void>(`/forms/${id}`, { method: 'DELETE' }),
   createFormLink: (kidId: string, sessionId?: string) =>
     fetchApi<{ token: string; url: string }>('/forms/create-link', {
       method: 'POST',

@@ -27,6 +27,106 @@ async function getKidById(kidId) {
   return { id: doc.id, ...doc.data() };
 }
 
+async function createKid(data) {
+  const db = getDb();
+  const name = (data.name || '').trim();
+  if (!name) throw new Error('Name is required');
+
+  const kidId = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\u0590-\u05FF-]/g, '');
+  if (!kidId) throw new Error('Invalid name');
+
+  const existing = await db.collection('kids').doc(kidId).get();
+  if (existing.exists) throw new Error('Kid with this name already exists');
+
+  const defaultBoardLayout = {
+    items: [
+      { id: 1, type: 'bank', label: `קופת החיסכון של ${name}` },
+      { id: 2, type: 'progress', title: 'ההתקדמות שלי היום' },
+      { id: 3, type: 'header', size: 'medium', text: 'המשימות שלי' },
+      { id: 4, type: 'task', taskType: 'regular', taskData: { id: 1, icon: '✅', title: 'משימה לדוגמה', type: 'regular', requiresTestimony: false, trackTime: false, activeDays: [0,1,2,3,4,5,6] }},
+      { id: 5, type: 'header', size: 'medium', text: '💰 משימות בונוס 💰' },
+      { id: 6, type: 'task', taskType: 'bonus', taskData: { id: 2, icon: '🌟', title: 'משימת בונוס לדוגמה', type: 'bonus', minReward: 1, maxReward: 5, requiresTestimony: false, trackTime: false, activeDays: [0,1,2,3,4,5,6] }},
+      { id: 7, type: 'header', size: 'medium', text: '🧘 פינת ההרגעה 🧘' },
+      { id: 8, type: 'task', taskType: 'calm-down', taskData: { id: 3, icon: '🎨', title: 'לוח ציור', type: 'calm-down', activityType: 'paint', activeDays: [0,1,2,3,4,5,6] }},
+    ]
+  };
+
+  const tasks = defaultBoardLayout.items
+    .filter(item => item.type === 'task')
+    .map(item => item.taskData);
+
+  const kidDoc = {
+    name,
+    imageName: '',
+    tasks,
+    boardLayout: defaultBoardLayout,
+    completedTasks: [],
+    completedBonusTasks: [],
+    bonusRewardsEarned: {},
+    totalMoney: 0,
+    dailyReward: 0.5,
+    coinStyle: 'dollar',
+    coinImageName: '',
+    age: data.age || '',
+    gender: data.gender || '',
+    colorSchema: 'purple',
+    headerLabel: '',
+    savingsLabel: '',
+    regularTasksHeader: 'המשימות שלי',
+    bonusTasksHeader: '💰 משימות בונוס 💰',
+    calmDownHeader: '🧘 פינת ההרגעה 🧘',
+    builderPin: '1234',
+    todayRewardGiven: false,
+    lastResetDate: new Date().toDateString(),
+    createdAt: new Date(),
+  };
+
+  await db.collection('kids').doc(kidId).set(kidDoc);
+  return { id: kidId, ...kidDoc };
+}
+
+async function deleteKid(kidId) {
+  const db = getDb();
+
+  // Check kid exists
+  const kidDoc = await db.collection('kids').doc(kidId).get();
+  if (!kidDoc.exists) throw new Error('Kid not found');
+
+  // Collect all documents to delete in batches
+  // Firestore batches are limited to 500 operations, so we'll commit in chunks
+  const refs = [db.collection('kids').doc(kidId)];
+
+  // Kid-Practitioner links and their practitioners
+  const linksSnap = await db.collection('kidPractitioners').where('kidId', '==', kidId).get();
+  for (const linkDoc of linksSnap.docs) {
+    refs.push(linkDoc.ref);
+    refs.push(db.collection('practitioners').doc(linkDoc.data().practitionerId));
+  }
+
+  // Parents
+  const parentsSnap = await db.collection('parents').where('kidId', '==', kidId).get();
+  parentsSnap.docs.forEach(doc => refs.push(doc.ref));
+
+  // Goals
+  const goalsSnap = await db.collection('goals').where('kidId', '==', kidId).get();
+  goalsSnap.docs.forEach(doc => refs.push(doc.ref));
+
+  // Sessions
+  const sessionsSnap = await db.collection('sessions').where('kidId', '==', kidId).get();
+  sessionsSnap.docs.forEach(doc => refs.push(doc.ref));
+
+  // Forms
+  const formsSnap = await db.collection('sessionForms').where('kidId', '==', kidId).get();
+  formsSnap.docs.forEach(doc => refs.push(doc.ref));
+
+  // Delete in batches of 500
+  for (let i = 0; i < refs.length; i += 500) {
+    const batch = db.batch();
+    refs.slice(i, i + 500).forEach(ref => batch.delete(ref));
+    await batch.commit();
+  }
+}
+
 // ==================== PRACTITIONERS ====================
 
 async function getPractitionersForKid(kidId) {
@@ -319,6 +419,16 @@ async function updateSession(id, data) {
 
 async function deleteSession(id) {
   const db = getDb();
+
+  // Check if the session has an associated form and delete it too
+  const sessionDoc = await db.collection('sessions').doc(id).get();
+  if (sessionDoc.exists) {
+    const formId = sessionDoc.data().formId;
+    if (formId) {
+      await db.collection('sessionForms').doc(formId).delete();
+    }
+  }
+
   await db.collection('sessions').doc(id).delete();
 }
 
@@ -340,13 +450,33 @@ async function getSessionAlerts() {
 
 // ==================== FORMS ====================
 
-async function getFormsForKid(kidId) {
+async function getFormsForKid(kidId, filters = {}) {
   const db = getDb();
   const snapshot = await db.collection('sessionForms')
     .where('kidId', '==', kidId)
     .get();
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  let forms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  if (filters.weekOf) {
+    const weekDate = new Date(filters.weekOf);
+    const dayOfWeek = weekDate.getDay();
+    const sunday = new Date(weekDate);
+    sunday.setDate(weekDate.getDate() - dayOfWeek);
+    sunday.setHours(0, 0, 0, 0);
+    const saturday = new Date(sunday);
+    saturday.setDate(sunday.getDate() + 6);
+    saturday.setHours(23, 59, 59, 999);
+
+    forms = forms.filter(f => {
+      const fDate = f.sessionDate?.seconds
+        ? new Date(f.sessionDate.seconds * 1000)
+        : new Date(f.sessionDate);
+      return fDate >= sunday && fDate <= saturday;
+    });
+  }
+
+  return forms;
 }
 
 async function getFormById(id) {
@@ -408,6 +538,7 @@ async function submitForm(data) {
     notes: data.notes || '',
     goalsWorkedOn: data.goalsWorkedOn || [],
     additionalGoals: data.additionalGoals || [],
+    customFields: data.customFields || {},
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -437,6 +568,95 @@ async function createFormLink(kidId, sessionId) {
   });
 
   return { token, url: `/therapy/form/new?kidId=${kidId}&token=${token}${sessionId ? `&sessionId=${sessionId}` : ''}` };
+}
+
+async function updateForm(id, data) {
+  const db = getDb();
+  const updates = { updatedAt: new Date() };
+
+  const allowedFields = [
+    'practitionerId', 'sessionDate', 'cooperation', 'sessionDuration', 'sittingDuration',
+    'mood', 'concentrationLevel', 'newReinforcers', 'wordsProduced', 'breakActivities',
+    'endOfSessionActivity', 'successes', 'difficulties', 'notes',
+    'goalsWorkedOn', 'additionalGoals', 'customFields'
+  ];
+  for (const field of allowedFields) {
+    if (data[field] !== undefined) {
+      updates[field] = field === 'sessionDate' ? new Date(data[field]) : data[field];
+    }
+  }
+
+  await db.collection('sessionForms').doc(id).update(updates);
+  const doc = await db.collection('sessionForms').doc(id).get();
+  return { id: doc.id, ...doc.data() };
+}
+
+async function deleteForm(id) {
+  const db = getDb();
+
+  const formDoc = await db.collection('sessionForms').doc(id).get();
+  if (!formDoc.exists) throw new Error('Form not found');
+
+  const formData = formDoc.data();
+
+  // Clear formId from associated session
+  if (formData.sessionId) {
+    const sessionDoc = await db.collection('sessions').doc(formData.sessionId).get();
+    if (sessionDoc.exists) {
+      await db.collection('sessions').doc(formData.sessionId).update({
+        formId: null,
+        status: 'scheduled',
+      });
+    }
+  }
+
+  await db.collection('sessionForms').doc(id).delete();
+}
+
+// Default form template sections
+const DEFAULT_FORM_TEMPLATE = [
+  { id: 'cooperation', label: 'שיתוף פעולה', type: 'percentage', order: 1, isDefault: true },
+  { id: 'sessionDuration', label: 'משך הטיפול (דקות)', type: 'number', order: 2, isDefault: true },
+  { id: 'sittingDuration', label: 'משך ישיבה (דקות)', type: 'number', order: 3, isDefault: true },
+  { id: 'mood', label: 'מצב רוח', type: 'text', order: 4, isDefault: true },
+  { id: 'concentrationLevel', label: 'רמת ריכוז / עייפות', type: 'text', order: 5, isDefault: true },
+  { id: 'newReinforcers', label: 'מחזקים (חדשים)', type: 'text', order: 6, isDefault: true },
+  { id: 'wordsProduced', label: 'מילים שהפיק', type: 'text', order: 7, isDefault: true },
+  { id: 'breakActivities', label: 'פעילות בהפסקות', type: 'text', order: 8, isDefault: true },
+  { id: 'endOfSessionActivity', label: 'פעילות סוף שיעור', type: 'text', order: 9, isDefault: true },
+  { id: 'successes', label: 'הצלחות', type: 'text', order: 10, isDefault: true },
+  { id: 'difficulties', label: 'קשיים', type: 'text', order: 11, isDefault: true },
+  { id: 'notes', label: 'הערות', type: 'text', order: 12, isDefault: true },
+];
+
+async function getFormTemplate(kidId) {
+  const db = getDb();
+  const kidDoc = await db.collection('kids').doc(kidId).get();
+  if (!kidDoc.exists) throw new Error('Kid not found');
+
+  const kid = kidDoc.data();
+  return kid.formTemplate || { sections: DEFAULT_FORM_TEMPLATE };
+}
+
+async function updateFormTemplate(kidId, template) {
+  const db = getDb();
+  if (!template.sections || !Array.isArray(template.sections)) {
+    throw new Error('Invalid template: sections array required');
+  }
+  for (const section of template.sections) {
+    if (!section.id || !section.label || !section.type || section.order === undefined) {
+      throw new Error('Invalid section: id, label, type, and order are required');
+    }
+    if (!['text', 'number', 'percentage'].includes(section.type)) {
+      throw new Error(`Invalid section type: ${section.type}`);
+    }
+  }
+
+  await db.collection('kids').doc(kidId).update({
+    formTemplate: { ...template, updatedAt: new Date() }
+  });
+
+  return { sections: template.sections, updatedAt: new Date() };
 }
 
 // ==================== INIT ====================
@@ -473,6 +693,8 @@ module.exports = {
   // Kids
   getAllKids,
   getKidById,
+  createKid,
+  deleteKid,
   // Practitioners
   getPractitionersForKid,
   addPractitionerToKid,
@@ -501,7 +723,12 @@ module.exports = {
   getFormById,
   getFormForSession,
   submitForm,
+  updateForm,
+  deleteForm,
   createFormLink,
+  // Form Template
+  getFormTemplate,
+  updateFormTemplate,
   // Init
   initializeSuperAdmin,
   initializeGoalCategories,

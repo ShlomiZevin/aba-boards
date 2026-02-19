@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
 import { kidsApi, sessionsApi } from '../api/client';
 import type { Kid } from '../types';
 
@@ -50,6 +51,13 @@ function KidCard({ kid }: { kid: Kid }) {
 
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showCreateKid, setShowCreateKid] = useState(false);
+  const [newKidName, setNewKidName] = useState('');
+  const [newKidAge, setNewKidAge] = useState('');
+  const [newKidGender, setNewKidGender] = useState('');
+
   const { data: kidsResponse, isLoading: kidsLoading } = useQuery({
     queryKey: ['kids'],
     queryFn: () => kidsApi.getAll(),
@@ -58,6 +66,21 @@ export default function Dashboard() {
   const { data: alertsResponse } = useQuery({
     queryKey: ['alerts'],
     queryFn: () => sessionsApi.getAlerts(),
+  });
+
+  const createKidMutation = useMutation({
+    mutationFn: (data: { name: string; age?: string; gender?: string }) =>
+      kidsApi.create(data),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['kids'] });
+      setShowCreateKid(false);
+      setNewKidName('');
+      setNewKidAge('');
+      setNewKidGender('');
+      if (res.data?.id) {
+        navigate(`/kid/${res.data.id}`);
+      }
+    },
   });
 
   const kids = kidsResponse?.data || [];
@@ -84,6 +107,9 @@ export default function Dashboard() {
       <div className="content-card">
         <div className="content-card-header">
           <h2>הילדים</h2>
+          <button onClick={() => setShowCreateKid(true)} className="btn-primary btn-small">
+            + הוסף ילד
+          </button>
         </div>
 
         {kidsLoading ? (
@@ -91,9 +117,13 @@ export default function Dashboard() {
         ) : kids.length === 0 ? (
           <div className="empty-state">
             <p>אין ילדים במערכת</p>
-            <p style={{ fontSize: '0.85em', marginTop: '8px' }}>
-              הוסף ילדים דרך מסך הניהול הראשי
-            </p>
+            <button
+              onClick={() => setShowCreateKid(true)}
+              className="btn-primary"
+              style={{ marginTop: '12px' }}
+            >
+              + הוסף ילד חדש
+            </button>
           </div>
         ) : (
           <div className="kids-grid">
@@ -103,6 +133,69 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Create Kid Modal */}
+      {showCreateKid && (
+        <div className="modal-overlay" onClick={() => setShowCreateKid(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>הוספת ילד חדש</h3>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              createKidMutation.mutate({
+                name: newKidName,
+                age: newKidAge || undefined,
+                gender: newKidGender || undefined,
+              });
+            }}>
+              <div className="form-group">
+                <label>שם הילד *</label>
+                <input
+                  type="text"
+                  value={newKidName}
+                  onChange={(e) => setNewKidName(e.target.value)}
+                  required
+                  autoFocus
+                  placeholder="הכנס שם ילד"
+                />
+              </div>
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label>גיל (לא חובה)</label>
+                  <input
+                    type="number"
+                    value={newKidAge}
+                    onChange={(e) => setNewKidAge(e.target.value)}
+                    min="0"
+                    max="18"
+                    placeholder="גיל"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>מין (לא חובה)</label>
+                  <select value={newKidGender} onChange={(e) => setNewKidGender(e.target.value)}>
+                    <option value="">בחר</option>
+                    <option value="boy">בן</option>
+                    <option value="girl">בת</option>
+                  </select>
+                </div>
+              </div>
+              {createKidMutation.isError && (
+                <div style={{ color: '#D32F2F', fontSize: '0.9em', marginBottom: '12px' }}>
+                  {(createKidMutation.error as Error)?.message || 'שגיאה ביצירת ילד'}
+                </div>
+              )}
+              <div className="modal-actions">
+                <button type="button" onClick={() => setShowCreateKid(false)} className="btn-secondary">
+                  ביטול
+                </button>
+                <button type="submit" className="btn-primary" disabled={createKidMutation.isPending}>
+                  {createKidMutation.isPending ? 'יוצר...' : 'הוסף ילד'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

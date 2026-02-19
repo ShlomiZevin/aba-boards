@@ -113,6 +113,9 @@ export interface SessionForm {
   goalsWorkedOn: GoalSnapshot[];
   additionalGoals: string[];
 
+  // Custom fields from dynamic template
+  customFields?: Record<string, string | number>;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,6 +130,40 @@ export interface Kid {
   createdBy?: string;
   adminId?: string;
 }
+
+// Form Template types
+export type FormFieldType = 'text' | 'number' | 'percentage';
+
+export interface FormTemplateSection {
+  id: string;
+  label: string;
+  type: FormFieldType;
+  order: number;
+  isDefault?: boolean;
+}
+
+export interface FormTemplate {
+  sections: FormTemplateSection[];
+  updatedAt?: Date;
+}
+
+export const DEFAULT_FORM_TEMPLATE: FormTemplateSection[] = [
+  { id: 'cooperation', label: 'שיתוף פעולה', type: 'percentage', order: 1, isDefault: true },
+  { id: 'sessionDuration', label: 'משך הטיפול (דקות)', type: 'number', order: 2, isDefault: true },
+  { id: 'sittingDuration', label: 'משך ישיבה (דקות)', type: 'number', order: 3, isDefault: true },
+  { id: 'mood', label: 'מצב רוח', type: 'text', order: 4, isDefault: true },
+  { id: 'concentrationLevel', label: 'רמת ריכוז / עייפות', type: 'text', order: 5, isDefault: true },
+  { id: 'newReinforcers', label: 'מחזקים (חדשים)', type: 'text', order: 6, isDefault: true },
+  { id: 'wordsProduced', label: 'מילים שהפיק', type: 'text', order: 7, isDefault: true },
+  { id: 'breakActivities', label: 'פעילות בהפסקות', type: 'text', order: 8, isDefault: true },
+  { id: 'endOfSessionActivity', label: 'פעילות סוף שיעור', type: 'text', order: 9, isDefault: true },
+  { id: 'successes', label: 'הצלחות', type: 'text', order: 10, isDefault: true },
+  { id: 'difficulties', label: 'קשיים', type: 'text', order: 11, isDefault: true },
+  { id: 'notes', label: 'הערות', type: 'text', order: 12, isDefault: true },
+];
+
+// Known field IDs for backward compatibility
+export const KNOWN_FIELD_IDS = DEFAULT_FORM_TEMPLATE.map(s => s.id);
 
 // API response types
 export interface ApiResponse<T> {

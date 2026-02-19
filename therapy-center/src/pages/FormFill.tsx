@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { kidsApi, practitionersApi, goalsApi, formsApi, sessionsApi } from '../api/client';
+import { kidsApi, practitionersApi, goalsApi, formsApi, formTemplateApi, sessionsApi } from '../api/client';
 import { toDate } from '../utils/date';
-import { GOAL_CATEGORIES } from '../types';
-import type { Goal, GoalCategoryId, GoalSnapshot, SessionForm, Session } from '../types';
+import { DEFAULT_FORM_TEMPLATE, KNOWN_FIELD_IDS } from '../types';
+import type { Goal, GoalSnapshot, SessionForm, Session, FormTemplateSection } from '../types';
 import RichTextEditor from '../components/RichTextEditor';
+import GoalsWeeklyTable from '../components/GoalsWeeklyTable';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -25,19 +26,13 @@ export default function FormFill() {
   const [kidId, setKidId] = useState(kidIdParam);
   const [practitionerId, setPractitionerId] = useState('');
   const [sessionDate, setSessionDate] = useState(dateParam || format(new Date(), 'yyyy-MM-dd'));
-  const [cooperation, setCooperation] = useState(70);
-  const [sessionDuration, setSessionDuration] = useState(45);
-  const [sittingDuration, setSittingDuration] = useState(30);
 
-  const [mood, setMood] = useState('');
-  const [concentrationLevel, setConcentrationLevel] = useState('');
-  const [newReinforcers, setNewReinforcers] = useState('');
-  const [wordsProduced, setWordsProduced] = useState('');
-  const [breakActivities, setBreakActivities] = useState('');
-  const [endOfSessionActivity, setEndOfSessionActivity] = useState('');
-  const [successes, setSuccesses] = useState('');
-  const [difficulties, setDifficulties] = useState('');
-  const [notes, setNotes] = useState('');
+  // Dynamic field values (replaces individual state vars)
+  const [fieldValues, setFieldValues] = useState<Record<string, string | number>>({
+    cooperation: 70,
+    sessionDuration: 45,
+    sittingDuration: 30,
+  });
 
   const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
   const [additionalGoals, setAdditionalGoals] = useState<string[]>([]);
@@ -46,12 +41,26 @@ export default function FormFill() {
   // Track if we've initialized
   const [initialized, setInitialized] = useState(false);
 
+  const updateField = (fieldId: string, value: string | number) => {
+    setFieldValues(prev => ({ ...prev, [fieldId]: value }));
+  };
+
   // Fetch existing form for edit mode
   const { data: existingFormRes } = useQuery({
     queryKey: ['form', formId],
     queryFn: () => formsApi.getById(formId!),
     enabled: isEditMode,
   });
+
+  // Fetch form template for kid
+  const { data: templateRes } = useQuery({
+    queryKey: ['formTemplate', kidId],
+    queryFn: () => formTemplateApi.get(kidId),
+    enabled: !!kidId,
+  });
+
+  const template: FormTemplateSection[] = (templateRes?.data?.sections || DEFAULT_FORM_TEMPLATE)
+    .sort((a: FormTemplateSection, b: FormTemplateSection) => a.order - b.order);
 
   // Initialize from existing form (edit mode)
   useEffect(() => {
@@ -61,22 +70,22 @@ export default function FormFill() {
     setKidId(form.kidId);
     setPractitionerId(form.practitionerId);
     setSessionDate(format(toDate(form.sessionDate), 'yyyy-MM-dd'));
-    setCooperation(form.cooperation);
-    setSessionDuration(form.sessionDuration);
-    setSittingDuration(form.sittingDuration);
-    setMood(form.mood);
-    setConcentrationLevel(form.concentrationLevel);
-    setNewReinforcers(form.newReinforcers);
-    setWordsProduced(form.wordsProduced);
-    setBreakActivities(form.breakActivities);
-    setEndOfSessionActivity(form.endOfSessionActivity);
-    setSuccesses(form.successes);
-    setDifficulties(form.difficulties);
-    setNotes(form.notes);
+
+    // Build field values from form data
+    const values: Record<string, string | number> = {};
+    for (const section of template) {
+      const knownValue = (form as Record<string, unknown>)[section.id];
+      if (knownValue !== undefined) {
+        values[section.id] = knownValue as string | number;
+      } else if (form.customFields?.[section.id] !== undefined) {
+        values[section.id] = form.customFields[section.id];
+      }
+    }
+    setFieldValues(values);
     setSelectedGoals(new Set(form.goalsWorkedOn.map((g) => g.goalId)));
     setAdditionalGoals(form.additionalGoals);
     setInitialized(true);
-  }, [isEditMode, existingFormRes, initialized]);
+  }, [isEditMode, existingFormRes, initialized, template]);
 
   // Queries
   const { data: kidRes } = useQuery({
@@ -124,7 +133,6 @@ export default function FormFill() {
       formsApi.submit(data),
     onSuccess: (res) => {
       if (res.success && res.data) {
-        // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
         queryClient.invalidateQueries({ queryKey: ['forms', kidId] });
         navigate(`/form/${res.data.id}/view`);
@@ -148,14 +156,6 @@ export default function FormFill() {
   const kid = kidRes?.data;
   const practitioners = practitionersRes?.data || [];
   const goals = (goalsRes?.data || []).filter((g: Goal) => g.isActive);
-
-  const goalsByCategory = GOAL_CATEGORIES.reduce(
-    (acc, cat) => {
-      acc[cat.id] = goals.filter((g: Goal) => g.categoryId === cat.id);
-      return acc;
-    },
-    {} as Record<GoalCategoryId, Goal[]>
-  );
 
   const toggleGoal = (goalId: string) => {
     const newSet = new Set(selectedGoals);
@@ -192,25 +192,38 @@ export default function FormFill() {
       }
     );
 
+    // Split field values into known fields and custom fields
+    const knownFields: Record<string, unknown> = {};
+    const customFields: Record<string, string | number> = {};
+    for (const [key, value] of Object.entries(fieldValues)) {
+      if (KNOWN_FIELD_IDS.includes(key)) {
+        knownFields[key] = value;
+      } else {
+        customFields[key] = value;
+      }
+    }
+
     const formData = {
       sessionId,
       kidId,
       practitionerId,
       sessionDate: new Date(sessionDate),
-      cooperation,
-      sessionDuration,
-      sittingDuration,
-      mood,
-      concentrationLevel,
-      newReinforcers,
-      wordsProduced,
-      breakActivities,
-      endOfSessionActivity,
-      successes,
-      difficulties,
-      notes,
+      // Known fields with defaults
+      cooperation: (knownFields.cooperation as number) || 70,
+      sessionDuration: (knownFields.sessionDuration as number) || 45,
+      sittingDuration: (knownFields.sittingDuration as number) || 30,
+      mood: (knownFields.mood as string) || '',
+      concentrationLevel: (knownFields.concentrationLevel as string) || '',
+      newReinforcers: (knownFields.newReinforcers as string) || '',
+      wordsProduced: (knownFields.wordsProduced as string) || '',
+      breakActivities: (knownFields.breakActivities as string) || '',
+      endOfSessionActivity: (knownFields.endOfSessionActivity as string) || '',
+      successes: (knownFields.successes as string) || '',
+      difficulties: (knownFields.difficulties as string) || '',
+      notes: (knownFields.notes as string) || '',
       goalsWorkedOn,
       additionalGoals,
+      customFields: Object.keys(customFields).length > 0 ? customFields : undefined,
     };
 
     if (isEditMode) {
@@ -232,6 +245,92 @@ export default function FormFill() {
     );
   }
 
+  // Render a dynamic field based on type
+  const renderField = (section: FormTemplateSection) => {
+    const value = fieldValues[section.id];
+
+    switch (section.type) {
+      case 'percentage':
+        return (
+          <div className="form-group" key={section.id}>
+            <label>{section.label}</label>
+            <div className="percentage-selector">
+              {[20, 40, 60, 80, 100].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  className={`percentage-btn ${value === val ? 'active' : ''}`}
+                  onClick={() => updateField(section.id, val)}
+                >
+                  {val}%
+                </button>
+              ))}
+            </div>
+            <div className="slider-container mobile-hidden">
+              <input
+                type="range"
+                min="10"
+                max="100"
+                step="5"
+                value={(value as number) || 50}
+                onChange={(e) => updateField(section.id, Number(e.target.value))}
+              />
+              <span className="slider-value">{(value as number) || 50}%</span>
+            </div>
+          </div>
+        );
+
+      case 'number':
+        return (
+          <div className="form-group" key={section.id}>
+            <label>{section.label}</label>
+            <input
+              type="number"
+              min="0"
+              max="999"
+              value={(value as number) || 0}
+              onChange={(e) => updateField(section.id, Number(e.target.value))}
+            />
+          </div>
+        );
+
+      case 'text':
+      default:
+        return (
+          <div className="form-group" key={section.id}>
+            <label>{section.label}</label>
+            <RichTextEditor
+              value={(value as string) || ''}
+              onChange={(val) => updateField(section.id, val)}
+            />
+          </div>
+        );
+    }
+  };
+
+  // Group consecutive number fields into rows of 2
+  const renderDynamicFields = () => {
+    const elements: React.ReactNode[] = [];
+    let i = 0;
+    while (i < template.length) {
+      const section = template[i];
+      // Try to pair consecutive number fields
+      if (section.type === 'number' && i + 1 < template.length && template[i + 1].type === 'number') {
+        elements.push(
+          <div className="form-row-2" key={`row-${section.id}`}>
+            {renderField(section)}
+            {renderField(template[i + 1])}
+          </div>
+        );
+        i += 2;
+      } else {
+        elements.push(renderField(section));
+        i++;
+      }
+    }
+    return elements;
+  };
+
   return (
     <div className="container">
       {/* Combined Header with Logo and Back */}
@@ -250,7 +349,7 @@ export default function FormFill() {
       <div className="content-card">
 
         <form onSubmit={handleSubmit}>
-          {/* Basic Info */}
+          {/* Basic Info - always shown */}
           <div className="form-row-2">
             <div className="form-group">
               <label>מטפלת *</label>
@@ -281,133 +380,22 @@ export default function FormFill() {
             </div>
           </div>
 
-          {/* Cooperation - Mobile friendly percentage selector */}
-          <div className="form-group">
-            <label>שיתוף פעולה</label>
-            <div className="percentage-selector">
-              {[20, 40, 60, 80, 100].map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  className={`percentage-btn ${cooperation === val ? 'active' : ''}`}
-                  onClick={() => setCooperation(val)}
-                >
-                  {val}%
-                </button>
-              ))}
-            </div>
-            <div className="slider-container mobile-hidden">
-              <input
-                type="range"
-                min="10"
-                max="100"
-                step="5"
-                value={cooperation}
-                onChange={(e) => setCooperation(Number(e.target.value))}
-              />
-              <span className="slider-value">{cooperation}%</span>
-            </div>
-          </div>
-
-          {/* Duration Fields */}
-          <div className="form-row-2">
-            <div className="form-group">
-              <label>משך הטיפול (דקות)</label>
-              <input
-                type="number"
-                min="5"
-                max="180"
-                value={sessionDuration}
-                onChange={(e) => setSessionDuration(Number(e.target.value))}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>משך ישיבה (דקות)</label>
-              <input
-                type="number"
-                min="0"
-                max="180"
-                value={sittingDuration}
-                onChange={(e) => setSittingDuration(Number(e.target.value))}
-              />
-            </div>
-          </div>
-
-          {/* Rich Text Fields */}
-          <div className="form-group">
-            <label>מצב רוח</label>
-            <RichTextEditor value={mood} onChange={setMood} />
-          </div>
-
-          <div className="form-group">
-            <label>רמת ריכוז / עייפות</label>
-            <RichTextEditor value={concentrationLevel} onChange={setConcentrationLevel} />
-          </div>
-
-          <div className="form-group">
-            <label>מחזקים (חדשים)</label>
-            <RichTextEditor value={newReinforcers} onChange={setNewReinforcers} />
-          </div>
-
-          <div className="form-group">
-            <label>מילים שהפיק</label>
-            <RichTextEditor value={wordsProduced} onChange={setWordsProduced} />
-          </div>
-
-          <div className="form-group">
-            <label>פעילות בהפסקות</label>
-            <RichTextEditor value={breakActivities} onChange={setBreakActivities} />
-          </div>
-
-          <div className="form-group">
-            <label>פעילות סוף שיעור</label>
-            <RichTextEditor value={endOfSessionActivity} onChange={setEndOfSessionActivity} />
-          </div>
-
-          <div className="form-group">
-            <label>הצלחות</label>
-            <RichTextEditor value={successes} onChange={setSuccesses} />
-          </div>
-
-          <div className="form-group">
-            <label>קשיים</label>
-            <RichTextEditor value={difficulties} onChange={setDifficulties} />
-          </div>
-
-          <div className="form-group">
-            <label>הערות</label>
-            <RichTextEditor value={notes} onChange={setNotes} />
-          </div>
+          {/* Dynamic Template Fields */}
+          {renderDynamicFields()}
 
           {/* Goals Section */}
           <div className="form-group">
             <label style={{ marginBottom: '12px' }}>מטרות שעבדנו עליהן</label>
 
-            {GOAL_CATEGORIES.map((cat) => {
-              const catGoals = goalsByCategory[cat.id] || [];
-              if (catGoals.length === 0) return null;
-
-              return (
-                <div key={cat.id} className="goals-category" style={{ '--category-color': cat.color } as React.CSSProperties}>
-                  <div className="goals-category-name" style={{ color: cat.color }}>
-                    {cat.nameHe}
-                  </div>
-                  <div className="checkbox-group">
-                    {catGoals.map((goal: Goal) => (
-                      <label key={goal.id} className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          checked={selectedGoals.has(goal.id)}
-                          onChange={() => toggleGoal(goal.id)}
-                        />
-                        <span>{goal.title}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+            <GoalsWeeklyTable
+              kidId={kidId}
+              goals={goals}
+              selectedGoals={selectedGoals}
+              onToggleGoal={toggleGoal}
+              currentFormDate={sessionDate}
+              currentFormId={isEditMode ? formId : undefined}
+              practitioners={practitioners}
+            />
 
             {/* Additional Goals */}
             <div className="custom-goals">
@@ -440,7 +428,7 @@ export default function FormFill() {
 
           {/* Submit */}
           <div className="form-actions">
-            <Link to={kidId ? `/kid/${kidId}/sessions` : '/'} className="btn-secondary">
+            <Link to={kidId ? `/kid/${kidId}` : '/'} className="btn-secondary">
               ביטול
             </Link>
             <button

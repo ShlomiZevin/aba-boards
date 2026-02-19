@@ -22,6 +22,27 @@ router.get('/kids/:kidId', asyncHandler(async (req, res) => {
   res.json(kid);
 }));
 
+router.post('/kids', asyncHandler(async (req, res) => {
+  const kid = await therapyService.createKid(req.body);
+  res.status(201).json(kid);
+}));
+
+router.delete('/kids/:kidId', asyncHandler(async (req, res) => {
+  await therapyService.deleteKid(req.params.kidId);
+  res.status(204).send();
+}));
+
+// Form Template
+router.get('/kids/:kidId/form-template', asyncHandler(async (req, res) => {
+  const template = await therapyService.getFormTemplate(req.params.kidId);
+  res.json(template);
+}));
+
+router.put('/kids/:kidId/form-template', asyncHandler(async (req, res) => {
+  const template = await therapyService.updateFormTemplate(req.params.kidId, req.body);
+  res.json(template);
+}));
+
 // ==================== PRACTITIONERS ====================
 
 router.get('/kids/:kidId/practitioners', asyncHandler(async (req, res) => {
@@ -145,7 +166,8 @@ router.get('/sessions/alerts', asyncHandler(async (req, res) => {
 // ==================== FORMS ====================
 
 router.get('/kids/:kidId/forms', asyncHandler(async (req, res) => {
-  const forms = await therapyService.getFormsForKid(req.params.kidId);
+  const filters = { weekOf: req.query.weekOf };
+  const forms = await therapyService.getFormsForKid(req.params.kidId, filters);
   res.json(forms);
 }));
 
@@ -168,6 +190,16 @@ router.get('/sessions/:sessionId/form', asyncHandler(async (req, res) => {
 router.post('/forms', asyncHandler(async (req, res) => {
   const form = await therapyService.submitForm(req.body);
   res.status(201).json(form);
+}));
+
+router.put('/forms/:id', asyncHandler(async (req, res) => {
+  const form = await therapyService.updateForm(req.params.id, req.body);
+  res.json(form);
+}));
+
+router.delete('/forms/:id', asyncHandler(async (req, res) => {
+  await therapyService.deleteForm(req.params.id);
+  res.status(204).send();
 }));
 
 router.post('/forms/create-link', asyncHandler(async (req, res) => {
