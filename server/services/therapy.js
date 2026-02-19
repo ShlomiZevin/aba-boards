@@ -129,6 +129,25 @@ async function deleteKid(kidId) {
 
 // ==================== PRACTITIONERS ====================
 
+async function getKidsForPractitioner(practitionerId) {
+  const db = getDb();
+  const linksSnapshot = await db.collection('kidPractitioners')
+    .where('practitionerId', '==', practitionerId)
+    .get();
+
+  if (linksSnapshot.empty) return [];
+
+  const kidIds = linksSnapshot.docs.map(doc => doc.data().kidId);
+  const kids = [];
+  for (const kidId of kidIds) {
+    const kidDoc = await db.collection('kids').doc(kidId).get();
+    if (kidDoc.exists) {
+      kids.push({ id: kidDoc.id, ...kidDoc.data() });
+    }
+  }
+  return kids;
+}
+
 async function getPractitionersForKid(kidId) {
   const db = getDb();
 
@@ -696,6 +715,7 @@ module.exports = {
   createKid,
   deleteKid,
   // Practitioners
+  getKidsForPractitioner,
   getPractitionersForKid,
   addPractitionerToKid,
   updatePractitioner,

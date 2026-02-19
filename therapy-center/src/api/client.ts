@@ -69,6 +69,8 @@ export const practitionersApi = {
   delete: (id: string) =>
     fetchApi<void>(`/practitioners/${id}`, { method: 'DELETE' }),
   getMyTherapists: () => fetchApi<Practitioner[]>('/practitioners/my-therapists'),
+  getKidsForPractitioner: (practitionerId: string) =>
+    fetchApi<Kid[]>(`/practitioners/${practitionerId}/kids`),
 };
 
 // Parents API

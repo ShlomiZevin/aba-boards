@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { kidsApi, sessionsApi } from '../api/client';
+import { kidsApi, practitionersApi, sessionsApi } from '../api/client';
+import { useTherapist } from '../contexts/TherapistContext';
+import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import type { Kid } from '../types';
 
 // Use import.meta.env.BASE_URL for correct path in both dev and production
 const BASE = import.meta.env.BASE_URL;
 const DEFAULT_AVATAR = `${BASE}me-default-small.jpg`;
 
-function KidCard({ kid }: { kid: Kid }) {
+function KidCard({ kid, isTherapistView, links }: { kid: Kid; isTherapistView: boolean; links: ReturnType<typeof useTherapistLinks> }) {
   const avatarUrl = kid.imageName ? `${BASE}${kid.imageName}` : DEFAULT_AVATAR;
 
   return (
     <div className="kid-card-container">
-      <Link to={`/kid/${kid.id}`} className="kid-card">
+      <Link to={links.kidDetail(kid.id)} className="kid-card">
         <img
           src={avatarUrl}
           alt={kid.name}
@@ -28,7 +30,7 @@ function KidCard({ kid }: { kid: Kid }) {
         </div>
       </Link>
       <div className="kid-card-actions">
-        <Link to={`/kid/${kid.id}`} className="kid-action-btn with-label">
+        <Link to={links.kidDetail(kid.id)} className="kid-action-btn with-label">
           <span className="action-icon">🏠</span>
           <span className="action-label">דף ילד</span>
         </Link>
@@ -36,14 +38,18 @@ function KidCard({ kid }: { kid: Kid }) {
           <span className="action-icon">📱</span>
           <span className="action-label">לוח</span>
         </a>
-        <a href={`/board-builder.html?kid=${kid.id}`} className="kid-action-btn with-label">
-          <span className="action-icon">🎨</span>
-          <span className="action-label">בנה לוח</span>
-        </a>
-        <a href={`/stats.html?kid=${kid.id}`} className="kid-action-btn with-label">
-          <span className="action-icon">📊</span>
-          <span className="action-label">סטטיסטיקה</span>
-        </a>
+        {!isTherapistView && (
+          <>
+            <a href={`/board-builder.html?kid=${kid.id}`} className="kid-action-btn with-label">
+              <span className="action-icon">🎨</span>
+              <span className="action-label">בנה לוח</span>
+            </a>
+            <a href={`/stats.html?kid=${kid.id}`} className="kid-action-btn with-label">
+              <span className="action-icon">📊</span>
+              <span className="action-label">סטטיסטיקה</span>
+            </a>
+          </>
+        )}
       </div>
     </div>
   );
@@ -53,19 +59,24 @@ function KidCard({ kid }: { kid: Kid }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isTherapistView, practitionerId } = useTherapist();
+  const links = useTherapistLinks();
   const [showCreateKid, setShowCreateKid] = useState(false);
   const [newKidName, setNewKidName] = useState('');
   const [newKidAge, setNewKidAge] = useState('');
   const [newKidGender, setNewKidGender] = useState('');
 
   const { data: kidsResponse, isLoading: kidsLoading } = useQuery({
-    queryKey: ['kids'],
-    queryFn: () => kidsApi.getAll(),
+    queryKey: isTherapistView ? ['kids', 'practitioner', practitionerId] : ['kids'],
+    queryFn: () => isTherapistView
+      ? practitionersApi.getKidsForPractitioner(practitionerId!)
+      : kidsApi.getAll(),
   });
 
   const { data: alertsResponse } = useQuery({
     queryKey: ['alerts'],
     queryFn: () => sessionsApi.getAlerts(),
+    enabled: !isTherapistView,
   });
 
   const createKidMutation = useMutation({
@@ -78,7 +89,7 @@ export default function Dashboard() {
       setNewKidAge('');
       setNewKidGender('');
       if (res.data?.id) {
-        navigate(`/kid/${res.data.id}`);
+        navigate(links.kidDetail(res.data.id));
       }
     },
   });
@@ -92,11 +103,11 @@ export default function Dashboard() {
       <div className="header-card">
         <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo" />
         <h1>מרכז הטיפול</h1>
-        <p>ניהול ילדים, מטפלות, מטרות וטפסים</p>
+        <p>{isTherapistView ? 'הילדים שלי' : 'ניהול ילדים, מטפלות, מטרות וטפסים'}</p>
       </div>
 
       {/* Alerts */}
-      {alerts.length > 0 && (
+      {!isTherapistView && alerts.length > 0 && (
         <div className="alerts-box">
           <h3>התראות ({alerts.length})</h3>
           <p>יש {alerts.length} טפסים שממתינים למילוי</p>
@@ -107,35 +118,39 @@ export default function Dashboard() {
       <div className="content-card">
         <div className="content-card-header">
           <h2>הילדים</h2>
-          <button onClick={() => setShowCreateKid(true)} className="btn-primary btn-small">
-            + הוסף ילד
-          </button>
+          {!isTherapistView && (
+            <button onClick={() => setShowCreateKid(true)} className="btn-primary btn-small">
+              + הוסף ילד
+            </button>
+          )}
         </div>
 
         {kidsLoading ? (
           <div className="loading">טוען...</div>
         ) : kids.length === 0 ? (
           <div className="empty-state">
-            <p>אין ילדים במערכת</p>
-            <button
-              onClick={() => setShowCreateKid(true)}
-              className="btn-primary"
-              style={{ marginTop: '12px' }}
-            >
-              + הוסף ילד חדש
-            </button>
+            <p>{isTherapistView ? 'אין ילדים משויכים אלייך' : 'אין ילדים במערכת'}</p>
+            {!isTherapistView && (
+              <button
+                onClick={() => setShowCreateKid(true)}
+                className="btn-primary"
+                style={{ marginTop: '12px' }}
+              >
+                + הוסף ילד חדש
+              </button>
+            )}
           </div>
         ) : (
           <div className="kids-grid">
             {kids.map((kid) => (
-              <KidCard key={kid.id} kid={kid} />
+              <KidCard key={kid.id} kid={kid} isTherapistView={isTherapistView} links={links} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Create Kid Modal */}
-      {showCreateKid && (
+      {/* Create Kid Modal - Admin only */}
+      {!isTherapistView && showCreateKid && (
         <div className="modal-overlay" onClick={() => setShowCreateKid(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>הוספת ילד חדש</h3>

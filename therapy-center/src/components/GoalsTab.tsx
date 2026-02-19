@@ -96,10 +96,12 @@ function GoalItem({
   goal,
   onToggleActive,
   onDelete,
+  readOnly = false,
 }: {
   goal: Goal;
   onToggleActive: () => void;
   onDelete: () => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className={`goal-item ${goal.isActive ? 'active' : 'inactive'}`}>
@@ -107,6 +109,7 @@ function GoalItem({
         <button
           onClick={onToggleActive}
           className={`goal-checkbox ${goal.isActive ? 'checked' : ''}`}
+          style={readOnly ? { cursor: 'default' } : undefined}
         >
           {goal.isActive && '✓'}
         </button>
@@ -114,9 +117,11 @@ function GoalItem({
           {goal.title}
         </span>
       </div>
-      <button onClick={onDelete} className="btn-icon" title="מחק">
-        ✕
-      </button>
+      {!readOnly && (
+        <button onClick={onDelete} className="btn-icon" title="מחק">
+          ✕
+        </button>
+      )}
     </div>
   );
 }
@@ -129,6 +134,7 @@ function CategorySection({
   onAddGoal,
   onToggleActive,
   onDeleteGoal,
+  readOnly = false,
 }: {
   categoryId: GoalCategoryId;
   categoryName: string;
@@ -137,6 +143,7 @@ function CategorySection({
   onAddGoal: (categoryId: GoalCategoryId) => void;
   onToggleActive: (goalId: string, isActive: boolean) => void;
   onDeleteGoal: (goalId: string) => void;
+  readOnly?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const activeCount = goals.filter((g) => g.isActive).length;
@@ -155,15 +162,17 @@ function CategorySection({
             ({activeCount} פעילות מתוך {goals.length})
           </span>
         </h4>
-        <button
-          className="add-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddGoal(categoryId);
-          }}
-        >
-          + הוסף מטרה
-        </button>
+        {!readOnly && (
+          <button
+            className="add-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddGoal(categoryId);
+            }}
+          >
+            + הוסף מטרה
+          </button>
+        )}
       </div>
 
       {isExpanded && (
@@ -177,8 +186,9 @@ function CategorySection({
               <GoalItem
                 key={goal.id}
                 goal={goal}
-                onToggleActive={() => onToggleActive(goal.id, !goal.isActive)}
+                onToggleActive={() => !readOnly && onToggleActive(goal.id, !goal.isActive)}
                 onDelete={() => onDeleteGoal(goal.id)}
+                readOnly={readOnly}
               />
             ))
           )}
@@ -188,7 +198,7 @@ function CategorySection({
   );
 }
 
-export default function GoalsTab({ kidId }: { kidId: string }) {
+export default function GoalsTab({ kidId, readOnly = false }: { kidId: string; readOnly?: boolean }) {
   const [addingToCategory, setAddingToCategory] = useState<GoalCategoryId | null>(null);
   const queryClient = useQueryClient();
 
@@ -256,6 +266,7 @@ export default function GoalsTab({ kidId }: { kidId: string }) {
             updateGoalMutation.mutate({ id: goalId, isActive })
           }
           onDeleteGoal={(goalId) => deleteGoalMutation.mutate(goalId)}
+          readOnly={readOnly}
         />
       ))}
 

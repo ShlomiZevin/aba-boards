@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { formsApi, kidsApi, practitionersApi, goalsApi, formTemplateApi } from '../api/client';
+import { useTherapist } from '../contexts/TherapistContext';
+import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import ConfirmModal from '../components/ConfirmModal';
 import { toDate } from '../utils/date';
 import { DEFAULT_FORM_TEMPLATE } from '../types';
@@ -36,6 +38,8 @@ export default function FormView() {
   const { formId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isTherapistView, practitionerId: contextPractitionerId } = useTherapist();
+  const links = useTherapistLinks();
   const [showDeleteForm, setShowDeleteForm] = useState(false);
 
   const { data: formRes, isLoading } = useQuery({
@@ -75,7 +79,7 @@ export default function FormView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forms'] });
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
-      navigate(form?.kidId ? `/kid/${form.kidId}` : '/');
+      navigate(form?.kidId ? links.kidDetail(form.kidId) : links.home());
     },
   });
 
@@ -99,7 +103,21 @@ export default function FormView() {
       <div className="container">
         <div className="content-card" style={{ textAlign: 'center', padding: '40px' }}>
           <p style={{ color: '#a0aec0', marginBottom: '16px' }}>הטופס לא נמצא</p>
-          <Link to="/" className="btn-primary">
+          <Link to={links.home()} className="btn-primary">
+            חזור לדף הבית
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Therapist access control: can only view own forms
+  if (isTherapistView && form.practitionerId !== contextPractitionerId) {
+    return (
+      <div className="container">
+        <div className="content-card" style={{ textAlign: 'center', padding: '40px' }}>
+          <p style={{ color: '#a0aec0', marginBottom: '16px' }}>אין הרשאה לצפות בטופס זה</p>
+          <Link to={links.home()} className="btn-primary">
             חזור לדף הבית
           </Link>
         </div>
@@ -129,7 +147,7 @@ export default function FormView() {
       {/* Combined Header with Logo and Back */}
       <div className="kid-header-card">
         <div className="kid-header-top">
-          <Link to={kid ? `/kid/${kid.id}` : '/'} className="kid-header-back">
+          <Link to={kid ? links.kidDetail(kid.id) : links.home()} className="kid-header-back">
             <span className="back-arrow">←</span>
             <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
           </Link>
@@ -140,26 +158,30 @@ export default function FormView() {
             {kid && <p style={{ color: '#64748b', margin: '4px 0 0 0' }}>{kid.name}</p>}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => navigate(`/form/${formId}/edit`)}
-              className="btn-primary btn-small"
-            >
-              ערוך
-            </button>
+            {!isTherapistView && (
+              <button
+                onClick={() => navigate(links.formEdit(formId!))}
+                className="btn-primary btn-small"
+              >
+                ערוך
+              </button>
+            )}
             <button
               onClick={() => window.print()}
               className="btn-secondary btn-small"
             >
               הדפס
             </button>
-            <button
-              onClick={() => setShowDeleteForm(true)}
-              className="btn-small"
-              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1em', padding: '6px 8px' }}
-              title="מחק טופס"
-            >
-              🗑
-            </button>
+            {!isTherapistView && (
+              <button
+                onClick={() => setShowDeleteForm(true)}
+                className="btn-small"
+                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1em', padding: '6px 8px' }}
+                title="מחק טופס"
+              >
+                🗑
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -1246,6 +1246,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
 }
 
 .calendar-event-status {
@@ -1265,6 +1266,45 @@ body {
 .calendar-event-status.no-form {
   background: rgba(255, 255, 255, 0.9);
   color: #c2410c;
+}
+
+/* X delete — slides in from the left edge of the event pill on hover */
+.calendar-event-delete {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 20px;
+  background: rgba(185, 28, 28, 0.85);
+  border: none;
+  color: white;
+  font-size: 0.7em;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.rbc-event:hover .calendar-event-delete {
+  display: flex;
+}
+
+/* Drag source: semi-transparent instead of invisible */
+.rbc-addons-dnd .rbc-addons-dnd-dragged-event {
+  opacity: 0.35 !important;
+}
+
+/* Hide resize handles — we only support day-level drag, not resizing */
+.rbc-addons-dnd-resize-ew-anchor,
+.rbc-addons-dnd-resize-ns-anchor {
+  display: none !important;
+}
+
+/* Hide delete button while any drag is in progress */
+.rbc-addons-dnd-is-dragging .calendar-event-delete {
+  display: none !important;
 }
 
 /* Form View */
@@ -2338,18 +2378,15 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
   background: white;
-  cursor: pointer;
   transition: all 0.2s ease;
   text-align: right;
-  width: 100%;
 }
 
 .day-session-item:hover {
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 

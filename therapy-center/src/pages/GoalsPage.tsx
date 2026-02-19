@@ -1,6 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { kidsApi } from '../api/client';
+import { useTherapist } from '../contexts/TherapistContext';
+import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import GoalsTab from '../components/GoalsTab';
 
 const BASE = import.meta.env.BASE_URL;
@@ -8,6 +10,8 @@ const DEFAULT_AVATAR = `${BASE}me-default-small.jpg`;
 
 export default function GoalsPage() {
   const { kidId } = useParams<{ kidId: string }>();
+  const { isTherapistView } = useTherapist();
+  const links = useTherapistLinks();
 
   const { data: kidRes, isLoading } = useQuery({
     queryKey: ['kid', kidId],
@@ -31,7 +35,7 @@ export default function GoalsPage() {
         <div className="content-card">
           <div className="empty-state">
             <p>הילד לא נמצא</p>
-            <Link to="/" className="btn-primary" style={{ marginTop: '16px', display: 'inline-block' }}>
+            <Link to={links.home()} className="btn-primary" style={{ marginTop: '16px', display: 'inline-block' }}>
               חזור לדף הבית
             </Link>
           </div>
@@ -47,7 +51,7 @@ export default function GoalsPage() {
       {/* Combined Header with Logo and Back */}
       <div className="kid-header-card">
         <div className="kid-header-top">
-          <Link to={`/kid/${kidId}`} className="kid-header-back">
+          <Link to={links.kidDetail(kidId!)} className="kid-header-back">
             <span className="back-arrow">←</span>
             <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
           </Link>
@@ -72,7 +76,7 @@ export default function GoalsPage() {
 
       {/* Goals Content */}
       <div className="content-card">
-        <GoalsTab kidId={kidId!} />
+        <GoalsTab kidId={kidId!} readOnly={isTherapistView} />
       </div>
     </div>
   );

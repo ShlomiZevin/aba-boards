@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate, Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { kidsApi, practitionersApi, goalsApi, formsApi, formTemplateApi, sessionsApi } from '../api/client';
+import { useTherapist } from '../contexts/TherapistContext';
+import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { toDate } from '../utils/date';
 import { DEFAULT_FORM_TEMPLATE, KNOWN_FIELD_IDS } from '../types';
 import type { Goal, GoalSnapshot, SessionForm, Session, FormTemplateSection } from '../types';
@@ -16,6 +18,8 @@ export default function FormFill() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isTherapistView, practitionerId: contextPractitionerId } = useTherapist();
+  const links = useTherapistLinks();
 
   const kidIdParam = searchParams.get('kidId') || '';
   const sessionId = searchParams.get('sessionId') || undefined;
@@ -24,7 +28,9 @@ export default function FormFill() {
 
   // Form state
   const [kidId, setKidId] = useState(kidIdParam);
-  const [practitionerId, setPractitionerId] = useState('');
+  const [practitionerId, setPractitionerId] = useState(
+    isTherapistView && contextPractitionerId ? contextPractitionerId : ''
+  );
   const [sessionDate, setSessionDate] = useState(dateParam || format(new Date(), 'yyyy-MM-dd'));
 
   // Dynamic field values (replaces individual state vars)
@@ -121,12 +127,14 @@ export default function FormFill() {
     if (session) {
       const sessionDateObj = toDate(session.scheduledDate);
       setSessionDate(format(sessionDateObj, 'yyyy-MM-dd'));
-      if (session.therapistId) {
+      if (isTherapistView && contextPractitionerId) {
+        setPractitionerId(contextPractitionerId);
+      } else if (session.therapistId) {
         setPractitionerId(session.therapistId);
       }
       setInitialized(true);
     }
-  }, [sessionId, sessionsRes, initialized, isEditMode]);
+  }, [sessionId, sessionsRes, initialized, isEditMode, isTherapistView, contextPractitionerId]);
 
   const submitMutation = useMutation({
     mutationFn: (data: Omit<SessionForm, 'id' | 'createdAt' | 'updatedAt'>) =>
@@ -135,7 +143,7 @@ export default function FormFill() {
       if (res.success && res.data) {
         queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
         queryClient.invalidateQueries({ queryKey: ['forms', kidId] });
-        navigate(`/form/${res.data.id}/view`);
+        navigate(links.formView(res.data.id));
       }
     },
   });
@@ -148,7 +156,7 @@ export default function FormFill() {
         queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
         queryClient.invalidateQueries({ queryKey: ['forms', kidId] });
         queryClient.invalidateQueries({ queryKey: ['form', formId] });
-        navigate(`/form/${res.data.id}/view`);
+        navigate(links.formView(res.data.id));
       }
     },
   });
@@ -336,7 +344,7 @@ export default function FormFill() {
       {/* Combined Header with Logo and Back */}
       <div className="kid-header-card">
         <div className="kid-header-top">
-          <Link to={kidId ? `/kid/${kidId}` : '/'} className="kid-header-back">
+          <Link to={kidId ? links.kidDetail(kidId) : links.home()} className="kid-header-back">
             <span className="back-arrow">←</span>
             <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
           </Link>
@@ -353,20 +361,29 @@ export default function FormFill() {
           <div className="form-row-2">
             <div className="form-group">
               <label>מטפלת *</label>
-              <select
-                value={practitionerId}
-                onChange={(e) => setPractitionerId(e.target.value)}
-                required
-              >
-                <option value="">בחר מטפלת</option>
-                {practitioners
-                  .filter((p) => p.type === 'מטפלת')
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </select>
+              {isTherapistView ? (
+                <input
+                  type="text"
+                  value={practitioners.find((p) => p.id === practitionerId)?.name || ''}
+                  disabled
+                  style={{ backgroundColor: '#f1f5f9' }}
+                />
+              ) : (
+                <select
+                  value={practitionerId}
+                  onChange={(e) => setPractitionerId(e.target.value)}
+                  required
+                >
+                  <option value="">בחר מטפלת</option>
+                  {practitioners
+                    .filter((p) => p.type === 'מטפלת')
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+              )}
             </div>
 
             <div className="form-group">
@@ -428,7 +445,7 @@ export default function FormFill() {
 
           {/* Submit */}
           <div className="form-actions">
-            <Link to={kidId ? `/kid/${kidId}` : '/'} className="btn-secondary">
+            <Link to={kidId ? links.kidDetail(kidId) : links.home()} className="btn-secondary">
               ביטול
             </Link>
             <button

@@ -71,6 +71,11 @@ router.delete('/practitioners/:id', asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
+router.get('/practitioners/:practitionerId/kids', asyncHandler(async (req, res) => {
+  const kids = await therapyService.getKidsForPractitioner(req.params.practitionerId);
+  res.json(kids);
+}));
+
 router.get('/practitioners/my-therapists', asyncHandler(async (req, res) => {
   // TODO: Get adminId from auth when implemented
   const adminId = 'michal-super-admin';
