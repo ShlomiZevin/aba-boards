@@ -6,6 +6,7 @@ import type {
   GoalLibraryItem,
   Session,
   SessionForm,
+  MeetingForm,
   FormTemplate,
   ApiResponse,
 } from '../types';
@@ -19,9 +20,19 @@ const ADMIN_API_BASE = import.meta.env.DEV
   ? '/api/admin'
   : 'https://avatar-server-1018338671074.me-west1.run.app/api/admin';
 
-function getAdminKey(): Record<string, string> {
-  const key = localStorage.getItem('admin_key');
-  return key ? { 'X-Admin-Key': key } : {};
+// Auth context for therapist/parent views (set by route components)
+let _therapistId: string | null = null;
+let _parentKidId: string | null = null;
+
+export function setTherapistAuth(id: string | null) { _therapistId = id; }
+export function setParentAuth(kidId: string | null) { _parentKidId = kidId; }
+
+function getAuthHeaders(): Record<string, string> {
+  const adminKey = localStorage.getItem('admin_key');
+  if (adminKey) return { 'X-Admin-Key': adminKey };
+  if (_therapistId) return { 'X-Practitioner-Id': _therapistId };
+  if (_parentKidId) return { 'X-Kid-Id': _parentKidId };
+  return {};
 }
 
 async function fetchApi<T>(
@@ -32,7 +43,7 @@ async function fetchApi<T>(
     const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...getAdminKey(),
+        ...getAuthHeaders(),
       },
       ...options,
     });
@@ -56,6 +67,11 @@ export const kidsApi = {
   create: (data: { name: string; age?: number | string; gender?: string }) =>
     fetchApi<Kid>('/kids', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (kidId: string, data: Partial<Kid>) =>
+    fetchApi<Kid>(`/kids/${kidId}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
   delete: (kidId: string) =>
@@ -86,6 +102,8 @@ export const practitionersApi = {
   getMyTherapists: () => fetchApi<Practitioner[]>('/practitioners/my-therapists'),
   getKidsForPractitioner: (practitionerId: string) =>
     fetchApi<Kid[]>(`/practitioners/${practitionerId}/kids`),
+  getInfo: (practitionerId: string) =>
+    fetchApi<Practitioner>(`/practitioners/${practitionerId}/info`),
 };
 
 // Parents API
@@ -134,9 +152,17 @@ export const sessionsApi = {
   },
   schedule: (
     kidId: string,
-    data: { scheduledDate: string; therapistId?: string }
+    data: { scheduledDate: string; therapistId?: string; type?: string }
   ) =>
     fetchApi<Session>(`/kids/${kidId}/sessions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  scheduleRecurring: (
+    kidId: string,
+    data: { scheduledDate: string; therapistId?: string; type?: string; until: string }
+  ) =>
+    fetchApi<Session[]>(`/kids/${kidId}/sessions/recurring`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -148,6 +174,23 @@ export const sessionsApi = {
   delete: (id: string) =>
     fetchApi<void>(`/sessions/${id}`, { method: 'DELETE' }),
   getAlerts: () => fetchApi<Session[]>('/sessions/alerts'),
+};
+
+// Meeting Forms API
+export const meetingFormsApi = {
+  getForKid: (kidId: string) => fetchApi<MeetingForm[]>(`/kids/${kidId}/meeting-forms`),
+  getById: (id: string) => fetchApi<MeetingForm>(`/meeting-forms/${id}`),
+  submit: (data: Omit<MeetingForm, 'id' | 'createdAt' | 'updatedAt'>) =>
+    fetchApi<MeetingForm>('/meeting-forms', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<MeetingForm>) =>
+    fetchApi<MeetingForm>(`/meeting-forms/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) => fetchApi<void>(`/meeting-forms/${id}`, { method: 'DELETE' }),
 };
 
 // Forms API
@@ -196,7 +239,7 @@ async function fetchAdminApi<T>(endpoint: string, options?: RequestInit): Promis
     const response = await fetch(`${ADMIN_API_BASE}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...getAdminKey(),
+        ...getAuthHeaders(),
       },
       ...options,
     });

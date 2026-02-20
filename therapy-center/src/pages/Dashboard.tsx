@@ -12,7 +12,9 @@ const BASE = import.meta.env.BASE_URL;
 const DEFAULT_AVATAR = `${BASE}me-default-small.jpg`;
 
 function KidCard({ kid, isTherapistView, links }: { kid: Kid; isTherapistView: boolean; links: ReturnType<typeof useTherapistLinks> }) {
-  const avatarUrl = kid.imageName ? `${BASE}${kid.imageName}` : DEFAULT_AVATAR;
+  const avatarUrl = kid.imageName
+    ? (kid.imageName.startsWith('data:') ? kid.imageName : `${BASE}${kid.imageName}`)
+    : DEFAULT_AVATAR;
 
   return (
     <div className="kid-card-container">
@@ -28,6 +30,29 @@ function KidCard({ kid, isTherapistView, links }: { kid: Kid; isTherapistView: b
         <div>
           <div className="kid-name">{kid.name}</div>
           {kid.age && <div className="kid-age">גיל {kid.age}</div>}
+          {(kid.totalMoney !== undefined || kid.tasks !== undefined) && (() => {
+            const completedToday = (kid.completedTasks?.length ?? 0) + (kid.completedBonusTasks?.length ?? 0);
+            const bonusToday = kid.completedBonusTasks?.length ?? 0;
+            return (
+              <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap' }}>
+                {kid.totalMoney !== undefined && (
+                  <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', borderRadius: 10, padding: '1px 7px', fontWeight: 600 }}>
+                    💰 {parseFloat(kid.totalMoney.toFixed(2))}
+                  </span>
+                )}
+                {kid.tasks !== undefined && (
+                  <span style={{ fontSize: 11, background: '#f0f9ff', color: '#0369a1', borderRadius: 10, padding: '1px 7px', fontWeight: 600 }}>
+                    📋 {kid.tasks.length}
+                  </span>
+                )}
+                {completedToday > 0 && (
+                  <span style={{ fontSize: 11, background: '#f0fdf4', color: '#15803d', borderRadius: 10, padding: '1px 7px', fontWeight: 600 }}>
+                    ✅ {completedToday}{bonusToday > 0 ? ` (+${bonusToday}⭐)` : ''}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </Link>
       <div className="kid-card-actions">
@@ -117,6 +142,13 @@ export default function Dashboard() {
     queryFn: () => sessionsApi.getAlerts(),
     enabled: !isTherapistView,
   });
+
+  const { data: practitionerInfoRes } = useQuery({
+    queryKey: ['practitioner-info', practitionerId],
+    queryFn: () => practitionersApi.getInfo(practitionerId!),
+    enabled: isTherapistView && !!practitionerId,
+  });
+  const practitionerName = practitionerInfoRes?.data?.name || '';
 
   const createKidMutation = useMutation({
     mutationFn: (data: { name: string; age?: string; gender?: string }) =>
@@ -208,7 +240,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="header-card" style={{ position: 'relative' }}>
         <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo" />
-        <h1>מרכז הטיפול</h1>
+        <h1>{isTherapistView && practitionerName ? `שלום, ${practitionerName}` : 'מרכז הטיפול'}</h1>
         <p>{isTherapistView ? 'הילדים שלי' : 'ניהול ילדים, מטפלות, מטרות וטפסים'}</p>
         {user && (
           <div ref={userMenuRef} style={{ position: 'absolute', top: 12, left: 12, zIndex: 20 }}>
@@ -435,10 +467,10 @@ export default function Dashboard() {
                 {showAdminList ? 'הסתר רשימה' : 'הצג רשימה'}
               </button>
               <button
-                onClick={() => { setShowCreateAdmin(v => !v); setCreatedKey(null); setCreateAdminError(''); }}
+                onClick={() => { setShowCreateAdmin(true); setCreatedKey(null); setCreateAdminError(''); setNewAdminName(''); setNewAdminMobile(''); setNewAdminEmail(''); setNewAdminKey(''); setNewAdminKeyConfirm(''); }}
                 className="btn-primary btn-small"
               >
-                {showCreateAdmin ? 'סגור' : '+ מנהל חדש'}
+                + מנהל חדש
               </button>
             </div>
           </div>
@@ -485,75 +517,98 @@ export default function Dashboard() {
               )}
             </div>
           )}
+        </div>
+      )}
 
-          {showCreateAdmin && !createdKey && (
-            <form onSubmit={handleCreateAdmin} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12, direction: 'rtl' }}>
-              <input
-                placeholder="שם המנהל / המרכז *"
-                value={newAdminName}
-                onChange={e => setNewAdminName(e.target.value)}
-                required
-                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15 }}
-              />
-              <input
-                placeholder="טלפון נייד"
-                value={newAdminMobile}
-                onChange={e => setNewAdminMobile(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15 }}
-              />
-              <input
-                placeholder="אימייל"
-                type="email"
-                value={newAdminEmail}
-                onChange={e => setNewAdminEmail(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15 }}
-              />
-              <input
-                type="password"
-                placeholder="מפתח גישה *"
-                value={newAdminKey}
-                onChange={e => setNewAdminKey(e.target.value)}
-                required
-                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15 }}
-              />
-              <input
-                type="password"
-                placeholder="אימות מפתח גישה *"
-                value={newAdminKeyConfirm}
-                onChange={e => setNewAdminKeyConfirm(e.target.value)}
-                required
-                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15 }}
-              />
-              {createAdminError && <p style={{ color: '#e53935', margin: 0, fontSize: 13 }}>{createAdminError}</p>}
-              <button type="submit" className="btn-primary" disabled={createAdminLoading || !newAdminName.trim() || !newAdminKey.trim()}>
-                {createAdminLoading ? 'יוצר...' : 'צור מנהל'}
-              </button>
-            </form>
-          )}
-
-          {createdKey && (
-            <div style={{ marginTop: 12, padding: 16, background: '#f0fdf4', borderRadius: 10, border: '1px solid #86efac', direction: 'rtl' }}>
-              <p style={{ margin: '0 0 6px', fontWeight: 600, color: '#15803d' }}>מפתח הגישה נוצר בהצלחה</p>
-              <p style={{ margin: '0 0 10px', fontSize: 13, color: '#555' }}>שלח את המפתח הזה למנהל המרכז — הם יזינו אותו בדף הכניסה:</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, direction: 'ltr' }}>
-                <code style={{ fontSize: 22, fontWeight: 700, letterSpacing: 4, color: '#1e3a8a', background: '#dbeafe', padding: '6px 14px', borderRadius: 8 }}>
-                  {createdKey}
-                </code>
+      {/* Create admin modal */}
+      {showCreateAdmin && (
+        <div className="modal-overlay" onClick={() => setShowCreateAdmin(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ direction: 'rtl', minWidth: 320 }}>
+            {!createdKey ? (
+              <>
+                <h3 style={{ margin: '0 0 18px', fontSize: 17 }}>הוספת מנהל מרכז חדש</h3>
+                <form onSubmit={handleCreateAdmin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>שם המנהל / המרכז *</label>
+                    <input
+                      placeholder="שם"
+                      value={newAdminName}
+                      onChange={e => setNewAdminName(e.target.value)}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>טלפון נייד</label>
+                    <input
+                      placeholder="05X-XXXXXXX"
+                      value={newAdminMobile}
+                      onChange={e => setNewAdminMobile(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>אימייל</label>
+                    <input
+                      type="email"
+                      placeholder="example@email.com"
+                      value={newAdminEmail}
+                      onChange={e => setNewAdminEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>מפתח גישה *</label>
+                    <input
+                      type="password"
+                      placeholder="לפחות 4 תווים"
+                      value={newAdminKey}
+                      onChange={e => setNewAdminKey(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>אימות מפתח גישה *</label>
+                    <input
+                      type="password"
+                      placeholder="הכנס שוב"
+                      value={newAdminKeyConfirm}
+                      onChange={e => setNewAdminKeyConfirm(e.target.value)}
+                      required
+                    />
+                  </div>
+                  {createAdminError && <p style={{ color: '#e53935', margin: 0, fontSize: 13 }}>{createAdminError}</p>}
+                  <div className="modal-actions">
+                    <button type="button" onClick={() => setShowCreateAdmin(false)} className="btn-secondary">ביטול</button>
+                    <button type="submit" className="btn-primary" disabled={createAdminLoading || !newAdminName.trim() || !newAdminKey.trim()}>
+                      {createAdminLoading ? 'יוצר...' : 'צור מנהל'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+                <h3 style={{ margin: '0 0 8px', color: '#15803d' }}>מנהל נוצר בהצלחה!</h3>
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>שלח את המפתח הזה למנהל המרכז:</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, direction: 'ltr', marginBottom: 16 }}>
+                  <code style={{ fontSize: 24, fontWeight: 700, letterSpacing: 4, color: '#1e3a8a', background: '#dbeafe', padding: '8px 16px', borderRadius: 10 }}>
+                    {createdKey}
+                  </code>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(createdKey)}
+                    style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #93c5fd', background: 'white', cursor: 'pointer', fontSize: 13 }}
+                  >
+                    העתק
+                  </button>
+                </div>
                 <button
-                  onClick={() => navigator.clipboard.writeText(createdKey)}
-                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #93c5fd', background: 'white', cursor: 'pointer', fontSize: 13 }}
+                  onClick={() => { setCreatedKey(null); setShowCreateAdmin(false); if (showAdminList) loadAdminList(); }}
+                  className="btn-primary"
                 >
-                  העתק
+                  סגור
                 </button>
               </div>
-              <button
-                onClick={() => { setCreatedKey(null); setShowCreateAdmin(false); }}
-                style={{ marginTop: 12, padding: '6px 14px', borderRadius: 8, border: '1px solid #ccc', background: 'white', cursor: 'pointer', fontSize: 13 }}
-              >
-                סגור
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 

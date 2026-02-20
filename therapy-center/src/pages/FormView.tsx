@@ -111,19 +111,8 @@ export default function FormView() {
     );
   }
 
-  // Therapist access control: can only view own forms
-  if (isTherapistView && form.practitionerId !== contextPractitionerId) {
-    return (
-      <div className="container">
-        <div className="content-card" style={{ textAlign: 'center', padding: '40px' }}>
-          <p style={{ color: '#a0aec0', marginBottom: '16px' }}>אין הרשאה לצפות בטופס זה</p>
-          <Link to={links.home()} className="btn-primary">
-            חזור לדף הבית
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // In therapist view: can view all forms, but only edit/delete own forms
+  const isOwnForm = !isTherapistView || form.practitionerId === contextPractitionerId;
 
   const dateStr = format(toDate(form.sessionDate), 'dd/MM/yyyy');
 
@@ -158,7 +147,7 @@ export default function FormView() {
             {kid && <p style={{ color: '#64748b', margin: '4px 0 0 0' }}>{kid.name}</p>}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            {!isTherapistView && (
+            {isOwnForm && (
               <button
                 onClick={() => navigate(links.formEdit(formId!))}
                 className="btn-primary btn-small"
@@ -172,7 +161,7 @@ export default function FormView() {
             >
               הדפס
             </button>
-            {!isTherapistView && (
+            {isOwnForm && !isTherapistView && (
               <button
                 onClick={() => setShowDeleteForm(true)}
                 className="btn-small"

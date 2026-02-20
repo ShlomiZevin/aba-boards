@@ -393,6 +393,8 @@ export default function FormFill() {
                 value={sessionDate}
                 onChange={(e) => setSessionDate(e.target.value)}
                 required
+                disabled={!!sessionId}
+                style={sessionId ? { backgroundColor: '#f1f5f9' } : undefined}
               />
             </div>
           </div>

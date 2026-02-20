@@ -259,6 +259,13 @@ async function deletePractitioner(id) {
   await batch.commit();
 }
 
+async function getPractitionerById(id) {
+  const db = getDb();
+  const doc = await db.collection('practitioners').doc(id).get();
+  if (!doc.exists) return null;
+  return { id: doc.id, ...doc.data() };
+}
+
 async function getMyTherapists(adminId) {
   const db = getDb();
   const snapshot = await db.collection('practitioners')
@@ -438,6 +445,7 @@ async function scheduleSession(kidId, data) {
     kidId,
     therapistId: data.therapistId || null,
     scheduledDate: new Date(data.scheduledDate),
+    type: data.type || 'therapy',
     status: 'scheduled',
     formId: null,
     createdAt: new Date(),
@@ -445,6 +453,35 @@ async function scheduleSession(kidId, data) {
 
   await db.collection('sessions').doc(sessionId).set(session);
   return { id: sessionId, ...session };
+}
+
+async function scheduleRecurringSessions(kidId, data) {
+  const db = getDb();
+  const { scheduledDate, type, therapistId, until } = data;
+
+  const start = new Date(scheduledDate);
+  const end = new Date(until);
+  const weekday = start.getDay(); // 0=Sun … 6=Sat
+
+  const sessions = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    const sessionId = uuidv4();
+    const session = {
+      kidId,
+      therapistId: therapistId || null,
+      scheduledDate: new Date(cur),
+      type: type || 'therapy',
+      status: 'scheduled',
+      formId: null,
+      createdAt: new Date(),
+    };
+    await db.collection('sessions').doc(sessionId).set(session);
+    sessions.push({ id: sessionId, ...session });
+    // Advance by 7 days to same weekday next week
+    cur.setDate(cur.getDate() + 7);
+  }
+  return sessions;
 }
 
 async function updateSession(id, data) {
@@ -455,6 +492,7 @@ async function updateSession(id, data) {
   if (data.scheduledDate !== undefined) updates.scheduledDate = new Date(data.scheduledDate);
   if (data.status !== undefined) updates.status = data.status;
   if (data.formId !== undefined) updates.formId = data.formId;
+  if (data.type !== undefined) updates.type = data.type;
 
   await db.collection('sessions').doc(id).update(updates);
 
@@ -465,12 +503,12 @@ async function updateSession(id, data) {
 async function deleteSession(id) {
   const db = getDb();
 
-  // Check if the session has an associated form and delete it too
   const sessionDoc = await db.collection('sessions').doc(id).get();
   if (sessionDoc.exists) {
-    const formId = sessionDoc.data().formId;
+    const { formId, type } = sessionDoc.data();
     if (formId) {
-      await db.collection('sessionForms').doc(formId).delete();
+      const collection = type === 'meeting' ? 'meetingForms' : 'sessionForms';
+      await db.collection(collection).doc(formId).delete();
     }
   }
 
@@ -784,15 +822,114 @@ async function initializeGoalCategories() {
   console.log('Goal categories initialized');
 }
 
+// ==================== UPDATE KID ====================
+
+async function updateKid(id, data) {
+  const db = getDb();
+  const updates = {};
+  if (data.name !== undefined) updates.name = data.name;
+  if (data.age !== undefined) updates.age = data.age;
+  if (data.gender !== undefined) updates.gender = data.gender;
+  if (data.imageName !== undefined) updates.imageName = data.imageName;
+  await db.collection('kids').doc(id).update(updates);
+  const doc = await db.collection('kids').doc(id).get();
+  return { id: doc.id, ...doc.data() };
+}
+
+// ==================== MEETING FORMS ====================
+
+async function getMeetingFormsForKid(kidId) {
+  const db = getDb();
+  const snap = await db.collection('meetingForms').where('kidId', '==', kidId).get();
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function getMeetingFormById(id) {
+  const db = getDb();
+  const doc = await db.collection('meetingForms').doc(id).get();
+  if (!doc.exists) return null;
+  return { id: doc.id, ...doc.data() };
+}
+
+async function submitMeetingForm(data) {
+  const db = getDb();
+  const formId = uuidv4();
+  const sessionDate = new Date(data.sessionDate);
+
+  let sessionId = data.sessionId;
+  if (!sessionId) {
+    sessionId = uuidv4();
+    await db.collection('sessions').doc(sessionId).set({
+      kidId: data.kidId,
+      therapistId: null,
+      scheduledDate: sessionDate,
+      type: 'meeting',
+      status: 'completed',
+      formId,
+      createdAt: new Date(),
+    });
+  }
+
+  const form = {
+    sessionId,
+    kidId: data.kidId,
+    sessionDate,
+    attendees: data.attendees || [],
+    generalNotes: data.generalNotes || '',
+    behaviorNotes: data.behaviorNotes || '',
+    adl: data.adl || '',
+    grossMotorPrograms: data.grossMotorPrograms || '',
+    programsOutsideRoom: data.programsOutsideRoom || '',
+    learningProgramsInRoom: data.learningProgramsInRoom || '',
+    tasks: data.tasks || '',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  await db.collection('meetingForms').doc(formId).set(form);
+
+  if (data.sessionId) {
+    await db.collection('sessions').doc(data.sessionId).update({ status: 'completed', formId });
+  }
+
+  return { id: formId, ...form };
+}
+
+async function updateMeetingForm(id, data) {
+  const db = getDb();
+  const allowed = ['attendees', 'generalNotes', 'behaviorNotes', 'adl',
+    'grossMotorPrograms', 'programsOutsideRoom', 'learningProgramsInRoom', 'tasks', 'sessionDate'];
+  const updates = { updatedAt: new Date() };
+  for (const field of allowed) {
+    if (data[field] !== undefined) {
+      updates[field] = field === 'sessionDate' ? new Date(data[field]) : data[field];
+    }
+  }
+  await db.collection('meetingForms').doc(id).update(updates);
+  const doc = await db.collection('meetingForms').doc(id).get();
+  return { id: doc.id, ...doc.data() };
+}
+
+async function deleteMeetingForm(id) {
+  const db = getDb();
+  const doc = await db.collection('meetingForms').doc(id).get();
+  if (doc.exists && doc.data().sessionId) {
+    await db.collection('sessions').doc(doc.data().sessionId).update({ status: 'scheduled', formId: null });
+  }
+  await db.collection('meetingForms').doc(id).delete();
+}
+
 module.exports = {
   // Kids
   getAllKids,
   getKidById,
   createKid,
+  updateKid,
   deleteKid,
   // Practitioners
   getKidsForPractitioner,
   getPractitionersForKid,
+  getPractitionerById,
   addPractitionerToKid,
   linkExistingPractitionerToKid,
   updatePractitioner,
@@ -812,9 +949,16 @@ module.exports = {
   // Sessions
   getSessionsForKid,
   scheduleSession,
+  scheduleRecurringSessions,
   updateSession,
   deleteSession,
   getSessionAlerts,
+  // Meeting Forms
+  getMeetingFormsForKid,
+  getMeetingFormById,
+  submitMeetingForm,
+  updateMeetingForm,
+  deleteMeetingForm,
   // Forms
   getFormsForKid,
   getFormById,

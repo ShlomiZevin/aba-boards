@@ -1506,8 +1506,9 @@ body {
   font-family: inherit;
 }
 
-.suggestion-item:hover {
-  background: #f8fafc;
+.suggestion-item:hover,
+.suggestion-item.highlighted {
+  background: #f0f4ff;
 }
 
 /* Custom goals in form */

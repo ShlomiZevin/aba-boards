@@ -44,7 +44,9 @@ export default function GoalsPage() {
     );
   }
 
-  const avatarUrl = kid.imageName ? `${BASE}${kid.imageName}` : DEFAULT_AVATAR;
+  const avatarUrl = kid.imageName
+    ? (kid.imageName.startsWith('data:') ? kid.imageName : `${BASE}${kid.imageName}`)
+    : DEFAULT_AVATAR;
 
   return (
     <div className="container">

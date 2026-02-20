@@ -68,15 +68,41 @@ export interface GoalLibraryItem {
 
 // Session types
 export type SessionStatus = 'scheduled' | 'pending_form' | 'completed' | 'missed';
+export type SessionType = 'therapy' | 'meeting';
 
 export interface Session {
   id: string;
   kidId: string;
   therapistId?: string;
   scheduledDate: Date;
+  type?: SessionType;
   status: SessionStatus;
   formId?: string;
   createdAt: Date;
+}
+
+// Meeting form types
+export interface MeetingAttendee {
+  id: string;
+  name: string;
+  type: 'parent' | 'practitioner';
+}
+
+export interface MeetingForm {
+  id: string;
+  sessionId?: string;
+  kidId: string;
+  sessionDate: Date;
+  attendees: MeetingAttendee[];
+  generalNotes: string;
+  behaviorNotes: string;
+  adl: string;
+  grossMotorPrograms: string;
+  programsOutsideRoom: string;
+  learningProgramsInRoom: string;
+  tasks: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Form types
@@ -129,6 +155,12 @@ export interface Kid {
   imageName?: string;
   createdBy?: string;
   adminId?: string;
+  // Board data (present in full Firestore document)
+  totalMoney?: number;
+  tasks?: { id: number; [key: string]: unknown }[];
+  dailyReward?: number;
+  completedTasks?: number[];
+  completedBonusTasks?: number[];
 }
 
 // Form Template types

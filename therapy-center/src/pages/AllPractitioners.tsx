@@ -59,6 +59,15 @@ export default function AllPractitioners() {
   const queryClient = useQueryClient();
   const [toDelete, setToDelete] = useState<Practitioner | null>(null);
   const [editing, setEditing] = useState<Practitioner | null>(null);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+
+  const copyTherapistLink = (id: string) => {
+    const url = `${window.location.origin}/therapy/t/${id}/`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedLinkId(id);
+      setTimeout(() => setCopiedLinkId(null), 2000);
+    });
+  };
 
   const { data: res, isLoading } = useQuery({
     queryKey: ['myTherapists'],
@@ -120,7 +129,12 @@ export default function AllPractitioners() {
                 {group.map((p) => (
                   <div key={p.id} className="team-member">
                     <div>
-                      <div className="team-name">{p.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <div className="team-name">{p.name}</div>
+                        {copiedLinkId === p.id && (
+                          <span style={{ color: '#48bb78', fontSize: '0.8em' }}>הקישור הועתק!</span>
+                        )}
+                      </div>
                       {(p.mobile || p.email) && (
                         <div style={{ fontSize: '0.8em', color: '#94a3b8', marginTop: '2px' }}>
                           {p.mobile && (
@@ -133,7 +147,14 @@ export default function AllPractitioners() {
                         </div>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      {p.type === 'מטפלת' && (
+                        <button
+                          onClick={() => copyTherapistLink(p.id)}
+                          className="edit-btn-small"
+                          title="העתק קישור מטפלת"
+                        >🔗</button>
+                      )}
                       <button
                         onClick={() => setEditing(p)}
                         className="edit-btn-small"

@@ -27,6 +27,11 @@ router.post('/kids', asyncHandler(async (req, res) => {
   res.status(201).json(kid);
 }));
 
+router.put('/kids/:kidId', asyncHandler(async (req, res) => {
+  const kid = await therapyService.updateKid(req.params.kidId, req.body);
+  res.json(kid);
+}));
+
 router.delete('/kids/:kidId', asyncHandler(async (req, res) => {
   await therapyService.deleteKid(req.params.kidId);
   res.status(204).send();
@@ -86,6 +91,12 @@ router.get('/practitioners/:practitionerId/kids', asyncHandler(async (req, res) 
 router.get('/practitioners/my-therapists', asyncHandler(async (req, res) => {
   const therapists = await therapyService.getMyTherapists(req.adminId);
   res.json(therapists);
+}));
+
+router.get('/practitioners/:id/info', asyncHandler(async (req, res) => {
+  const practitioner = await therapyService.getPractitionerById(req.params.id);
+  if (!practitioner) return res.status(404).json({ error: 'Practitioner not found' });
+  res.json(practitioner);
 }));
 
 // ==================== PARENTS ====================
@@ -158,6 +169,11 @@ router.post('/kids/:kidId/sessions', asyncHandler(async (req, res) => {
   res.status(201).json(session);
 }));
 
+router.post('/kids/:kidId/sessions/recurring', asyncHandler(async (req, res) => {
+  const sessions = await therapyService.scheduleRecurringSessions(req.params.kidId, req.body);
+  res.status(201).json(sessions);
+}));
+
 router.put('/sessions/:id', asyncHandler(async (req, res) => {
   const session = await therapyService.updateSession(req.params.id, req.body);
   res.json(session);
@@ -216,6 +232,34 @@ router.post('/forms/create-link', asyncHandler(async (req, res) => {
   const { kidId, sessionId } = req.body;
   const link = await therapyService.createFormLink(kidId, sessionId);
   res.json(link);
+}));
+
+// ==================== MEETING FORMS ====================
+
+router.get('/kids/:kidId/meeting-forms', asyncHandler(async (req, res) => {
+  const forms = await therapyService.getMeetingFormsForKid(req.params.kidId);
+  res.json(forms);
+}));
+
+router.get('/meeting-forms/:id', asyncHandler(async (req, res) => {
+  const form = await therapyService.getMeetingFormById(req.params.id);
+  if (!form) return res.status(404).json({ error: 'Meeting form not found' });
+  res.json(form);
+}));
+
+router.post('/meeting-forms', asyncHandler(async (req, res) => {
+  const form = await therapyService.submitMeetingForm(req.body);
+  res.status(201).json(form);
+}));
+
+router.put('/meeting-forms/:id', asyncHandler(async (req, res) => {
+  const form = await therapyService.updateMeetingForm(req.params.id, req.body);
+  res.json(form);
+}));
+
+router.delete('/meeting-forms/:id', asyncHandler(async (req, res) => {
+  await therapyService.deleteMeetingForm(req.params.id);
+  res.status(204).send();
 }));
 
 // Error handling middleware

@@ -10,9 +10,10 @@ import { useTherapist } from '../contexts/TherapistContext';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { toDate } from '../utils/date';
 import { GOAL_CATEGORIES } from '../types';
-import type { Practitioner, Parent, Goal, GoalCategoryId, Session, PractitionerType } from '../types';
+import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
 import FormTemplateEditor from '../components/FormTemplateEditor';
+import ImageCropModal from '../components/ImageCropModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
@@ -180,7 +181,9 @@ export default function KidDetail() {
   const [editingParent, setEditingParent] = useState<Parent | null>(null);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const [showDeleteKid, setShowDeleteKid] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  const [copiedParentLink, setCopiedParentLink] = useState(false);
 
   // Form state for modals
   const [newName, setNewName] = useState('');
@@ -190,6 +193,9 @@ export default function KidDetail() {
   const [scheduleDate, setScheduleDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [scheduleTime, setScheduleTime] = useState('10:00');
   const [scheduleTherapist, setScheduleTherapist] = useState('');
+  const [scheduleType, setScheduleType] = useState<SessionType>('therapy');
+  const [scheduleRecurring, setScheduleRecurring] = useState(false);
+  const [scheduleUntil, setScheduleUntil] = useState('');
 
   // Queries
   const { data: kidRes, isLoading } = useQuery({
@@ -290,15 +296,31 @@ export default function KidDetail() {
     },
   });
 
+  const resetScheduleModal = () => {
+    setScheduleDate(format(new Date(), 'yyyy-MM-dd'));
+    setScheduleTime('10:00');
+    setScheduleTherapist('');
+    setScheduleType('therapy');
+    setScheduleRecurring(false);
+    setScheduleUntil('');
+    setShowScheduleSession(false);
+  };
+
   const scheduleSessionMutation = useMutation({
-    mutationFn: (data: { scheduledDate: string; therapistId?: string }) =>
+    mutationFn: (data: { scheduledDate: string; therapistId?: string; type: SessionType }) =>
       sessionsApi.schedule(kidId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
-      setShowScheduleSession(false);
-      setScheduleDate(format(new Date(), 'yyyy-MM-dd'));
-      setScheduleTime('10:00');
-      setScheduleTherapist('');
+      resetScheduleModal();
+    },
+  });
+
+  const scheduleRecurringMutation = useMutation({
+    mutationFn: (data: { scheduledDate: string; therapistId?: string; type: SessionType; until: string }) =>
+      sessionsApi.scheduleRecurring(kidId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
+      resetScheduleModal();
     },
   });
 
@@ -335,6 +357,15 @@ export default function KidDetail() {
     },
   });
 
+  const updateKidImageMutation = useMutation({
+    mutationFn: (imageName: string) => kidsApi.update(kidId!, { imageName }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kid', kidId] });
+      queryClient.invalidateQueries({ queryKey: ['kids'] });
+      setShowImageUpload(false);
+    },
+  });
+
   const resetForm = () => {
     setNewName('');
     setNewMobile('');
@@ -360,7 +391,10 @@ export default function KidDetail() {
 
   const therapists = practitioners.filter((p: Practitioner) => p.type === 'מטפלת');
   const activeGoals = goals.filter((g: Goal) => g.isActive);
-  const pendingSessions = sessions.filter((s: Session) => !s.formId);
+  // Pending = no form, and (admin sees all, therapist only sees their own therapy sessions)
+  const pendingSessions = sessions.filter((s: Session) => !s.formId &&
+    (isTherapistView ? (s.type !== 'meeting' && s.therapistId === contextPractitionerId) : true)
+  );
 
   // Helper: is this session mine (therapist view)?
   const isOwnSession = (session: Session) =>
@@ -372,6 +406,15 @@ export default function KidDetail() {
     navigator.clipboard.writeText(url).then(() => {
       setCopiedLinkId(pId);
       setTimeout(() => setCopiedLinkId(null), 2000);
+    });
+  };
+
+  // Copy parent view link to clipboard
+  const copyParentLink = () => {
+    const url = `${window.location.origin}/therapy/p/${kidId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedParentLink(true);
+      setTimeout(() => setCopiedParentLink(false), 2000);
     });
   };
 
@@ -393,20 +436,23 @@ export default function KidDetail() {
     if (isMultiple) {
       return {
         id: dateKey,
-        title: `${daySessions.length} טיפולים`,
+        title: `${daySessions.length} פגישות`,
         start: startDate,
         end: new Date(startDate.getTime() + 60 * 60 * 1000),
         resource: { isMultiple: true, sessions: daySessions, allHaveForms, someHaveForms },
       };
     } else {
-      const therapist = practitioners.find((t: Practitioner) => t.id === daySessions[0].therapistId);
-      const isOwn = isTherapistView && daySessions[0].therapistId === contextPractitionerId;
+      const session = daySessions[0];
+      const isMeeting = session.type === 'meeting';
+      const therapist = practitioners.find((t: Practitioner) => t.id === session.therapistId);
+      const isOwn = isTherapistView && session.therapistId === contextPractitionerId;
+      const title = isMeeting ? 'ישיבה' : (isOwn ? 'שלי' : (therapist?.name || 'טיפול'));
       return {
-        id: daySessions[0].id,
-        title: isOwn ? 'שלי' : (therapist?.name || 'טיפול'),
+        id: session.id,
+        title,
         start: startDate,
         end: new Date(startDate.getTime() + 60 * 60 * 1000),
-        resource: daySessions[0],
+        resource: session,
       };
     }
   });
@@ -440,7 +486,10 @@ export default function KidDetail() {
     );
   }
 
-  const avatarUrl = kid.imageName ? `${BASE}${kid.imageName}` : DEFAULT_AVATAR;
+  // Handle both base64 data URLs (uploaded images) and plain filenames (static assets)
+  const avatarUrl = kid.imageName
+    ? (kid.imageName.startsWith('data:') ? kid.imageName : `${BASE}${kid.imageName}`)
+    : DEFAULT_AVATAR;
 
   return (
     <div className="container">
@@ -463,14 +512,67 @@ export default function KidDetail() {
           )}
         </div>
         <div className="kid-header-profile">
-          <img
-            src={avatarUrl}
-            alt={kid.name}
-            className="kid-avatar-large"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = DEFAULT_AVATAR;
-            }}
-          />
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <img
+              src={avatarUrl}
+              alt={kid.name}
+              className="kid-avatar-large"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = DEFAULT_AVATAR;
+              }}
+            />
+            {!isTherapistView && (
+              <>
+                <button
+                  onClick={() => setShowImageUpload(true)}
+                  title="שנה תמונה"
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '50%',
+                    background: '#667eea',
+                    border: '2px solid white',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                  }}
+                >
+                  ✎
+                </button>
+                {kid.imageName && (
+                  <button
+                    onClick={() => updateKidImageMutation.mutate('')}
+                    title="הסר תמונה"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: '#ef4444',
+                      border: '2px solid white',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      lineHeight: 1,
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </>
+            )}
+          </div>
           <div className="kid-header-info">
             <h1 className="kid-header-name">{kid.name}</h1>
             {kid.age && <div className="kid-header-age">גיל {kid.age}</div>}
@@ -587,7 +689,12 @@ export default function KidDetail() {
                 {parents.map((p: Parent) => (
                   <div key={p.id} className="team-member">
                     <div>
-                      <span className="team-name">{p.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span className="team-name">{p.name}</span>
+                        {copiedParentLink && (
+                          <span style={{ color: '#48bb78', fontSize: '0.8em' }}>הקישור הועתק!</span>
+                        )}
+                      </div>
                       {(p.mobile || p.email) && (
                         <div style={{ fontSize: '0.8em', color: '#94a3b8', marginTop: '2px' }}>
                           {p.mobile && <a href={`tel:${p.mobile}`} style={{ color: '#94a3b8', textDecoration: 'none' }}>{p.mobile}</a>}
@@ -598,6 +705,11 @@ export default function KidDetail() {
                     </div>
                     {!isTherapistView && (
                       <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={copyParentLink}
+                          className="edit-btn-small"
+                          title="העתק קישור הורה (צפייה בלבד)"
+                        >🔗</button>
                         <button onClick={() => setEditingParent(p)} className="edit-btn-small">✎</button>
                         <button
                           onClick={() => deleteParentMutation.mutate(p.id)}
@@ -684,7 +796,7 @@ export default function KidDetail() {
                 onClick={() => setShowScheduleSession(true)}
                 className="btn-primary btn-small"
               >
-                + טיפול חדש
+                + פגישה חדשה
               </button>
             )}
           </div>
@@ -763,16 +875,19 @@ export default function KidDetail() {
                 const session = resource as Session;
                 const hasForm = session.formId;
                 const own = isOwnSession(session);
+                const isMeeting = session.type === 'meeting';
+                const canFill = isMeeting ? !isTherapistView : own;
                 return (
                   <div
-                    className={`calendar-event${!own ? ' calendar-event-other' : ''}`}
+                    className={`calendar-event${!own && !isMeeting ? ' calendar-event-other' : ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!own) return; // Don't navigate for other therapists' sessions
                       if (hasForm) {
-                        navigate(links.formView(session.formId!));
-                      } else {
-                        navigate(links.formNew({ kidId: kidId!, sessionId: session.id }));
+                        navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!));
+                      } else if (canFill) {
+                        navigate(isMeeting
+                          ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
+                          : links.formNew({ kidId: kidId!, sessionId: session.id }));
                       }
                     }}
                   >
@@ -780,12 +895,12 @@ export default function KidDetail() {
                       <span
                         className="calendar-event-indicator"
                         onClick={(e) => { e.stopPropagation(); openEditSession(session); }}
-                        title="ערוך טיפול"
+                        title="ערוך פגישה"
                         style={{ cursor: 'pointer' }}
                       >✎</span>
                     ) : (
                       <span className="calendar-event-indicator">
-                        {hasForm ? '✓' : (own ? '✎' : '○')}
+                        {hasForm ? '✓' : (canFill ? '✎' : '○')}
                       </span>
                     )}
                     <span className="calendar-event-title" style={{ flex: 1 }}>{event.title}</span>
@@ -793,7 +908,7 @@ export default function KidDetail() {
                       <button
                         onClick={(e) => { e.stopPropagation(); setSessionToDelete(session); }}
                         className="calendar-event-delete"
-                        title="בטל טיפול"
+                        title="בטל פגישה"
                       >✕</button>
                     )}
                   </div>
@@ -815,11 +930,16 @@ export default function KidDetail() {
 
               const session = resource as Session;
               const own = isOwnSession(session);
+              const isMeeting = session.type === 'meeting';
+              const canFill = isMeeting ? !isTherapistView : own;
+              const bgColor = isMeeting
+                ? (session.formId ? '#388E3C' : '#7C3AED')
+                : (!own ? '#94a3b8' : session.formId ? '#388E3C' : '#F57C00');
               return {
                 style: {
-                  backgroundColor: !own ? '#94a3b8' : session.formId ? '#388E3C' : '#F57C00',
-                  cursor: own ? 'pointer' : 'default',
-                  opacity: own ? 1 : 0.6,
+                  backgroundColor: bgColor,
+                  cursor: (canFill || session.formId) ? 'pointer' : 'default',
+                  opacity: (!own && !isMeeting) ? 0.6 : 1,
                 },
               };
             }}
@@ -849,37 +969,39 @@ export default function KidDetail() {
                   const therapist = practitioners.find((t: Practitioner) => t.id === session.therapistId);
                   const hasForm = session.formId;
                   const own = isOwnSession(session);
+                  const isMeeting = session.type === 'meeting';
+                  const canFill = isMeeting ? !isTherapistView : own;
                   return (
                     <div key={session.id} className="session-row">
                       <div className="session-row-info">
                         <span className="session-date">
                           {format(toDate(session.scheduledDate), 'dd/MM/yyyy')}
                         </span>
-                        {therapist && <span className="session-therapist">{therapist.name}</span>}
+                        {isMeeting ? (
+                          <span className="session-therapist" style={{ color: '#7C3AED' }}>ישיבה</span>
+                        ) : therapist ? (
+                          <span className="session-therapist">{therapist.name}</span>
+                        ) : null}
                         <span className={`session-status ${hasForm ? 'completed' : 'pending'}`}>
                           {hasForm ? 'הושלם' : 'ממתין'}
                         </span>
                       </div>
                       <div className="session-row-actions">
                         {hasForm ? (
-                          own ? (
-                            <button onClick={() => navigate(links.formView(session.formId!))}>
-                              צפה
-                            </button>
-                          ) : (
-                            <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>טופס אחר</span>
-                          )
+                          <button onClick={() => navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!))}>
+                            צפה
+                          </button>
+                        ) : canFill ? (
+                          <button
+                            onClick={() => navigate(isMeeting
+                              ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
+                              : links.formNew({ kidId: kidId!, sessionId: session.id }))}
+                            className="fill-btn"
+                          >
+                            מלא
+                          </button>
                         ) : (
-                          own ? (
-                            <button
-                              onClick={() => navigate(links.formNew({ kidId: kidId!, sessionId: session.id }))}
-                              className="fill-btn"
-                            >
-                              מלא
-                            </button>
-                          ) : (
-                            <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>טיפול אחר</span>
-                          )
+                          <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>טיפול אחר</span>
                         )}
                         {!isTherapistView && (
                           <>
@@ -1068,14 +1190,47 @@ export default function KidDetail() {
 
           {/* Schedule Session Modal */}
           {showScheduleSession && (
-            <AddModal title="תזמון טיפול חדש" onClose={() => setShowScheduleSession(false)}>
+            <AddModal title="תזמון פגישה חדשה" onClose={resetScheduleModal}>
               <form onSubmit={(e) => {
                 e.preventDefault();
-                scheduleSessionMutation.mutate({
-                  scheduledDate: `${scheduleDate}T${scheduleTime}:00`,
-                  therapistId: scheduleTherapist || undefined,
-                });
+                const dateStr = `${scheduleDate}T${scheduleTime}:00`;
+                if (scheduleRecurring) {
+                  scheduleRecurringMutation.mutate({
+                    scheduledDate: dateStr,
+                    therapistId: scheduleType === 'therapy' ? (scheduleTherapist || undefined) : undefined,
+                    type: scheduleType,
+                    until: scheduleUntil,
+                  });
+                } else {
+                  scheduleSessionMutation.mutate({
+                    scheduledDate: dateStr,
+                    therapistId: scheduleType === 'therapy' ? (scheduleTherapist || undefined) : undefined,
+                    type: scheduleType,
+                  });
+                }
               }}>
+                {/* Type Toggle */}
+                <div className="form-group">
+                  <label>סוג פגישה</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className={scheduleType === 'therapy' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+                      onClick={() => setScheduleType('therapy')}
+                      style={{ flex: 1 }}
+                    >
+                      טיפול
+                    </button>
+                    <button
+                      type="button"
+                      className={scheduleType === 'meeting' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+                      onClick={() => setScheduleType('meeting')}
+                      style={{ flex: 1, ...(scheduleType === 'meeting' ? { backgroundColor: '#7C3AED', borderColor: '#7C3AED' } : {}) }}
+                    >
+                      ישיבה
+                    </button>
+                  </div>
+                </div>
                 <div className="form-group">
                   <label>תאריך</label>
                   <input
@@ -1094,20 +1249,52 @@ export default function KidDetail() {
                     required
                   />
                 </div>
+                {scheduleType === 'therapy' && (
+                  <div className="form-group">
+                    <label>מטפלת (לא חובה)</label>
+                    <select value={scheduleTherapist} onChange={(e) => setScheduleTherapist(e.target.value)}>
+                      <option value="">בחר מטפלת</option>
+                      {therapists.map((t: Practitioner) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {/* Recurring toggle */}
                 <div className="form-group">
-                  <label>מטפלת (לא חובה)</label>
-                  <select value={scheduleTherapist} onChange={(e) => setScheduleTherapist(e.target.value)}>
-                    <option value="">בחר מטפלת</option>
-                    {therapists.map((t: Practitioner) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={scheduleRecurring}
+                      onChange={(e) => setScheduleRecurring(e.target.checked)}
+                      style={{ width: '16px', height: '16px' }}
+                    />
+                    חוזר שבועי
+                  </label>
                 </div>
+                {scheduleRecurring && (
+                  <div className="form-group">
+                    <label>עד תאריך</label>
+                    <input
+                      type="date"
+                      value={scheduleUntil}
+                      onChange={(e) => setScheduleUntil(e.target.value)}
+                      min={scheduleDate}
+                      required
+                    />
+                  </div>
+                )}
                 <div className="modal-actions">
-                  <button type="button" onClick={() => setShowScheduleSession(false)} className="btn-secondary">
+                  <button type="button" onClick={resetScheduleModal} className="btn-secondary">
                     ביטול
                   </button>
-                  <button type="submit" className="btn-primary">תזמן</button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={scheduleSessionMutation.isPending || scheduleRecurringMutation.isPending}
+                  >
+                    {(scheduleSessionMutation.isPending || scheduleRecurringMutation.isPending) ? 'מתזמן...' : 'תזמן'}
+                  </button>
                 </div>
               </form>
             </AddModal>
@@ -1206,8 +1393,8 @@ export default function KidDetail() {
                     }}
                   >
                     <span className="date-action-icon">📅</span>
-                    <span className="date-action-label">תזמן טיפול</span>
-                    <span className="date-action-desc">הוסף טיפול ללוח השנה</span>
+                    <span className="date-action-label">תזמן פגישה</span>
+                    <span className="date-action-desc">הוסף טיפול או ישיבה ללוח</span>
                   </button>
                   <button
                     className="date-action-btn form"
@@ -1241,6 +1428,14 @@ export default function KidDetail() {
               </div>
             </div>
           )}
+
+          {/* Image Upload / Crop Modal */}
+          {showImageUpload && (
+            <ImageCropModal
+              onSave={(dataUrl) => updateKidImageMutation.mutate(dataUrl)}
+              onClose={() => setShowImageUpload(false)}
+            />
+          )}
         </>
       )}
 
@@ -1254,31 +1449,43 @@ export default function KidDetail() {
                 const therapist = practitioners.find((t: Practitioner) => t.id === session.therapistId);
                 const hasForm = session.formId;
                 const own = isOwnSession(session);
+                const isMeeting = session.type === 'meeting';
+                const canFill = isMeeting ? !isTherapistView : own;
                 return (
                   <div
                     key={session.id}
-                    className={`day-session-item ${hasForm ? 'completed' : 'pending'}${!own ? ' other-therapist' : ''}`}
+                    className={`day-session-item ${hasForm ? 'completed' : 'pending'}${!own && !isMeeting ? ' other-therapist' : ''}`}
                   >
-                    <div className="day-session-info" style={!own ? { opacity: 0.55 } : undefined}>
-                      <span className="day-session-therapist">{therapist?.name || 'טיפול'}</span>
+                    <div className="day-session-info" style={(!own && !isMeeting) ? { opacity: 0.55 } : undefined}>
+                      <span className="day-session-therapist" style={isMeeting ? { color: '#7C3AED' } : undefined}>
+                        {isMeeting ? 'ישיבה' : (therapist?.name || 'טיפול')}
+                      </span>
                       <span className="day-session-time">
                         {format(toDate(session.scheduledDate), 'HH:mm')}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      {own && (
+                      {hasForm ? (
                         <button
-                          className={`btn-small ${hasForm ? 'btn-secondary' : 'btn-primary'}`}
+                          className="btn-small btn-secondary"
                           onClick={() => {
                             setShowDaySessions(false);
-                            if (hasForm) {
-                              navigate(links.formView(session.formId!));
-                            } else {
-                              navigate(links.formNew({ kidId: kidId!, sessionId: session.id }));
-                            }
+                            navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!));
                           }}
                         >
-                          {hasForm ? 'צפה' : 'מלא'}
+                          צפה
+                        </button>
+                      ) : canFill && (
+                        <button
+                          className="btn-small btn-primary"
+                          onClick={() => {
+                            setShowDaySessions(false);
+                            navigate(isMeeting
+                              ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
+                              : links.formNew({ kidId: kidId!, sessionId: session.id }));
+                          }}
+                        >
+                          מלא
                         </button>
                       )}
                       {!isTherapistView && (
