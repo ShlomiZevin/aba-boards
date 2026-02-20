@@ -953,79 +953,110 @@ export default function KidDetail() {
         </div>
 
 
-        {/* Recent Sessions List */}
+        {/* Sessions List */}
         <div className="recent-sessions">
-          <h4>טיפולים אחרונים</h4>
+          <h4>מפגשים</h4>
           {sessions.length === 0 ? (
-            <p className="empty-text">אין טיפולים</p>
-          ) : (
-            <div className="sessions-list">
-              {sessions
-                .sort((a: Session, b: Session) =>
-                  toDate(b.scheduledDate).getTime() - toDate(a.scheduledDate).getTime()
-                )
-                .slice(0, 5)
-                .map((session: Session) => {
-                  const therapist = practitioners.find((t: Practitioner) => t.id === session.therapistId);
-                  const hasForm = session.formId;
-                  const own = isOwnSession(session);
-                  const isMeeting = session.type === 'meeting';
-                  const canFill = isMeeting ? !isTherapistView : own;
-                  return (
-                    <div key={session.id} className="session-row">
-                      <div className="session-row-info">
-                        <span className="session-date">
-                          {format(toDate(session.scheduledDate), 'dd/MM/yyyy')}
-                        </span>
-                        {isMeeting ? (
-                          <span className="session-therapist" style={{ color: '#7C3AED' }}>ישיבה</span>
-                        ) : therapist ? (
-                          <span className="session-therapist">{therapist.name}</span>
-                        ) : null}
-                        <span className={`session-status ${hasForm ? 'completed' : 'pending'}`}>
-                          {hasForm ? 'הושלם' : 'ממתין'}
-                        </span>
-                      </div>
-                      <div className="session-row-actions">
-                        {hasForm ? (
-                          <button onClick={() => navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!))}>
-                            צפה
-                          </button>
-                        ) : canFill ? (
-                          <button
-                            onClick={() => navigate(isMeeting
-                              ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
-                              : links.formNew({ kidId: kidId!, sessionId: session.id }))}
-                            className="fill-btn"
-                          >
-                            מלא
-                          </button>
-                        ) : (
-                          <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>טיפול אחר</span>
-                        )}
-                        {!isTherapistView && (
-                          <>
-                            <button
-                              onClick={() => openEditSession(session)}
-                              className="edit-btn-small"
-                              title="ערוך טיפול"
-                            >
-                              ✎
-                            </button>
-                            <button
-                              onClick={() => setSessionToDelete(session)}
-                              className="delete-btn"
-                            >
-                              ✕
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
+            <p className="empty-text">אין מפגשים</p>
+          ) : (() => {
+            const now = new Date();
+            const futureSessions = [...sessions]
+              .filter((s: Session) => toDate(s.scheduledDate) >= now)
+              .sort((a: Session, b: Session) => toDate(a.scheduledDate).getTime() - toDate(b.scheduledDate).getTime());
+            const pastSessions = [...sessions]
+              .filter((s: Session) => toDate(s.scheduledDate) < now)
+              .sort((a: Session, b: Session) => toDate(b.scheduledDate).getTime() - toDate(a.scheduledDate).getTime());
+
+            const renderSession = (session: Session) => {
+              const therapist = practitioners.find((t: Practitioner) => t.id === session.therapistId);
+              const hasForm = session.formId;
+              const own = isOwnSession(session);
+              const isMeeting = session.type === 'meeting';
+              const canFill = isMeeting ? !isTherapistView : own;
+              return (
+                <div key={session.id} className="session-row">
+                  <div className="session-row-info">
+                    <span className="session-date">
+                      {format(toDate(session.scheduledDate), 'dd/MM/yyyy')}
+                    </span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, borderRadius: 8, padding: '1px 7px',
+                      background: isMeeting ? '#f3e8ff' : '#e0f2fe',
+                      color: isMeeting ? '#7C3AED' : '#0369a1',
+                    }}>
+                      {isMeeting ? 'ישיבה' : 'טיפול'}
+                    </span>
+                    {!isMeeting && therapist && (
+                      <span className="session-therapist">{therapist.name}</span>
+                    )}
+                    <span className={`session-status ${hasForm ? 'completed' : 'pending'}`}>
+                      {hasForm ? 'הושלם' : 'ממתין'}
+                    </span>
+                  </div>
+                  <div className="session-row-actions">
+                    {hasForm ? (
+                      <button onClick={() => navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!))}>
+                        צפה
+                      </button>
+                    ) : canFill ? (
+                      <button
+                        onClick={() => navigate(isMeeting
+                          ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
+                          : links.formNew({ kidId: kidId!, sessionId: session.id }))}
+                        className="fill-btn"
+                      >
+                        מלא
+                      </button>
+                    ) : (
+                      <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>מפגש אחר</span>
+                    )}
+                    {!isTherapistView && (
+                      <>
+                        <button
+                          onClick={() => openEditSession(session)}
+                          className="edit-btn-small"
+                          title="ערוך מפגש"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          onClick={() => setSessionToDelete(session)}
+                          className="delete-btn"
+                        >
+                          ✕
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            };
+
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {/* Future — left col in RTL = right side visually */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', background: '#e0f2fe', borderRadius: 6, padding: '3px 8px', marginBottom: 6, display: 'inline-block' }}>
+                    עתידיים ({futureSessions.length})
+                  </div>
+                  {futureSessions.length === 0
+                    ? <p style={{ color: '#94a3b8', fontSize: 13 }}>אין מפגשים קרובים</p>
+                    : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{futureSessions.map(renderSession)}</div>
+                  }
+                </div>
+                {/* Past */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '3px 8px', marginBottom: 6, display: 'inline-block' }}>
+                    אחרונים ({pastSessions.length})
+                  </div>
+                  {pastSessions.length === 0
+                    ? <p style={{ color: '#94a3b8', fontSize: 13 }}>אין מפגשים קודמים</p>
+                    : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{pastSessions.map(renderSession)}</div>
+                  }
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
