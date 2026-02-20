@@ -14,9 +14,11 @@ const GOAL_CATEGORIES = [
 
 // ==================== KIDS ====================
 
-async function getAllKids() {
+async function getAllKids(adminId) {
   const db = getDb();
-  const snapshot = await db.collection('kids').get();
+  const snapshot = await db.collection('kids')
+    .where('adminId', '==', adminId)
+    .get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
@@ -27,7 +29,7 @@ async function getKidById(kidId) {
   return { id: doc.id, ...doc.data() };
 }
 
-async function createKid(data) {
+async function createKid(data, adminId) {
   const db = getDb();
   const name = (data.name || '').trim();
   if (!name) throw new Error('Name is required');
@@ -79,6 +81,7 @@ async function createKid(data) {
     todayRewardGiven: false,
     lastResetDate: new Date().toDateString(),
     createdAt: new Date(),
+    adminId,
   };
 
   await db.collection('kids').doc(kidId).set(kidDoc);
@@ -474,13 +477,23 @@ async function deleteSession(id) {
   await db.collection('sessions').doc(id).delete();
 }
 
-async function getSessionAlerts() {
+async function getSessionAlerts(adminId) {
   const db = getDb();
 
   // Get sessions that are past scheduled date but don't have a form
   const now = new Date();
+
+  // Get all kids for this admin to filter sessions
+  const kidsSnapshot = await db.collection('kids')
+    .where('adminId', '==', adminId)
+    .get();
+  const kidIds = kidsSnapshot.docs.map(doc => doc.id);
+
+  if (kidIds.length === 0) return [];
+
   const snapshot = await db.collection('sessions')
     .where('status', 'in', ['scheduled', 'pending_form'])
+    .where('kidId', 'in', kidIds.slice(0, 10)) // Firestore 'in' limit is 10
     .get();
 
   const alerts = snapshot.docs
@@ -707,6 +720,7 @@ async function initializeSuperAdmin() {
   const db = getDb();
   const adminId = 'michal-super-admin';
 
+  // Ensure practitioners doc exists
   const doc = await db.collection('practitioners').doc(adminId).get();
   if (!doc.exists) {
     await db.collection('practitioners').doc(adminId).set({
@@ -716,6 +730,45 @@ async function initializeSuperAdmin() {
       createdAt: new Date(),
     });
     console.log('Created super admin: מיכל');
+  }
+
+  // Ensure adminKeys entry exists for the super admin passkey
+  const keySnapshot = await db.collection('adminKeys')
+    .where('adminId', '==', adminId)
+    .limit(1)
+    .get();
+  if (keySnapshot.empty) {
+    await db.collection('adminKeys').add({
+      key: '6724',
+      adminId,
+      name: 'מיכל',
+      isSuperAdmin: true,
+      active: true,
+      createdAt: new Date(),
+    });
+    console.log('Seeded super admin passkey');
+  } else {
+    // Fix name if it was seeded as 'Super Admin'
+    const keyDoc = keySnapshot.docs[0];
+    if (keyDoc.data().name === 'Super Admin') {
+      await keyDoc.ref.update({ name: 'מיכל' });
+      console.log('Updated super admin name to מיכל');
+    }
+  }
+
+  // One-time migration: stamp existing kids that predate multi-admin support
+  const kidsSnapshot = await db.collection('kids').get();
+  const batch = db.batch();
+  let migrated = 0;
+  kidsSnapshot.docs.forEach(doc => {
+    if (!doc.data().adminId) {
+      batch.update(doc.ref, { adminId });
+      migrated++;
+    }
+  });
+  if (migrated > 0) {
+    await batch.commit();
+    console.log(`Migrated ${migrated} existing kid(s) to adminId: ${adminId}`);
   }
 }
 

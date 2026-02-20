@@ -15,6 +15,15 @@ const API_BASE = import.meta.env.DEV
   ? '/api/therapy'  // Dev: proxied by Vite to localhost:3001
   : 'https://avatar-server-1018338671074.me-west1.run.app/api/therapy';  // Prod: Cloud Run
 
+const ADMIN_API_BASE = import.meta.env.DEV
+  ? '/api/admin'
+  : 'https://avatar-server-1018338671074.me-west1.run.app/api/admin';
+
+function getAdminKey(): Record<string, string> {
+  const key = localStorage.getItem('admin_key');
+  return key ? { 'X-Admin-Key': key } : {};
+}
+
 async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit
@@ -23,6 +32,7 @@ async function fetchApi<T>(
     const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        ...getAdminKey(),
       },
       ...options,
     });
@@ -177,5 +187,41 @@ export const formsApi = {
     fetchApi<{ token: string; url: string }>('/forms/create-link', {
       method: 'POST',
       body: JSON.stringify({ kidId, sessionId }),
+    }),
+};
+
+// Admin API (super-admin operations)
+async function fetchAdminApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${ADMIN_API_BASE}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAdminKey(),
+      },
+      ...options,
+    });
+    if (response.status === 204) return { success: true, data: undefined as unknown as T };
+    const data = await response.json();
+    if (!response.ok) return { success: false, error: data.error || 'Request failed' };
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export const adminApi = {
+  createKey: (data: { name: string; key: string; mobile?: string; email?: string }) =>
+    fetchAdminApi<{ key: string; adminId: string; name: string }>('/create-key', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listAdmins: () =>
+    fetchAdminApi<{ docId: string; adminId: string; name: string; key: string; active: boolean; mobile: string; email: string; createdAt: string | null }[]>('/list'),
+  deleteAdmin: (adminId: string) =>
+    fetchAdminApi<void>(`/${adminId}`, { method: 'DELETE' }),
+  changeKey: (newKey: string) =>
+    fetchAdminApi<{ success: boolean }>('/change-key', {
+      method: 'POST',
+      body: JSON.stringify({ newKey }),
     }),
 };

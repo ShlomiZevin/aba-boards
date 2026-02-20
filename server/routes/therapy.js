@@ -10,7 +10,7 @@ const asyncHandler = (fn) => (req, res, next) => {
 // ==================== KIDS ====================
 
 router.get('/kids', asyncHandler(async (req, res) => {
-  const kids = await therapyService.getAllKids();
+  const kids = await therapyService.getAllKids(req.adminId);
   res.json(kids);
 }));
 
@@ -23,7 +23,7 @@ router.get('/kids/:kidId', asyncHandler(async (req, res) => {
 }));
 
 router.post('/kids', asyncHandler(async (req, res) => {
-  const kid = await therapyService.createKid(req.body);
+  const kid = await therapyService.createKid(req.body, req.adminId);
   res.status(201).json(kid);
 }));
 
@@ -51,22 +51,19 @@ router.get('/kids/:kidId/practitioners', asyncHandler(async (req, res) => {
 }));
 
 router.post('/kids/:kidId/practitioners', asyncHandler(async (req, res) => {
-  // TODO: Get adminId from auth when implemented
-  const adminId = 'michal-super-admin';
   const practitioner = await therapyService.addPractitionerToKid(
     req.params.kidId,
     req.body,
-    adminId
+    req.adminId
   );
   res.status(201).json(practitioner);
 }));
 
 router.post('/kids/:kidId/practitioners/link', asyncHandler(async (req, res) => {
-  const adminId = 'michal-super-admin';
   await therapyService.linkExistingPractitionerToKid(
     req.params.kidId,
     req.body.practitionerId,
-    adminId
+    req.adminId
   );
   res.status(204).send();
 }));
@@ -87,9 +84,7 @@ router.get('/practitioners/:practitionerId/kids', asyncHandler(async (req, res) 
 }));
 
 router.get('/practitioners/my-therapists', asyncHandler(async (req, res) => {
-  // TODO: Get adminId from auth when implemented
-  const adminId = 'michal-super-admin';
-  const therapists = await therapyService.getMyTherapists(adminId);
+  const therapists = await therapyService.getMyTherapists(req.adminId);
   res.json(therapists);
 }));
 
@@ -174,7 +169,7 @@ router.delete('/sessions/:id', asyncHandler(async (req, res) => {
 }));
 
 router.get('/sessions/alerts', asyncHandler(async (req, res) => {
-  const alerts = await therapyService.getSessionAlerts();
+  const alerts = await therapyService.getSessionAlerts(req.adminId);
   res.json(alerts);
 }));
 

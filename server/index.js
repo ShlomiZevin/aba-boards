@@ -6,6 +6,8 @@ const path = require('path');
 
 const avatarRoutes = require('./routes/avatar');
 const therapyRoutes = require('./routes/therapy');
+const adminRoutes = require('./routes/admin');
+const { authenticate } = require('./middleware/auth');
 const { initializeSuperAdmin, initializeGoalCategories } = require('./services/therapy');
 
 const app = express();
@@ -20,7 +22,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API Routes
 app.use('/api/avatar', avatarRoutes);
-app.use('/api/therapy', therapyRoutes);
+app.use('/api/admin', authenticate, adminRoutes);
+app.use('/api/therapy', authenticate, therapyRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
