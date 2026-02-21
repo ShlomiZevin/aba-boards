@@ -36,7 +36,7 @@ export default function MeetingFormView() {
   const { formId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isTherapistView } = useTherapist();
+  const { isTherapistView, isParentView } = useTherapist();
   const links = useTherapistLinks();
   const [showDelete, setShowDelete] = useState(false);
 
@@ -102,7 +102,7 @@ export default function MeetingFormView() {
             {kid && <p style={{ color: '#64748b', margin: '4px 0 0 0' }}>{kid.name}</p>}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            {!isTherapistView && (
+            {!isTherapistView && !isParentView && (
               <button
                 onClick={() => navigate(links.meetingFormEdit(formId!))}
                 className="btn-primary btn-small"
@@ -113,7 +113,7 @@ export default function MeetingFormView() {
             <button onClick={() => window.print()} className="btn-secondary btn-small">
               הדפס
             </button>
-            {!isTherapistView && (
+            {!isTherapistView && !isParentView && (
               <button
                 onClick={() => setShowDelete(true)}
                 className="btn-small"

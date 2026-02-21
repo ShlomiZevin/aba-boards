@@ -30,6 +30,13 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
+const HE_DAY_SHORT = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+const calendarFormats = {
+  weekdayFormat: (date: Date) => HE_DAY_SHORT[date.getDay()],
+  monthHeaderFormat: (date: Date) => `${HE_MONTHS[date.getMonth()]} ${date.getFullYear()}`,
+};
+
 interface CalendarEvent {
   id: string;
   title: string;
@@ -159,8 +166,11 @@ export default function KidDetail() {
   const { kidId } = useParams<{ kidId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isTherapistView, practitionerId: contextPractitionerId } = useTherapist();
+  const { isTherapistView, isParentView, practitionerId: contextPractitionerId } = useTherapist();
   const links = useTherapistLinks();
+  const isSimplifiedView = isTherapistView || isParentView;
+  const isReadOnly = isParentView;
+  const isAdmin = !isTherapistView && !isParentView;
 
   // State
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -184,6 +194,7 @@ export default function KidDetail() {
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [copiedParentLink, setCopiedParentLink] = useState(false);
+  const [sessionsTab, setSessionsTab] = useState<'future' | 'past'>('future');
 
   // Form state for modals
   const [newName, setNewName] = useState('');
@@ -213,13 +224,13 @@ export default function KidDetail() {
   const { data: parentsRes } = useQuery({
     queryKey: ['parents', kidId],
     queryFn: () => parentsApi.getForKid(kidId!),
-    enabled: !!kidId,
+    enabled: !!kidId && !isSimplifiedView,
   });
 
   const { data: goalsRes } = useQuery({
     queryKey: ['goals', kidId],
     queryFn: () => goalsApi.getForKid(kidId!),
-    enabled: !!kidId,
+    enabled: !!kidId && !isSimplifiedView,
   });
 
   const { data: sessionsRes } = useQuery({
@@ -391,10 +402,14 @@ export default function KidDetail() {
 
   const therapists = practitioners.filter((p: Practitioner) => p.type === 'מטפלת');
   const activeGoals = goals.filter((g: Goal) => g.isActive);
-  // Pending = no form, and (admin sees all, therapist only sees their own therapy sessions)
-  const pendingSessions = sessions.filter((s: Session) => !s.formId &&
-    (isTherapistView ? (s.type !== 'meeting' && s.therapistId === contextPractitionerId) : true)
-  );
+  // Pending = no form, and (admin sees all, therapist only sees their own therapy sessions, parent sees none)
+  const pendingSessions = sessions.filter((s: Session) => {
+    if (isParentView) return false;
+    if (!s.formId) {
+      return isTherapistView ? (s.type !== 'meeting' && s.therapistId === contextPractitionerId) : true;
+    }
+    return false;
+  });
 
   // Helper: is this session mine (therapist view)?
   const isOwnSession = (session: Session) =>
@@ -500,7 +515,7 @@ export default function KidDetail() {
             <span className="back-arrow">←</span>
             <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
           </Link>
-          {!isTherapistView && (
+          {isAdmin && (
             <button
               onClick={() => setShowDeleteKid(true)}
               className="delete-btn-small"
@@ -521,7 +536,7 @@ export default function KidDetail() {
                 (e.target as HTMLImageElement).src = DEFAULT_AVATAR;
               }}
             />
-            {!isTherapistView && (
+            {isAdmin && (
               <>
                 <button
                   onClick={() => setShowImageUpload(true)}
@@ -577,43 +592,44 @@ export default function KidDetail() {
             <h1 className="kid-header-name">{kid.name}</h1>
             {kid.age && <div className="kid-header-age">גיל {kid.age}</div>}
             <div className="kid-header-stats">
-              <span>{activeGoals.length} מטרות פעילות</span>
-              <span>{sessions.length} טיפולים</span>
+              {!isSimplifiedView && <span>{activeGoals.length} מטרות פעילות</span>}
+              {!isSimplifiedView && <span>{sessions.length} טיפולים</span>}
               {pendingSessions.length > 0 && (
                 <span className="pending-badge">{pendingSessions.length} ממתינים לטופס</span>
               )}
             </div>
+            {isParentView && (
+              <div className="readonly-badge">צפייה בלבד</div>
+            )}
           </div>
         </div>
-        {/* Kid Action Links */}
-        <div className="kid-action-links">
-          <QuickActionLink
-            href={`/board.html?kid=${kidId}`}
-            label="לוח"
-            icon="📱"
-            color="#667eea"
-          />
-          {!isTherapistView && (
-            <>
-              <QuickActionLink
-                href={`/board-builder.html?kid=${kidId}`}
-                label="בנה לוח"
-                icon="🎨"
-                color="#48bb78"
-              />
-              <QuickActionLink
-                href={`/stats.html?kid=${kidId}`}
-                label="סטטיסטיקה"
-                icon="📊"
-                color="#ed8936"
-              />
-            </>
-          )}
-        </div>
+        {/* Kid Action Links - admin only */}
+        {!isSimplifiedView && (
+          <div className="kid-action-links">
+            <QuickActionLink
+              href={`/board.html?kid=${kidId}`}
+              label="לוח"
+              icon="📱"
+              color="#667eea"
+            />
+            <QuickActionLink
+              href={`/board-builder.html?kid=${kidId}`}
+              label="בנה לוח"
+              icon="🎨"
+              color="#48bb78"
+            />
+            <QuickActionLink
+              href={`/stats.html?kid=${kidId}`}
+              label="סטטיסטיקה"
+              icon="📊"
+              color="#ed8936"
+            />
+          </div>
+        )}
       </div>
 
-      {/* Dashboard Grid */}
-      <div className="dashboard-grid">
+      {/* Dashboard Grid - admin only */}
+      {!isSimplifiedView && <div className="dashboard-grid">
         {/* Team Section */}
         <div className="dashboard-card">
           <div className="dashboard-card-header">
@@ -769,37 +785,39 @@ export default function KidDetail() {
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Sessions Section - Full Width */}
       <div className="content-card sessions-section">
         <div className="sessions-header">
           <h3>טיפולים</h3>
-          <div className="sessions-actions">
-            {!isTherapistView && (
+          {!isReadOnly && (
+            <div className="sessions-actions">
+              {isAdmin && (
+                <button
+                  onClick={() => setShowTemplateEditor(true)}
+                  className="btn-secondary btn-small"
+                  style={{ color: '#64748b', borderColor: '#e2e8f0' }}
+                >
+                  תבנית טופס
+                </button>
+              )}
               <button
-                onClick={() => setShowTemplateEditor(true)}
+                onClick={() => navigate(links.formNew({ kidId: kidId! }))}
                 className="btn-secondary btn-small"
-                style={{ color: '#64748b', borderColor: '#e2e8f0' }}
               >
-                תבנית טופס
+                מלא טופס
               </button>
-            )}
-            <button
-              onClick={() => navigate(links.formNew({ kidId: kidId! }))}
-              className="btn-secondary btn-small"
-            >
-              מלא טופס
-            </button>
-            {!isTherapistView && (
-              <button
-                onClick={() => setShowScheduleSession(true)}
-                className="btn-primary btn-small"
-              >
-                + פגישה חדשה
-              </button>
-            )}
-          </div>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowScheduleSession(true)}
+                  className="btn-primary btn-small"
+                >
+                  + פגישה חדשה
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {pendingSessions.length > 0 && (
@@ -809,9 +827,10 @@ export default function KidDetail() {
         )}
 
         {/* Calendar */}
-        <div className="calendar-container" dir="ltr">
+        <div className="calendar-container" dir="rtl">
           <DnDCalendar
             localizer={localizer}
+            formats={calendarFormats}
             events={calendarEvents}
             startAccessor="start"
             endAccessor="end"
@@ -819,10 +838,10 @@ export default function KidDetail() {
             views={['month']}
             date={calendarDate}
             onNavigate={(newDate) => setCalendarDate(newDate)}
-            selectable
-            draggableAccessor={() => !isTherapistView}
+            selectable={!isReadOnly}
+            draggableAccessor={() => isAdmin}
             onEventDrop={({ event, start }: { event: CalendarEvent; start: Date | string }) => {
-              if (isTherapistView) return;
+              if (!isAdmin) return;
               const { resource } = event;
               if ('isMultiple' in resource && resource.isMultiple) return;
               const session = resource as Session;
@@ -835,6 +854,7 @@ export default function KidDetail() {
               });
             }}
             onSelectSlot={(slotInfo) => {
+              if (isReadOnly) return;
               if (isTherapistView) {
                 // Therapist: directly go to fill form
                 setSelectedDate(slotInfo.start);
@@ -845,7 +865,7 @@ export default function KidDetail() {
                 setShowDateActions(true);
               }
             }}
-            style={{ height: 400 }}
+            style={{ height: 420 }}
             components={{
               event: ({ event }) => {
                 const resource = event.resource as Session | { isMultiple: true; sessions: Session[]; allHaveForms: boolean; someHaveForms: boolean };
@@ -856,15 +876,17 @@ export default function KidDetail() {
                   return (
                     <div
                       className="calendar-event"
+                      style={isReadOnly ? { cursor: 'default' } : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (isReadOnly) return;
                         setDaySessionsList(daySessions);
                         setSelectedDate(event.start as Date);
                         setShowDaySessions(true);
                       }}
                     >
                       <span className="calendar-event-indicator">
-                        {allHaveForms ? '✓' : someHaveForms ? '⚠' : '✎'}
+                        {allHaveForms ? '✓' : someHaveForms ? '⚠' : '○'}
                       </span>
                       <span className="calendar-event-title">{daySessions.length} טיפולים</span>
                     </div>
@@ -876,12 +898,14 @@ export default function KidDetail() {
                 const hasForm = session.formId;
                 const own = isOwnSession(session);
                 const isMeeting = session.type === 'meeting';
-                const canFill = isMeeting ? !isTherapistView : own;
+                const canFill = isReadOnly ? false : (isMeeting ? isAdmin : own);
                 return (
                   <div
                     className={`calendar-event${!own && !isMeeting ? ' calendar-event-other' : ''}`}
+                    style={isReadOnly ? { cursor: 'default' } : undefined}
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (isReadOnly) return;
                       if (hasForm) {
                         navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!));
                       } else if (canFill) {
@@ -891,7 +915,7 @@ export default function KidDetail() {
                       }
                     }}
                   >
-                    {!isTherapistView && !hasForm ? (
+                    {isAdmin && !hasForm ? (
                       <span
                         className="calendar-event-indicator"
                         onClick={(e) => { e.stopPropagation(); openEditSession(session); }}
@@ -904,7 +928,7 @@ export default function KidDetail() {
                       </span>
                     )}
                     <span className="calendar-event-title" style={{ flex: 1 }}>{event.title}</span>
-                    {!isTherapistView && (
+                    {isAdmin && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setSessionToDelete(session); }}
                         className="calendar-event-delete"
@@ -931,15 +955,15 @@ export default function KidDetail() {
               const session = resource as Session;
               const own = isOwnSession(session);
               const isMeeting = session.type === 'meeting';
-              const canFill = isMeeting ? !isTherapistView : own;
+              const canFillStyle = isReadOnly ? false : (isMeeting ? isAdmin : own);
               const bgColor = isMeeting
                 ? (session.formId ? '#388E3C' : '#7C3AED')
                 : (!own ? '#94a3b8' : session.formId ? '#388E3C' : '#F57C00');
               return {
                 style: {
                   backgroundColor: bgColor,
-                  cursor: (canFill || session.formId) ? 'pointer' : 'default',
-                  opacity: (!own && !isMeeting) ? 0.6 : 1,
+                  cursor: (canFillStyle || session.formId) ? 'pointer' : 'default',
+                  opacity: (!own && !isMeeting && !isParentView) ? 0.6 : 1,
                 },
               };
             }}
@@ -950,6 +974,15 @@ export default function KidDetail() {
               month: 'חודש',
             }}
           />
+          {/* Mobile add session button - admin only */}
+          {isAdmin && (
+            <button
+              className="mobile-add-session-btn"
+              onClick={() => setShowScheduleSession(true)}
+            >
+              + הוסף פגישה
+            </button>
+          )}
         </div>
 
 
@@ -972,96 +1005,126 @@ export default function KidDetail() {
               const hasForm = session.formId;
               const own = isOwnSession(session);
               const isMeeting = session.type === 'meeting';
-              const canFill = isMeeting ? !isTherapistView : own;
+              const canFill = isReadOnly ? false : (isMeeting ? isAdmin : own);
               return (
-                <div key={session.id} className="session-row">
-                  <div className="session-row-info">
-                    <span className="session-date">
+                <div key={session.id} className="session-card-mobile">
+                  <div className="session-card-top">
+                    <span className="session-card-date">
                       {format(toDate(session.scheduledDate), 'dd/MM/yyyy')}
                     </span>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, borderRadius: 8, padding: '1px 7px',
-                      background: isMeeting ? '#f3e8ff' : '#e0f2fe',
-                      color: isMeeting ? '#7C3AED' : '#0369a1',
-                    }}>
+                    <span className={`session-type-badge ${isMeeting ? 'meeting' : 'therapy'}`}>
                       {isMeeting ? 'ישיבה' : 'טיפול'}
                     </span>
                     {!isMeeting && therapist && (
-                      <span className="session-therapist">{therapist.name}</span>
+                      <span className="session-card-therapist">{therapist.name}</span>
                     )}
+                  </div>
+                  <div className="session-card-bottom">
                     <span className={`session-status ${hasForm ? 'completed' : 'pending'}`}>
                       {hasForm ? 'הושלם' : 'ממתין'}
                     </span>
-                  </div>
-                  <div className="session-row-actions">
-                    {hasForm ? (
-                      <button onClick={() => navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!))}>
-                        צפה
-                      </button>
-                    ) : canFill ? (
-                      <button
-                        onClick={() => navigate(isMeeting
-                          ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
-                          : links.formNew({ kidId: kidId!, sessionId: session.id }))}
-                        className="fill-btn"
-                      >
-                        מלא
-                      </button>
-                    ) : (
-                      <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>מפגש אחר</span>
-                    )}
-                    {!isTherapistView && (
-                      <>
-                        <button
-                          onClick={() => openEditSession(session)}
-                          className="edit-btn-small"
-                          title="ערוך מפגש"
-                        >
-                          ✎
+                    <div className="session-card-actions">
+                      {hasForm ? (
+                        <button onClick={() => navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!))}>
+                          צפה
                         </button>
+                      ) : isReadOnly ? (
+                        <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>טרם הושלם</span>
+                      ) : canFill ? (
                         <button
-                          onClick={() => setSessionToDelete(session)}
-                          className="delete-btn"
+                          onClick={() => navigate(isMeeting
+                            ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
+                            : links.formNew({ kidId: kidId!, sessionId: session.id }))}
+                          className="fill-btn"
                         >
-                          ✕
+                          מלא
                         </button>
-                      </>
-                    )}
+                      ) : (
+                        <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>מפגש אחר</span>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={() => openEditSession(session)}
+                            className="edit-btn-small"
+                            title="ערוך מפגש"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={() => setSessionToDelete(session)}
+                            className="delete-btn"
+                          >
+                            ✕
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             };
 
             return (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                {/* Future — left col in RTL = right side visually */}
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', background: '#e0f2fe', borderRadius: 6, padding: '3px 8px', marginBottom: 6, display: 'inline-block' }}>
-                    עתידיים ({futureSessions.length})
+              <>
+                {/* Desktop: side-by-side columns */}
+                <div className="sessions-columns">
+                  <div>
+                    <div className="sessions-col-label future">
+                      עתידיים ({futureSessions.length})
+                    </div>
+                    {futureSessions.length === 0
+                      ? <p className="sessions-empty">אין מפגשים קרובים</p>
+                      : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{futureSessions.map(renderSession)}</div>
+                    }
                   </div>
-                  {futureSessions.length === 0
-                    ? <p style={{ color: '#94a3b8', fontSize: 13 }}>אין מפגשים קרובים</p>
-                    : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{futureSessions.map(renderSession)}</div>
-                  }
-                </div>
-                {/* Past */}
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '3px 8px', marginBottom: 6, display: 'inline-block' }}>
-                    אחרונים ({pastSessions.length})
+                  <div>
+                    <div className="sessions-col-label past">
+                      אחרונים ({pastSessions.length})
+                    </div>
+                    {pastSessions.length === 0
+                      ? <p className="sessions-empty">אין מפגשים קודמים</p>
+                      : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{pastSessions.map(renderSession)}</div>
+                    }
                   </div>
-                  {pastSessions.length === 0
-                    ? <p style={{ color: '#94a3b8', fontSize: 13 }}>אין מפגשים קודמים</p>
-                    : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{pastSessions.map(renderSession)}</div>
-                  }
                 </div>
-              </div>
+
+                {/* Mobile: tabbed layout */}
+                <div className="sessions-tabbed">
+                  <div className="sessions-tabs">
+                    <button
+                      className={`sessions-tab ${sessionsTab === 'future' ? 'active' : ''}`}
+                      onClick={() => setSessionsTab('future')}
+                    >
+                      עתידיים ({futureSessions.length})
+                    </button>
+                    <button
+                      className={`sessions-tab ${sessionsTab === 'past' ? 'active' : ''}`}
+                      onClick={() => setSessionsTab('past')}
+                    >
+                      אחרונים ({pastSessions.length})
+                    </button>
+                  </div>
+                  <div className="sessions-tab-content">
+                    {sessionsTab === 'future' ? (
+                      futureSessions.length === 0
+                        ? <p className="sessions-empty">אין מפגשים קרובים</p>
+                        : <div className="sessions-list">{futureSessions.map(renderSession)}</div>
+                    ) : (
+                      pastSessions.length === 0
+                        ? <p className="sessions-empty">אין מפגשים קודמים</p>
+                        : <div className="sessions-list">{pastSessions.map(renderSession)}</div>
+                    )}
+                  </div>
+                </div>
+              </>
             );
           })()}
         </div>
       </div>
 
       {/* Admin-only Modals */}
-      {!isTherapistView && (
+      {isAdmin && (
         <>
           {/* Add Practitioner Modal */}
           {showAddPractitioner && (() => {
@@ -1481,7 +1544,7 @@ export default function KidDetail() {
                 const hasForm = session.formId;
                 const own = isOwnSession(session);
                 const isMeeting = session.type === 'meeting';
-                const canFill = isMeeting ? !isTherapistView : own;
+                const canFill = isReadOnly ? false : (isMeeting ? isAdmin : own);
                 return (
                   <div
                     key={session.id}
@@ -1519,7 +1582,7 @@ export default function KidDetail() {
                           מלא
                         </button>
                       )}
-                      {!isTherapistView && (
+                      {isAdmin && (
                         <>
                           <button
                             className="edit-btn-small"

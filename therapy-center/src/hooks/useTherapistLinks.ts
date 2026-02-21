@@ -1,13 +1,19 @@
+import { useParams } from 'react-router-dom';
 import { useTherapist } from '../contexts/TherapistContext';
 
 export function useTherapistLinks() {
-  const { isTherapistView, practitionerId } = useTherapist();
+  const { isTherapistView, isParentView, practitionerId } = useTherapist();
+  const { kidId: urlKidId } = useParams<{ kidId: string }>();
 
-  const prefix = isTherapistView ? `/t/${practitionerId}` : '';
+  const prefix = isParentView
+    ? `/p/${urlKidId}`
+    : isTherapistView
+      ? `/t/${practitionerId}`
+      : '';
 
   return {
-    home: () => `${prefix}/`,
-    kidDetail: (kidId: string) => `${prefix}/kid/${kidId}`,
+    home: () => isParentView ? `/p/${urlKidId}` : `${prefix}/`,
+    kidDetail: (kidId: string) => isParentView ? `/p/${kidId}` : `${prefix}/kid/${kidId}`,
     kidGoals: (kidId: string) => `${prefix}/kid/${kidId}/goals`,
     formNew: (params: { kidId: string; sessionId?: string; date?: string }) => {
       const searchParams = new URLSearchParams();

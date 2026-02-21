@@ -1143,7 +1143,15 @@ body {
 /* Calendar - react-big-calendar overrides */
 .rbc-calendar {
   font-family: inherit;
-  direction: ltr;
+  direction: rtl;
+}
+
+/* RTL border fix: the library uses border-left for cell dividers,
+   swap to border-right so the first visual column (Sunday) gets its border */
+.rbc-header + .rbc-header,
+.rbc-day-bg + .rbc-day-bg {
+  border-left: none;
+  border-right: 1px solid #ddd;
 }
 
 .rbc-toolbar {
@@ -1189,7 +1197,7 @@ body {
   content: '+';
   position: absolute;
   bottom: 4px;
-  right: 4px;
+  left: 4px;
   width: 18px;
   height: 18px;
   background: #667eea;
@@ -1316,7 +1324,7 @@ body {
 .calendar-event-delete {
   position: absolute;
   top: 0;
-  left: 0;
+  right: 0;
   bottom: 0;
   width: 20px;
   background: rgba(185, 28, 28, 0.85);
@@ -2185,6 +2193,181 @@ body {
   background: #fee2e2;
 }
 
+/* Sessions - Two-column layout (desktop) */
+.sessions-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sessions-col-label {
+  font-size: 0.78em;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 3px 8px;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
+.sessions-col-label.future {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.sessions-col-label.past {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+/* Sessions - Tabbed Layout (mobile only) */
+.sessions-tabbed {
+  display: none;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .sessions-columns {
+    display: none;
+  }
+
+  .sessions-tabbed {
+    display: block;
+  }
+}
+
+.sessions-tabs {
+  display: flex;
+  gap: 0;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+
+.sessions-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 0.88em;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.sessions-tab.active {
+  background: white;
+  color: #2d3748;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sessions-tab-content {
+  min-height: 60px;
+}
+
+.sessions-empty {
+  color: #94a3b8;
+  font-size: 0.9em;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* Session Card - Mobile-friendly */
+.session-card-mobile {
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.session-card-mobile:hover {
+  background: #f1f5f9;
+}
+
+.session-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.session-card-date {
+  font-weight: 700;
+  color: #2d3748;
+  font-size: 0.95em;
+}
+
+.session-type-badge {
+  font-size: 0.75em;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+
+.session-type-badge.therapy {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.session-type-badge.meeting {
+  background: #f3e8ff;
+  color: #7C3AED;
+}
+
+.session-card-therapist {
+  color: #64748b;
+  font-size: 0.88em;
+}
+
+.session-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-card-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.session-card-actions button {
+  background: none;
+  border: none;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  color: #667eea;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+  font-family: inherit;
+}
+
+.session-card-actions button:hover {
+  background: #e8eaf6;
+}
+
+.session-card-actions .fill-btn {
+  color: #48bb78;
+}
+
+.session-card-actions .fill-btn:hover {
+  background: #e8f5e9;
+}
+
+.session-card-actions .delete-btn {
+  color: #ef4444;
+}
+
+.session-card-actions .delete-btn:hover {
+  background: #fee2e2;
+}
+
 /* Print styles */
 @media print {
   body {
@@ -2723,4 +2906,738 @@ body {
   background: #f0f4f8;
   border-radius: 10px;
   flex-wrap: wrap;
+}
+
+/* ========================= */
+/* READ-ONLY BADGE           */
+/* ========================= */
+.readonly-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 20px;
+  font-size: 0.8em;
+  color: #3b82f6;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+/* ========================= */
+/* MOBILE ADD SESSION BUTTON */
+/* ========================= */
+.mobile-add-session-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-add-session-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+  }
+
+  /* Hide hover + indicator on mobile (touch doesn't support hover) */
+  .rbc-day-bg:hover::after {
+    display: none;
+  }
+
+  /* ========================= */
+  /* MOBILE CALENDAR POLISH    */
+  /* ========================= */
+
+  /* Remove calendar container border/padding on mobile — use full width */
+  .calendar-container {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0 0 16px 0;
+    background: transparent;
+  }
+
+  /* Toolbar: compact, centered */
+  .rbc-toolbar {
+    margin-bottom: 10px;
+  }
+
+  .rbc-toolbar-label {
+    font-size: 1em;
+    font-weight: 700;
+    color: #2d3748;
+  }
+
+  .rbc-toolbar button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+  }
+
+  /* Day headers */
+  .rbc-header {
+    padding: 6px 2px;
+    font-size: 0.82em;
+  }
+
+  /* Date numbers */
+  .rbc-date-cell button {
+    font-size: 0.88em;
+    font-weight: 700;
+  }
+
+  /* Events: compact on mobile */
+  .rbc-event {
+    border-radius: 4px;
+    padding: 1px 3px;
+    font-size: 0.72em;
+  }
+
+  .calendar-event-title {
+    font-size: 0.78em;
+  }
+
+  .calendar-event-indicator {
+    font-size: 0.75em;
+  }
+
+  .calendar-event {
+    gap: 2px;
+  }
+
+  /* Remove day cell hover on mobile */
+  .rbc-day-bg:hover {
+    background-color: transparent !important;
+  }
+
+  .rbc-day-bg.rbc-today:hover {
+    background-color: #fff3e0 !important;
+  }
+}
+
+/* ========================= */
+/* APP SHELL - SIDEBAR LAYOUT */
+/* ========================= */
+
+body:has(.app-shell) {
+  padding: 0;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  direction: rtl;
+}
+
+.app-sidebar {
+  width: 220px;
+  background: white;
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-brand {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #f0f4f8;
+}
+
+.sidebar-logo {
+  height: 40px;
+  width: auto;
+}
+
+.sidebar-title {
+  font-weight: 700;
+  font-size: 1.1em;
+  color: #2d3748;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  color: #64748b;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95em;
+  transition: all 0.15s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  text-align: right;
+  font-family: inherit;
+}
+
+.sidebar-nav-item:hover {
+  background: #f8fafc;
+  color: #2d3748;
+}
+
+.sidebar-nav-item.active {
+  background: linear-gradient(135deg, #f0f1ff 0%, #e8eaf6 100%);
+  color: #667eea;
+}
+
+.sidebar-nav-item.danger {
+  color: #ef4444;
+}
+
+.sidebar-nav-item.danger:hover {
+  background: #fff5f5;
+}
+
+.sidebar-nav-icon {
+  font-size: 1.1em;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: 8px 0;
+  border-top: 1px solid #f0f4f8;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+}
+
+.sidebar-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.sidebar-user-info {
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  font-weight: 600;
+  font-size: 0.9em;
+  color: #2d3748;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user-role {
+  font-size: 0.78em;
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.app-main {
+  flex: 1;
+  margin-right: 220px;
+  padding: 20px;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.app-topbar {
+  display: none;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-logo {
+  height: 32px;
+  width: auto;
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 8px;
+  color: #2d3748;
+  line-height: 1;
+}
+
+.alert-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 0.7em;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-inline-start: auto;
+}
+
+/* ========================= */
+/* SIDE DRAWER (MOBILE NAV)  */
+/* ========================= */
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-panel {
+  position: fixed;
+  top: 0;
+  right: -280px;
+  bottom: 0;
+  width: 280px;
+  background: white;
+  z-index: 1000;
+  transition: right 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  direction: rtl;
+}
+
+.drawer-panel.open {
+  right: 0;
+}
+
+.drawer-header {
+  padding: 20px;
+  border-bottom: 1px solid #f0f4f8;
+}
+
+.drawer-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawer-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.drawer-user-name {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 1em;
+}
+
+.drawer-user-role {
+  font-size: 0.85em;
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.drawer-nav {
+  flex: 1;
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  color: #64748b;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1em;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  text-align: right;
+  transition: background 0.15s ease;
+  font-family: inherit;
+}
+
+.drawer-nav-item:hover {
+  background: #f8fafc;
+}
+
+.drawer-nav-item.active {
+  color: #667eea;
+  background: #f0f1ff;
+}
+
+.drawer-nav-item.danger {
+  color: #ef4444;
+}
+
+.drawer-divider {
+  height: 1px;
+  background: #f0f4f8;
+  margin: 8px 20px;
+}
+
+/* ========================= */
+/* RESPONSIVE - APP SHELL    */
+/* ========================= */
+
+@media (max-width: 768px) {
+  .app-sidebar {
+    display: none;
+  }
+
+  .app-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .app-main {
+    margin-right: 0;
+  }
+}
+
+@media print {
+  .app-sidebar,
+  .app-topbar,
+  .drawer-overlay,
+  .drawer-panel {
+    display: none !important;
+  }
+
+  .app-main {
+    margin-right: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  body:has(.app-shell) {
+    padding: 0;
+  }
+}
+
+/* ========================= */
+/* ADMIN MANAGEMENT CARDS    */
+/* ========================= */
+
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  gap: 12px;
+}
+
+.admin-card-info {
+  min-width: 0;
+}
+
+.admin-card-name {
+  font-weight: 700;
+  color: #2d3748;
+  font-size: 0.95em;
+  margin-bottom: 4px;
+}
+
+.admin-card-detail {
+  font-size: 0.85em;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-card-key {
+  display: inline-block;
+  margin-top: 6px;
+  background: #e2e8f0;
+  padding: 2px 10px;
+  border-radius: 6px;
+  letter-spacing: 2px;
+  font-size: 13px;
+  color: #2d3748;
+}
+
+/* ========================= */
+/* MOBILE FIXES FOR APP SHELL */
+/* ========================= */
+
+@media (max-width: 768px) {
+  /* Hide calendar event delete button on mobile (hover is unreliable on touch) */
+  .rbc-event:hover .calendar-event-delete {
+    display: none;
+  }
+
+  /* --- Full-bleed card layout inside AppShell on mobile --- */
+  /* Remove body padding since AppShell handles its own layout */
+  body:has(.app-shell) {
+    padding: 0;
+  }
+
+  .app-main {
+    padding: 60px 0 0 0;
+    background: #f4f6fb;
+  }
+
+  .app-main .container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* Content cards go edge-to-edge on mobile for app-like feel */
+  .app-main .content-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #e8ecf1;
+    margin-bottom: 8px;
+    padding: 16px;
+  }
+
+  .app-main .content-card:last-child {
+    border-bottom: none;
+  }
+
+  /* Kid header card also edge-to-edge */
+  .app-main .kid-header-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #e8ecf1;
+    margin-bottom: 8px;
+    padding: 16px;
+  }
+
+  /* Header card (therapist greeting etc.) */
+  .app-main .header-card {
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #e8ecf1;
+    margin-bottom: 8px;
+    padding: 16px 16px;
+  }
+
+  /* Alerts box inside AppShell */
+  .app-main .alerts-box {
+    border-radius: 0;
+    margin-bottom: 8px;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* Content card header stays horizontal on mobile inside AppShell */
+  .app-main .content-card-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    gap: 12px;
+  }
+
+  .app-main .content-card-header h2 {
+    font-size: 1.15em;
+  }
+
+  /* Kids grid - tighter spacing */
+  .app-main .kids-grid {
+    gap: 10px;
+  }
+
+  /* Kid card container - softer style on mobile */
+  .app-main .kid-card-container {
+    border-radius: 12px;
+    border: 1px solid #e8ecf1;
+    background: white;
+  }
+
+  .app-main .kid-card-container:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .app-main .kid-card {
+    padding: 14px;
+  }
+
+  .app-main .kid-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .app-main .kid-name {
+    font-size: 1.05em;
+  }
+
+  /* Action buttons always visible on mobile (no hover) */
+  .app-main .kid-action-btn.with-label .action-label {
+    opacity: 1;
+    max-height: 20px;
+    font-size: 0.6em;
+  }
+
+  .app-main .kid-action-btn {
+    padding: 8px 4px;
+    font-size: 1em;
+  }
+
+  /* Session card on mobile */
+  .app-main .session-card {
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+
+  /* List items on mobile */
+  .app-main .list-item {
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+
+  /* Form cards on mobile */
+  .app-main .form-card {
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+
+  /* Empty state on mobile */
+  .app-main .empty-state {
+    padding: 40px 16px;
+    border-radius: 10px;
+  }
+
+  /* Tab buttons compact on mobile */
+  .app-main .tab-btn {
+    padding: 8px 14px;
+    font-size: 0.88em;
+  }
+
+  /* Pending alert on mobile */
+  .app-main .pending-alert {
+    border-radius: 10px;
+    margin: 0 0 12px 0;
+  }
+
+  /* Modal: slightly smaller padding on mobile */
+  .modal {
+    border-radius: 16px;
+    padding: 20px;
+    margin: 12px;
+    max-width: calc(100vw - 24px);
+  }
+
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    border-radius: 20px 20px 0 0;
+    max-width: 100%;
+    margin: 0;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Admin card stacks better on small screens */
+  .admin-card {
+    flex-wrap: wrap;
+  }
+
+  /* Back link spacing */
+  .app-main .back-link {
+    margin: 0 16px 12px;
+  }
+
+  /* Kid detail header */
+  .app-main .kid-detail-header {
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 14px;
+  }
+
+  /* View toggle smaller on mobile */
+  .app-main .view-toggle button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+  }
+
+  /* Section headers */
+  .app-main .section-header {
+    margin-bottom: 14px;
+  }
+
+  /* Calendar toolbar compact */
+  .app-main .rbc-toolbar {
+    margin-bottom: 10px;
+  }
+
+  .app-main .rbc-toolbar button {
+    padding: 6px 10px;
+    font-size: 0.85em;
+  }
 }

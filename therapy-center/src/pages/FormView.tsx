@@ -38,7 +38,7 @@ export default function FormView() {
   const { formId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isTherapistView, practitionerId: contextPractitionerId } = useTherapist();
+  const { isTherapistView, isParentView, practitionerId: contextPractitionerId } = useTherapist();
   const links = useTherapistLinks();
   const [showDeleteForm, setShowDeleteForm] = useState(false);
 
@@ -112,7 +112,7 @@ export default function FormView() {
   }
 
   // In therapist view: can view all forms, but only edit/delete own forms
-  const isOwnForm = !isTherapistView || form.practitionerId === contextPractitionerId;
+  const isOwnForm = isParentView ? false : (!isTherapistView || form.practitionerId === contextPractitionerId);
 
   const dateStr = format(toDate(form.sessionDate), 'dd/MM/yyyy');
 
