@@ -244,38 +244,35 @@ export default function GoalProgressChart({ kidId }: GoalProgressChartProps) {
         </div>
       )}
 
-      {/* Goal Frequency Bar Chart */}
-      {goalFrequencyData.length > 0 && (
-        <div className="progress-section">
-          <h4>תדירות עבודה על מטרות</h4>
-          <ResponsiveContainer width="100%" height={Math.max(200, goalFrequencyData.length * 36)}>
-            <BarChart
-              data={goalFrequencyData}
-              layout="vertical"
-              margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-              <YAxis
-                type="category"
-                dataKey="title"
-                width={120}
-                tick={{ fontSize: 11 }}
-                tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 16) + '…' : v}
-              />
-              <Tooltip
-                formatter={(value: number) => [value, 'טיפולים']}
-                contentStyle={{ direction: 'rtl', fontSize: 13 }}
-              />
-              <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={24}>
-                {goalFrequencyData.map((entry) => (
-                  <Cell key={entry.id} fill={getCategoryColor(entry.categoryId)} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      {/* Goal Frequency Bars */}
+      {goalFrequencyData.length > 0 && (() => {
+        const maxCount = goalFrequencyData[0]?.count || 1;
+        return (
+          <div className="progress-section">
+            <h4>תדירות עבודה על מטרות</h4>
+            <div className="goal-freq-list">
+              {goalFrequencyData.map(entry => {
+                const pct = maxCount > 0 ? (entry.count / maxCount) * 100 : 0;
+                const color = getCategoryColor(entry.categoryId);
+                return (
+                  <div key={entry.id} className="goal-freq-item">
+                    <div className="goal-freq-label">
+                      <span className="goal-freq-name">{entry.title}</span>
+                      <span className="goal-freq-count" style={{ color }}>{entry.count}</span>
+                    </div>
+                    <div className="goal-freq-track">
+                      <div
+                        className="goal-freq-fill"
+                        style={{ width: `${Math.max(pct, 2)}%`, background: color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Category Distribution */}
       {categoryData.length > 0 && (

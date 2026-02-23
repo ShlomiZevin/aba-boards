@@ -173,6 +173,10 @@ export default function KidDetail() {
   const isReadOnly = isParentView;
   const isAdmin = !isTherapistView && !isParentView;
 
+  // Tab state
+  type KidTab = 'overview' | 'progress' | 'sessions' | 'notifications';
+  const [kidTab, setKidTab] = useState<KidTab>('sessions');
+
   // State
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [showAddPractitioner, setShowAddPractitioner] = useState(false);
@@ -230,13 +234,13 @@ export default function KidDetail() {
   const { data: parentsRes } = useQuery({
     queryKey: ['parents', kidId],
     queryFn: () => parentsApi.getForKid(kidId!),
-    enabled: !!kidId && !isSimplifiedView,
+    enabled: !!kidId,
   });
 
   const { data: goalsRes } = useQuery({
     queryKey: ['goals', kidId],
     queryFn: () => goalsApi.getForKid(kidId!),
-    enabled: !!kidId && !isSimplifiedView,
+    enabled: !!kidId,
   });
 
   const { data: sessionsRes } = useQuery({
@@ -771,65 +775,39 @@ export default function KidDetail() {
         )}
       </div>
 
-      {/* Notifications Section - Therapist and Parent view (always visible, top of page) */}
-      {(isTherapistView || isParentView) && (
-        <div className="content-card" style={{ marginTop: '16px' }}>
-          <div className="content-card-header">
-            <h3>הודעות מהצוות</h3>
-            {myNotifications.some(n => !n.read) && (
-              <button
-                className="btn-secondary btn-small"
-                onClick={() => markAllReadMutation.mutate(myNotifications.filter(n => !n.read).map(n => n.id))}
-                disabled={markAllReadMutation.isPending}
-              >סמן הכל כנקרא</button>
-            )}
+      {/* Pill Tab Bar */}
+      {(() => {
+        const unreadCount = isSimplifiedView
+          ? myNotifications.filter(n => !n.read).length
+          : (sentNotificationsRes?.data || []).filter((n: Notification) => !n.read).length;
+        return (
+          <div className="kid-tab-bar">
+            <button className={`kid-tab${kidTab === 'sessions' ? ' active' : ''}`} onClick={() => setKidTab('sessions')}>
+              טיפולים
+            </button>
+            <button className={`kid-tab${kidTab === 'progress' ? ' active' : ''}`} onClick={() => setKidTab('progress')}>
+              התקדמות
+            </button>
+            <button className={`kid-tab${kidTab === 'overview' ? ' active' : ''}`} onClick={() => setKidTab('overview')}>
+              סקירה
+            </button>
+            <button className={`kid-tab${kidTab === 'notifications' ? ' active' : ''}`} onClick={() => setKidTab('notifications')}>
+              הודעות
+              {unreadCount > 0 && <span className="kid-tab-badge">{unreadCount}</span>}
+            </button>
           </div>
-          {myNotifications.length === 0 ? (
-            <p className="empty-text">אין הודעות</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {myNotifications.map((n: Notification) => (
-                <div
-                  key={n.id}
-                  style={{
-                    padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                    background: n.read ? '#f8fafc' : '#fffbeb',
-                  }}
-                >
-                  <div style={{ fontSize: '0.9em', marginBottom: '4px', wordBreak: 'break-word', fontWeight: n.read ? 'normal' : 600 }}>{n.message}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.75em', color: '#94a3b8' }}>
-                      {format(toDate(n.createdAt), 'dd/MM/yyyy HH:mm')}
-                    </span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      {!n.read ? (
-                        <button
-                          onClick={() => markReadMutation.mutate(n.id)}
-                          disabled={pendingReadIds.has(n.id)}
-                          style={{ fontSize: '0.78em', padding: '2px 8px', background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer' }}
-                        >סמן כנקרא</button>
-                      ) : (
-                        <button
-                          onClick={() => dismissMutation.mutate(n.id)}
-                          style={{ fontSize: '0.78em', padding: '2px 8px', background: 'transparent', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer' }}
-                        >הסתר</button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
-      {/* Dashboard Grid - admin only */}
-      {!isSimplifiedView && <div className="dashboard-grid">
+      {/* === OVERVIEW TAB === */}
+      {kidTab === 'overview' && <>
+      {/* Dashboard Grid */}
+      <div className="dashboard-grid">
         {/* Team Section */}
         <div className="dashboard-card">
           <div className="dashboard-card-header">
             <h3>צוות</h3>
-            {(practitioners.length > 0 || parents.length > 0) && (
+            {isAdmin && (practitioners.length > 0 || parents.length > 0) && (
               <button
                 onClick={() => openComposeFor([
                   ...practitioners.map((p: Practitioner) => `p:${p.id}`),
@@ -844,7 +822,7 @@ export default function KidDetail() {
           <div className="team-subsection">
             <div className="team-subsection-header">
               <span>צוות טיפולי ({therapists.length})</span>
-              {!isTherapistView && (
+              {isAdmin && (
                 <div style={{ display: 'flex', gap: '4px' }}>
                   {practitioners.length > 0 && (
                     <button
@@ -877,7 +855,7 @@ export default function KidDetail() {
                         </div>
                       )}
                     </div>
-                    {!isTherapistView ? (
+                    {isAdmin ? (
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
                           onClick={() => openComposeFor([`p:${p.id}`])}
@@ -912,7 +890,7 @@ export default function KidDetail() {
           <div className="team-subsection">
             <div className="team-subsection-header">
               <span>הורים ({parents.length})</span>
-              {!isTherapistView && (
+              {isAdmin && (
                 <div style={{ display: 'flex', gap: '4px' }}>
                   {parents.length > 0 && (
                     <button
@@ -946,7 +924,7 @@ export default function KidDetail() {
                         </div>
                       )}
                     </div>
-                    {!isTherapistView && (
+                    {isAdmin && (
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button
                           onClick={copyParentLink}
@@ -974,14 +952,14 @@ export default function KidDetail() {
           <div className="dashboard-card-header">
             <h3>מטרות</h3>
             <Link to={links.kidGoals(kidId!)} className="manage-link">
-              {isTherapistView ? 'צפה →' : 'ניהול →'}
+              {isSimplifiedView ? 'צפה →' : 'ניהול →'}
             </Link>
           </div>
 
           {activeGoals.length === 0 ? (
             <div className="goals-empty">
               <p>אין מטרות פעילות</p>
-              {!isTherapistView && (
+              {isAdmin && (
                 <Link to={links.kidGoals(kidId!)} className="btn-primary btn-small">
                   + הוסף מטרות
                 </Link>
@@ -1012,8 +990,11 @@ export default function KidDetail() {
             </div>
           )}
         </div>
-      </div>}
+      </div>
+      </>}
 
+      {/* === PROGRESS TAB === */}
+      {kidTab === 'progress' && <>
       {/* Goal Progress Section - Full Width */}
       <div className="content-card">
         <div className="dashboard-card-header">
@@ -1021,7 +1002,10 @@ export default function KidDetail() {
         </div>
         <GoalProgressChart kidId={kidId!} />
       </div>
+      </>}
 
+      {/* === SESSIONS TAB === */}
+      {kidTab === 'sessions' && <>
       {/* Sessions Section - Full Width */}
       <div className="content-card sessions-section">
         <div className="sessions-header">
@@ -1357,151 +1341,76 @@ export default function KidDetail() {
           })()}
         </div>
       </div>
+      </>}
 
-      {/* Notifications Section - Admin only */}
+      {/* === NOTIFICATIONS TAB === */}
+      {kidTab === 'notifications' && <>
+
+      {/* Incoming notifications - Therapist/Parent */}
+      {isSimplifiedView && (
+        <div className="content-card">
+          <div className="content-card-header">
+            <h3>הודעות נכנסות</h3>
+            {myNotifications.some(n => !n.read) && (
+              <button className="btn-secondary btn-small" onClick={() => {
+                const unreadIds = myNotifications.filter(n => !n.read && !pendingReadIds.has(n.id)).map(n => n.id);
+                if (unreadIds.length > 0) markAllReadMutation.mutate(unreadIds);
+              }}>
+                סמן הכל כנקרא
+              </button>
+            )}
+          </div>
+          {myNotifications.length === 0 ? (
+            <p className="empty-text">אין הודעות</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {myNotifications.map((n: Notification) => {
+                const isRead = n.read || pendingReadIds.has(n.id);
+                return (
+                  <div key={n.id} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px',
+                    background: isRead ? '#f8fafc' : '#fffbeb', borderRadius: '10px',
+                    border: `1px solid ${isRead ? '#e2e8f0' : '#fcd34d'}`,
+                    transition: 'all 0.3s ease',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.9em', wordBreak: 'break-word' }}>{n.message}</div>
+                      <div style={{ fontSize: '0.75em', color: '#94a3b8', marginTop: '4px' }}>
+                        {format(toDate(n.createdAt), 'dd/MM/yyyy HH:mm')}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                      {!isRead && (
+                        <button
+                          onClick={() => markReadMutation.mutate(n.id)}
+                          disabled={pendingReadIds.has(n.id)}
+                          style={{ padding: '3px 10px', fontSize: '0.78em', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 500 }}
+                        >נקרא</button>
+                      )}
+                      <button
+                        onClick={() => dismissMutation.mutate(n.id)}
+                        style={{ padding: '3px 8px', fontSize: '0.75em', background: 'transparent', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer' }}
+                      >הסתר</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Admin notifications - sent log */}
       {isAdmin && (() => {
         const sentNotifications: Notification[] = sentNotificationsRes?.data || [];
-        const toggleTarget = (key: string) => {
-          setNotifyTargets(prev => {
-            const next = new Set(prev);
-            if (next.has(key)) next.delete(key); else next.add(key);
-            return next;
-          });
-        };
         return (
-          <div className="content-card" style={{ marginTop: '16px' }}>
+          <div className="content-card">
             <div className="content-card-header">
-              <h3>התראות</h3>
+              <h3>הודעות שנשלחו</h3>
               <button className="btn-primary btn-small" onClick={() => setShowNotifyCompose(true)}>
                 + שלח הודעה
               </button>
             </div>
-
-            {/* Compose modal */}
-            {showNotifyCompose && (
-              <div className="modal-overlay" onClick={() => setShowNotifyCompose(false)}>
-                <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
-                  <h3>שליחת הודעה</h3>
-                  <div className="form-group">
-                    <label>הודעה</label>
-                    <textarea
-                      value={notifyMessage}
-                      onChange={e => setNotifyMessage(e.target.value)}
-                      rows={3}
-                      placeholder="כתוב הודעה..."
-                      style={{ width: '100%', resize: 'vertical' }}
-                      autoFocus
-                    />
-                  </div>
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '0.85em', color: '#64748b', marginBottom: '6px' }}>למי לשלוח:</div>
-                    {practitioners.length > 0 && (
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ fontSize: '0.8em', color: '#7c3aed', fontWeight: 600, marginBottom: '4px' }}>מטפלות / צוות</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const allPractKeys = practitioners.map((p: Practitioner) => `p:${p.id}`);
-                              const allSelected = allPractKeys.every((k: string) => notifyTargets.has(k));
-                              setNotifyTargets(prev => {
-                                const next = new Set(prev);
-                                allPractKeys.forEach((k: string) => allSelected ? next.delete(k) : next.add(k));
-                                return next;
-                              });
-                            }}
-                            style={{
-                              padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #7c3aed',
-                              background: practitioners.every((p: Practitioner) => notifyTargets.has(`p:${p.id}`)) ? '#7c3aed' : 'white',
-                              color: practitioners.every((p: Practitioner) => notifyTargets.has(`p:${p.id}`)) ? 'white' : '#7c3aed',
-                            }}
-                          >כולם</button>
-                          {practitioners.map((p: Practitioner) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => toggleTarget(`p:${p.id}`)}
-                              style={{
-                                padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #7c3aed',
-                                background: notifyTargets.has(`p:${p.id}`) ? '#7c3aed' : 'white',
-                                color: notifyTargets.has(`p:${p.id}`) ? 'white' : '#7c3aed',
-                              }}
-                            >{p.name}</button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {parents.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: '0.8em', color: '#15803d', fontWeight: 600, marginBottom: '4px' }}>הורים</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const allParentKeys = parents.map((p: Parent) => `par:${p.id}`);
-                              const allSelected = allParentKeys.every((k: string) => notifyTargets.has(k));
-                              setNotifyTargets(prev => {
-                                const next = new Set(prev);
-                                allParentKeys.forEach((k: string) => allSelected ? next.delete(k) : next.add(k));
-                                return next;
-                              });
-                            }}
-                            style={{
-                              padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #15803d',
-                              background: parents.every((p: Parent) => notifyTargets.has(`par:${p.id}`)) ? '#15803d' : 'white',
-                              color: parents.every((p: Parent) => notifyTargets.has(`par:${p.id}`)) ? 'white' : '#15803d',
-                            }}
-                          >כולם</button>
-                          {parents.map((p: Parent) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => toggleTarget(`par:${p.id}`)}
-                              style={{
-                                padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #15803d',
-                                background: notifyTargets.has(`par:${p.id}`) ? '#15803d' : 'white',
-                                color: notifyTargets.has(`par:${p.id}`) ? 'white' : '#15803d',
-                              }}
-                            >{p.name}</button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {practitioners.length === 0 && parents.length === 0 && (
-                      <p style={{ fontSize: '0.85em', color: '#94a3b8' }}>אין מטפלות או הורים משויכים לילד זה</p>
-                    )}
-                  </div>
-                  {sendNotificationMutation.isError && (
-                    <div style={{ color: '#D32F2F', fontSize: '0.9em', marginBottom: '8px' }}>שגיאה בשליחה</div>
-                  )}
-                  <div className="modal-actions">
-                    <button type="button" className="btn-secondary" onClick={() => { setShowNotifyCompose(false); setNotifyMessage(''); setNotifyTargets(new Set()); }}>ביטול</button>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      disabled={!notifyMessage.trim() || notifyTargets.size === 0 || sendNotificationMutation.isPending}
-                      onClick={() => {
-                        if (!kidId) return;
-                        const targets = Array.from(notifyTargets).map(key => {
-                          if (key.startsWith('p:')) {
-                            const id = key.slice(2);
-                            const pract = practitioners.find((p: Practitioner) => p.id === id);
-                            return { type: 'practitioner', id, name: pract?.name || id };
-                          } else {
-                            const id = key.slice(4);
-                            const parent = parents.find((p: Parent) => p.id === id);
-                            return { type: 'parent', id: kidId, name: parent?.name || 'הורה' };
-                          }
-                        });
-                        sendNotificationMutation.mutate({ kidId, message: notifyMessage.trim(), targets });
-                      }}
-                    >
-                      {sendNotificationMutation.isPending ? 'שולח...' : 'שלח'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Sent log */}
             {sentNotifications.length === 0 ? (
@@ -1557,8 +1466,9 @@ export default function KidDetail() {
           </div>
         );
       })()}
+      </>}
 
-      {/* Admin-only Modals */}
+      {/* Admin-only Modals — always rendered, outside tabs */}
       {isAdmin && (
         <>
           {/* Add Practitioner Modal */}
@@ -1965,6 +1875,141 @@ export default function KidDetail() {
               onClose={() => setShowImageUpload(false)}
             />
           )}
+
+          {/* Compose Notification Modal */}
+          {showNotifyCompose && (() => {
+            const toggleTarget = (key: string) => {
+              setNotifyTargets(prev => {
+                const next = new Set(prev);
+                if (next.has(key)) next.delete(key); else next.add(key);
+                return next;
+              });
+            };
+            return (
+              <div className="modal-overlay" onClick={() => setShowNotifyCompose(false)}>
+                <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+                  <h3>שליחת הודעה</h3>
+                  <div className="form-group">
+                    <label>הודעה</label>
+                    <textarea
+                      value={notifyMessage}
+                      onChange={e => setNotifyMessage(e.target.value)}
+                      rows={3}
+                      placeholder="כתוב הודעה..."
+                      style={{ width: '100%', resize: 'vertical' }}
+                      autoFocus
+                    />
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '0.85em', color: '#64748b', marginBottom: '6px' }}>למי לשלוח:</div>
+                    {practitioners.length > 0 && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '0.8em', color: '#7c3aed', fontWeight: 600, marginBottom: '4px' }}>מטפלות / צוות</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const allPractKeys = practitioners.map((p: Practitioner) => `p:${p.id}`);
+                              const allSelected = allPractKeys.every((k: string) => notifyTargets.has(k));
+                              setNotifyTargets(prev => {
+                                const next = new Set(prev);
+                                allPractKeys.forEach((k: string) => allSelected ? next.delete(k) : next.add(k));
+                                return next;
+                              });
+                            }}
+                            style={{
+                              padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #7c3aed',
+                              background: practitioners.every((p: Practitioner) => notifyTargets.has(`p:${p.id}`)) ? '#7c3aed' : 'white',
+                              color: practitioners.every((p: Practitioner) => notifyTargets.has(`p:${p.id}`)) ? 'white' : '#7c3aed',
+                            }}
+                          >כולם</button>
+                          {practitioners.map((p: Practitioner) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => toggleTarget(`p:${p.id}`)}
+                              style={{
+                                padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #7c3aed',
+                                background: notifyTargets.has(`p:${p.id}`) ? '#7c3aed' : 'white',
+                                color: notifyTargets.has(`p:${p.id}`) ? 'white' : '#7c3aed',
+                              }}
+                            >{p.name}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {parents.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '0.8em', color: '#15803d', fontWeight: 600, marginBottom: '4px' }}>הורים</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const allParentKeys = parents.map((p: Parent) => `par:${p.id}`);
+                              const allSelected = allParentKeys.every((k: string) => notifyTargets.has(k));
+                              setNotifyTargets(prev => {
+                                const next = new Set(prev);
+                                allParentKeys.forEach((k: string) => allSelected ? next.delete(k) : next.add(k));
+                                return next;
+                              });
+                            }}
+                            style={{
+                              padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #15803d',
+                              background: parents.every((p: Parent) => notifyTargets.has(`par:${p.id}`)) ? '#15803d' : 'white',
+                              color: parents.every((p: Parent) => notifyTargets.has(`par:${p.id}`)) ? 'white' : '#15803d',
+                            }}
+                          >כולם</button>
+                          {parents.map((p: Parent) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => toggleTarget(`par:${p.id}`)}
+                              style={{
+                                padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #15803d',
+                                background: notifyTargets.has(`par:${p.id}`) ? '#15803d' : 'white',
+                                color: notifyTargets.has(`par:${p.id}`) ? 'white' : '#15803d',
+                              }}
+                            >{p.name}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {practitioners.length === 0 && parents.length === 0 && (
+                      <p style={{ fontSize: '0.85em', color: '#94a3b8' }}>אין מטפלות או הורים משויכים לילד זה</p>
+                    )}
+                  </div>
+                  {sendNotificationMutation.isError && (
+                    <div style={{ color: '#D32F2F', fontSize: '0.9em', marginBottom: '8px' }}>שגיאה בשליחה</div>
+                  )}
+                  <div className="modal-actions">
+                    <button type="button" className="btn-secondary" onClick={() => { setShowNotifyCompose(false); setNotifyMessage(''); setNotifyTargets(new Set()); }}>ביטול</button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={!notifyMessage.trim() || notifyTargets.size === 0 || sendNotificationMutation.isPending}
+                      onClick={() => {
+                        if (!kidId) return;
+                        const targets = Array.from(notifyTargets).map(key => {
+                          if (key.startsWith('p:')) {
+                            const id = key.slice(2);
+                            const pract = practitioners.find((p: Practitioner) => p.id === id);
+                            return { type: 'practitioner', id, name: pract?.name || id };
+                          } else {
+                            const id = key.slice(4);
+                            const parent = parents.find((p: Parent) => p.id === id);
+                            return { type: 'parent', id: kidId, name: parent?.name || 'הורה' };
+                          }
+                        });
+                        sendNotificationMutation.mutate({ kidId, message: notifyMessage.trim(), targets });
+                      }}
+                    >
+                      {sendNotificationMutation.isPending ? 'שולח...' : 'שלח'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
 
