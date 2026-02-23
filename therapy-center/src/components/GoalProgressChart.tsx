@@ -5,8 +5,8 @@ import { GOAL_CATEGORIES } from '../types';
 import type { GoalCategoryId, SessionForm, Goal } from '../types';
 import { toDate } from '../utils/date';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer,
 } from 'recharts';
 
 interface GoalProgressChartProps {
@@ -28,8 +28,6 @@ function formatDate(d: Date): string {
 const getCategoryColor = (catId: GoalCategoryId) =>
   GOAL_CATEGORIES.find(c => c.id === catId)?.color || '#607D8B';
 
-const getCategoryName = (catId: GoalCategoryId) =>
-  GOAL_CATEGORIES.find(c => c.id === catId)?.nameHe || catId;
 
 export default function GoalProgressChart({ kidId }: GoalProgressChartProps) {
   const [range, setRange] = useState<TimeRange>('3months');
@@ -227,8 +225,8 @@ export default function GoalProgressChart({ kidId }: GoalProgressChartProps) {
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
               <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
               <Tooltip
-                formatter={(value: number) => [`${value}%`, 'שיתוף פעולה']}
-                labelFormatter={(label: string) => label}
+                formatter={(value: number | undefined) => [`${value ?? 0}%`, 'שיתוף פעולה']}
+                labelFormatter={(label) => String(label)}
                 contentStyle={{ direction: 'rtl', fontSize: 13 }}
               />
               <Line
