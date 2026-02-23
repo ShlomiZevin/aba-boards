@@ -64,6 +64,8 @@ export interface GoalLibraryItem {
   title: string;
   categoryId: GoalCategoryId;
   usageCount: number;
+  activeCount?: number;
+  isOrphan?: boolean;
 }
 
 // Session types

@@ -146,6 +146,12 @@ export const goalsApi = {
   delete: (id: string) => fetchApi<void>(`/goals/${id}`, { method: 'DELETE' }),
   searchLibrary: (search: string) =>
     fetchApi<GoalLibraryItem[]>(`/goals/library?search=${encodeURIComponent(search)}`),
+  getAllLibrary: () =>
+    fetchApi<GoalLibraryItem[]>('/goals/library/all'),
+  deleteLibraryItem: (id: string) =>
+    fetchApi<void>(`/goals/library/${id}`, { method: 'DELETE' }),
+  addLibraryItem: (data: { title: string; categoryId: string }) =>
+    fetchApi<GoalLibraryItem>('/goals/library', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // Sessions API

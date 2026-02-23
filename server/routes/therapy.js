@@ -159,6 +159,21 @@ router.delete('/goals/:id', asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
+router.get('/goals/library/all', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const items = await therapyService.getAllGoalsLibrary();
+  res.json(items);
+}));
+
+router.delete('/goals/library/:id', requireSuperAdmin, asyncHandler(async (req, res) => {
+  await therapyService.deleteGoalLibraryItem(req.params.id);
+  res.status(204).send();
+}));
+
+router.post('/goals/library', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const item = await therapyService.addGoalLibraryItem(req.body);
+  res.status(201).json(item);
+}));
+
 router.get('/goals/library', asyncHandler(async (req, res) => {
   const search = req.query.search || '';
   if (search.length < 3) {

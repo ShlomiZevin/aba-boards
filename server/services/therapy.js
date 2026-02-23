@@ -458,6 +458,61 @@ async function searchGoalsLibrary(search) {
   return results;
 }
 
+async function getAllGoalsLibrary() {
+  const db = getDb();
+  const [libSnapshot, goalsSnapshot] = await Promise.all([
+    db.collection('goalsLibrary').orderBy('usageCount', 'desc').limit(1000).get(),
+    db.collection('goals').where('isActive', '==', true).get(),
+  ]);
+
+  // Count active goals per "title|categoryId" key
+  const activeGoalCounts = {};
+  goalsSnapshot.docs.forEach(doc => {
+    const g = doc.data();
+    const key = `${g.title}|${g.categoryId}`;
+    activeGoalCounts[key] = (activeGoalCounts[key] || 0) + 1;
+  });
+
+  return libSnapshot.docs.map(doc => {
+    const data = doc.data();
+    const key = `${data.title}|${data.categoryId}`;
+    const activeCount = activeGoalCounts[key] || 0;
+    return {
+      id: doc.id,
+      ...data,
+      activeCount,
+      isOrphan: activeCount === 0,
+    };
+  });
+}
+
+async function deleteGoalLibraryItem(id) {
+  const db = getDb();
+  await db.collection('goalsLibrary').doc(id).delete();
+}
+
+async function addGoalLibraryItem(data) {
+  const db = getDb();
+  const title = (data.title || '').trim();
+  if (!title) throw new Error('Title is required');
+
+  const validCatIds = GOAL_CATEGORIES.map(c => c.id);
+  if (!validCatIds.includes(data.categoryId)) throw new Error('Invalid categoryId');
+
+  // Check for duplicate
+  const existing = await db.collection('goalsLibrary')
+    .where('title', '==', title)
+    .where('categoryId', '==', data.categoryId)
+    .limit(1)
+    .get();
+  if (!existing.empty) throw new Error('Goal already exists in library');
+
+  const id = uuidv4();
+  const item = { title, categoryId: data.categoryId, usageCount: 0 };
+  await db.collection('goalsLibrary').doc(id).set(item);
+  return { id, ...item };
+}
+
 // ==================== SESSIONS ====================
 
 async function getSessionsForKid(kidId, filters = {}) {
@@ -1088,6 +1143,9 @@ module.exports = {
   updateGoal,
   deleteGoal,
   searchGoalsLibrary,
+  getAllGoalsLibrary,
+  deleteGoalLibraryItem,
+  addGoalLibraryItem,
   // Sessions
   getSessionsForKid,
   scheduleSession,

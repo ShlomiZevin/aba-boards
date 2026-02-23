@@ -56,7 +56,10 @@ export default function AppShell({ children }: AppShellProps) {
     { path: '/', label: 'ילדים', icon: '👧' },
     { path: '/practitioners', label: 'אנשי צוות', icon: '👥' },
     { path: '/notifications', label: 'מרכז הודעות', icon: '💬' },
-    ...(user?.isSuperAdmin ? [{ path: '/admin-management', label: 'מנהלי מרכזים', icon: '⚙' }] : []),
+    ...(user?.isSuperAdmin ? [
+      { path: '/goal-library', label: 'ספריית מטרות', icon: '🎯' },
+      { path: '/admin-management', label: 'מנהלי מרכזים', icon: '⚙' },
+    ] : []),
   ];
 
   const isActive = (path: string) => {
