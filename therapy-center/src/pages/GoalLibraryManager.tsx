@@ -8,7 +8,7 @@ export default function GoalLibraryManager() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<GoalCategoryId | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'usage' | 'name'>('usage');
+  const [sortBy, setSortBy] = useState<'kids' | 'name'>('kids');
   const [orphansOnly, setOrphansOnly] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
@@ -96,6 +96,7 @@ export default function GoalLibraryManager() {
       result = result.filter(item => item.title.toLowerCase().includes(q));
     }
     if (sortBy === 'name') result = [...result].sort((a, b) => a.title.localeCompare(b.title, 'he'));
+    else result = [...result].sort((a, b) => (b.activeCount ?? b.usageCount) - (a.activeCount ?? a.usageCount));
     return result;
   }, [items, categoryFilter, search, sortBy, orphansOnly]);
 
@@ -188,10 +189,10 @@ export default function GoalLibraryManager() {
         {/* Controls row */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
-            onClick={() => setSortBy(s => s === 'usage' ? 'name' : 'usage')}
+            onClick={() => setSortBy(s => s === 'kids' ? 'name' : 'kids')}
             className="btn-secondary btn-small"
           >
-            {sortBy === 'usage' ? 'מיון: שימושים ↓' : 'מיון: א-ב'}
+            {sortBy === 'kids' ? 'מיון: ילדים ↓' : 'מיון: א-ב'}
           </button>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.9em' }}>
             <input type="checkbox" checked={orphansOnly} onChange={(e) => setOrphansOnly(e.target.checked)} style={{ accentColor: '#ef4444' }} />
