@@ -14,6 +14,7 @@ import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, 
 import ConfirmModal from '../components/ConfirmModal';
 import FormTemplateEditor from '../components/FormTemplateEditor';
 import ImageCropModal from '../components/ImageCropModal';
+import GoalProgressChart from '../components/GoalProgressChart';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
@@ -1012,6 +1013,14 @@ export default function KidDetail() {
           )}
         </div>
       </div>}
+
+      {/* Goal Progress Section - Full Width */}
+      <div className="content-card">
+        <div className="dashboard-card-header">
+          <h3>התקדמות מטרות</h3>
+        </div>
+        <GoalProgressChart kidId={kidId!} />
+      </div>
 
       {/* Sessions Section - Full Width */}
       <div className="content-card sessions-section">

@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { formsApi, sessionsApi } from '../api/client';
@@ -125,8 +126,8 @@ export default function GoalsWeeklyTable({
         </thead>
         <tbody>
           {goalsByCategory.map(cat => (
-            <>
-              <tr key={`cat-${cat.id}`} className="category-row">
+            <Fragment key={cat.id}>
+              <tr className="category-row">
                 <td
                   colSpan={totalCols}
                   style={{ color: cat.color, fontWeight: 700 }}
@@ -162,7 +163,7 @@ export default function GoalsWeeklyTable({
                   ))}
                 </tr>
               ))}
-            </>
+            </Fragment>
           ))}
         </tbody>
       </table>
