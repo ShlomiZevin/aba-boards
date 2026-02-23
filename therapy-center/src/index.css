@@ -1504,23 +1504,45 @@ body {
 
 .rbc-toolbar {
   margin-bottom: 16px;
+  flex-direction: row-reverse;
+  gap: 12px;
+}
+
+.rbc-toolbar-label {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #334155;
+}
+
+.rbc-toolbar .rbc-btn-group {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 4px;
 }
 
 .rbc-toolbar button {
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  padding: 7px 14px;
   font-weight: 600;
+  font-size: 0.85em;
+  color: #64748b;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .rbc-toolbar button:hover {
   background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
 }
 
 .rbc-toolbar button.rbc-active {
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
-  border-color: #667eea;
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
 }
 
 .rbc-header {

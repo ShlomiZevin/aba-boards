@@ -291,6 +291,20 @@ async function updatePractitioner(id, data) {
   return { id: doc.id, ...doc.data() };
 }
 
+async function unlinkPractitioner(kidId, practitionerId) {
+  const db = getDb();
+
+  // Only delete the link between this kid and the practitioner
+  const linksSnapshot = await db.collection('kidPractitioners')
+    .where('kidId', '==', kidId)
+    .where('practitionerId', '==', practitionerId)
+    .get();
+
+  const batch = db.batch();
+  linksSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+  await batch.commit();
+}
+
 async function deletePractitioner(id) {
   const db = getDb();
 
@@ -1130,6 +1144,7 @@ module.exports = {
   addPractitionerToKid,
   linkExistingPractitionerToKid,
   updatePractitioner,
+  unlinkPractitioner,
   deletePractitioner,
   getMyTherapists,
   // Parents

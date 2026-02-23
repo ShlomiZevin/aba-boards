@@ -279,8 +279,8 @@ export default function KidDetail() {
     },
   });
 
-  const deletePractitionerMutation = useMutation({
-    mutationFn: (id: string) => practitionersApi.delete(id),
+  const unlinkPractitionerMutation = useMutation({
+    mutationFn: (practitionerId: string) => practitionersApi.unlink(kidId!, practitionerId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['practitioners', kidId] }),
   });
 
@@ -873,7 +873,7 @@ export default function KidDetail() {
                         )}
                         <button onClick={() => setEditingPractitioner(p)} className="edit-btn-small">✎</button>
                         <button
-                          onClick={() => deletePractitionerMutation.mutate(p.id)}
+                          onClick={() => unlinkPractitionerMutation.mutate(p.id)}
                           className="delete-btn-small"
                         >
                           ✕

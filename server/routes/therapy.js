@@ -89,6 +89,11 @@ router.post('/kids/:kidId/practitioners/link', asyncHandler(async (req, res) => 
   res.status(204).send();
 }));
 
+router.delete('/kids/:kidId/practitioners/:practitionerId', asyncHandler(async (req, res) => {
+  await therapyService.unlinkPractitioner(req.params.kidId, req.params.practitionerId);
+  res.status(204).send();
+}));
+
 router.put('/practitioners/:id', asyncHandler(async (req, res) => {
   const practitioner = await therapyService.updatePractitioner(req.params.id, req.body);
   res.json(practitioner);

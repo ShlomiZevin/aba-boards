@@ -102,6 +102,8 @@ export const practitionersApi = {
     }),
   delete: (id: string) =>
     fetchApi<void>(`/practitioners/${id}`, { method: 'DELETE' }),
+  unlink: (kidId: string, practitionerId: string) =>
+    fetchApi<void>(`/kids/${kidId}/practitioners/${practitionerId}`, { method: 'DELETE' }),
   linkExisting: (kidId: string, practitionerId: string) =>
     fetchApi<void>(`/kids/${kidId}/practitioners/link`, {
       method: 'POST',
