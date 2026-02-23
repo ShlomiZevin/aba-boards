@@ -163,6 +163,17 @@ export interface Kid {
   completedBonusTasks?: number[];
 }
 
+// Super admin kid management
+export interface KidWithAdmin extends Kid {
+  adminName?: string;
+}
+
+export interface GroupedKidsResponse {
+  myKids: Kid[];
+  orphanKids: Kid[];
+  otherAdminKids: KidWithAdmin[];
+}
+
 // Form Template types
 export type FormFieldType = 'text' | 'number' | 'percentage';
 
@@ -196,6 +207,22 @@ export const DEFAULT_FORM_TEMPLATE: FormTemplateSection[] = [
 
 // Known field IDs for backward compatibility
 export const KNOWN_FIELD_IDS = DEFAULT_FORM_TEMPLATE.map(s => s.id);
+
+// Notification types
+export interface Notification {
+  id: string;
+  kidId: string;
+  adminId: string;
+  message: string;
+  createdAt: Date;
+  recipientType: 'practitioner' | 'parent';
+  recipientId: string;
+  recipientName: string;
+  read: boolean;
+  readAt?: Date;
+  dismissed?: boolean;
+  dismissedByAdmin?: boolean;
+}
 
 // API response types
 export interface ApiResponse<T> {

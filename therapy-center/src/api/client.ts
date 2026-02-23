@@ -8,7 +8,9 @@ import type {
   SessionForm,
   MeetingForm,
   FormTemplate,
+  Notification,
   ApiResponse,
+  GroupedKidsResponse,
 } from '../types';
 
 // Auto-detect: dev uses Vite proxy, production uses Cloud Run
@@ -28,10 +30,13 @@ export function setTherapistAuth(id: string | null) { _therapistId = id; }
 export function setParentAuth(kidId: string | null) { _parentKidId = kidId; }
 
 function getAuthHeaders(): Record<string, string> {
-  const adminKey = localStorage.getItem('admin_key');
-  if (adminKey) return { 'X-Admin-Key': adminKey };
+  // Therapist/parent auth must take priority when set (via route components).
+  // Otherwise an admin_key still in localStorage overrides the intended auth type,
+  // causing e.g. GET /notifications/mine to return [] instead of the therapist's notifications.
   if (_therapistId) return { 'X-Practitioner-Id': _therapistId };
   if (_parentKidId) return { 'X-Kid-Id': _parentKidId };
+  const adminKey = localStorage.getItem('admin_key');
+  if (adminKey) return { 'X-Admin-Key': adminKey };
   return {};
 }
 
@@ -76,6 +81,9 @@ export const kidsApi = {
     }),
   delete: (kidId: string) =>
     fetchApi<void>(`/kids/${kidId}`, { method: 'DELETE' }),
+  getAllGrouped: () => fetchApi<GroupedKidsResponse>('/kids/all-grouped'),
+  detach: (kidId: string) => fetchApi<void>(`/kids/${kidId}/detach`, { method: 'POST' }),
+  attach: (kidId: string) => fetchApi<void>(`/kids/${kidId}/attach`, { method: 'POST' }),
 };
 
 // Practitioners API
@@ -231,6 +239,22 @@ export const formsApi = {
       method: 'POST',
       body: JSON.stringify({ kidId, sessionId }),
     }),
+};
+
+// Notifications API
+export const notificationsApi = {
+  send: (data: { kidId: string; message: string; targets: { type: string; id: string; name: string }[] }) =>
+    fetchApi<void>('/notifications', { method: 'POST', body: JSON.stringify(data) }),
+  getMine: () => fetchApi<Notification[]>('/notifications/mine'),
+  getSent: (kidId: string) => fetchApi<Notification[]>(`/notifications/sent?kidId=${kidId}`),
+  getAllSent: (opts?: { includeHidden?: boolean }) =>
+    fetchApi<Notification[]>(`/notifications/all-sent${opts?.includeHidden ? '?includeHidden=true' : ''}`),
+  markRead: (id: string) => fetchApi<void>(`/notifications/${id}/read`, { method: 'PUT' }),
+  markAllRead: () => fetchApi<void>('/notifications/mine/read-all', { method: 'PUT' }),
+  dismiss: (id: string) => fetchApi<void>(`/notifications/${id}/dismiss`, { method: 'PUT' }),
+  adminDismiss: (id: string) => fetchApi<void>(`/notifications/${id}/admin-dismiss`, { method: 'PUT' }),
+  delete: (id: string) => fetchApi<void>(`/notifications/${id}`, { method: 'DELETE' }),
+  deleteAll: () => fetchApi<{ deleted: number }>('/notifications/all', { method: 'DELETE' }),
 };
 
 // Admin API (super-admin operations)

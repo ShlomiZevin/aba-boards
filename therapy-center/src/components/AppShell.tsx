@@ -55,6 +55,7 @@ export default function AppShell({ children }: AppShellProps) {
   const navItems = [
     { path: '/', label: 'ילדים', icon: '👧' },
     { path: '/practitioners', label: 'אנשי צוות', icon: '👥' },
+    { path: '/notifications', label: 'מרכז הודעות', icon: '💬' },
     ...(user?.isSuperAdmin ? [{ path: '/admin-management', label: 'מנהלי מרכזים', icon: '⚙' }] : []),
   ];
 

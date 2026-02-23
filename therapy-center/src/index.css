@@ -146,6 +146,7 @@ body {
 
 /* Kid Card Container (with action buttons) */
 .kid-card-container {
+  position: relative;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border: 2px solid transparent;
   border-radius: 16px;
@@ -157,6 +158,50 @@ body {
   border-color: #667eea;
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
   transform: translateY(-2px);
+}
+
+.kid-card-container.read-only {
+  opacity: 0.75;
+}
+.kid-card-container.read-only:hover {
+  border-color: #94a3b8;
+  box-shadow: none;
+  transform: none;
+}
+
+.kid-corner-btns {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.kid-card-container:hover .kid-corner-btns {
+  opacity: 1;
+}
+.kid-corner-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  transition: transform 0.15s;
+}
+.kid-corner-btn:hover {
+  transform: scale(1.15);
+}
+.kid-corner-btn.delete:hover {
+  background: #fee2e2;
 }
 
 .kid-card-container .kid-card {
@@ -2392,14 +2437,6 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
-  body {
-    padding: 12px;
-  }
-
-  .container {
-    max-width: 100%;
-  }
-
   .kids-grid {
     grid-template-columns: 1fr;
   }
@@ -2445,24 +2482,9 @@ body {
     min-height: 80px;
   }
 
-  .content-card {
-    padding: 16px;
-    border-radius: 16px;
-  }
-
-  .kid-header-card {
-    padding: 16px;
-    border-radius: 16px;
-  }
-
   .kid-detail-header {
     flex-direction: column;
     text-align: center;
-  }
-
-  .content-card-header {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   /* Dashboard responsive */
@@ -2955,15 +2977,6 @@ body {
   /* MOBILE CALENDAR POLISH    */
   /* ========================= */
 
-  /* Remove calendar container border/padding on mobile — use full width */
-  .calendar-container {
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    margin: 0 0 16px 0;
-    background: transparent;
-  }
-
   /* Toolbar: compact, centered */
   .rbc-toolbar {
     margin-bottom: 10px;
@@ -3432,24 +3445,25 @@ body:has(.app-shell) {
     display: none;
   }
 
-  /* --- Full-bleed card layout inside AppShell on mobile --- */
-  /* Remove body padding since AppShell handles its own layout */
-  body:has(.app-shell) {
+  /* --- Full-bleed mobile layout for ALL views --- */
+  body {
     padding: 0;
+    background: #f4f6fb;
   }
 
+  /* AppShell main area */
   .app-main {
     padding: 60px 0 0 0;
     background: #f4f6fb;
   }
 
-  .app-main .container {
+  .container {
     max-width: 100%;
     padding: 0;
   }
 
   /* Content cards go edge-to-edge on mobile for app-like feel */
-  .app-main .content-card {
+  .content-card {
     border-radius: 0;
     box-shadow: none;
     border-bottom: 1px solid #e8ecf1;
@@ -3457,12 +3471,12 @@ body:has(.app-shell) {
     padding: 16px;
   }
 
-  .app-main .content-card:last-child {
+  .content-card:last-child {
     border-bottom: none;
   }
 
   /* Kid header card also edge-to-edge */
-  .app-main .kid-header-card {
+  .kid-header-card {
     border-radius: 0;
     box-shadow: none;
     border-bottom: 1px solid #e8ecf1;
@@ -3471,24 +3485,24 @@ body:has(.app-shell) {
   }
 
   /* Header card (therapist greeting etc.) */
-  .app-main .header-card {
+  .header-card {
     border-radius: 0;
     box-shadow: none;
     border-bottom: 1px solid #e8ecf1;
     margin-bottom: 8px;
-    padding: 16px 16px;
+    padding: 16px;
   }
 
-  /* Alerts box inside AppShell */
-  .app-main .alerts-box {
+  /* Alerts box */
+  .alerts-box {
     border-radius: 0;
     margin-bottom: 8px;
     border-left: none;
     border-right: none;
   }
 
-  /* Content card header stays horizontal on mobile inside AppShell */
-  .app-main .content-card-header {
+  /* Content card header stays horizontal on mobile */
+  .content-card-header {
     flex-direction: row;
     align-items: center;
     margin-bottom: 16px;
@@ -3496,99 +3510,96 @@ body:has(.app-shell) {
     gap: 12px;
   }
 
-  .app-main .content-card-header h2 {
+  .content-card-header h2 {
     font-size: 1.15em;
   }
 
   /* Kids grid - tighter spacing */
-  .app-main .kids-grid {
+  .kids-grid {
     gap: 10px;
   }
 
   /* Kid card container - softer style on mobile */
-  .app-main .kid-card-container {
+  .kid-card-container {
     border-radius: 12px;
     border: 1px solid #e8ecf1;
     background: white;
   }
 
-  .app-main .kid-card-container:hover {
+  .kid-card-container:hover {
     transform: none;
     box-shadow: none;
   }
 
-  .app-main .kid-card {
+  .kid-corner-btns {
+    opacity: 1;
+  }
+
+  .kid-card {
     padding: 14px;
   }
 
-  .app-main .kid-avatar {
+  .kid-avatar {
     width: 48px;
     height: 48px;
   }
 
-  .app-main .kid-name {
+  .kid-name {
     font-size: 1.05em;
   }
 
   /* Action buttons always visible on mobile (no hover) */
-  .app-main .kid-action-btn.with-label .action-label {
+  .kid-action-btn.with-label .action-label {
     opacity: 1;
     max-height: 20px;
     font-size: 0.6em;
   }
 
-  .app-main .kid-action-btn {
+  .kid-action-btn {
     padding: 8px 4px;
     font-size: 1em;
   }
 
   /* Session card on mobile */
-  .app-main .session-card {
+  .session-card {
     border-radius: 10px;
     padding: 12px 14px;
     margin-bottom: 8px;
   }
 
   /* List items on mobile */
-  .app-main .list-item {
+  .list-item {
     border-radius: 10px;
     padding: 12px 14px;
     margin-bottom: 8px;
   }
 
   /* Form cards on mobile */
-  .app-main .form-card {
+  .form-card {
     border-radius: 10px;
     padding: 12px 14px;
     margin-bottom: 8px;
   }
 
   /* Empty state on mobile */
-  .app-main .empty-state {
+  .empty-state {
     padding: 40px 16px;
     border-radius: 10px;
   }
 
   /* Tab buttons compact on mobile */
-  .app-main .tab-btn {
+  .tab-btn {
     padding: 8px 14px;
     font-size: 0.88em;
   }
 
   /* Pending alert on mobile */
-  .app-main .pending-alert {
+  .pending-alert {
     border-radius: 10px;
     margin: 0 0 12px 0;
   }
 
-  /* Modal: slightly smaller padding on mobile */
-  .modal {
-    border-radius: 16px;
-    padding: 20px;
-    margin: 12px;
-    max-width: calc(100vw - 24px);
-  }
-
+  /* Modal: bottom-sheet style on mobile */
   .modal-overlay {
     padding: 0;
     align-items: flex-end;
@@ -3601,6 +3612,7 @@ body:has(.app-shell) {
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
+    padding: 20px;
   }
 
   /* Admin card stacks better on small screens */
@@ -3609,35 +3621,44 @@ body:has(.app-shell) {
   }
 
   /* Back link spacing */
-  .app-main .back-link {
+  .back-link {
     margin: 0 16px 12px;
   }
 
   /* Kid detail header */
-  .app-main .kid-detail-header {
+  .kid-detail-header {
     border-radius: 12px;
     margin-bottom: 12px;
     padding: 14px;
   }
 
   /* View toggle smaller on mobile */
-  .app-main .view-toggle button {
+  .view-toggle button {
     padding: 6px 12px;
     font-size: 0.85em;
   }
 
   /* Section headers */
-  .app-main .section-header {
+  .section-header {
     margin-bottom: 14px;
   }
 
   /* Calendar toolbar compact */
-  .app-main .rbc-toolbar {
+  .rbc-toolbar {
     margin-bottom: 10px;
   }
 
-  .app-main .rbc-toolbar button {
+  .rbc-toolbar button {
     padding: 6px 10px;
     font-size: 0.85em;
+  }
+
+  /* Calendar container - no border on mobile */
+  .calendar-container {
+    border: none;
+    border-radius: 0;
+    padding: 8px 0;
+    margin-bottom: 8px;
+    background: transparent;
   }
 }

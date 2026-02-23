@@ -130,6 +130,53 @@ async function deleteKid(kidId) {
   }
 }
 
+async function getAllKidsForSuperAdmin(superAdminId) {
+  const db = getDb();
+  const snapshot = await db.collection('kids').get();
+  const allKids = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  // Build admin name map
+  const adminKeysSnap = await db.collection('adminKeys').get();
+  const adminNames = {};
+  adminKeysSnap.docs.forEach(doc => {
+    const data = doc.data();
+    adminNames[data.adminId] = data.name;
+  });
+
+  const myKids = [];
+  const orphanKids = [];
+  const otherAdminKids = [];
+
+  for (const kid of allKids) {
+    if (kid.adminId === superAdminId) {
+      myKids.push(kid);
+    } else if (!kid.adminId) {
+      orphanKids.push(kid);
+    } else {
+      otherAdminKids.push({ ...kid, adminName: adminNames[kid.adminId] || kid.adminId });
+    }
+  }
+
+  return { myKids, orphanKids, otherAdminKids };
+}
+
+async function detachKid(kidId, adminId) {
+  const db = getDb();
+  const doc = await db.collection('kids').doc(kidId).get();
+  if (!doc.exists) throw new Error('Kid not found');
+  if (doc.data().adminId !== adminId) throw new Error('Kid does not belong to this admin');
+  await db.collection('kids').doc(kidId).update({ adminId: null });
+}
+
+async function attachKid(kidId, adminId) {
+  const db = getDb();
+  const doc = await db.collection('kids').doc(kidId).get();
+  if (!doc.exists) throw new Error('Kid not found');
+  const currentAdminId = doc.data().adminId;
+  if (currentAdminId) throw new Error('Kid already belongs to another admin');
+  await db.collection('kids').doc(kidId).update({ adminId });
+}
+
 // ==================== PRACTITIONERS ====================
 
 async function getKidsForPractitioner(practitionerId) {
@@ -793,21 +840,6 @@ async function initializeSuperAdmin() {
       console.log('Updated super admin name to מיכל');
     }
   }
-
-  // One-time migration: stamp existing kids that predate multi-admin support
-  const kidsSnapshot = await db.collection('kids').get();
-  const batch = db.batch();
-  let migrated = 0;
-  kidsSnapshot.docs.forEach(doc => {
-    if (!doc.data().adminId) {
-      batch.update(doc.ref, { adminId });
-      migrated++;
-    }
-  });
-  if (migrated > 0) {
-    await batch.commit();
-    console.log(`Migrated ${migrated} existing kid(s) to adminId: ${adminId}`);
-  }
 }
 
 async function initializeGoalCategories() {
@@ -919,6 +951,113 @@ async function deleteMeetingForm(id) {
   await db.collection('meetingForms').doc(id).delete();
 }
 
+// ==================== NOTIFICATIONS ====================
+
+async function createNotifications(kidId, adminId, message, targets) {
+  const db = getDb();
+  const batch = db.batch();
+  const now = new Date();
+  for (const target of targets) {
+    const ref = db.collection('notifications').doc();
+    batch.set(ref, {
+      kidId,
+      adminId,
+      message,
+      createdAt: now,
+      recipientType: target.type,
+      recipientId: target.id,
+      recipientName: target.name,
+      read: false,
+      readAt: null,
+      dismissed: false,
+      dismissedByAdmin: false,
+    });
+  }
+  await batch.commit();
+}
+
+async function getMyNotifications(recipientType, recipientId) {
+  const db = getDb();
+  const snap = await db.collection('notifications')
+    .where('recipientType', '==', recipientType)
+    .where('recipientId', '==', recipientId)
+    .orderBy('createdAt', 'desc')
+    .get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(n => !n.dismissed);
+}
+
+async function getSentNotifications(kidId, adminId) {
+  const db = getDb();
+  const snap = await db.collection('notifications')
+    .where('kidId', '==', kidId)
+    .where('adminId', '==', adminId)
+    .orderBy('createdAt', 'desc')
+    .get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(n => !n.dismissedByAdmin);
+}
+
+async function getAllSentNotifications(adminId, { includeHidden = false } = {}) {
+  const db = getDb();
+  const snap = await db.collection('notifications')
+    .where('adminId', '==', adminId)
+    .orderBy('createdAt', 'desc')
+    .get();
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return includeHidden ? all : all.filter(n => !n.dismissedByAdmin);
+}
+
+async function deleteAllNotifications(adminId) {
+  const db = getDb();
+  const snap = await db.collection('notifications')
+    .where('adminId', '==', adminId)
+    .get();
+  if (snap.empty) return 0;
+  const batch = db.batch();
+  snap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+  return snap.size;
+}
+
+async function markNotificationRead(notificationId) {
+  const db = getDb();
+  await db.collection('notifications').doc(notificationId).update({ read: true, readAt: new Date() });
+}
+
+async function markAllNotificationsRead(recipientType, recipientId) {
+  const db = getDb();
+  const snap = await db.collection('notifications')
+    .where('recipientType', '==', recipientType)
+    .where('recipientId', '==', recipientId)
+    .get();
+  const unread = snap.docs.filter(d => !d.data().read);
+  if (unread.length === 0) return;
+  const batch = db.batch();
+  const now = new Date();
+  unread.forEach(d => batch.update(d.ref, { read: true, readAt: now }));
+  await batch.commit();
+}
+
+async function deleteNotification(notificationId, adminId) {
+  const db = getDb();
+  const doc = await db.collection('notifications').doc(notificationId).get();
+  if (!doc.exists) throw new Error('Notification not found');
+  if (doc.data().adminId !== adminId) throw new Error('Unauthorized');
+  await db.collection('notifications').doc(notificationId).delete();
+}
+
+async function dismissNotification(notificationId) {
+  const db = getDb();
+  await db.collection('notifications').doc(notificationId).update({ dismissed: true });
+}
+
+async function dismissNotificationByAdmin(notificationId, adminId) {
+  const db = getDb();
+  const doc = await db.collection('notifications').doc(notificationId).get();
+  if (!doc.exists) throw new Error('Notification not found');
+  if (doc.data().adminId !== adminId) throw new Error('Unauthorized');
+  await db.collection('notifications').doc(notificationId).update({ dismissedByAdmin: true });
+}
+
 module.exports = {
   // Kids
   getAllKids,
@@ -926,6 +1065,9 @@ module.exports = {
   createKid,
   updateKid,
   deleteKid,
+  getAllKidsForSuperAdmin,
+  detachKid,
+  attachKid,
   // Practitioners
   getKidsForPractitioner,
   getPractitionersForKid,
@@ -970,6 +1112,17 @@ module.exports = {
   // Form Template
   getFormTemplate,
   updateFormTemplate,
+  // Notifications
+  createNotifications,
+  getMyNotifications,
+  getSentNotifications,
+  getAllSentNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification,
+  deleteAllNotifications,
+  dismissNotification,
+  dismissNotificationByAdmin,
   // Init
   initializeSuperAdmin,
   initializeGoalCategories,

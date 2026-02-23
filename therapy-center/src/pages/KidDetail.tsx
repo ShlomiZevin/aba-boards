@@ -5,12 +5,12 @@ import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { kidsApi, practitionersApi, parentsApi, goalsApi, sessionsApi } from '../api/client';
+import { kidsApi, practitionersApi, parentsApi, goalsApi, sessionsApi, notificationsApi } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { toDate } from '../utils/date';
 import { GOAL_CATEGORIES } from '../types';
-import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType } from '../types';
+import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
 import FormTemplateEditor from '../components/FormTemplateEditor';
 import ImageCropModal from '../components/ImageCropModal';
@@ -195,6 +195,11 @@ export default function KidDetail() {
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [copiedParentLink, setCopiedParentLink] = useState(false);
   const [sessionsTab, setSessionsTab] = useState<'future' | 'past'>('future');
+  const [showNotifyCompose, setShowNotifyCompose] = useState(false);
+  const [notifyMessage, setNotifyMessage] = useState('');
+  const [notifyTargets, setNotifyTargets] = useState<Set<string>>(new Set());
+  const [notifyDeleteConfirm, setNotifyDeleteConfirm] = useState<string | null>(null);
+  const [pendingReadIds, setPendingReadIds] = useState<Set<string>>(new Set());
 
   // Form state for modals
   const [newName, setNewName] = useState('');
@@ -377,6 +382,133 @@ export default function KidDetail() {
     },
   });
 
+  const { data: sentNotificationsRes } = useQuery({
+    queryKey: ['notifications', 'sent', kidId],
+    queryFn: () => notificationsApi.getSent(kidId!),
+    enabled: isAdmin && !!kidId,
+  });
+
+  const sendNotificationMutation = useMutation({
+    mutationFn: (data: { kidId: string; message: string; targets: { type: string; id: string; name: string }[] }) =>
+      notificationsApi.send(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'sent', kidId] });
+      setShowNotifyCompose(false);
+      setNotifyMessage('');
+      setNotifyTargets(new Set());
+    },
+  });
+
+  const deleteNotificationMutation = useMutation({
+    mutationFn: (id: string) => notificationsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'sent', kidId] });
+      setNotifyDeleteConfirm(null);
+    },
+  });
+
+  const adminDismissMutation = useMutation({
+    mutationFn: (id: string) => notificationsApi.adminDismiss(id),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'sent', kidId] });
+      const previous = queryClient.getQueryData(['notifications', 'sent', kidId]);
+      queryClient.setQueryData(['notifications', 'sent', kidId], (old: { data?: Notification[] } | undefined) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter((n: Notification) => n.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(['notifications', 'sent', kidId], context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'sent', kidId] });
+    },
+  });
+
+  const { data: myNotificationsRes } = useQuery({
+    queryKey: ['notifications', 'mine'],
+    queryFn: () => notificationsApi.getMine(),
+    enabled: isParentView || isTherapistView,
+    refetchInterval: 60_000,
+  });
+  const allMyNotifications: Notification[] = myNotificationsRes?.data || [];
+  // For therapist: show only notifications for this specific kid
+  const myNotifications: Notification[] = isTherapistView
+    ? allMyNotifications.filter(n => n.kidId === kidId)
+    : allMyNotifications;
+
+  const markReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await notificationsApi.markRead(id);
+      if (!res.success) throw new Error(res.error || 'Failed');
+      return id;
+    },
+    onMutate: async (id: string) => {
+      setPendingReadIds(prev => new Set(prev).add(id));
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'mine'] });
+      const previous = queryClient.getQueryData(['notifications', 'mine']);
+      queryClient.setQueryData(['notifications', 'mine'], (old: { data?: Notification[] } | undefined) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((n: Notification) => n.id === id ? { ...n, read: true } : n) };
+      });
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(['notifications', 'mine'], context.previous);
+    },
+    onSettled: (_data, _err, id) => {
+      setPendingReadIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'mine'] });
+    },
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const results = await Promise.all(ids.map(id => notificationsApi.markRead(id)));
+      const failed = results.filter(r => !r.success);
+      if (failed.length > 0) throw new Error(failed[0].error || 'Failed to mark notifications as read');
+    },
+    onMutate: async (ids: string[]) => {
+      setPendingReadIds(prev => { const next = new Set(prev); ids.forEach(id => next.add(id)); return next; });
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'mine'] });
+      const previous = queryClient.getQueryData(['notifications', 'mine']);
+      const idSet = new Set(ids);
+      queryClient.setQueryData(['notifications', 'mine'], (old: { data?: Notification[] } | undefined) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((n: Notification) => idSet.has(n.id) ? { ...n, read: true } : n) };
+      });
+      return { previous };
+    },
+    onError: (_err, _v, context) => {
+      if (context?.previous) queryClient.setQueryData(['notifications', 'mine'], context.previous);
+    },
+    onSettled: (_data, _err, ids) => {
+      setPendingReadIds(prev => { const next = new Set(prev); ids?.forEach(id => next.delete(id)); return next; });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'mine'] });
+    },
+  });
+
+  const dismissMutation = useMutation({
+    mutationFn: (id: string) => notificationsApi.dismiss(id),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'mine'] });
+      const previous = queryClient.getQueryData(['notifications', 'mine']);
+      queryClient.setQueryData(['notifications', 'mine'], (old: { data?: Notification[] } | undefined) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter((n: Notification) => n.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(['notifications', 'mine'], context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'mine'] });
+    },
+  });
+
   const resetForm = () => {
     setNewName('');
     setNewMobile('');
@@ -431,6 +563,12 @@ export default function KidDetail() {
       setCopiedParentLink(true);
       setTimeout(() => setCopiedParentLink(false), 2000);
     });
+  };
+
+  const openComposeFor = (targetKeys: string[]) => {
+    setNotifyTargets(new Set(targetKeys));
+    setNotifyMessage('');
+    setShowNotifyCompose(true);
   };
 
   // Group sessions by date
@@ -511,10 +649,14 @@ export default function KidDetail() {
       {/* Kid Profile Header - Combined logo, back, and kid info */}
       <div className="kid-header-card">
         <div className="kid-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link to={links.home()} className="kid-header-back">
-            <span className="back-arrow">←</span>
-            <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
-          </Link>
+          {!isParentView ? (
+            <Link to={links.home()} className="kid-header-back">
+              <span className="back-arrow">←</span>
+              <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
+            </Link>
+          ) : (
+            <div />
+          )}
           {isAdmin && (
             <button
               onClick={() => setShowDeleteKid(true)}
@@ -628,20 +770,90 @@ export default function KidDetail() {
         )}
       </div>
 
+      {/* Notifications Section - Therapist and Parent view (always visible, top of page) */}
+      {(isTherapistView || isParentView) && (
+        <div className="content-card" style={{ marginTop: '16px' }}>
+          <div className="content-card-header">
+            <h3>הודעות מהצוות</h3>
+            {myNotifications.some(n => !n.read) && (
+              <button
+                className="btn-secondary btn-small"
+                onClick={() => markAllReadMutation.mutate(myNotifications.filter(n => !n.read).map(n => n.id))}
+                disabled={markAllReadMutation.isPending}
+              >סמן הכל כנקרא</button>
+            )}
+          </div>
+          {myNotifications.length === 0 ? (
+            <p className="empty-text">אין הודעות</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {myNotifications.map((n: Notification) => (
+                <div
+                  key={n.id}
+                  style={{
+                    padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                    background: n.read ? '#f8fafc' : '#fffbeb',
+                  }}
+                >
+                  <div style={{ fontSize: '0.9em', marginBottom: '4px', wordBreak: 'break-word', fontWeight: n.read ? 'normal' : 600 }}>{n.message}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.75em', color: '#94a3b8' }}>
+                      {format(toDate(n.createdAt), 'dd/MM/yyyy HH:mm')}
+                    </span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {!n.read ? (
+                        <button
+                          onClick={() => markReadMutation.mutate(n.id)}
+                          disabled={pendingReadIds.has(n.id)}
+                          style={{ fontSize: '0.78em', padding: '2px 8px', background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer' }}
+                        >סמן כנקרא</button>
+                      ) : (
+                        <button
+                          onClick={() => dismissMutation.mutate(n.id)}
+                          style={{ fontSize: '0.78em', padding: '2px 8px', background: 'transparent', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer' }}
+                        >הסתר</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Dashboard Grid - admin only */}
       {!isSimplifiedView && <div className="dashboard-grid">
         {/* Team Section */}
         <div className="dashboard-card">
           <div className="dashboard-card-header">
             <h3>צוות</h3>
+            {(practitioners.length > 0 || parents.length > 0) && (
+              <button
+                onClick={() => openComposeFor([
+                  ...practitioners.map((p: Practitioner) => `p:${p.id}`),
+                  ...parents.map((p: Parent) => `par:${p.id}`),
+                ])}
+                style={{ fontSize: '0.75em', padding: '3px 10px', borderRadius: '12px', border: '1px solid #667eea', background: '#eef2ff', color: '#4f46e5', cursor: 'pointer', fontWeight: 600 }}
+              >שלח הודעה לכולם</button>
+            )}
           </div>
 
           {/* Therapists */}
           <div className="team-subsection">
             <div className="team-subsection-header">
-              <span>מטפלות ({therapists.length})</span>
+              <span>צוות טיפולי ({therapists.length})</span>
               {!isTherapistView && (
-                <button onClick={() => setShowAddPractitioner(true)} className="add-btn-small">+</button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {practitioners.length > 0 && (
+                    <button
+                      onClick={() => openComposeFor(practitioners.map((p: Practitioner) => `p:${p.id}`))}
+                      title="שלח הודעה לכל הצוות"
+                      style={{ fontSize: '0.7em', padding: '2px 8px', borderRadius: '10px', border: '1px solid #c4b5fd', background: '#ede9fe', color: '#7c3aed', cursor: 'pointer', fontWeight: 600 }}
+                    >שלח לכולם</button>
+                  )}
+                  <button onClick={() => setShowAddPractitioner(true)} className="add-btn-small">+</button>
+                </div>
               )}
             </div>
             {practitioners.length === 0 ? (
@@ -666,6 +878,11 @@ export default function KidDetail() {
                     </div>
                     {!isTherapistView ? (
                       <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() => openComposeFor([`p:${p.id}`])}
+                          title="שלח הודעה"
+                          style={{ fontSize: '0.7em', padding: '2px 7px', borderRadius: '10px', border: '1px solid #c4b5fd', background: '#ede9fe', color: '#7c3aed', cursor: 'pointer', fontWeight: 500 }}
+                        >שלח</button>
                         {p.type === 'מטפלת' && (
                           <button
                             onClick={() => copyTherapistLink(p.id)}
@@ -695,7 +912,16 @@ export default function KidDetail() {
             <div className="team-subsection-header">
               <span>הורים ({parents.length})</span>
               {!isTherapistView && (
-                <button onClick={() => setShowAddParent(true)} className="add-btn-small">+</button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {parents.length > 0 && (
+                    <button
+                      onClick={() => openComposeFor(parents.map((p: Parent) => `par:${p.id}`))}
+                      title="שלח הודעה לכל ההורים"
+                      style={{ fontSize: '0.7em', padding: '2px 8px', borderRadius: '10px', border: '1px solid #86efac', background: '#dcfce7', color: '#15803d', cursor: 'pointer', fontWeight: 600 }}
+                    >שלח לכולם</button>
+                  )}
+                  <button onClick={() => setShowAddParent(true)} className="add-btn-small">+</button>
+                </div>
               )}
             </div>
             {parents.length === 0 ? (
@@ -1122,6 +1348,206 @@ export default function KidDetail() {
           })()}
         </div>
       </div>
+
+      {/* Notifications Section - Admin only */}
+      {isAdmin && (() => {
+        const sentNotifications: Notification[] = sentNotificationsRes?.data || [];
+        const toggleTarget = (key: string) => {
+          setNotifyTargets(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key); else next.add(key);
+            return next;
+          });
+        };
+        return (
+          <div className="content-card" style={{ marginTop: '16px' }}>
+            <div className="content-card-header">
+              <h3>התראות</h3>
+              <button className="btn-primary btn-small" onClick={() => setShowNotifyCompose(true)}>
+                + שלח הודעה
+              </button>
+            </div>
+
+            {/* Compose modal */}
+            {showNotifyCompose && (
+              <div className="modal-overlay" onClick={() => setShowNotifyCompose(false)}>
+                <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+                  <h3>שליחת הודעה</h3>
+                  <div className="form-group">
+                    <label>הודעה</label>
+                    <textarea
+                      value={notifyMessage}
+                      onChange={e => setNotifyMessage(e.target.value)}
+                      rows={3}
+                      placeholder="כתוב הודעה..."
+                      style={{ width: '100%', resize: 'vertical' }}
+                      autoFocus
+                    />
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '0.85em', color: '#64748b', marginBottom: '6px' }}>למי לשלוח:</div>
+                    {practitioners.length > 0 && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '0.8em', color: '#7c3aed', fontWeight: 600, marginBottom: '4px' }}>מטפלות / צוות</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const allPractKeys = practitioners.map((p: Practitioner) => `p:${p.id}`);
+                              const allSelected = allPractKeys.every((k: string) => notifyTargets.has(k));
+                              setNotifyTargets(prev => {
+                                const next = new Set(prev);
+                                allPractKeys.forEach((k: string) => allSelected ? next.delete(k) : next.add(k));
+                                return next;
+                              });
+                            }}
+                            style={{
+                              padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #7c3aed',
+                              background: practitioners.every((p: Practitioner) => notifyTargets.has(`p:${p.id}`)) ? '#7c3aed' : 'white',
+                              color: practitioners.every((p: Practitioner) => notifyTargets.has(`p:${p.id}`)) ? 'white' : '#7c3aed',
+                            }}
+                          >כולם</button>
+                          {practitioners.map((p: Practitioner) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => toggleTarget(`p:${p.id}`)}
+                              style={{
+                                padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #7c3aed',
+                                background: notifyTargets.has(`p:${p.id}`) ? '#7c3aed' : 'white',
+                                color: notifyTargets.has(`p:${p.id}`) ? 'white' : '#7c3aed',
+                              }}
+                            >{p.name}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {parents.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '0.8em', color: '#15803d', fontWeight: 600, marginBottom: '4px' }}>הורים</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const allParentKeys = parents.map((p: Parent) => `par:${p.id}`);
+                              const allSelected = allParentKeys.every((k: string) => notifyTargets.has(k));
+                              setNotifyTargets(prev => {
+                                const next = new Set(prev);
+                                allParentKeys.forEach((k: string) => allSelected ? next.delete(k) : next.add(k));
+                                return next;
+                              });
+                            }}
+                            style={{
+                              padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #15803d',
+                              background: parents.every((p: Parent) => notifyTargets.has(`par:${p.id}`)) ? '#15803d' : 'white',
+                              color: parents.every((p: Parent) => notifyTargets.has(`par:${p.id}`)) ? 'white' : '#15803d',
+                            }}
+                          >כולם</button>
+                          {parents.map((p: Parent) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => toggleTarget(`par:${p.id}`)}
+                              style={{
+                                padding: '3px 10px', borderRadius: '12px', fontSize: '0.82em', cursor: 'pointer', border: '1.5px solid #15803d',
+                                background: notifyTargets.has(`par:${p.id}`) ? '#15803d' : 'white',
+                                color: notifyTargets.has(`par:${p.id}`) ? 'white' : '#15803d',
+                              }}
+                            >{p.name}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {practitioners.length === 0 && parents.length === 0 && (
+                      <p style={{ fontSize: '0.85em', color: '#94a3b8' }}>אין מטפלות או הורים משויכים לילד זה</p>
+                    )}
+                  </div>
+                  {sendNotificationMutation.isError && (
+                    <div style={{ color: '#D32F2F', fontSize: '0.9em', marginBottom: '8px' }}>שגיאה בשליחה</div>
+                  )}
+                  <div className="modal-actions">
+                    <button type="button" className="btn-secondary" onClick={() => { setShowNotifyCompose(false); setNotifyMessage(''); setNotifyTargets(new Set()); }}>ביטול</button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={!notifyMessage.trim() || notifyTargets.size === 0 || sendNotificationMutation.isPending}
+                      onClick={() => {
+                        if (!kidId) return;
+                        const targets = Array.from(notifyTargets).map(key => {
+                          if (key.startsWith('p:')) {
+                            const id = key.slice(2);
+                            const pract = practitioners.find((p: Practitioner) => p.id === id);
+                            return { type: 'practitioner', id, name: pract?.name || id };
+                          } else {
+                            const id = key.slice(4);
+                            const parent = parents.find((p: Parent) => p.id === id);
+                            return { type: 'parent', id: kidId, name: parent?.name || 'הורה' };
+                          }
+                        });
+                        sendNotificationMutation.mutate({ kidId, message: notifyMessage.trim(), targets });
+                      }}
+                    >
+                      {sendNotificationMutation.isPending ? 'שולח...' : 'שלח'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sent log */}
+            {sentNotifications.length === 0 ? (
+              <p className="empty-text">לא נשלחו הודעות</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {sentNotifications.map((n: Notification) => (
+                  <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <span style={{
+                      flexShrink: 0, padding: '2px 8px', borderRadius: '10px', fontSize: '0.75em', fontWeight: 600,
+                      background: n.recipientType === 'practitioner' ? '#ede9fe' : '#dcfce7',
+                      color: n.recipientType === 'practitioner' ? '#7c3aed' : '#15803d',
+                    }}>{n.recipientName}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.9em', wordBreak: 'break-word' }}>{n.message}</div>
+                      <div style={{ fontSize: '0.75em', color: '#94a3b8', marginTop: '2px' }}>
+                        {format(toDate(n.createdAt), 'dd/MM/yyyy HH:mm')}
+                        {' · '}
+                        {n.read
+                          ? <span style={{ color: '#15803d' }}>נקרא</span>
+                          : <span style={{ color: '#f59e0b' }}>לא נקרא</span>
+                        }
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => adminDismissMutation.mutate(n.id)}
+                        style={{ padding: '2px 8px', fontSize: '0.75em', background: 'transparent', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer' }}
+                      >הסתר</button>
+                      {notifyDeleteConfirm === n.id ? (
+                        <>
+                          <button
+                            onClick={() => deleteNotificationMutation.mutate(n.id)}
+                            disabled={deleteNotificationMutation.isPending}
+                            style={{ padding: '2px 8px', fontSize: '0.78em', background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                          >מחק</button>
+                          <button
+                            onClick={() => setNotifyDeleteConfirm(null)}
+                            style={{ padding: '2px 8px', fontSize: '0.78em', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                          >ביטול</button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setNotifyDeleteConfirm(n.id)}
+                          style={{ padding: '2px 8px', fontSize: '0.75em', background: 'transparent', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer' }}
+                        >מחק</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Admin-only Modals */}
       {isAdmin && (

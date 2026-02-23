@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { practitionersApi } from '../api/client';
 import type { Practitioner, PractitionerType } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
-
-const BASE = import.meta.env.BASE_URL;
 
 function EditModal({ practitioner, onSave, onClose, isPending }: {
   practitioner: Practitioner;
@@ -103,18 +100,10 @@ export default function AllPractitioners() {
 
   return (
     <div className="container">
-      <div className="kid-header-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link to="/" className="kid-header-back">
-            <span className="back-arrow">←</span>
-            <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
-          </Link>
-          <h2 style={{ margin: 0, fontSize: '1.2em' }}>כל אנשי הצוות</h2>
-          <div style={{ width: '60px' }} />
-        </div>
-      </div>
-
       <div className="content-card">
+        <div className="content-card-header">
+          <h2>אנשי צוות</h2>
+        </div>
         {isLoading ? (
           <div className="loading">טוען...</div>
         ) : practitioners.length === 0 ? (

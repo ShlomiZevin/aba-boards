@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const therapyService = require('../services/therapy');
+const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 
 // Error handler wrapper
 const asyncHandler = (fn) => (req, res, next) => {
@@ -8,6 +9,11 @@ const asyncHandler = (fn) => (req, res, next) => {
 };
 
 // ==================== KIDS ====================
+
+router.get('/kids/all-grouped', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const result = await therapyService.getAllKidsForSuperAdmin(req.adminId);
+  res.json(result);
+}));
 
 router.get('/kids', asyncHandler(async (req, res) => {
   const kids = await therapyService.getAllKids(req.adminId);
@@ -35,6 +41,16 @@ router.put('/kids/:kidId', asyncHandler(async (req, res) => {
 router.delete('/kids/:kidId', asyncHandler(async (req, res) => {
   await therapyService.deleteKid(req.params.kidId);
   res.status(204).send();
+}));
+
+router.post('/kids/:kidId/detach', requireSuperAdmin, asyncHandler(async (req, res) => {
+  await therapyService.detachKid(req.params.kidId, req.adminId);
+  res.json({ success: true });
+}));
+
+router.post('/kids/:kidId/attach', requireSuperAdmin, asyncHandler(async (req, res) => {
+  await therapyService.attachKid(req.params.kidId, req.adminId);
+  res.json({ success: true });
 }));
 
 // Form Template
@@ -259,6 +275,81 @@ router.put('/meeting-forms/:id', asyncHandler(async (req, res) => {
 
 router.delete('/meeting-forms/:id', asyncHandler(async (req, res) => {
   await therapyService.deleteMeetingForm(req.params.id);
+  res.status(204).send();
+}));
+
+// ==================== NOTIFICATIONS ====================
+
+router.post('/notifications', requireAdmin, asyncHandler(async (req, res) => {
+  const { kidId, message, targets } = req.body;
+  await therapyService.createNotifications(kidId, req.adminId, message, targets);
+  res.json({ success: true });
+}));
+
+router.get('/notifications/mine', asyncHandler(async (req, res) => {
+  let recipientType, recipientId;
+  if (req.authType === 'therapist') {
+    recipientType = 'practitioner';
+    recipientId = req.practitionerId;
+  } else if (req.authType === 'parent') {
+    recipientType = 'parent';
+    recipientId = req.kidViewId;
+  } else {
+    // Admin has no incoming notifications — return empty rather than 403
+    return res.json([]);
+  }
+  const notifications = await therapyService.getMyNotifications(recipientType, recipientId);
+  res.json(notifications);
+}));
+
+router.get('/notifications/all-sent', requireAdmin, asyncHandler(async (req, res) => {
+  const includeHidden = req.query.includeHidden === 'true';
+  const notifications = await therapyService.getAllSentNotifications(req.adminId, { includeHidden });
+  res.json(notifications);
+}));
+
+router.get('/notifications/sent', requireAdmin, asyncHandler(async (req, res) => {
+  const { kidId } = req.query;
+  const notifications = await therapyService.getSentNotifications(kidId, req.adminId);
+  res.json(notifications);
+}));
+
+router.put('/notifications/mine/read-all', asyncHandler(async (req, res) => {
+  let recipientType, recipientId;
+  if (req.authType === 'therapist') {
+    recipientType = 'practitioner'; recipientId = req.practitionerId;
+  } else if (req.authType === 'parent') {
+    recipientType = 'parent'; recipientId = req.kidViewId;
+  } else {
+    return res.json({ success: true }); // admin has no incoming notifications
+  }
+  await therapyService.markAllNotificationsRead(recipientType, recipientId);
+  res.json({ success: true });
+}));
+
+router.put('/notifications/:id/read', asyncHandler(async (req, res) => {
+  // Accept any auth type — notification IDs are unguessable random Firestore IDs
+  await therapyService.markNotificationRead(req.params.id);
+  res.json({ success: true });
+}));
+
+router.put('/notifications/:id/dismiss', asyncHandler(async (req, res) => {
+  await therapyService.dismissNotification(req.params.id);
+  res.json({ success: true });
+}));
+
+router.put('/notifications/:id/admin-dismiss', requireAdmin, asyncHandler(async (req, res) => {
+  await therapyService.dismissNotificationByAdmin(req.params.id, req.adminId);
+  res.json({ success: true });
+}));
+
+router.delete('/notifications/all', requireAdmin, asyncHandler(async (req, res) => {
+  const count = await therapyService.deleteAllNotifications(req.adminId);
+  res.json({ deleted: count });
+}));
+
+router.delete('/notifications/:id', requireAdmin, asyncHandler(async (req, res) => {
+  await therapyService.deleteNotification(req.params.id, req.adminId);
   res.status(204).send();
 }));
 

@@ -13,6 +13,7 @@ import MeetingFormView from './pages/MeetingFormView';
 import AllPractitioners from './pages/AllPractitioners';
 import Login from './pages/Login';
 import AdminManagement from './pages/AdminManagement';
+import NotificationCenter from './pages/NotificationCenter';
 import AppShell from './components/AppShell';
 import { setTherapistAuth, setParentAuth } from './api/client';
 import './index.css';
@@ -44,8 +45,11 @@ function TherapistRoutes() {
   setTherapistAuth(practitionerId || null);
 
   useEffect(() => {
-    return () => setTherapistAuth(null); // cleanup on unmount
-  }, []);
+    // Must also set in effect setup — React StrictMode double-invokes effects
+    // (setup → cleanup → setup), so cleanup alone would leave _therapistId null.
+    setTherapistAuth(practitionerId || null);
+    return () => setTherapistAuth(null);
+  }, [practitionerId]);
 
   return (
     <TherapistContext.Provider value={{ isTherapistView: true, isParentView: false, practitionerId: practitionerId || null }}>
@@ -70,8 +74,11 @@ function ParentRoutes() {
   setParentAuth(kidId || null);
 
   useEffect(() => {
-    return () => setParentAuth(null); // cleanup on unmount
-  }, []);
+    // Must also set in effect setup — React StrictMode double-invokes effects
+    // (setup → cleanup → setup), so cleanup alone would leave _parentKidId null.
+    setParentAuth(kidId || null);
+    return () => setParentAuth(null);
+  }, [kidId]);
 
   return (
     <TherapistContext.Provider value={{ isTherapistView: false, isParentView: true, practitionerId: null }}>
@@ -121,6 +128,7 @@ function App() {
             <Route path="/meeting-form/:formId/edit" element={<AdminLayout><MeetingFormFill /></AdminLayout>} />
             <Route path="/meeting-form/:formId/view" element={<AdminLayout><MeetingFormView /></AdminLayout>} />
             <Route path="/practitioners" element={<AdminLayout><AllPractitioners /></AdminLayout>} />
+            <Route path="/notifications" element={<AdminLayout><NotificationCenter /></AdminLayout>} />
             <Route path="/admin-management" element={<AdminLayout><AdminManagement /></AdminLayout>} />
 
             {/* Therapist routes — no auth required, URL is the identity */}
