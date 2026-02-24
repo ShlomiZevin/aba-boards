@@ -157,6 +157,13 @@ async function getAllKidsForSuperAdmin(superAdminId) {
     }
   }
 
+  // Sort unassociated kids by createdAt descending (newest first)
+  orphanKids.sort((a, b) => {
+    const aTime = a.createdAt?.toMillis?.() || a.createdAt?.getTime?.() || 0;
+    const bTime = b.createdAt?.toMillis?.() || b.createdAt?.getTime?.() || 0;
+    return bTime - aTime;
+  });
+
   return { myKids, orphanKids, otherAdminKids };
 }
 
