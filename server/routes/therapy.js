@@ -373,6 +373,30 @@ router.delete('/notifications/:id', requireAdmin, asyncHandler(async (req, res) 
   res.status(204).send();
 }));
 
+// ==================== BOARD REQUESTS ====================
+
+const { createBoardFromRequest } = require('../services/board-generator');
+
+router.get('/board-requests', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const requests = await therapyService.getBoardRequests();
+  res.json(requests);
+}));
+
+router.post('/board-requests/:id/generate', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const result = await createBoardFromRequest(req.params.id);
+  res.json(result);
+}));
+
+router.put('/board-requests/:id', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const updated = await therapyService.updateBoardRequest(req.params.id, req.body);
+  res.json(updated);
+}));
+
+router.delete('/board-requests/:id', requireSuperAdmin, asyncHandler(async (req, res) => {
+  await therapyService.deleteBoardRequest(req.params.id);
+  res.status(204).send();
+}));
+
 // Error handling middleware
 router.use((err, req, res, next) => {
   console.error('Therapy API Error:', err);

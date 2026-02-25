@@ -9,6 +9,7 @@ import type {
   MeetingForm,
   FormTemplate,
   Notification,
+  BoardRequest,
   ApiResponse,
   GroupedKidsResponse,
 } from '../types';
@@ -263,6 +264,22 @@ export const notificationsApi = {
   adminDismiss: (id: string) => fetchApi<void>(`/notifications/${id}/admin-dismiss`, { method: 'PUT' }),
   delete: (id: string) => fetchApi<void>(`/notifications/${id}`, { method: 'DELETE' }),
   deleteAll: () => fetchApi<{ deleted: number }>('/notifications/all', { method: 'DELETE' }),
+};
+
+// Board Requests API (super-admin only)
+export const boardRequestsApi = {
+  getAll: () => fetchApi<BoardRequest[]>('/board-requests'),
+  generate: (id: string) =>
+    fetchApi<{ kidId: string; boardUrl: string; builderUrl: string }>(`/board-requests/${id}/generate`, {
+      method: 'POST',
+    }),
+  update: (id: string, data: Partial<BoardRequest>) =>
+    fetchApi<BoardRequest>(`/board-requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    fetchApi<void>(`/board-requests/${id}`, { method: 'DELETE' }),
 };
 
 // Admin API (super-admin operations)

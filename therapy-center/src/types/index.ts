@@ -226,6 +226,32 @@ export interface Notification {
   dismissedByAdmin?: boolean;
 }
 
+// Board Request types
+export interface BoardRequest {
+  id: string;
+  childName: string;
+  parentName?: string;
+  email?: string;
+  phone?: string;
+  age?: number;
+  gender?: 'boy' | 'girl';
+  childImage?: string;
+  childDescription?: string;
+  tasks?: string;
+  behaviorGoals?: string;
+  rewards?: string;
+  additionalNotes?: string;
+  dailyReward?: number;
+  coinStyle?: 'points' | 'shekel' | 'dollar';
+  colorSchema?: 'purple' | 'pink' | 'blue' | 'dark';
+  showDino?: boolean;
+  soundsEnabled?: boolean;
+  status: 'pending' | 'completed';
+  createdBoardId?: string;
+  inviteToken?: string;
+  submittedAt?: { _seconds: number; _nanoseconds: number };
+}
+
 // API response types
 export interface ApiResponse<T> {
   success: boolean;

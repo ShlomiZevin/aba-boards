@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { kidsApi, practitionersApi, sessionsApi } from '../api/client';
+import { kidsApi, practitionersApi, sessionsApi, boardRequestsApi } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
+import BoardRequests from '../components/BoardRequests';
 import type { Kid, KidWithAdmin } from '../types';
 
 // Use import.meta.env.BASE_URL for correct path in both dev and production
@@ -138,7 +139,7 @@ function SuperAdminDashboard() {
   const queryClient = useQueryClient();
   const links = useTherapistLinks();
 
-  const [activeTab, setActiveTab] = useState<'my' | 'orphan' | 'other'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'orphan' | 'other' | 'requests'>('my');
   const [confirmDetach, setConfirmDetach] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [showCreateKid, setShowCreateKid] = useState(false);
@@ -155,6 +156,12 @@ function SuperAdminDashboard() {
     queryKey: ['alerts'],
     queryFn: () => sessionsApi.getAlerts(),
   });
+
+  const { data: boardRequestsResponse } = useQuery({
+    queryKey: ['board-requests'],
+    queryFn: () => boardRequestsApi.getAll(),
+  });
+  const pendingRequestsCount = (boardRequestsResponse?.data || []).filter(r => r.status === 'pending').length;
 
   const createKidMutation = useMutation({
     mutationFn: (data: { name: string; age?: string; gender?: string }) =>
@@ -264,6 +271,12 @@ function SuperAdminDashboard() {
           >
             מרכזים אחרים ({otherAdminKids.length})
           </button>
+          <button
+            className={`tab-btn${activeTab === 'requests' ? ' active' : ''}`}
+            onClick={() => setActiveTab('requests')}
+          >
+            בקשות לוחות {pendingRequestsCount > 0 && <span className="tab-badge">{pendingRequestsCount}</span>}
+          </button>
         </div>
 
         {isLoading ? (
@@ -273,6 +286,7 @@ function SuperAdminDashboard() {
             {activeTab === 'my' && renderGrid(myKids, 'default', 'אין ילדים משויכים אליך')}
             {activeTab === 'orphan' && renderGrid(orphanKids, 'orphan', 'אין ילדים ללא מרכז')}
             {activeTab === 'other' && renderGrid(otherAdminKids, 'other-admin', 'אין ילדים של מרכזים אחרים')}
+            {activeTab === 'requests' && <BoardRequests />}
           </>
         )}
       </div>

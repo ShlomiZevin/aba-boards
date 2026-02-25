@@ -875,6 +875,31 @@ async function updateFormTemplate(kidId, template) {
   return { sections: template.sections, updatedAt: new Date() };
 }
 
+// ==================== BOARD REQUESTS ====================
+
+async function getBoardRequests() {
+  const db = getDb();
+  const snap = await db.collection('boardRequests').orderBy('submittedAt', 'desc').get();
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function updateBoardRequest(id, data) {
+  const db = getDb();
+  const allowed = ['status', 'createdBoardId'];
+  const updates = {};
+  for (const field of allowed) {
+    if (data[field] !== undefined) updates[field] = data[field];
+  }
+  await db.collection('boardRequests').doc(id).update(updates);
+  const doc = await db.collection('boardRequests').doc(id).get();
+  return { id: doc.id, ...doc.data() };
+}
+
+async function deleteBoardRequest(id) {
+  const db = getDb();
+  await db.collection('boardRequests').doc(id).delete();
+}
+
 // ==================== INIT ====================
 
 async function initializeSuperAdmin() {
@@ -1203,6 +1228,10 @@ module.exports = {
   deleteAllNotifications,
   dismissNotification,
   dismissNotificationByAdmin,
+  // Board Requests
+  getBoardRequests,
+  updateBoardRequest,
+  deleteBoardRequest,
   // Init
   initializeSuperAdmin,
   initializeGoalCategories,
