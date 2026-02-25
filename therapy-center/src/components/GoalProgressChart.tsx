@@ -205,7 +205,7 @@ export default function GoalProgressChart({ kidId }: GoalProgressChartProps) {
           <span className="progress-stat-value">{avgCooperation}%</span>
           <span className="progress-stat-label">שיתוף פעולה ממוצע</span>
         </div>
-        {topGoal && (
+        {topGoal?.title && (
           <div className="progress-stat">
             <span className="progress-stat-value">{topGoal.count}</span>
             <span className="progress-stat-label">

@@ -537,7 +537,7 @@ export default function KidDetail() {
   const goals = goalsRes?.data || [];
   const sessions = sessionsRes?.data || [];
 
-  const therapists = practitioners.filter((p: Practitioner) => p.type === 'מטפלת');
+  const therapists = practitioners;
   const activeGoals = goals.filter((g: Goal) => g.isActive);
   // Pending = no form, and (admin sees all, therapist only sees their own therapy sessions, parent sees none)
   const pendingSessions = sessions.filter((s: Session) => {
@@ -1690,11 +1690,11 @@ export default function KidDetail() {
                 </div>
                 {scheduleType === 'therapy' && (
                   <div className="form-group">
-                    <label>מטפלת (לא חובה)</label>
+                    <label>איש/ת צוות (לא חובה)</label>
                     <select value={scheduleTherapist} onChange={(e) => setScheduleTherapist(e.target.value)}>
-                      <option value="">בחר מטפלת</option>
+                      <option value="">בחר איש/ת צוות</option>
                       {therapists.map((t: Practitioner) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                        <option key={t.id} value={t.id}>{t.name} ({t.type})</option>
                       ))}
                     </select>
                   </div>
@@ -1771,11 +1771,11 @@ export default function KidDetail() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>מטפלת (לא חובה)</label>
+                  <label>איש/ת צוות (לא חובה)</label>
                   <select value={editSessionTherapist} onChange={(e) => setEditSessionTherapist(e.target.value)}>
-                    <option value="">ללא מטפלת</option>
+                    <option value="">ללא איש/ת צוות</option>
                     {therapists.map((t: Practitioner) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                      <option key={t.id} value={t.id}>{t.name} ({t.type})</option>
                     ))}
                   </select>
                 </div>

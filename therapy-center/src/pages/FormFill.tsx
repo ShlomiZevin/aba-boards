@@ -360,7 +360,7 @@ export default function FormFill() {
           {/* Basic Info - always shown */}
           <div className="form-row-2">
             <div className="form-group">
-              <label>מטפלת *</label>
+              <label>איש/ת צוות *</label>
               {isTherapistView ? (
                 <input
                   type="text"
@@ -374,12 +374,10 @@ export default function FormFill() {
                   onChange={(e) => setPractitionerId(e.target.value)}
                   required
                 >
-                  <option value="">בחר מטפלת</option>
-                  {practitioners
-                    .filter((p) => p.type === 'מטפלת')
-                    .map((p) => (
+                  <option value="">בחר איש/ת צוות</option>
+                  {practitioners.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name}
+                        {p.name} ({p.type})
                       </option>
                     ))}
                 </select>

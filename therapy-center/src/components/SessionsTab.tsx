@@ -78,17 +78,15 @@ function ScheduleModal({ onClose, onSchedule, therapists }: ScheduleModalProps) 
           </div>
 
           <div className="form-group">
-            <label>מטפלת (לא חובה)</label>
+            <label>איש/ת צוות (לא חובה)</label>
             <select
               value={therapistId}
               onChange={(e) => setTherapistId(e.target.value)}
             >
-              <option value="">בחר מטפלת</option>
-              {therapists
-                .filter((t) => t.type === 'מטפלת')
-                .map((t) => (
+              <option value="">בחר איש/ת צוות</option>
+              {therapists.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name}
+                    {t.name} ({t.type})
                   </option>
                 ))}
             </select>
