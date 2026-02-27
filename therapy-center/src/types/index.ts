@@ -31,6 +31,158 @@ export interface Parent {
   createdAt: Date;
 }
 
+// Goal form template types (for תוכנית למידה and איסוף נתונים)
+export type GoalColumnType = 'text' | 'date' | 'options';
+
+export interface GoalColumnDef {
+  id: string;
+  label: string;
+  type: GoalColumnType;
+  options?: string[];
+  wide?: boolean; // kept for backward compat with old stored data, not shown in UI
+}
+
+// A table block — the fundamental unit of a form template.
+// vertical: fields displayed as rows (label | value) — one row of data per block
+// horizontal: fields displayed as columns — multiple rows of data per block
+export type GoalTableType = 'vertical' | 'horizontal';
+
+export interface GoalTableBlock {
+  id: string;
+  title?: string;
+  type: GoalTableType;
+  columns: GoalColumnDef[];
+}
+
+export interface GoalFormTemplate {
+  tables: GoalTableBlock[];
+  updatedAt?: Date;
+}
+
+// A single row of filled data (columnId → value string)
+export type GoalFormRow = Record<string, string>;
+
+// Per-table filled data (rows can be 1 for vertical, N for horizontal)
+export interface TableBlockData {
+  tableId: string;
+  rows: GoalFormRow[];
+}
+
+export interface KidGoalLearningPlan {
+  id: string;
+  kidId: string;
+  goalLibraryId: string;
+  goalTitle: string;
+  tables: TableBlockData[];
+  updatedAt: Date;
+  updatedBy: string;
+}
+
+export interface KidGoalDataEntry {
+  id: string;
+  kidId: string;
+  goalLibraryId: string;
+  goalTitle: string;
+  sessionDate: Date;
+  practitionerId?: string;
+  tables: TableBlockData[];
+  createdAt: Date;
+}
+
+// ---- Backward-compat normalizers ----
+// Old Firestore data may have columns/rows/row at top level instead of tables.
+
+export function normalizeTemplate(t: GoalFormTemplate | null | undefined): GoalTableBlock[] {
+  if (!t) return [];
+  if (t.tables && t.tables.length > 0) return t.tables;
+  // old format: flat columns array
+  const oldCols = (t as Record<string, unknown>).columns as GoalColumnDef[] | undefined;
+  if (oldCols && oldCols.length > 0) {
+    return [{ id: 'default', title: '', type: 'horizontal', columns: oldCols }];
+  }
+  return [];
+}
+
+export function normalizeLpData(plan: KidGoalLearningPlan | null): TableBlockData[] {
+  if (!plan) return [];
+  if (plan.tables && plan.tables.length > 0) return plan.tables;
+  const oldRows = (plan as Record<string, unknown>).rows as GoalFormRow[] | undefined;
+  if (oldRows) return [{ tableId: 'default', rows: oldRows }];
+  return [];
+}
+
+export function normalizeDcEntry(entry: KidGoalDataEntry): TableBlockData[] {
+  if (entry.tables && entry.tables.length > 0) return entry.tables;
+  const oldRow = (entry as Record<string, unknown>).row as GoalFormRow | undefined;
+  if (oldRow) return [{ tableId: 'default', rows: [oldRow] }];
+  return [];
+}
+
+// ---- Built-in presets ----
+// Based on reference documents: תוכניתלמידה1.docx and דף איסוף.docx / דף 10.docx
+
+export const PRESET_LP_PROGRAM: GoalFormTemplate = {
+  tables: [
+    {
+      id: 'lp_meta',
+      title: 'פרטי תוכנית',
+      type: 'vertical',
+      columns: [
+        { id: 'child_name', label: 'שם הילד', type: 'text' },
+        { id: 'therapist_name', label: 'שם המטפלת', type: 'text' },
+        { id: 'goal_desc', label: 'תיאור המטרה', type: 'text' },
+        { id: 'general_instructions', label: 'הוראות כלליות', type: 'text' },
+      ],
+    },
+    {
+      id: 'lp_program',
+      title: 'תוכנית',
+      type: 'horizontal',
+      columns: [
+        { id: 'item', label: 'פריט / פעילות', type: 'text' },
+        { id: 'stimulus', label: 'גירוי', type: 'text' },
+        { id: 'response', label: 'תגובה', type: 'text' },
+        { id: 'prompts', label: 'רמזים', type: 'options', options: ['פיזי מלא', 'פיזי חלקי', 'מילולי', 'עצמאי'] },
+        { id: 'datePresented', label: 'תאריך הצגה', type: 'date' },
+        { id: 'dateAcquired', label: 'תאריך רכישה', type: 'date' },
+        { id: 'mastered', label: 'מסטר', type: 'options', options: ['כן', 'לא', 'חלקי'] },
+      ],
+    },
+  ],
+};
+
+export const PRESET_DC_ACTIVITY: GoalFormTemplate = {
+  tables: [
+    {
+      id: 'dc_activity',
+      title: 'פרטי פגישה',
+      type: 'horizontal',
+      columns: [
+        { id: 'activity', label: 'מה עשינו', type: 'text' },
+        { id: 'cooperation', label: 'שיתוף פעולה', type: 'options', options: ['מלא', 'חלקי', 'לא שיתף פעולה'] },
+        { id: 'assistance', label: 'כמה סייעתי', type: 'options', options: ['עצמאי', 'סיוע חלקי', 'סיוע מלא'] },
+        { id: 'difficulties', label: 'קשיים', type: 'text' },
+        { id: 'successes', label: 'הצלחות', type: 'text' },
+      ],
+    },
+  ],
+};
+
+export const PRESET_DC_DTT: GoalFormTemplate = {
+  tables: [
+    {
+      id: 'dc_dtt',
+      title: 'ניסויים',
+      type: 'horizontal',
+      columns: [
+        { id: 'item', label: 'הפריט שהוצג', type: 'text' },
+        { id: 'response', label: 'תגובת הילד', type: 'options', options: ['+', 'ר'] },
+        { id: 'notes', label: 'הערות', type: 'text' },
+      ],
+    },
+  ],
+};
+
 // Goal types
 export type GoalCategoryId =
   | 'motor-gross'
@@ -57,6 +209,9 @@ export interface Goal {
   isActive: boolean;
   createdAt: Date;
   deactivatedAt?: Date;
+  libraryItemId?: string;
+  learningPlanTemplate?: GoalFormTemplate;
+  dataCollectionTemplate?: GoalFormTemplate;
 }
 
 export interface GoalLibraryItem {
@@ -66,6 +221,8 @@ export interface GoalLibraryItem {
   usageCount: number;
   activeCount?: number;
   isOrphan?: boolean;
+  learningPlanTemplate?: GoalFormTemplate;
+  dataCollectionTemplate?: GoalFormTemplate;
 }
 
 // Session types

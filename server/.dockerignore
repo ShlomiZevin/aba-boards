@@ -2,5 +2,7 @@ node_modules
 npm-debug.log
 .git
 .gitignore
-*.webm
-temp_*
+.env
+.env.example
+service-account.json
+debug-audio

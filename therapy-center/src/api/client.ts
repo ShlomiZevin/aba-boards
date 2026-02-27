@@ -4,6 +4,11 @@ import type {
   Parent,
   Goal,
   GoalLibraryItem,
+  GoalFormTemplate,
+  GoalFormRow,
+  KidGoalLearningPlan,
+  KidGoalDataEntry,
+  TableBlockData,
   Session,
   SessionForm,
   MeetingForm,
@@ -155,6 +160,93 @@ export const goalsApi = {
     fetchApi<void>(`/goals/library/${id}`, { method: 'DELETE' }),
   addLibraryItem: (data: { title: string; categoryId: string }) =>
     fetchApi<GoalLibraryItem>('/goals/library', { method: 'POST', body: JSON.stringify(data) }),
+  migrateLibraryLinks: (kidId: string) =>
+    fetchApi<{ matched: { goalId: string; title: string; libraryItemId: string }[]; unmatched: { goalId: string; title: string }[] }>(
+      `/kids/${kidId}/goals/migrate-library-links`, { method: 'POST' }
+    ),
+};
+
+// Goal Templates API (admin only)
+export const goalTemplatesApi = {
+  updateTemplates: (
+    libraryItemId: string,
+    data: { learningPlanTemplate?: GoalFormTemplate | null; dataCollectionTemplate?: GoalFormTemplate | null }
+  ) =>
+    fetchApi<GoalLibraryItem>(`/goals/library/${libraryItemId}/templates`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
+// Goal Learning Plans API (per kid)
+export const goalPlansApi = {
+  get: (kidId: string, goalLibraryId: string) =>
+    fetchApi<KidGoalLearningPlan>(`/kids/${kidId}/goal-plans/${goalLibraryId}`),
+  save: (kidId: string, goalLibraryId: string, data: { goalTitle: string; tables: TableBlockData[] }) =>
+    fetchApi<KidGoalLearningPlan>(`/kids/${kidId}/goal-plans/${goalLibraryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
+// Goal Data Collection API (per kid)
+export const goalDataApi = {
+  getEntries: (kidId: string, goalLibraryId: string) =>
+    fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/goal-data/${goalLibraryId}`),
+  addEntry: (
+    kidId: string,
+    goalLibraryId: string,
+    data: { goalTitle: string; sessionDate: string; practitionerId?: string; tables: TableBlockData[] }
+  ) =>
+    fetchApi<KidGoalDataEntry>(`/kids/${kidId}/goal-data/${goalLibraryId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  bulkAddEntries: (
+    kidId: string,
+    goalLibraryId: string,
+    entries: { goalTitle: string; sessionDate: string; practitionerId?: string; tables: TableBlockData[] }[]
+  ) =>
+    fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/goal-data/${goalLibraryId}/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ entries }),
+    }),
+  deleteEntry: (kidId: string, goalLibraryId: string, entryId: string) =>
+    fetchApi<void>(`/kids/${kidId}/goal-data/${goalLibraryId}/${entryId}`, { method: 'DELETE' }),
+};
+
+// Goal Form File Upload API
+export interface GoalFormUploadResult {
+  goalTitle: string;
+  formType: 'lp' | 'dc';
+  targetBlockId: string;
+  columns: import('../types').GoalColumnDef[] | null;
+  rows: GoalFormRow[] | null;
+  entries: (GoalFormRow & { sessionDate: string })[] | null;
+}
+
+export const goalFormUploadApi = {
+  upload: (
+    kidId: string,
+    goalLibraryId: string,
+    file: File,
+    formType: 'lp' | 'dc',
+    updateStructure: boolean
+  ): Promise<ApiResponse<GoalFormUploadResult>> => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('formType', formType);
+    form.append('updateStructure', String(updateStructure));
+    return fetch(`${API_BASE}/kids/${kidId}/goal-forms/${goalLibraryId}/upload`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: form,
+    }).then(async r => {
+      const data = await r.json();
+      if (!r.ok) return { success: false as const, error: data.error || 'שגיאה בהעלאה' };
+      return { success: true as const, data };
+    }).catch(err => ({ success: false as const, error: (err as Error).message }));
+  },
 };
 
 // Sessions API

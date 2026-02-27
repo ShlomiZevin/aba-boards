@@ -8,6 +8,7 @@ import { he } from 'date-fns/locale';
 import { kidsApi, practitionersApi, parentsApi, goalsApi, sessionsApi, notificationsApi } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
+import { useAuth } from '../contexts/AuthContext';
 import { toDate } from '../utils/date';
 import { GOAL_CATEGORIES } from '../types';
 import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification } from '../types';
@@ -15,6 +16,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import FormTemplateEditor from '../components/FormTemplateEditor';
 import ImageCropModal from '../components/ImageCropModal';
 import GoalProgressChart from '../components/GoalProgressChart';
+import GoalPlansTab from '../components/GoalPlansTab';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
@@ -168,13 +170,15 @@ export default function KidDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isTherapistView, isParentView, practitionerId: contextPractitionerId } = useTherapist();
+  const { user: authUser } = useAuth();
   const links = useTherapistLinks();
   const isSimplifiedView = isTherapistView || isParentView;
   const isReadOnly = isParentView;
   const isAdmin = !isTherapistView && !isParentView;
+  const isSuperAdmin = isAdmin && (authUser?.isSuperAdmin ?? false);
 
   // Tab state
-  type KidTab = 'overview' | 'progress' | 'sessions' | 'notifications';
+  type KidTab = 'overview' | 'progress' | 'sessions' | 'notifications' | 'plans';
   const [kidTab, setKidTab] = useState<KidTab>('sessions');
 
   // State
@@ -795,6 +799,9 @@ export default function KidDetail() {
               הודעות
               {unreadCount > 0 && <span className="kid-tab-badge">{unreadCount}</span>}
             </button>
+            <button className={`kid-tab${kidTab === 'plans' ? ' active' : ''}`} onClick={() => setKidTab('plans')}>
+              תוכניות ואיסוף
+            </button>
           </div>
         );
       })()}
@@ -1128,9 +1135,10 @@ export default function KidDetail() {
                       if (hasForm) {
                         navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!));
                       } else if (canFill) {
+                        const sessionDateStr = format(toDate(session.scheduledDate), 'yyyy-MM-dd');
                         navigate(isMeeting
-                          ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
-                          : links.formNew({ kidId: kidId!, sessionId: session.id }));
+                          ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id, date: sessionDateStr })
+                          : links.formNew({ kidId: kidId!, sessionId: session.id, date: sessionDateStr }));
                       }
                     }}
                   >
@@ -1467,6 +1475,18 @@ export default function KidDetail() {
         );
       })()}
       </>}
+
+      {/* === PLANS TAB === */}
+      {kidTab === 'plans' && (
+        <GoalPlansTab
+          kidId={kidId!}
+          goals={goals}
+          isReadOnly={isReadOnly}
+          isAdmin={isAdmin}
+          isSuperAdmin={isSuperAdmin}
+          practitionerId={contextPractitionerId || undefined}
+        />
+      )}
 
       {/* Admin-only Modals — always rendered, outside tabs */}
       {isAdmin && (
@@ -2054,9 +2074,10 @@ export default function KidDetail() {
                           className="btn-small btn-primary"
                           onClick={() => {
                             setShowDaySessions(false);
+                            const sessionDateStr = format(toDate(session.scheduledDate), 'yyyy-MM-dd');
                             navigate(isMeeting
-                              ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
-                              : links.formNew({ kidId: kidId!, sessionId: session.id }));
+                              ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id, date: sessionDateStr })
+                              : links.formNew({ kidId: kidId!, sessionId: session.id, date: sessionDateStr }));
                           }}
                         >
                           מלא

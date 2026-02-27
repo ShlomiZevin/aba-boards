@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const therapyService = require('../services/therapy');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 // Error handler wrapper
 const asyncHandler = (fn) => (req, res, next) => {
@@ -186,6 +189,93 @@ router.get('/goals/library', asyncHandler(async (req, res) => {
   }
   const results = await therapyService.searchGoalsLibrary(search);
   res.json(results);
+}));
+
+// Goal library template editor (admin only)
+router.put('/goals/library/:id/templates', requireAdmin, asyncHandler(async (req, res) => {
+  const item = await therapyService.updateGoalLibraryTemplates(req.params.id, req.body);
+  res.json(item);
+}));
+
+// ==================== GOAL LEARNING PLANS ====================
+
+router.get('/kids/:kidId/goal-plans/:goalLibraryId', asyncHandler(async (req, res) => {
+  const plan = await therapyService.getGoalLearningPlan(req.params.kidId, req.params.goalLibraryId);
+  if (!plan) return res.status(404).json({ error: 'Plan not found' });
+  res.json(plan);
+}));
+
+router.put('/kids/:kidId/goal-plans/:goalLibraryId', asyncHandler(async (req, res) => {
+  const updatedBy = req.practitionerId || req.adminId || 'unknown';
+  const plan = await therapyService.saveGoalLearningPlan(
+    req.params.kidId,
+    req.params.goalLibraryId,
+    req.body,
+    updatedBy
+  );
+  res.json(plan);
+}));
+
+// ==================== GOAL DATA COLLECTION ====================
+
+router.get('/kids/:kidId/goal-data/:goalLibraryId', asyncHandler(async (req, res) => {
+  const entries = await therapyService.getGoalDataEntries(req.params.kidId, req.params.goalLibraryId);
+  res.json(entries);
+}));
+
+router.post('/kids/:kidId/goal-data/:goalLibraryId', asyncHandler(async (req, res) => {
+  const entry = await therapyService.addGoalDataEntry(
+    req.params.kidId,
+    req.params.goalLibraryId,
+    req.body
+  );
+  res.status(201).json(entry);
+}));
+
+router.delete('/kids/:kidId/goal-data/:goalLibraryId/:entryId', asyncHandler(async (req, res) => {
+  await therapyService.deleteGoalDataEntry(
+    req.params.kidId,
+    req.params.goalLibraryId,
+    req.params.entryId
+  );
+  res.status(204).send();
+}));
+
+// Migrate orphaned goals → match by title to library, write only libraryItemId (admin only)
+router.post('/kids/:kidId/goals/migrate-library-links', requireAdmin, asyncHandler(async (req, res) => {
+  const result = await therapyService.migrateGoalLibraryLinks(req.params.kidId);
+  res.json(result);
+}));
+
+// Bulk-add DC entries (used after file upload confirmation)
+router.post('/kids/:kidId/goal-data/:goalLibraryId/bulk', requireAdmin, asyncHandler(async (req, res) => {
+  const entries = (req.body.entries || []).map(e => ({ ...e, goalTitle: e.goalTitle || '' }));
+  const saved = await therapyService.bulkAddGoalDataEntries(req.params.kidId, req.params.goalLibraryId, entries);
+  res.status(201).json(saved);
+}));
+
+// Upload a .doc/.docx file → Claude extracts structured form data (preview only, does not save)
+// Admin can extract data only; super-admin can also extract + suggest new column structure
+router.post('/kids/:kidId/goal-forms/:goalLibraryId/upload', requireAdmin, upload.single('file'), asyncHandler(async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'לא נבחר קובץ' });
+
+  const formType = req.body.formType; // 'lp' | 'dc'
+  if (!formType || !['lp', 'dc'].includes(formType)) {
+    return res.status(400).json({ error: 'formType חייב להיות lp או dc' });
+  }
+
+  // updateStructure is only honoured for super-admins
+  const updateStructure = req.isSuperAdmin && req.body.updateStructure === 'true';
+
+  console.log('[upload route] kidId:', req.params.kidId, 'goalLibraryId:', req.params.goalLibraryId, 'formType:', formType, 'fileSize:', req.file.size, 'updateStructure:', updateStructure);
+
+  const result = await therapyService.extractGoalFormFromFile(
+    req.params.goalLibraryId,
+    req.file.buffer,
+    { formType, updateStructure }
+  );
+
+  res.json(result);
 }));
 
 // ==================== SESSIONS ====================

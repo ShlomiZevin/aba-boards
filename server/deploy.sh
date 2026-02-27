@@ -29,7 +29,7 @@ DEPLOY_CMD="gcloud run deploy $SERVICE_NAME \
   --region $REGION \
   --project $PROJECT_ID \
   --allow-unauthenticated \
-  --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY,ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY"
+  --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY,ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY,ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
 
 # Add revision suffix if provided
 if [ -n "$REVISION_SUFFIX" ]; then

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalsApi, kidsApi } from '../api/client';
 import { GOAL_CATEGORIES } from '../types';
 import type { GoalCategoryId, GoalLibraryItem, Kid } from '../types';
+import GoalFormTemplateEditor from '../components/GoalFormTemplateEditor';
 
 export default function GoalLibraryManager() {
   const queryClient = useQueryClient();
@@ -11,6 +12,9 @@ export default function GoalLibraryManager() {
   const [sortBy, setSortBy] = useState<'kids' | 'name'>('kids');
   const [orphansOnly, setOrphansOnly] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+
+  // Template editor
+  const [editingTemplate, setEditingTemplate] = useState<{ goal: GoalLibraryItem; type: 'lp' | 'dc' } | null>(null);
 
   // Add goal modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -239,6 +243,34 @@ export default function GoalLibraryManager() {
                 </span>
                 <span className="goal-library-title">{item.title}</span>
                 <span className="goal-library-count" title="ילדים פעילים">{item.activeCount ?? item.usageCount}</span>
+                <button
+                  title="תוכנית למידה — עריכת תבנית"
+                  onClick={() => setEditingTemplate({ goal: item, type: 'lp' })}
+                  style={{
+                    background: item.learningPlanTemplate ? '#ede9fe' : 'none',
+                    border: '1px solid',
+                    borderColor: item.learningPlanTemplate ? '#c4b5fd' : '#e2e8f0',
+                    borderRadius: 5, cursor: 'pointer', fontSize: '0.72em', padding: '2px 6px',
+                    color: item.learningPlanTemplate ? '#7c3aed' : '#94a3b8',
+                    fontWeight: 600,
+                  }}
+                >
+                  ת״ל
+                </button>
+                <button
+                  title="איסוף נתונים — עריכת תבנית"
+                  onClick={() => setEditingTemplate({ goal: item, type: 'dc' })}
+                  style={{
+                    background: item.dataCollectionTemplate ? '#dcfce7' : 'none',
+                    border: '1px solid',
+                    borderColor: item.dataCollectionTemplate ? '#86efac' : '#e2e8f0',
+                    borderRadius: 5, cursor: 'pointer', fontSize: '0.72em', padding: '2px 6px',
+                    color: item.dataCollectionTemplate ? '#166534' : '#94a3b8',
+                    fontWeight: 600,
+                  }}
+                >
+                  א״נ
+                </button>
                 {confirmingDelete === item.id ? (
                   <span className="goal-library-confirm">
                     בטוח?
@@ -318,6 +350,15 @@ export default function GoalLibraryManager() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Template Editor Modal */}
+      {editingTemplate && (
+        <GoalFormTemplateEditor
+          goal={editingTemplate.goal}
+          formType={editingTemplate.type}
+          onClose={() => setEditingTemplate(null)}
+        />
       )}
 
       {/* Assign-to-Kid Modal */}

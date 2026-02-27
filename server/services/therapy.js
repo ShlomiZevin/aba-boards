@@ -397,42 +397,75 @@ async function getGoalsForKid(kidId) {
     .where('kidId', '==', kidId)
     .get();
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const goals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  // Batch-fetch library templates for goals that have libraryItemId
+  const libraryIds = [...new Set(goals.map(g => g.libraryItemId).filter(Boolean))];
+  if (libraryIds.length > 0) {
+    // Firestore 'in' query supports up to 30 values; chunk if needed
+    const chunks = [];
+    for (let i = 0; i < libraryIds.length; i += 30) chunks.push(libraryIds.slice(i, i + 30));
+    const libDocs = (await Promise.all(
+      chunks.map(chunk =>
+        db.collection('goalsLibrary').where('__name__', 'in', chunk).get()
+          .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      )
+    )).flat();
+
+    const libMap = {};
+    libDocs.forEach(d => { libMap[d.id] = d; });
+
+    return goals.map(g => {
+      if (!g.libraryItemId || !libMap[g.libraryItemId]) return g;
+      const lib = libMap[g.libraryItemId];
+      return {
+        ...g,
+        learningPlanTemplate: lib.learningPlanTemplate || null,
+        dataCollectionTemplate: lib.dataCollectionTemplate || null,
+      };
+    });
+  }
+
+  return goals;
 }
 
 async function addGoalToKid(kidId, data) {
   const db = getDb();
   const goalId = uuidv4();
 
-  const goal = {
-    kidId,
-    categoryId: data.categoryId,
-    title: data.title,
-    isActive: true,
-    createdAt: new Date(),
-  };
-
-  await db.collection('goals').doc(goalId).set(goal);
-
-  // Also add to goals library for autocomplete
+  // Also add to goals library for autocomplete and get/create libraryItemId
   const librarySnapshot = await db.collection('goalsLibrary')
     .where('title', '==', data.title)
     .where('categoryId', '==', data.categoryId)
     .limit(1)
     .get();
 
+  let libraryItemId;
   if (librarySnapshot.empty) {
-    await db.collection('goalsLibrary').doc(uuidv4()).set({
+    libraryItemId = uuidv4();
+    await db.collection('goalsLibrary').doc(libraryItemId).set({
       title: data.title,
       categoryId: data.categoryId,
       usageCount: 1,
     });
   } else {
     const libDoc = librarySnapshot.docs[0];
+    libraryItemId = libDoc.id;
     await libDoc.ref.update({
       usageCount: (libDoc.data().usageCount || 0) + 1,
     });
   }
+
+  const goal = {
+    kidId,
+    categoryId: data.categoryId,
+    title: data.title,
+    libraryItemId,
+    isActive: true,
+    createdAt: new Date(),
+  };
+
+  await db.collection('goals').doc(goalId).set(goal);
 
   return { id: goalId, ...goal };
 }
@@ -510,6 +543,317 @@ async function getAllGoalsLibrary() {
 async function deleteGoalLibraryItem(id) {
   const db = getDb();
   await db.collection('goalsLibrary').doc(id).delete();
+}
+
+async function updateGoalLibraryTemplates(id, data) {
+  const db = getDb();
+  const doc = await db.collection('goalsLibrary').doc(id).get();
+  if (!doc.exists) throw new Error('Goal library item not found');
+
+  const updates = {};
+  if (data.learningPlanTemplate !== undefined) {
+    updates.learningPlanTemplate = data.learningPlanTemplate
+      ? { ...data.learningPlanTemplate, updatedAt: new Date() }
+      : null;
+  }
+  if (data.dataCollectionTemplate !== undefined) {
+    updates.dataCollectionTemplate = data.dataCollectionTemplate
+      ? { ...data.dataCollectionTemplate, updatedAt: new Date() }
+      : null;
+  }
+
+  await doc.ref.update(updates);
+  const updated = await doc.ref.get();
+  return { id: updated.id, ...updated.data() };
+}
+
+// ==================== GOAL LEARNING PLANS ====================
+
+async function getGoalLearningPlan(kidId, goalLibraryId) {
+  const db = getDb();
+  const snapshot = await db.collection('kidGoalLearningPlans')
+    .where('kidId', '==', kidId)
+    .where('goalLibraryId', '==', goalLibraryId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return null;
+  const doc = snapshot.docs[0];
+  return { id: doc.id, ...doc.data() };
+}
+
+async function saveGoalLearningPlan(kidId, goalLibraryId, data, updatedBy) {
+  const db = getDb();
+  const snapshot = await db.collection('kidGoalLearningPlans')
+    .where('kidId', '==', kidId)
+    .where('goalLibraryId', '==', goalLibraryId)
+    .limit(1)
+    .get();
+
+  const planData = {
+    kidId,
+    goalLibraryId,
+    goalTitle: data.goalTitle || '',
+    tables: data.tables || [],
+    updatedAt: new Date(),
+    updatedBy: updatedBy || 'unknown',
+  };
+
+  if (snapshot.empty) {
+    const id = uuidv4();
+    await db.collection('kidGoalLearningPlans').doc(id).set(planData);
+    return { id, ...planData };
+  } else {
+    const doc = snapshot.docs[0];
+    await doc.ref.update(planData);
+    return { id: doc.id, ...planData };
+  }
+}
+
+// ==================== GOAL DATA COLLECTION ====================
+
+async function getGoalDataEntries(kidId, goalLibraryId) {
+  const db = getDb();
+  const snapshot = await db.collection('kidGoalDataEntries')
+    .where('kidId', '==', kidId)
+    .where('goalLibraryId', '==', goalLibraryId)
+    .orderBy('sessionDate', 'desc')
+    .get();
+
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function addGoalDataEntry(kidId, goalLibraryId, data) {
+  const db = getDb();
+  const id = uuidv4();
+  const entry = {
+    kidId,
+    goalLibraryId,
+    goalTitle: data.goalTitle || '',
+    sessionDate: data.sessionDate ? new Date(data.sessionDate) : new Date(),
+    practitionerId: data.practitionerId || null,
+    tables: data.tables || [],
+    createdAt: new Date(),
+  };
+
+  await db.collection('kidGoalDataEntries').doc(id).set(entry);
+  return { id, ...entry };
+}
+
+async function bulkAddGoalDataEntries(kidId, goalLibraryId, entries) {
+  const db = getDb();
+  const saved = [];
+  for (const entry of entries) {
+    const id = uuidv4();
+    const doc = {
+      kidId,
+      goalLibraryId,
+      goalTitle: entry.goalTitle || '',
+      sessionDate: entry.sessionDate ? new Date(entry.sessionDate) : new Date(),
+      practitionerId: entry.practitionerId || null,
+      tables: entry.tables || [],
+      createdAt: new Date(),
+    };
+    await db.collection('kidGoalDataEntries').doc(id).set(doc);
+    saved.push({ id, ...doc });
+  }
+  return saved;
+}
+
+// ==================== GOAL LIBRARY LINK MIGRATION ====================
+// Finds orphaned goals (missing libraryItemId) and links them by title match.
+// ONLY writes libraryItemId — nothing else on the goal is changed.
+async function migrateGoalLibraryLinks(kidId) {
+  const db = getDb();
+
+  // 1. Fetch all active goals for this kid that are missing libraryItemId
+  const goalsSnap = await db.collection('goals')
+    .where('kidId', '==', kidId)
+    .where('isActive', '==', true)
+    .get();
+
+  const orphaned = goalsSnap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(g => !g.libraryItemId);
+
+  if (orphaned.length === 0) {
+    return { matched: [], unmatched: [] };
+  }
+
+  // 2. Load the entire goal library (global collection)
+  const librarySnap = await db.collection('goalsLibrary').get();
+  // Build a lookup: normalised title → libraryItemId
+  const titleToLibId = new Map();
+  librarySnap.docs.forEach(d => {
+    const title = (d.data().title || '').trim().toLowerCase();
+    if (title) titleToLibId.set(title, d.id);
+  });
+
+  // 3. Match & update
+  const matched = [];
+  const unmatched = [];
+
+  for (const goal of orphaned) {
+    const normalised = (goal.title || '').trim().toLowerCase();
+    const libId = titleToLibId.get(normalised);
+
+    if (libId) {
+      // SAFE: update ONLY libraryItemId
+      await db.collection('goals').doc(goal.id).update({ libraryItemId: libId });
+      matched.push({ goalId: goal.id, title: goal.title, libraryItemId: libId });
+    } else {
+      unmatched.push({ goalId: goal.id, title: goal.title });
+    }
+  }
+
+  return { matched, unmatched };
+}
+
+async function deleteGoalDataEntry(kidId, goalLibraryId, entryId) {
+  const db = getDb();
+  const doc = await db.collection('kidGoalDataEntries').doc(entryId).get();
+  if (!doc.exists) throw new Error('Entry not found');
+  const data = doc.data();
+  if (data.kidId !== kidId || data.goalLibraryId !== goalLibraryId) {
+    throw new Error('Entry does not belong to this kid/goal');
+  }
+  await doc.ref.delete();
+}
+
+// ==================== GOAL FORM FILE UPLOAD (Claude extraction) ====================
+
+const Anthropic = require('@anthropic-ai/sdk');
+const mammoth = require('mammoth');
+
+// Normalize a goal form template (handles both old flat {columns:[]} and new {tables:[{id,type,columns}]} format)
+function normalizeTemplateBlocks(tmpl) {
+  if (!tmpl) return [];
+  if (Array.isArray(tmpl.tables) && tmpl.tables.length > 0) return tmpl.tables;
+  if (Array.isArray(tmpl.columns) && tmpl.columns.length > 0) {
+    return [{ id: 'default', type: 'horizontal', columns: tmpl.columns }];
+  }
+  return [];
+}
+
+async function extractGoalFormFromFile(goalLibraryId, fileBuffer, { formType, updateStructure }) {
+  console.log('[upload] extractGoalFormFromFile start', { goalLibraryId, formType, updateStructure });
+
+  // 1. Extract plain text from the .doc/.docx file
+  const { value: docText } = await mammoth.extractRawText({ buffer: fileBuffer });
+
+  if (!docText || docText.trim().length < 10) {
+    throw new Error('לא ניתן לחלץ טקסט מהקובץ');
+  }
+  console.log('[upload] extracted text length:', docText.length);
+
+  // 2. Fetch goal library item to get goal title + current template
+  const db = getDb();
+  const libDoc = await db.collection('goalsLibrary').doc(goalLibraryId).get();
+  if (!libDoc.exists) throw new Error('Goal library item not found');
+
+  const libData = libDoc.data();
+  const goalTitle = libData.title || '';
+  const currentTemplate = formType === 'lp' ? libData.learningPlanTemplate : libData.dataCollectionTemplate;
+
+  // Normalize to blocks — supports both old flat format and new multi-table format
+  const templateBlocks = normalizeTemplateBlocks(currentTemplate);
+  // Target the first horizontal block for data extraction (most meaningful for LP rows / DC entries)
+  const targetBlock = templateBlocks.find(b => b.type === 'horizontal') || templateBlocks[0] || null;
+  const targetBlockId = targetBlock ? targetBlock.id : 'uploaded';
+  const currentColumns = targetBlock ? (targetBlock.columns || []) : [];
+
+  console.log('[upload] goal:', goalTitle, 'blocks:', templateBlocks.length, 'targetBlock:', targetBlockId, 'columns:', currentColumns.length);
+
+  // 3. Build Claude prompt
+  const columnDescription = currentColumns.length > 0
+    ? `העמודות הנוכחיות של הטבלה "${targetBlockId}" (השתמש ב-id המדויק של כל עמודה):\n${JSON.stringify(currentColumns, null, 2)}\n\nסוגי הטבלאות: vertical = שדות בודדים (שורה אחת), horizontal = טבלה עם מספר שורות.`
+    : 'אין תבנית עמודות קיימת — אתה יכול להציע מבנה חדש.';
+
+  let systemPrompt;
+  let userPrompt;
+
+  if (formType === 'lp') {
+    systemPrompt = updateStructure
+      ? `אתה מחלץ נתונים מתוכנית למידה (LP) של ABA לפי מטרה טיפולית.
+${columnDescription}
+
+החזר JSON בפורמט הבא:
+{
+  "columns": [/* אם מבנה הקובץ שונה מהעמודות הקיימות, הצע עמודות מעודכנות */],
+  "rows": [{ "col_id": "ערך", ... }, ...]
+}
+
+כל עמודה חדשה: id (string ללא רווחים), label (string עברי), type ("text"|"date"|"options"), options: string[] (רק עבור type options).
+אם המבנה תואם — השתמש ב-columns הקיימים ללא שינוי.
+החזר ONLY JSON תקין, ללא הסברים.`
+      : `אתה מחלץ נתונים מתוכנית למידה (LP) של ABA לפי מטרה טיפולית.
+${columnDescription}
+
+החזר JSON בפורמט הבא:
+{ "rows": [{ "col_id": "ערך", ... }, ...] }
+
+השתמש ב-id של העמודות הקיימות בלבד. שורה ריקה = "". החזר ONLY JSON תקין.`;
+
+    userPrompt = `מטרה: ${goalTitle}\n\nתוכן הקובץ:\n${docText}`;
+  } else {
+    systemPrompt = updateStructure
+      ? `אתה מחלץ רשומות איסוף נתונים (DC) של ABA לפי מטרה טיפולית.
+${columnDescription}
+
+החזר JSON בפורמט הבא:
+{
+  "columns": [/* עמודות מעודכנות אם המבנה שונה */],
+  "entries": [{ "sessionDate": "YYYY-MM-DD", "col_id": "ערך", ... }, ...]
+}
+
+כל עמודה חדשה: id, label, type ("text"|"date"|"options"), options[].
+sessionDate = YYYY-MM-DD. אם חסר תאריך — השתמש בתאריך היום.
+החזר ONLY JSON תקין.`
+      : `אתה מחלץ רשומות איסוף נתונים (DC) של ABA לפי מטרה טיפולית.
+${columnDescription}
+
+החזר JSON בפורמט הבא:
+{ "entries": [{ "sessionDate": "YYYY-MM-DD", "col_id": "ערך", ... }, ...] }
+
+השתמש ב-id העמודות הקיימות בלבד. sessionDate = YYYY-MM-DD. החזר ONLY JSON תקין.`;
+
+    userPrompt = `מטרה: ${goalTitle}\n\nתוכן הקובץ:\n${docText}`;
+  }
+
+  // 4. Call Claude
+  console.log('[upload] calling Claude API...');
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-5',
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }],
+  });
+
+  const rawText = message.content[0]?.text || '';
+  console.log('[upload] Claude response length:', rawText.length, 'preview:', rawText.slice(0, 120));
+
+  // 5. Parse Claude's JSON response (strip markdown fences if present)
+  const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || rawText.match(/(\{[\s\S]*\})/);
+  const jsonText = jsonMatch ? jsonMatch[1] : rawText;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonText.trim());
+  } catch {
+    throw new Error('Claude לא החזיר JSON תקין: ' + rawText.slice(0, 200));
+  }
+
+  console.log('[upload] parsed — rows:', parsed.rows?.length, 'entries:', parsed.entries?.length, 'columns:', parsed.columns?.length);
+
+  return {
+    goalTitle,
+    formType,
+    targetBlockId,                     // which block the rows/entries belong to
+    columns: parsed.columns || null,   // only present if updateStructure=true and Claude suggested changes
+    rows: parsed.rows || null,         // for LP
+    entries: parsed.entries || null,   // for DC
+  };
 }
 
 async function addGoalLibraryItem(data) {
@@ -1193,6 +1537,19 @@ module.exports = {
   getAllGoalsLibrary,
   deleteGoalLibraryItem,
   addGoalLibraryItem,
+  updateGoalLibraryTemplates,
+  // Goal Learning Plans
+  getGoalLearningPlan,
+  saveGoalLearningPlan,
+  // Goal Data Collection
+  getGoalDataEntries,
+  addGoalDataEntry,
+  bulkAddGoalDataEntries,
+  deleteGoalDataEntry,
+  // Goal Form File Upload
+  extractGoalFormFromFile,
+  // Goal Library Link Migration
+  migrateGoalLibraryLinks,
   // Sessions
   getSessionsForKid,
   scheduleSession,

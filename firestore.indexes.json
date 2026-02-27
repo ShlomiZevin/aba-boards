@@ -1,6 +1,15 @@
 {
   "indexes": [
     {
+      "collectionGroup": "kidGoalDataEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "kidId",          "order": "ASCENDING" },
+        { "fieldPath": "goalLibraryId",  "order": "ASCENDING" },
+        { "fieldPath": "sessionDate",    "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
