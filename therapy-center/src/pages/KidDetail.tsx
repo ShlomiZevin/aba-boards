@@ -13,6 +13,42 @@ import { toDate } from '../utils/date';
 import { GOAL_CATEGORIES } from '../types';
 import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
+
+// Distinct colors for therapists on the calendar (vivid for therapy, pastel for meetings)
+const THERAPIST_PALETTE = [
+  '#0891b2', // cyan
+  '#7c3aed', // violet
+  '#db2777', // pink
+  '#059669', // emerald
+  '#d97706', // amber
+  '#2563eb', // blue
+  '#dc2626', // red
+  '#65a30d', // lime
+  '#0d9488', // teal
+  '#9333ea', // purple
+];
+const MEETING_PALETTE = [
+  '#67e8f9', // light cyan
+  '#c4b5fd', // light violet
+  '#f9a8d4', // light pink
+  '#6ee7b7', // light emerald
+  '#fcd34d', // light amber
+  '#93c5fd', // light blue
+  '#fca5a5', // light red
+  '#bef264', // light lime
+  '#5eead4', // light teal
+  '#d8b4fe', // light purple
+];
+function hashId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) { h = Math.imul(31, h) + id.charCodeAt(i) | 0; }
+  return Math.abs(h);
+}
+function getTherapistColor(therapistId: string | undefined, isMeeting = false): string {
+  const palette = isMeeting ? MEETING_PALETTE : THERAPIST_PALETTE;
+  if (!therapistId) return isMeeting ? '#a78bfa' : '#64748b';
+  return palette[hashId(therapistId) % palette.length];
+}
 import FormTemplateEditor from '../components/FormTemplateEditor';
 import ImageCropModal from '../components/ImageCropModal';
 import GoalProgressChart from '../components/GoalProgressChart';
@@ -1170,10 +1206,12 @@ export default function KidDetail() {
               const resource = event.resource as Session | { isMultiple: true; sessions: Session[]; allHaveForms: boolean; someHaveForms: boolean };
 
               if ('isMultiple' in resource && resource.isMultiple) {
-                const { allHaveForms, someHaveForms } = resource;
+                const { allHaveForms, someHaveForms, sessions: daySess } = resource;
+                // Use first session's therapist color tinted for the multi-session dot
+                const firstColor = getTherapistColor(daySess[0]?.therapistId);
                 return {
                   style: {
-                    backgroundColor: allHaveForms ? '#388E3C' : someHaveForms ? '#1976D2' : '#F57C00',
+                    backgroundColor: allHaveForms ? '#388E3C' : someHaveForms ? '#1976D2' : firstColor,
                     cursor: 'pointer',
                   },
                 };
@@ -1183,14 +1221,13 @@ export default function KidDetail() {
               const own = isOwnSession(session);
               const isMeeting = session.type === 'meeting';
               const canFillStyle = isReadOnly ? false : (isMeeting ? isAdmin : own);
-              const bgColor = isMeeting
-                ? (session.formId ? '#388E3C' : '#7C3AED')
-                : (!own ? '#94a3b8' : session.formId ? '#388E3C' : '#F57C00');
+              const therapistColor = getTherapistColor(session.therapistId, isMeeting);
+              const bgColor = session.formId ? '#388E3C' : therapistColor;
               return {
                 style: {
                   backgroundColor: bgColor,
                   cursor: (canFillStyle || session.formId) ? 'pointer' : 'default',
-                  opacity: (!own && !isMeeting && !isParentView) ? 0.6 : 1,
+                  opacity: (!own && !isMeeting && !isParentView) ? 0.65 : 1,
                 },
               };
             }}
