@@ -244,7 +244,7 @@ function BlockPreview({ block }: { block: GoalTableBlock }) {
 }
 
 // -------- Live preview panel --------
-function LivePreviewPanel({ blocks, title }: { blocks: GoalTableBlock[]; title: string }) {
+function LivePreviewPanel({ blocks }: { blocks: GoalTableBlock[]; title?: string }) {
   const hasAny = blocks.some(b => b.columns.length > 0);
   return (
     <div>

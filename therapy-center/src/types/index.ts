@@ -96,7 +96,7 @@ export function normalizeTemplate(t: GoalFormTemplate | null | undefined): GoalT
   if (!t) return [];
   if (t.tables && t.tables.length > 0) return t.tables;
   // old format: flat columns array
-  const oldCols = (t as Record<string, unknown>).columns as GoalColumnDef[] | undefined;
+  const oldCols = (t as unknown as Record<string, unknown>).columns as GoalColumnDef[] | undefined;
   if (oldCols && oldCols.length > 0) {
     return [{ id: 'default', title: '', type: 'horizontal', columns: oldCols }];
   }
@@ -106,14 +106,14 @@ export function normalizeTemplate(t: GoalFormTemplate | null | undefined): GoalT
 export function normalizeLpData(plan: KidGoalLearningPlan | null): TableBlockData[] {
   if (!plan) return [];
   if (plan.tables && plan.tables.length > 0) return plan.tables;
-  const oldRows = (plan as Record<string, unknown>).rows as GoalFormRow[] | undefined;
+  const oldRows = (plan as unknown as Record<string, unknown>).rows as GoalFormRow[] | undefined;
   if (oldRows) return [{ tableId: 'default', rows: oldRows }];
   return [];
 }
 
 export function normalizeDcEntry(entry: KidGoalDataEntry): TableBlockData[] {
   if (entry.tables && entry.tables.length > 0) return entry.tables;
-  const oldRow = (entry as Record<string, unknown>).row as GoalFormRow | undefined;
+  const oldRow = (entry as unknown as Record<string, unknown>).row as GoalFormRow | undefined;
   if (oldRow) return [{ tableId: 'default', rows: [oldRow] }];
   return [];
 }

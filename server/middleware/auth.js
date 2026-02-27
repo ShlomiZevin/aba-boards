@@ -29,7 +29,8 @@ const { getDb } = require('../services/firebase');
 async function authenticate(req, res, next) {
   const key = req.headers['x-admin-key'];
   const practitionerId = req.headers['x-practitioner-id'];
-  const kidViewId = req.headers['x-kid-id'];
+  const rawKidId = req.headers['x-kid-id'];
+  const kidViewId = rawKidId ? decodeURIComponent(rawKidId) : undefined;
 
   try {
     const db = getDb();

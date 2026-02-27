@@ -82,7 +82,7 @@ function ParentRoutes() {
   }, [kidId]);
 
   return (
-    <TherapistContext.Provider value={{ isTherapistView: false, isParentView: true, practitionerId: null }}>
+    <TherapistContext.Provider value={{ isTherapistView: false, isParentView: true, practitionerId: null, parentKidId: kidId || null }}>
       <Routes>
         <Route path="/" element={<KidDetail />} />
         <Route path="/form/:formId/view" element={<FormView />} />

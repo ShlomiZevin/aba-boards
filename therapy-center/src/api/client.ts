@@ -40,7 +40,7 @@ function getAuthHeaders(): Record<string, string> {
   // Otherwise an admin_key still in localStorage overrides the intended auth type,
   // causing e.g. GET /notifications/mine to return [] instead of the therapist's notifications.
   if (_therapistId) return { 'X-Practitioner-Id': _therapistId };
-  if (_parentKidId) return { 'X-Kid-Id': _parentKidId };
+  if (_parentKidId) return { 'X-Kid-Id': encodeURIComponent(_parentKidId) };
   const adminKey = localStorage.getItem('admin_key');
   if (adminKey) return { 'X-Admin-Key': adminKey };
   return {};

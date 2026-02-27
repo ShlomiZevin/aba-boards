@@ -202,10 +202,11 @@ function EditParentForm({
 }
 
 export default function KidDetail() {
-  const { kidId } = useParams<{ kidId: string }>();
+  const { kidId: urlKidId } = useParams<{ kidId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isTherapistView, isParentView, practitionerId: contextPractitionerId } = useTherapist();
+  const { isTherapistView, isParentView, practitionerId: contextPractitionerId, parentKidId } = useTherapist();
+  const kidId = urlKidId || parentKidId;
   const { user: authUser } = useAuth();
   const links = useTherapistLinks();
   const isSimplifiedView = isTherapistView || isParentView;
