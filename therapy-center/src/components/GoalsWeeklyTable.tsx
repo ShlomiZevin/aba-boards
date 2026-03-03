@@ -56,7 +56,7 @@ export default function GoalsWeeklyTable({
   const allSessionIds = new Set(allSessions.map((s: Session) => s.id));
 
   const weekForms = (weekFormsRes?.data || [])
-    .filter((f: SessionForm) => f.id !== currentFormId)
+    .filter((f: SessionForm) => onToggleGoal ? f.id !== currentFormId : true)
     // Filter out orphaned forms (session was deleted but form remained)
     .filter((f: SessionForm) => !f.sessionId || allSessionIds.has(f.sessionId))
     .filter((f: SessionForm) => {
@@ -105,10 +105,12 @@ export default function GoalsWeeklyTable({
             {onToggleGoal && <th className="check-col">עבדנו</th>}
             {weekForms.map((f: SessionForm) => {
               const therapist = practitioners.find(p => p.id === f.practitionerId);
+              const isCurrent = !onToggleGoal && f.id === currentFormId;
               return (
-                <th key={f.id} className="week-col">
+                <th key={f.id} className="week-col" style={isCurrent ? { background: '#eef2ff', borderBottom: '2px solid #667eea' } : undefined}>
                   <div className="week-col-therapist">{therapist?.name || '?'}</div>
                   <div className="week-col-date">{format(toDate(f.sessionDate), 'dd/MM')}</div>
+                  {isCurrent && <div style={{ fontSize: '0.7em', color: '#667eea', fontWeight: 600 }}>טופס זה</div>}
                 </th>
               );
             })}
@@ -148,7 +150,7 @@ export default function GoalsWeeklyTable({
                     </td>
                   )}
                   {weekForms.map((f: SessionForm, idx: number) => (
-                    <td key={f.id} className="week-cell">
+                    <td key={f.id} className="week-cell" style={!onToggleGoal && f.id === currentFormId ? { background: '#eef2ff' } : undefined}>
                       {formGoalSets[idx].has(goal.id) ? (
                         <span className="goal-worked">✓</span>
                       ) : (
