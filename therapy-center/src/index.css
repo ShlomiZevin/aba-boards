@@ -2005,6 +2005,50 @@ body {
   color: #764ba2;
 }
 
+/* Mobile bottom tab bar */
+.kid-bottom-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .kid-tab-bar-desktop { display: none; }
+  .kid-bottom-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+    z-index: 100;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)) 4px;
+  }
+  .kid-bottom-tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 6px 2px;
+    font-size: 0.72em;
+    font-weight: 600;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .kid-bottom-tab.active {
+    color: #667eea;
+    background: #eef2ff;
+  }
+  /* Add bottom padding so content isn't hidden behind the bar */
+  .container {
+    overflow-x: hidden;
+    max-width: 100vw;
+    padding-bottom: 80px;
+  }
+}
+
 .kid-header-top {
   margin-bottom: 16px;
 }
@@ -2012,14 +2056,15 @@ body {
 .kid-header-back {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   text-decoration: none;
   color: #667eea;
   font-weight: 600;
-  padding: 6px 12px;
-  margin: -6px -12px;
+  padding: 8px 14px;
+  margin: -8px -14px;
   border-radius: 10px;
   transition: all 0.2s ease;
+  font-size: 0.9em;
 }
 
 .kid-header-back:hover {
@@ -2027,12 +2072,55 @@ body {
 }
 
 .kid-header-back .back-arrow {
-  font-size: 1.2em;
+  font-size: 1.3em;
+}
+
+.kid-header-back .back-label {
+  font-size: 0.9em;
 }
 
 .kid-header-back .logo-small {
   height: 32px;
   width: auto;
+}
+
+/* Toolbar icons in header top row — on desktop only show delete, hide action icons */
+.kid-header-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kid-toolbar-btn:not(.delete) {
+  display: none;
+}
+
+.kid-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  font-size: 0.85em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.kid-toolbar-btn:hover {
+  background: #e2e8f0;
+}
+
+.kid-toolbar-btn.delete {
+  color: #ef4444;
+}
+
+/* Labels hidden on desktop */
+.toolbar-label {
+  display: none;
 }
 
 .kid-header-profile {
@@ -3841,7 +3929,7 @@ body:has(.app-shell) {
 
   .container {
     max-width: 100%;
-    padding: 0;
+    padding: 0 0 80px 0;
   }
 
   /* Content cards go edge-to-edge on mobile for app-like feel */
@@ -3857,13 +3945,99 @@ body:has(.app-shell) {
     border-bottom: none;
   }
 
-  /* Kid header card also edge-to-edge */
+  /* ── Kid header — compact mobile layout ── */
   .kid-header-card {
     border-radius: 0;
     box-shadow: none;
     border-bottom: 1px solid #e8ecf1;
-    margin-bottom: 8px;
-    padding: 16px;
+    margin-bottom: 4px;
+    padding: 10px 14px 12px;
+  }
+
+  /* Top bar: hide on mobile — back arrow moves into profile row */
+  .kid-header-top {
+    margin-bottom: 6px;
+  }
+
+  .kid-header-back .logo-small {
+    height: 22px;
+  }
+
+  /* Show all toolbar icons on mobile */
+  .kid-toolbar-btn:not(.delete) {
+    display: inline-flex;
+  }
+
+  .kid-toolbar-btn {
+    width: auto;
+    height: auto;
+    padding: 4px 8px;
+    font-size: 0.7em;
+    border-radius: 8px;
+    gap: 3px;
+  }
+
+  .kid-toolbar-btn.delete {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+  }
+
+  .toolbar-label {
+    display: inline;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  /* Profile: centered avatar card — like WhatsApp/Telegram contact header */
+  .kid-header-profile {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 0;
+    gap: 6px;
+    margin-bottom: 0;
+    background: none;
+    border-radius: 0;
+  }
+
+  .kid-avatar-large {
+    width: 64px;
+    height: 64px;
+    border-width: 3px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  }
+
+  .kid-header-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .kid-header-name {
+    font-size: 1.2em;
+    margin-bottom: 0;
+  }
+
+  .kid-header-age {
+    font-size: 0.82em;
+    margin-bottom: 4px;
+  }
+
+  .kid-header-stats {
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .kid-header-stats span {
+    font-size: 0.72em;
+    padding: 2px 8px;
+  }
+
+  /* Hide desktop action links on mobile — they're in the toolbar */
+  .kid-action-links {
+    display: none;
   }
 
   /* Header card (therapist greeting etc.) */

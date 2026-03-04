@@ -633,11 +633,40 @@ async function addGoalDataEntry(kidId, goalLibraryId, data) {
     sessionDate: data.sessionDate ? new Date(data.sessionDate) : new Date(),
     practitionerId: data.practitionerId || null,
     tables: data.tables || [],
+    status: data.status || 'filled',
+    sessionFormId: data.sessionFormId || null,
     createdAt: new Date(),
   };
 
   await db.collection('kidGoalDataEntries').doc(id).set(entry);
   return { id, ...entry };
+}
+
+async function updateGoalDataEntry(kidId, goalLibraryId, entryId, data) {
+  const db = getDb();
+  const doc = await db.collection('kidGoalDataEntries').doc(entryId).get();
+  if (!doc.exists) throw new Error('Entry not found');
+  const existing = doc.data();
+  if (existing.kidId !== kidId || existing.goalLibraryId !== goalLibraryId) {
+    throw new Error('Entry does not belong to this kid/goal');
+  }
+  const updates = {
+    tables: data.tables || [],
+    status: 'filled',
+    updatedAt: new Date(),
+  };
+  await doc.ref.update(updates);
+  return { id: entryId, ...existing, ...updates };
+}
+
+async function getPendingDcForms(kidId) {
+  const db = getDb();
+  const snapshot = await db.collection('kidGoalDataEntries')
+    .where('kidId', '==', kidId)
+    .where('status', '==', 'pending')
+    .orderBy('sessionDate', 'desc')
+    .get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
 async function bulkAddGoalDataEntries(kidId, goalLibraryId, entries) {
@@ -1113,6 +1142,30 @@ async function submitForm(data) {
     });
   }
 
+  // Auto-create pending DC entries for goals that have DC templates
+  const goalsWorkedOn = data.goalsWorkedOn || [];
+  if (goalsWorkedOn.length > 0) {
+    try {
+      const goals = await getGoalsForKid(data.kidId);
+      for (const snapshot of goalsWorkedOn) {
+        const goal = goals.find(g => g.id === snapshot.goalId);
+        if (!goal || !goal.libraryItemId) continue;
+        const dcBlocks = normalizeTemplateBlocks(goal.dataCollectionTemplate);
+        if (dcBlocks.length === 0 || !dcBlocks.some(b => b.columns && b.columns.length > 0)) continue;
+        await addGoalDataEntry(data.kidId, goal.libraryItemId, {
+          goalTitle: goal.title,
+          sessionDate: data.sessionDate,
+          practitionerId: data.practitionerId || null,
+          tables: [],
+          status: 'pending',
+          sessionFormId: formId,
+        });
+      }
+    } catch (err) {
+      console.error('[submitForm] Failed to auto-create pending DC entries:', err);
+    }
+  }
+
   return { id: formId, ...form };
 }
 
@@ -1544,8 +1597,10 @@ module.exports = {
   // Goal Data Collection
   getGoalDataEntries,
   addGoalDataEntry,
+  updateGoalDataEntry,
   bulkAddGoalDataEntries,
   deleteGoalDataEntry,
+  getPendingDcForms,
   // Goal Form File Upload
   extractGoalFormFromFile,
   // Goal Library Link Migration

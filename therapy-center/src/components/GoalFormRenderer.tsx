@@ -12,6 +12,16 @@ const inputStyle: React.CSSProperties = {
 function CellInput({ col, value, onChange, colKey }: {
   col: GoalColumnDef; value: string; onChange: (v: string) => void; colKey: string;
 }) {
+  if (col.type === 'checkbox') {
+    const checked = value === 'true' || value === '1';
+    return (
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85em', userSelect: 'none' as const }}>
+        <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked ? 'true' : 'false')}
+          style={{ width: 20, height: 20, accentColor: '#667eea', cursor: 'pointer' }} />
+        <span style={{ color: checked ? '#1e293b' : '#94a3b8' }}>{checked ? 'כן' : 'לא'}</span>
+      </label>
+    );
+  }
   if (col.type === 'date') {
     return (
       <input type="date" value={value || ''} onChange={e => onChange(e.target.value)}
@@ -50,6 +60,10 @@ function CellInput({ col, value, onChange, colKey }: {
 
 // ---- Cell view ----
 function CellView({ col, value }: { col: GoalColumnDef; value: string }) {
+  if (col.type === 'checkbox') {
+    const checked = value === 'true' || value === '1';
+    return <span style={{ color: checked ? '#16a34a' : '#ef4444', fontWeight: 600 }}>{checked ? '✓' : '✗'}</span>;
+  }
   if (!value) return <span style={{ color: '#cbd5e1' }}>—</span>;
   if (col.type === 'date') {
     try {

@@ -211,8 +211,20 @@ export const goalDataApi = {
       method: 'POST',
       body: JSON.stringify({ entries }),
     }),
+  updateEntry: (
+    kidId: string,
+    goalLibraryId: string,
+    entryId: string,
+    data: { tables: TableBlockData[] }
+  ) =>
+    fetchApi<KidGoalDataEntry>(`/kids/${kidId}/goal-data/${goalLibraryId}/${entryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   deleteEntry: (kidId: string, goalLibraryId: string, entryId: string) =>
     fetchApi<void>(`/kids/${kidId}/goal-data/${goalLibraryId}/${entryId}`, { method: 'DELETE' }),
+  getPending: (kidId: string) =>
+    fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/pending-dc`),
 };
 
 // Goal Form File Upload API

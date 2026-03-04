@@ -32,7 +32,7 @@ export interface Parent {
 }
 
 // Goal form template types (for תוכנית למידה and איסוף נתונים)
-export type GoalColumnType = 'text' | 'date' | 'options';
+export type GoalColumnType = 'text' | 'date' | 'options' | 'checkbox';
 
 export interface GoalColumnDef {
   id: string;
@@ -86,6 +86,8 @@ export interface KidGoalDataEntry {
   sessionDate: Date;
   practitionerId?: string;
   tables: TableBlockData[];
+  status?: 'pending' | 'filled';
+  sessionFormId?: string;
   createdAt: Date;
 }
 

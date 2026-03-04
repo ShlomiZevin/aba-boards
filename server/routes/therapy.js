@@ -232,6 +232,16 @@ router.post('/kids/:kidId/goal-data/:goalLibraryId', asyncHandler(async (req, re
   res.status(201).json(entry);
 }));
 
+router.put('/kids/:kidId/goal-data/:goalLibraryId/:entryId', asyncHandler(async (req, res) => {
+  const entry = await therapyService.updateGoalDataEntry(
+    req.params.kidId,
+    req.params.goalLibraryId,
+    req.params.entryId,
+    req.body
+  );
+  res.json(entry);
+}));
+
 router.delete('/kids/:kidId/goal-data/:goalLibraryId/:entryId', asyncHandler(async (req, res) => {
   await therapyService.deleteGoalDataEntry(
     req.params.kidId,
@@ -239,6 +249,11 @@ router.delete('/kids/:kidId/goal-data/:goalLibraryId/:entryId', asyncHandler(asy
     req.params.entryId
   );
   res.status(204).send();
+}));
+
+router.get('/kids/:kidId/pending-dc', asyncHandler(async (req, res) => {
+  const entries = await therapyService.getPendingDcForms(req.params.kidId);
+  res.json(entries);
 }));
 
 // Migrate orphaned goals → match by title to library, write only libraryItemId (admin only)

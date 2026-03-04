@@ -5,13 +5,14 @@ import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { kidsApi, practitionersApi, parentsApi, goalsApi, sessionsApi, notificationsApi } from '../api/client';
+import { kidsApi, practitionersApi, parentsApi, goalsApi, sessionsApi, notificationsApi, goalDataApi } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { useAuth } from '../contexts/AuthContext';
 import { toDate } from '../utils/date';
 import { GOAL_CATEGORIES } from '../types';
-import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification } from '../types';
+import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification, KidGoalDataEntry, GoalFormRow, TableBlockData } from '../types';
+import { normalizeTemplate } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
 
 // Distinct colors for therapists on the calendar (vivid for therapy, pastel for meetings)
@@ -53,6 +54,7 @@ import FormTemplateEditor from '../components/FormTemplateEditor';
 import ImageCropModal from '../components/ImageCropModal';
 import GoalProgressChart from '../components/GoalProgressChart';
 import GoalPlansTab from '../components/GoalPlansTab';
+import { EditableHorizontalBlock, EditableVerticalBlock } from '../components/GoalFormRenderer';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
@@ -246,6 +248,9 @@ export default function KidDetail() {
   const [notifyTargets, setNotifyTargets] = useState<Set<string>>(new Set());
   const [notifyDeleteConfirm, setNotifyDeleteConfirm] = useState<string | null>(null);
   const [pendingReadIds, setPendingReadIds] = useState<Set<string>>(new Set());
+  const [dcFillEntry, setDcFillEntry] = useState<KidGoalDataEntry | null>(null);
+  const [dcFillData, setDcFillData] = useState<Record<string, GoalFormRow[]>>({});
+  const [dcExpanded, setDcExpanded] = useState(true);
 
   // Form state for modals
   const [newName, setNewName] = useState('');
@@ -287,6 +292,12 @@ export default function KidDetail() {
   const { data: sessionsRes } = useQuery({
     queryKey: ['sessions', kidId],
     queryFn: () => sessionsApi.getForKid(kidId!),
+    enabled: !!kidId,
+  });
+
+  const { data: pendingDcRes } = useQuery({
+    queryKey: ['pending-dc', kidId],
+    queryFn: () => goalDataApi.getPending(kidId!),
     enabled: !!kidId,
   });
 
@@ -400,6 +411,25 @@ export default function KidDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
       setEditingSession(null);
+    },
+  });
+
+  const fillDcMutation = useMutation({
+    mutationFn: ({ entry, tables }: { entry: KidGoalDataEntry; tables: TableBlockData[] }) =>
+      goalDataApi.updateEntry(entry.kidId, entry.goalLibraryId, entry.id, { tables }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-dc', kidId] });
+      queryClient.invalidateQueries({ queryKey: ['goal-data'] });
+      setDcFillEntry(null);
+      setDcFillData({});
+    },
+  });
+
+  const dismissDcMutation = useMutation({
+    mutationFn: (entry: KidGoalDataEntry) =>
+      goalDataApi.deleteEntry(entry.kidId, entry.goalLibraryId, entry.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-dc', kidId] });
     },
   });
 
@@ -697,22 +727,30 @@ export default function KidDetail() {
         <div className="kid-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {!isParentView ? (
             <Link to={links.home()} className="kid-header-back">
-              <span className="back-arrow">←</span>
-              <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
+              <span className="back-arrow">→</span>
+              <span className="back-label">חזרה</span>
             </Link>
           ) : (
             <div />
           )}
-          {isAdmin && (
-            <button
-              onClick={() => setShowDeleteKid(true)}
-              className="delete-btn-small"
-              title="מחק ילד"
-              style={{ width: '30px', height: '30px', fontSize: '1em' }}
-            >
-              🗑
-            </button>
-          )}
+          <div className="kid-header-toolbar">
+            {!isSimplifiedView && (
+              <>
+                <a href={`/board.html?kid=${kidId}`} className="kid-toolbar-btn" title="לוח">📱<span className="toolbar-label">לוח</span></a>
+                <a href={`/board-builder.html?kid=${kidId}`} className="kid-toolbar-btn" title="בנה לוח">🎨<span className="toolbar-label">בנה לוח</span></a>
+                <a href={`/stats.html?kid=${kidId}`} className="kid-toolbar-btn" title="סטטיסטיקה">📊<span className="toolbar-label">סטטיסטיקה</span></a>
+              </>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => setShowDeleteKid(true)}
+                className="kid-toolbar-btn delete"
+                title="מחק ילד"
+              >
+                🗑
+              </button>
+            )}
+          </div>
         </div>
         <div className="kid-header-profile">
           <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -791,29 +829,31 @@ export default function KidDetail() {
             )}
           </div>
         </div>
-        {/* Kid Action Links - admin only */}
-        {!isSimplifiedView && (
-          <div className="kid-action-links">
-            <QuickActionLink
-              href={`/board.html?kid=${kidId}`}
-              label="לוח"
-              icon="📱"
-              color="#667eea"
-            />
-            <QuickActionLink
-              href={`/board-builder.html?kid=${kidId}`}
-              label="בנה לוח"
-              icon="🎨"
-              color="#48bb78"
-            />
-            <QuickActionLink
-              href={`/stats.html?kid=${kidId}`}
-              label="סטטיסטיקה"
-              icon="📊"
-              color="#ed8936"
-            />
-          </div>
-        )}
+        {/* Kid Action Links - desktop only (on mobile they're in the toolbar) */}
+        <div className="kid-action-links">
+          {!isSimplifiedView && (
+            <>
+              <QuickActionLink
+                href={`/board.html?kid=${kidId}`}
+                label="לוח"
+                icon="📱"
+                color="#667eea"
+              />
+              <QuickActionLink
+                href={`/board-builder.html?kid=${kidId}`}
+                label="בנה לוח"
+                icon="🎨"
+                color="#48bb78"
+              />
+              <QuickActionLink
+                href={`/stats.html?kid=${kidId}`}
+                label="סטטיסטיקה"
+                icon="📊"
+                color="#ed8936"
+              />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Pill Tab Bar */}
@@ -822,7 +862,7 @@ export default function KidDetail() {
           ? myNotifications.filter(n => !n.read).length
           : (sentNotificationsRes?.data || []).filter((n: Notification) => !n.read).length;
         return (
-          <div className="kid-tab-bar">
+          <div className="kid-tab-bar kid-tab-bar-desktop">
             <button className={`kid-tab${kidTab === 'sessions' ? ' active' : ''}`} onClick={() => setKidTab('sessions')}>
               טיפולים
             </button>
@@ -1386,6 +1426,123 @@ export default function KidDetail() {
             );
           })()}
         </div>
+
+        {/* Pending DC forms */}
+        {(() => {
+          const pendingDc = (pendingDcRes?.data || []) as KidGoalDataEntry[];
+          if (pendingDc.length === 0) return null;
+          return (
+            <div className="content-card" style={{ marginTop: 16 }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
+                onClick={() => setDcExpanded(!dcExpanded)}
+              >
+                <h4 style={{ margin: 0, color: '#475569' }}>
+                  איסוף נתונים ממתין ({pendingDc.length})
+                </h4>
+                <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{dcExpanded ? '▲' : '▼'}</span>
+              </div>
+              {dcExpanded && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+                  {pendingDc.map((entry) => {
+                    const therapist = practitioners.find((t: Practitioner) => t.id === entry.practitionerId);
+                    const dateStr = entry.sessionDate ? format(toDate(entry.sessionDate), 'dd/MM/yyyy') : '';
+                    return (
+                      <div key={entry.id} style={{
+                        border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 14px',
+                        background: '#fefce8',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.9em', color: '#1e293b' }}>{entry.goalTitle}</span>
+                          <span style={{ fontSize: '0.78em', color: '#94a3b8' }}>{dateStr}{therapist ? ` · ${therapist.name}` : ''}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                          <button
+                            className="btn-primary btn-small"
+                            onClick={() => {
+                              setDcFillEntry(entry);
+                              setDcFillData({});
+                            }}
+                          >
+                            מלא
+                          </button>
+                          <button
+                            className="btn-secondary btn-small"
+                            style={{ color: '#94a3b8', borderColor: '#e2e8f0', fontSize: '0.8em' }}
+                            onClick={() => dismissDcMutation.mutate(entry)}
+                          >
+                            דלג
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* DC Fill Modal */}
+        {dcFillEntry && (() => {
+          const goal = goals.find((g: Goal) => g.libraryItemId === dcFillEntry.goalLibraryId);
+          const templateBlocks = goal ? normalizeTemplate(goal.dataCollectionTemplate ?? null) : [];
+          const hasTemplate = templateBlocks.length > 0 && templateBlocks.some(b => b.columns.length > 0);
+          return (
+            <div className="modal-backdrop" onClick={() => setDcFillEntry(null)}>
+              <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 700, maxHeight: '90vh', overflow: 'auto' }}>
+                <div className="modal-header">
+                  <h3>איסוף נתונים — {dcFillEntry.goalTitle}</h3>
+                  <button className="modal-close" onClick={() => setDcFillEntry(null)}>✕</button>
+                </div>
+                <div style={{ padding: '16px 20px' }}>
+                  {!hasTemplate ? (
+                    <p style={{ color: '#94a3b8', textAlign: 'center', padding: 20 }}>
+                      תבנית איסוף נתונים טרם הוגדרה עבור מטרה זו.
+                    </p>
+                  ) : (
+                    <>
+                      {templateBlocks.map(block => {
+                        const blockRows = dcFillData[block.id] || [Object.fromEntries(block.columns.map(c => [c.id, '']))];
+                        return block.type === 'vertical' ? (
+                          <EditableVerticalBlock
+                            key={block.id}
+                            block={block}
+                            row={blockRows[0] || {}}
+                            onChange={(row) => setDcFillData(prev => ({ ...prev, [block.id]: [row] }))}
+                          />
+                        ) : (
+                          <EditableHorizontalBlock
+                            key={block.id}
+                            block={block}
+                            rows={blockRows}
+                            onChange={(rows) => setDcFillData(prev => ({ ...prev, [block.id]: rows }))}
+                          />
+                        );
+                      })}
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+                        <button className="btn-secondary" onClick={() => setDcFillEntry(null)}>ביטול</button>
+                        <button
+                          className="btn-primary"
+                          disabled={fillDcMutation.isPending}
+                          onClick={() => {
+                            const tables: TableBlockData[] = templateBlocks.map(block => ({
+                              tableId: block.id,
+                              rows: dcFillData[block.id] || [Object.fromEntries(block.columns.map(c => [c.id, '']))],
+                            }));
+                            fillDcMutation.mutate({ entry: dcFillEntry, tables });
+                          }}
+                        >
+                          {fillDcMutation.isPending ? 'שומר...' : 'שמור'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
       </>}
 
@@ -2150,6 +2307,25 @@ export default function KidDetail() {
           </div>
         </div>
       )}
+
+      {/* Mobile bottom tab bar */}
+      <div className="kid-bottom-bar">
+        {([
+          { key: 'sessions' as const, label: 'טיפולים' },
+          { key: 'progress' as const, label: 'התקדמות' },
+          { key: 'overview' as const, label: 'סקירה' },
+          { key: 'notifications' as const, label: 'הודעות' },
+          { key: 'plans' as const, label: 'תוכניות' },
+        ] as const).map(tab => (
+          <button
+            key={tab.key}
+            className={`kid-bottom-tab${kidTab === tab.key ? ' active' : ''}`}
+            onClick={() => setKidTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -18,6 +18,7 @@ const TYPE_LABELS: Record<GoalColumnType, string> = {
   text: 'טקסט',
   date: 'תאריך',
   options: 'אפשרויות',
+  checkbox: 'סימון',
 };
 
 function TypePills({ value, onChange }: { value: GoalColumnType; onChange: (t: GoalColumnType) => void }) {
