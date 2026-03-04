@@ -3821,7 +3821,7 @@ body:has(.app-shell) {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px 16px;
     background: white;
     border-bottom: 1px solid #e2e8f0;
     position: fixed;
@@ -3921,9 +3921,9 @@ body:has(.app-shell) {
     background: #f4f6fb;
   }
 
-  /* AppShell main area */
+  /* AppShell main area — top padding must clear the fixed topbar + safe area */
   .app-main {
-    padding: 60px 0 0 0;
+    padding: calc(60px + env(safe-area-inset-top, 0px)) 0 0 0;
     background: #f4f6fb;
   }
 

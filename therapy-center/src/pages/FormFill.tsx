@@ -11,7 +11,7 @@ import type { Goal, GoalSnapshot, SessionForm, Session, FormTemplateSection } fr
 import RichTextEditor from '../components/RichTextEditor';
 import GoalsWeeklyTable from '../components/GoalsWeeklyTable';
 
-const BASE = import.meta.env.BASE_URL;
+
 
 export default function FormFill() {
   const { formId } = useParams(); // For edit mode
@@ -345,8 +345,8 @@ export default function FormFill() {
       <div className="kid-header-card">
         <div className="kid-header-top">
           <Link to={kidId ? links.kidDetail(kidId) : links.home()} className="kid-header-back">
-            <span className="back-arrow">←</span>
-            <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
+            <span className="back-arrow">→</span>
+            <span className="back-label">חזרה</span>
           </Link>
         </div>
         <h1 style={{ fontSize: '1.4em', fontWeight: 700, color: '#2d3748', margin: 0 }}>

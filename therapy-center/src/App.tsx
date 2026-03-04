@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TherapistContext from './contexts/TherapistContext';
@@ -19,12 +19,27 @@ import AppShell from './components/AppShell';
 import { setTherapistAuth, setParentAuth } from './api/client';
 import './index.css';
 
-// Scroll to top on route change
+// Scroll to top on route change — aggressive multi-strategy for iOS
+function scrollToTop() {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 
+  // Before paint
+  useLayoutEffect(() => {
+    scrollToTop();
+  }, [pathname]);
+
+  // After paint + delayed fallback for iOS
   useEffect(() => {
-    window.scrollTo(0, 0);
+    scrollToTop();
+    requestAnimationFrame(scrollToTop);
+    const t = setTimeout(scrollToTop, 50);
+    return () => clearTimeout(t);
   }, [pathname]);
 
   return null;

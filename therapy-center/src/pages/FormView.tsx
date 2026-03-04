@@ -11,7 +11,7 @@ import { DEFAULT_FORM_TEMPLATE } from '../types';
 import type { Goal, FormTemplateSection } from '../types';
 import GoalsWeeklyTable from '../components/GoalsWeeklyTable';
 
-const BASE = import.meta.env.BASE_URL;
+
 
 function RichTextDisplay({ html }: { html: string }) {
   if (!html || html === '<p></p>') {
@@ -137,8 +137,8 @@ export default function FormView() {
       <div className="kid-header-card">
         <div className="kid-header-top">
           <Link to={kid ? links.kidDetail(kid.id) : links.home()} className="kid-header-back">
-            <span className="back-arrow">←</span>
-            <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
+            <span className="back-arrow">→</span>
+            <span className="back-label">חזרה</span>
           </Link>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

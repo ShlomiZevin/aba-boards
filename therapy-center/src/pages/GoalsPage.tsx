@@ -54,8 +54,8 @@ export default function GoalsPage() {
       <div className="kid-header-card">
         <div className="kid-header-top">
           <Link to={links.kidDetail(kidId!)} className="kid-header-back">
-            <span className="back-arrow">←</span>
-            <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
+            <span className="back-arrow">→</span>
+            <span className="back-label">חזרה</span>
           </Link>
         </div>
         <div className="goals-page-header">

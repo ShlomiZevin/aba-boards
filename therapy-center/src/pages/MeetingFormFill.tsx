@@ -8,7 +8,7 @@ import { toDate } from '../utils/date';
 import type { Practitioner, Parent, MeetingAttendee, MeetingForm, Session } from '../types';
 import RichTextEditor from '../components/RichTextEditor';
 
-const BASE = import.meta.env.BASE_URL;
+
 
 export default function MeetingFormFill() {
   const { formId } = useParams(); // edit mode
@@ -160,8 +160,8 @@ export default function MeetingFormFill() {
       <div className="kid-header-card">
         <div className="kid-header-top">
           <Link to={kidId ? links.kidDetail(kidId) : links.home()} className="kid-header-back">
-            <span className="back-arrow">←</span>
-            <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo-small" />
+            <span className="back-arrow">→</span>
+            <span className="back-label">חזרה</span>
           </Link>
         </div>
         <h1 style={{ fontSize: '1.4em', fontWeight: 700, color: '#2d3748', margin: 0 }}>
