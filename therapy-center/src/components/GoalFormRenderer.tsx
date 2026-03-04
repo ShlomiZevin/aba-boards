@@ -9,16 +9,16 @@ const inputStyle: React.CSSProperties = {
 };
 
 // ---- Cell input ----
-function CellInput({ col, value, onChange, colKey }: {
-  col: GoalColumnDef; value: string; onChange: (v: string) => void; colKey: string;
+export function CellInput({ col, value, onChange, colKey, compact }: {
+  col: GoalColumnDef; value: string; onChange: (v: string) => void; colKey: string; compact?: boolean;
 }) {
   if (col.type === 'checkbox') {
     const checked = value === 'true' || value === '1';
     return (
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85em', userSelect: 'none' as const }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: compact ? 4 : 8, cursor: 'pointer', fontSize: '0.85em', userSelect: 'none' as const, justifyContent: compact ? 'center' : undefined }}>
         <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked ? 'true' : 'false')}
-          style={{ width: 20, height: 20, accentColor: '#667eea', cursor: 'pointer' }} />
-        <span style={{ color: checked ? '#1e293b' : '#94a3b8' }}>{checked ? 'כן' : 'לא'}</span>
+          style={{ width: compact ? 18 : 20, height: compact ? 18 : 20, accentColor: '#667eea', cursor: 'pointer' }} />
+        {!compact && <span style={{ color: checked ? '#1e293b' : '#94a3b8' }}>{checked ? 'כן' : 'לא'}</span>}
       </label>
     );
   }
@@ -29,6 +29,21 @@ function CellInput({ col, value, onChange, colKey }: {
     );
   }
   if (col.type === 'options') {
+    // Compact mode: dropdown select
+    if (compact) {
+      return (
+        <select
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' }}
+        >
+          <option value="">בחר...</option>
+          {(col.options || []).map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      );
+    }
     return (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {(col.options || []).map(opt => (

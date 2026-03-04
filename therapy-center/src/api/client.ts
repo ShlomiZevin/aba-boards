@@ -225,6 +225,8 @@ export const goalDataApi = {
     fetchApi<void>(`/kids/${kidId}/goal-data/${goalLibraryId}/${entryId}`, { method: 'DELETE' }),
   getPending: (kidId: string) =>
     fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/pending-dc`),
+  getAllEntries: (kidId: string) =>
+    fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/all-dc`),
 };
 
 // Goal Form File Upload API

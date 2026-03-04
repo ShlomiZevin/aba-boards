@@ -669,6 +669,15 @@ async function getPendingDcForms(kidId) {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+async function getAllDcEntries(kidId) {
+  const db = getDb();
+  const snapshot = await db.collection('kidGoalDataEntries')
+    .where('kidId', '==', kidId)
+    .orderBy('sessionDate', 'desc')
+    .get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
 async function bulkAddGoalDataEntries(kidId, goalLibraryId, entries) {
   const db = getDb();
   const saved = [];
@@ -1147,11 +1156,15 @@ async function submitForm(data) {
   if (goalsWorkedOn.length > 0) {
     try {
       const goals = await getGoalsForKid(data.kidId);
+      console.log('[submitForm] Auto-DC: goalsWorkedOn=', goalsWorkedOn.length, 'totalGoals=', goals.length);
       for (const snapshot of goalsWorkedOn) {
         const goal = goals.find(g => g.id === snapshot.goalId);
+        console.log('[submitForm] Auto-DC: goalId=', snapshot.goalId, 'found=', !!goal, 'libraryItemId=', goal?.libraryItemId, 'hasDcTemplate=', !!goal?.dataCollectionTemplate);
         if (!goal || !goal.libraryItemId) continue;
         const dcBlocks = normalizeTemplateBlocks(goal.dataCollectionTemplate);
+        console.log('[submitForm] Auto-DC: dcBlocks=', dcBlocks.length, 'hasColumns=', dcBlocks.some(b => b.columns && b.columns.length > 0));
         if (dcBlocks.length === 0 || !dcBlocks.some(b => b.columns && b.columns.length > 0)) continue;
+        console.log('[submitForm] Auto-DC: Creating pending entry for goal', goal.title);
         await addGoalDataEntry(data.kidId, goal.libraryItemId, {
           goalTitle: goal.title,
           sessionDate: data.sessionDate,
@@ -1601,6 +1614,7 @@ module.exports = {
   bulkAddGoalDataEntries,
   deleteGoalDataEntry,
   getPendingDcForms,
+  getAllDcEntries,
   // Goal Form File Upload
   extractGoalFormFromFile,
   // Goal Library Link Migration

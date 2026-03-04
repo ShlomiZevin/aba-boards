@@ -256,6 +256,11 @@ router.get('/kids/:kidId/pending-dc', asyncHandler(async (req, res) => {
   res.json(entries);
 }));
 
+router.get('/kids/:kidId/all-dc', asyncHandler(async (req, res) => {
+  const entries = await therapyService.getAllDcEntries(req.params.kidId);
+  res.json(entries);
+}));
+
 // Migrate orphaned goals → match by title to library, write only libraryItemId (admin only)
 router.post('/kids/:kidId/goals/migrate-library-links', requireAdmin, asyncHandler(async (req, res) => {
   const result = await therapyService.migrateGoalLibraryLinks(req.params.kidId);

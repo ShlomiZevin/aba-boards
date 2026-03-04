@@ -11,8 +11,7 @@ import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { useAuth } from '../contexts/AuthContext';
 import { toDate } from '../utils/date';
 import { GOAL_CATEGORIES } from '../types';
-import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification, KidGoalDataEntry, GoalFormRow, TableBlockData } from '../types';
-import { normalizeTemplate } from '../types';
+import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification, KidGoalDataEntry } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
 
 // Distinct colors for therapists on the calendar (vivid for therapy, pastel for meetings)
@@ -54,7 +53,7 @@ import FormTemplateEditor from '../components/FormTemplateEditor';
 import ImageCropModal from '../components/ImageCropModal';
 import GoalProgressChart from '../components/GoalProgressChart';
 import GoalPlansTab from '../components/GoalPlansTab';
-import { EditableHorizontalBlock, EditableVerticalBlock } from '../components/GoalFormRenderer';
+import DcEntryModal from '../components/DcEntryModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
@@ -248,9 +247,11 @@ export default function KidDetail() {
   const [notifyTargets, setNotifyTargets] = useState<Set<string>>(new Set());
   const [notifyDeleteConfirm, setNotifyDeleteConfirm] = useState<string | null>(null);
   const [pendingReadIds, setPendingReadIds] = useState<Set<string>>(new Set());
-  const [dcFillEntry, setDcFillEntry] = useState<KidGoalDataEntry | null>(null);
-  const [dcFillData, setDcFillData] = useState<Record<string, GoalFormRow[]>>({});
-  const [dcExpanded, setDcExpanded] = useState(true);
+  const [dcModalEntry, setDcModalEntry] = useState<KidGoalDataEntry | null>(null);
+  const [dcModalOpen, setDcModalOpen] = useState(false);
+  const [dcDeleteConfirm, setDcDeleteConfirm] = useState<string | null>(null);
+  const [dcSectionExpanded, setDcSectionExpanded] = useState(true);
+  const [sessionsSectionExpanded, setSessionsSectionExpanded] = useState(true);
 
   // Form state for modals
   const [newName, setNewName] = useState('');
@@ -295,10 +296,11 @@ export default function KidDetail() {
     enabled: !!kidId,
   });
 
-  const { data: pendingDcRes } = useQuery({
-    queryKey: ['pending-dc', kidId],
-    queryFn: () => goalDataApi.getPending(kidId!),
+  const { data: allDcRes } = useQuery({
+    queryKey: ['all-dc', kidId],
+    queryFn: () => goalDataApi.getAllEntries(kidId!),
     enabled: !!kidId,
+    staleTime: 0,
   });
 
   const { data: myTherapistsRes } = useQuery({
@@ -414,24 +416,16 @@ export default function KidDetail() {
     },
   });
 
-  const fillDcMutation = useMutation({
-    mutationFn: ({ entry, tables }: { entry: KidGoalDataEntry; tables: TableBlockData[] }) =>
-      goalDataApi.updateEntry(entry.kidId, entry.goalLibraryId, entry.id, { tables }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-dc', kidId] });
-      queryClient.invalidateQueries({ queryKey: ['goal-data'] });
-      setDcFillEntry(null);
-      setDcFillData({});
-    },
-  });
-
-  const dismissDcMutation = useMutation({
+  const deleteDcMutation = useMutation({
     mutationFn: (entry: KidGoalDataEntry) =>
       goalDataApi.deleteEntry(entry.kidId, entry.goalLibraryId, entry.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-dc', kidId] });
+      queryClient.invalidateQueries({ queryKey: ['all-dc', kidId] });
+      queryClient.invalidateQueries({ queryKey: ['goal-data'] });
+      setDcDeleteConfirm(null);
     },
   });
+
 
   const openEditSession = (session: Session) => {
     const d = toDate(session.scheduledDate);
@@ -877,7 +871,7 @@ export default function KidDetail() {
               {unreadCount > 0 && <span className="kid-tab-badge">{unreadCount}</span>}
             </button>
             <button className={`kid-tab${kidTab === 'plans' ? ' active' : ''}`} onClick={() => setKidTab('plans')}>
-              תוכניות ואיסוף
+              איסוף נתונים
             </button>
           </div>
         );
@@ -1130,7 +1124,7 @@ export default function KidDetail() {
         )}
 
         {/* Calendar */}
-        <div className="calendar-container" dir="rtl">
+        <div className="calendar-container">
           <DnDCalendar
             localizer={localizer}
             formats={calendarFormats}
@@ -1141,6 +1135,7 @@ export default function KidDetail() {
             views={['month']}
             date={calendarDate}
             onNavigate={(newDate) => setCalendarDate(newDate)}
+            rtl
             selectable={!isReadOnly}
             draggableAccessor={() => isAdmin}
             onEventDrop={({ event, start }: { event: CalendarEvent; start: Date | string }) => {
@@ -1291,258 +1286,254 @@ export default function KidDetail() {
         </div>
 
 
-        {/* Sessions List */}
-        <div className="recent-sessions">
-          <h4>מפגשים</h4>
-          {sessions.length === 0 ? (
-            <p className="empty-text">אין מפגשים</p>
-          ) : (() => {
-            const now = new Date();
-            const futureSessions = [...sessions]
-              .filter((s: Session) => toDate(s.scheduledDate) >= now)
-              .sort((a: Session, b: Session) => toDate(a.scheduledDate).getTime() - toDate(b.scheduledDate).getTime());
-            const pastSessions = [...sessions]
-              .filter((s: Session) => toDate(s.scheduledDate) < now)
-              .sort((a: Session, b: Session) => toDate(b.scheduledDate).getTime() - toDate(a.scheduledDate).getTime());
+        {/* Sessions List — collapsible */}
+        <div className="dc-section">
+          <div className="dc-section-header" onClick={() => setSessionsSectionExpanded(e => !e)}>
+            <div className="dc-section-title">
+              <span>📅</span>
+              מפגשים
+              {pendingSessions.length > 0 && <span className="dc-section-pending-count">{pendingSessions.length} ממתינים</span>}
+              <span className="dc-section-total">({sessions.length})</span>
+            </div>
+            <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{sessionsSectionExpanded ? '▲' : '▼'}</span>
+          </div>
+          {sessionsSectionExpanded && (
+            <div className="dc-section-body">
+              {sessions.length === 0 ? (
+                <p className="empty-text">אין מפגשים</p>
+              ) : (() => {
+                const now = new Date();
+                const futureSessions = [...sessions]
+                  .filter((s: Session) => toDate(s.scheduledDate) >= now)
+                  .sort((a: Session, b: Session) => toDate(a.scheduledDate).getTime() - toDate(b.scheduledDate).getTime());
+                const pastSessions = [...sessions]
+                  .filter((s: Session) => toDate(s.scheduledDate) < now)
+                  .sort((a: Session, b: Session) => toDate(b.scheduledDate).getTime() - toDate(a.scheduledDate).getTime());
 
-            const renderSession = (session: Session) => {
-              const therapist = practitioners.find((t: Practitioner) => t.id === session.therapistId);
-              const hasForm = session.formId;
-              const own = isOwnSession(session);
-              const isMeeting = session.type === 'meeting';
-              const canFill = isReadOnly ? false : (isMeeting ? isAdmin : own);
-              return (
-                <div key={session.id} className="session-card-mobile">
-                  <div className="session-card-top">
-                    <span className="session-card-date">
-                      {format(toDate(session.scheduledDate), 'dd/MM/yyyy')}
-                    </span>
-                    <span className={`session-type-badge ${isMeeting ? 'meeting' : 'therapy'}`}>
-                      {isMeeting ? 'ישיבה' : 'טיפול'}
-                    </span>
-                    {!isMeeting && therapist && (
-                      <span className="session-card-therapist">{therapist.name}</span>
-                    )}
-                  </div>
-                  <div className="session-card-bottom">
-                    <span className={`session-status ${hasForm ? 'completed' : 'pending'}`}>
-                      {hasForm ? 'הושלם' : 'ממתין'}
-                    </span>
-                    <div className="session-card-actions">
-                      {hasForm ? (
-                        <button onClick={() => navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!))}>
-                          צפה
-                        </button>
-                      ) : isReadOnly ? (
-                        <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>טרם הושלם</span>
-                      ) : canFill ? (
-                        <button
-                          onClick={() => navigate(isMeeting
-                            ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
-                            : links.formNew({ kidId: kidId!, sessionId: session.id }))}
-                          className="fill-btn"
-                        >
-                          מלא
-                        </button>
-                      ) : (
-                        <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>מפגש אחר</span>
-                      )}
-                      {isAdmin && (
-                        <>
-                          <button
-                            onClick={() => openEditSession(session)}
-                            className="edit-btn-small"
-                            title="ערוך מפגש"
-                          >
-                            ✎
-                          </button>
-                          <button
-                            onClick={() => setSessionToDelete(session)}
-                            className="delete-btn"
-                          >
-                            ✕
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            };
-
-            return (
-              <>
-                {/* Desktop: side-by-side columns */}
-                <div className="sessions-columns">
-                  <div>
-                    <div className="sessions-col-label future">
-                      עתידיים ({futureSessions.length})
-                    </div>
-                    {futureSessions.length === 0
-                      ? <p className="sessions-empty">אין מפגשים קרובים</p>
-                      : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{futureSessions.map(renderSession)}</div>
-                    }
-                  </div>
-                  <div>
-                    <div className="sessions-col-label past">
-                      אחרונים ({pastSessions.length})
-                    </div>
-                    {pastSessions.length === 0
-                      ? <p className="sessions-empty">אין מפגשים קודמים</p>
-                      : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{pastSessions.map(renderSession)}</div>
-                    }
-                  </div>
-                </div>
-
-                {/* Mobile: tabbed layout */}
-                <div className="sessions-tabbed">
-                  <div className="sessions-tabs">
-                    <button
-                      className={`sessions-tab ${sessionsTab === 'future' ? 'active' : ''}`}
-                      onClick={() => setSessionsTab('future')}
-                    >
-                      עתידיים ({futureSessions.length})
-                    </button>
-                    <button
-                      className={`sessions-tab ${sessionsTab === 'past' ? 'active' : ''}`}
-                      onClick={() => setSessionsTab('past')}
-                    >
-                      אחרונים ({pastSessions.length})
-                    </button>
-                  </div>
-                  <div className="sessions-tab-content">
-                    {sessionsTab === 'future' ? (
-                      futureSessions.length === 0
-                        ? <p className="sessions-empty">אין מפגשים קרובים</p>
-                        : <div className="sessions-list">{futureSessions.map(renderSession)}</div>
-                    ) : (
-                      pastSessions.length === 0
-                        ? <p className="sessions-empty">אין מפגשים קודמים</p>
-                        : <div className="sessions-list">{pastSessions.map(renderSession)}</div>
-                    )}
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-
-        {/* Pending DC forms */}
-        {(() => {
-          const pendingDc = (pendingDcRes?.data || []) as KidGoalDataEntry[];
-          if (pendingDc.length === 0) return null;
-          return (
-            <div className="content-card" style={{ marginTop: 16 }}>
-              <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 0' }}
-                onClick={() => setDcExpanded(!dcExpanded)}
-              >
-                <h4 style={{ margin: 0, color: '#475569' }}>
-                  איסוף נתונים ממתין ({pendingDc.length})
-                </h4>
-                <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{dcExpanded ? '▲' : '▼'}</span>
-              </div>
-              {dcExpanded && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                  {pendingDc.map((entry) => {
-                    const therapist = practitioners.find((t: Practitioner) => t.id === entry.practitionerId);
-                    const dateStr = entry.sessionDate ? format(toDate(entry.sessionDate), 'dd/MM/yyyy') : '';
-                    return (
-                      <div key={entry.id} style={{
-                        border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 14px',
-                        background: '#fefce8',
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                          <span style={{ fontWeight: 600, fontSize: '0.9em', color: '#1e293b' }}>{entry.goalTitle}</span>
-                          <span style={{ fontSize: '0.78em', color: '#94a3b8' }}>{dateStr}{therapist ? ` · ${therapist.name}` : ''}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                          <button
-                            className="btn-primary btn-small"
-                            onClick={() => {
-                              setDcFillEntry(entry);
-                              setDcFillData({});
-                            }}
-                          >
-                            מלא
-                          </button>
-                          <button
-                            className="btn-secondary btn-small"
-                            style={{ color: '#94a3b8', borderColor: '#e2e8f0', fontSize: '0.8em' }}
-                            onClick={() => dismissDcMutation.mutate(entry)}
-                          >
-                            דלג
-                          </button>
+                const renderSession = (session: Session) => {
+                  const therapist = practitioners.find((t: Practitioner) => t.id === session.therapistId);
+                  const hasForm = session.formId;
+                  const own = isOwnSession(session);
+                  const isMeeting = session.type === 'meeting';
+                  const canFill = isReadOnly ? false : (isMeeting ? isAdmin : own);
+                  return (
+                    <div key={session.id} className="session-card-mobile">
+                      <div className="session-card-top">
+                        <span className="session-card-date">
+                          {format(toDate(session.scheduledDate), 'dd/MM/yyyy')}
+                        </span>
+                        <span className={`session-type-badge ${isMeeting ? 'meeting' : 'therapy'}`}>
+                          {isMeeting ? 'ישיבה' : 'טיפול'}
+                        </span>
+                        {!isMeeting && therapist && (
+                          <span className="session-card-therapist">{therapist.name}</span>
+                        )}
+                      </div>
+                      <div className="session-card-bottom">
+                        <span className={`session-status ${hasForm ? 'completed' : 'pending'}`}>
+                          {hasForm ? 'הושלם' : 'ממתין'}
+                        </span>
+                        <div className="session-card-actions">
+                          {hasForm ? (
+                            <button onClick={() => navigate(isMeeting ? links.meetingFormView(session.formId!) : links.formView(session.formId!))}>
+                              צפה
+                            </button>
+                          ) : isReadOnly ? (
+                            <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>טרם הושלם</span>
+                          ) : canFill ? (
+                            <button
+                              onClick={() => navigate(isMeeting
+                                ? links.meetingFormNew({ kidId: kidId!, sessionId: session.id })
+                                : links.formNew({ kidId: kidId!, sessionId: session.id }))}
+                              className="fill-btn"
+                            >
+                              מלא
+                            </button>
+                          ) : (
+                            <span style={{ color: '#a0aec0', fontSize: '0.85em' }}>מפגש אחר</span>
+                          )}
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => openEditSession(session)}
+                                className="edit-btn-small"
+                                title="ערוך מפגש"
+                              >
+                                ✎
+                              </button>
+                              <button
+                                onClick={() => setSessionToDelete(session)}
+                                className="delete-btn"
+                              >
+                                ✕
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                };
+
+                return (
+                  <>
+                    {/* Desktop: side-by-side columns */}
+                    <div className="sessions-columns">
+                      <div>
+                        <div className="sessions-col-label future">
+                          עתידיים ({futureSessions.length})
+                        </div>
+                        {futureSessions.length === 0
+                          ? <p className="sessions-empty">אין מפגשים קרובים</p>
+                          : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{futureSessions.map(renderSession)}</div>
+                        }
+                      </div>
+                      <div>
+                        <div className="sessions-col-label past">
+                          אחרונים ({pastSessions.length})
+                        </div>
+                        {pastSessions.length === 0
+                          ? <p className="sessions-empty">אין מפגשים קודמים</p>
+                          : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{pastSessions.map(renderSession)}</div>
+                        }
+                      </div>
+                    </div>
+
+                    {/* Mobile: tabbed layout */}
+                    <div className="sessions-tabbed">
+                      <div className="sessions-tabs">
+                        <button
+                          className={`sessions-tab ${sessionsTab === 'future' ? 'active' : ''}`}
+                          onClick={() => setSessionsTab('future')}
+                        >
+                          עתידיים ({futureSessions.length})
+                        </button>
+                        <button
+                          className={`sessions-tab ${sessionsTab === 'past' ? 'active' : ''}`}
+                          onClick={() => setSessionsTab('past')}
+                        >
+                          אחרונים ({pastSessions.length})
+                        </button>
+                      </div>
+                      <div className="sessions-tab-content">
+                        {sessionsTab === 'future' ? (
+                          futureSessions.length === 0
+                            ? <p className="sessions-empty">אין מפגשים קרובים</p>
+                            : <div className="sessions-list">{futureSessions.map(renderSession)}</div>
+                        ) : (
+                          pastSessions.length === 0
+                            ? <p className="sessions-empty">אין מפגשים קודמים</p>
+                            : <div className="sessions-list">{pastSessions.map(renderSession)}</div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* Data Collection Section — collapsible */}
+        {(() => {
+          const allDc = (allDcRes?.data || []) as KidGoalDataEntry[];
+          const pendingCount = allDc.filter(e => e.status === 'pending').length;
+          return (
+            <div className="dc-section">
+              <div className="dc-section-header" onClick={() => setDcSectionExpanded(e => !e)}>
+                <div className="dc-section-title">
+                  <span>📋</span>
+                  איסוף נתונים
+                  {pendingCount > 0 && <span className="dc-section-pending-count">{pendingCount} ממתינים</span>}
+                  <span className="dc-section-total">({allDc.length})</span>
+                </div>
+                <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{dcSectionExpanded ? '▲' : '▼'}</span>
+              </div>
+              {dcSectionExpanded && (
+                <div className="dc-section-body">
+                  {!isReadOnly && (
+                    <div style={{ marginBottom: 12 }}>
+                      <button className="btn-primary btn-small" onClick={() => { setDcModalEntry(null); setDcModalOpen(true); }}>
+                        + הוסף רשומה
+                      </button>
+                    </div>
+                  )}
+                  {allDc.length === 0 ? (
+                    <p className="empty-text">אין רשומות איסוף נתונים</p>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="dc-all-table">
+                        <thead>
+                          <tr>
+                            <th>מטרה</th>
+                            <th>תאריך</th>
+                            <th>סטטוס</th>
+                            <th>מטפל/ת</th>
+                            <th>פעולות</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allDc.map(entry => {
+                            const therapist = practitioners.find((t: Practitioner) => t.id === entry.practitionerId);
+                            const dateStr = entry.sessionDate ? format(toDate(entry.sessionDate), 'dd/MM/yyyy') : '';
+                            const isPending = entry.status === 'pending';
+                            return (
+                              <tr key={entry.id}>
+                                <td>{entry.goalTitle}</td>
+                                <td>{dateStr}</td>
+                                <td>
+                                  <span className={`dc-status-badge ${isPending ? 'pending' : 'filled'}`}>
+                                    {isPending ? 'ממתין' : 'מולא'}
+                                  </span>
+                                </td>
+                                <td>{therapist?.name || '—'}</td>
+                                <td>
+                                  <div style={{ display: 'flex', gap: 4 }}>
+                                    {isPending ? (
+                                      <button className="btn-primary btn-small" onClick={() => { setDcModalEntry(entry); setDcModalOpen(true); }}>
+                                        מלא
+                                      </button>
+                                    ) : (
+                                      <button className="btn-secondary btn-small" onClick={() => { setDcModalEntry(entry); setDcModalOpen(true); }}>
+                                        ערוך
+                                      </button>
+                                    )}
+                                    {dcDeleteConfirm === entry.id ? (
+                                      <>
+                                        <button className="btn-danger btn-small" onClick={() => deleteDcMutation.mutate(entry)}>כן</button>
+                                        <button className="btn-secondary btn-small" onClick={() => setDcDeleteConfirm(null)}>לא</button>
+                                      </>
+                                    ) : (
+                                      <button className="btn-secondary btn-small" onClick={() => setDcDeleteConfirm(entry.id)}
+                                        style={{ color: '#ef4444' }}>
+                                        מחק
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           );
         })()}
 
-        {/* DC Fill Modal */}
-        {dcFillEntry && (() => {
-          const goal = goals.find((g: Goal) => g.libraryItemId === dcFillEntry.goalLibraryId);
-          const templateBlocks = goal ? normalizeTemplate(goal.dataCollectionTemplate ?? null) : [];
-          const hasTemplate = templateBlocks.length > 0 && templateBlocks.some(b => b.columns.length > 0);
-          return (
-            <div className="modal-backdrop" onClick={() => setDcFillEntry(null)}>
-              <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 700, maxHeight: '90vh', overflow: 'auto' }}>
-                <div className="modal-header">
-                  <h3>איסוף נתונים — {dcFillEntry.goalTitle}</h3>
-                  <button className="modal-close" onClick={() => setDcFillEntry(null)}>✕</button>
-                </div>
-                <div style={{ padding: '16px 20px' }}>
-                  {!hasTemplate ? (
-                    <p style={{ color: '#94a3b8', textAlign: 'center', padding: 20 }}>
-                      תבנית איסוף נתונים טרם הוגדרה עבור מטרה זו.
-                    </p>
-                  ) : (
-                    <>
-                      {templateBlocks.map(block => {
-                        const blockRows = dcFillData[block.id] || [Object.fromEntries(block.columns.map(c => [c.id, '']))];
-                        return block.type === 'vertical' ? (
-                          <EditableVerticalBlock
-                            key={block.id}
-                            block={block}
-                            row={blockRows[0] || {}}
-                            onChange={(row) => setDcFillData(prev => ({ ...prev, [block.id]: [row] }))}
-                          />
-                        ) : (
-                          <EditableHorizontalBlock
-                            key={block.id}
-                            block={block}
-                            rows={blockRows}
-                            onChange={(rows) => setDcFillData(prev => ({ ...prev, [block.id]: rows }))}
-                          />
-                        );
-                      })}
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-                        <button className="btn-secondary" onClick={() => setDcFillEntry(null)}>ביטול</button>
-                        <button
-                          className="btn-primary"
-                          disabled={fillDcMutation.isPending}
-                          onClick={() => {
-                            const tables: TableBlockData[] = templateBlocks.map(block => ({
-                              tableId: block.id,
-                              rows: dcFillData[block.id] || [Object.fromEntries(block.columns.map(c => [c.id, '']))],
-                            }));
-                            fillDcMutation.mutate({ entry: dcFillEntry, tables });
-                          }}
-                        >
-                          {fillDcMutation.isPending ? 'שומר...' : 'שמור'}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {/* DC Entry Modal */}
+        {dcModalOpen && (
+          <DcEntryModal
+            kidId={kidId!}
+            goals={goals}
+            practitioners={practitioners}
+            entry={dcModalEntry}
+            onClose={() => { setDcModalOpen(false); setDcModalEntry(null); }}
+          />
+        )}
       </div>
       </>}
 
@@ -1676,6 +1667,7 @@ export default function KidDetail() {
         <GoalPlansTab
           kidId={kidId!}
           goals={goals}
+          practitioners={practitioners}
           isReadOnly={isReadOnly}
           isAdmin={isAdmin}
           isSuperAdmin={isSuperAdmin}

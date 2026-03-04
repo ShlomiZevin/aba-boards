@@ -164,7 +164,7 @@ export default function MeetingFormFill() {
             <span className="back-label">חזרה</span>
           </Link>
         </div>
-        <h1 style={{ fontSize: '1.4em', fontWeight: 700, color: '#2d3748', margin: 0 }}>
+        <h1 style={{ fontSize: '1.05em', fontWeight: 700, color: '#2d3748', margin: 0, whiteSpace: 'nowrap' }}>
           {isEditMode ? 'עריכת סיכום ישיבה' : 'טופס סיכום ישיבה'}{kid ? ` - ${kid.name}` : ''}
         </h1>
       </div>

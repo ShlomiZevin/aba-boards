@@ -143,7 +143,7 @@ export default function FormView() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontSize: '1.4em', fontWeight: 700, color: '#2d3748', margin: 0 }}>טופס טיפול</h1>
+            <h1 style={{ fontSize: '1.05em', fontWeight: 700, color: '#2d3748', margin: 0 }}>טופס טיפול</h1>
             {kid && <p style={{ color: '#64748b', margin: '4px 0 0 0' }}>{kid.name}</p>}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -178,7 +178,7 @@ export default function FormView() {
       <div className="content-card">
 
         {/* Stats Bar - date, therapist, and number/percentage fields */}
-        <div className="form-view-stats" style={{ gridTemplateColumns: `repeat(${Math.min(statFields.length + 2, 4)}, 1fr)` }}>
+        <div className="form-view-stats" style={{ gridTemplateColumns: `repeat(${statFields.length + 2}, 1fr)` }}>
           <div className="stat">
             <div className="stat-label">תאריך</div>
             <div className="stat-value">{dateStr}</div>
