@@ -1531,7 +1531,7 @@ body {
   display: none;
 }
 
-/* DC View Table (GoalPlansTab) */
+/* DC View Table (GoalPlansTab) — desktop */
 .dc-view-table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -1540,6 +1540,46 @@ body {
   border-collapse: collapse;
   width: 100%;
   font-size: 0.85em;
+}
+
+/* DC View Mobile cards (GoalPlansTab) — hidden on desktop */
+.dc-view-mobile {
+  display: none;
+}
+.dc-view-entry-card {
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.dc-view-entry-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82em;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.dc-view-entry-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+.dc-view-entry-field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dc-view-entry-label {
+  font-size: 0.72em;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.dc-view-entry-value {
+  font-size: 0.85em;
+  color: #334155;
 }
 
 /* DC Vertical Block (read-only) */
@@ -2451,8 +2491,6 @@ body {
   }
   /* Add bottom padding so content isn't hidden behind the bar */
   .container {
-    overflow-x: hidden;
-    max-width: 100vw;
     padding-bottom: 80px;
   }
 }
@@ -4393,29 +4431,6 @@ body:has(.app-shell) {
     width: 100% !important;
     max-width: 100% !important;
   }
-  .dc-edit-table thead th {
-    padding: 8px 8px;
-    font-size: 0.8em;
-  }
-  .dc-edit-table tbody td {
-    padding: 8px 8px;
-  }
-  .dc-edit-row-num {
-    width: 28px;
-  }
-  .dc-edit-row-action {
-    width: 24px;
-  }
-  .dc-edit-table-wrap {
-    border-radius: 0 !important;
-    border-left: none !important;
-    border-right: none !important;
-    margin: 0 -20px;
-  }
-  .dc-add-row {
-    margin: 0 -20px !important;
-    border-radius: 0 !important;
-  }
 
   /* DC all-entries table — hide on mobile, show cards instead */
   .dc-table-desktop {
@@ -4459,15 +4474,14 @@ body:has(.app-shell) {
     align-items: center;
   }
 
-  /* DC View Table (GoalPlansTab) — scroll horizontally on mobile */
-  .dc-view-table-wrap {
-    margin: 0 -14px;
-    -webkit-overflow-scrolling: touch;
+  /* DC View (GoalPlansTab) — hide table, show mobile cards */
+  .dc-view-desktop {
+    display: none !important;
   }
-  .dc-view-table th,
-  .dc-view-table td {
-    padding: 5px 6px !important;
-    font-size: 0.78em !important;
+  .dc-view-mobile {
+    display: flex !important;
+    flex-direction: column;
+    gap: 8px;
   }
 
   /* GoalPlansTab — tighter on mobile */

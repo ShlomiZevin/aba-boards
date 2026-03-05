@@ -5,7 +5,7 @@ import { goalDataApi } from '../api/client';
 import { normalizeTemplate, normalizeDcEntry } from '../types';
 import { toDate } from '../utils/date';
 import type { Goal, KidGoalDataEntry, GoalFormRow, TableBlockData, Practitioner } from '../types';
-import { EditableVerticalBlock, CellInput } from './GoalFormRenderer';
+import { EditableVerticalBlock, EditableHorizontalBlock } from './GoalFormRenderer';
 
 interface DcEntryModalProps {
   kidId: string;
@@ -174,70 +174,14 @@ export default function DcEntryModal({
                   );
                 }
 
-                // Horizontal blocks → spacious table
-                const cols = block.columns;
+                // Horizontal blocks → card-per-row layout
                 return (
-                  <div key={block.id}>
-                    {block.title && (
-                      <div style={{ fontWeight: 700, fontSize: '0.95em', color: '#334155', marginBottom: 12 }}>
-                        {block.title}
-                      </div>
-                    )}
-                    <div className="dc-edit-table-wrap">
-                      <table className="dc-edit-table">
-                        <thead>
-                          <tr>
-                            <th className="dc-edit-row-num">#</th>
-                            {cols.map(col => <th key={col.id}>{col.label}</th>)}
-                            <th className="dc-edit-row-action"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {blockRows.map((row, rowIdx) => (
-                            <tr key={rowIdx}>
-                              <td className="dc-edit-row-num">{rowIdx + 1}</td>
-                              {cols.map(col => (
-                                <td key={col.id}>
-                                  <CellInput
-                                    col={col}
-                                    value={row[col.id] || ''}
-                                    onChange={v => {
-                                      const updated = blockRows.map((r, i) => i === rowIdx ? { ...r, [col.id]: v } : r);
-                                      setDcData(prev => ({ ...prev, [block.id]: updated }));
-                                    }}
-                                    colKey={`${block.id}-${rowIdx}-${col.id}`}
-                                  />
-                                </td>
-                              ))}
-                              <td className="dc-edit-row-action">
-                                {blockRows.length > 1 && (
-                                  <button
-                                    type="button"
-                                    className="dc-row-delete"
-                                    onClick={() => {
-                                      const updated = blockRows.filter((_, i) => i !== rowIdx);
-                                      setDcData(prev => ({ ...prev, [block.id]: updated }));
-                                    }}
-                                  >✕</button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <button
-                      type="button"
-                      className="dc-add-row"
-                      onClick={() => {
-                        const empty: Record<string, string> = {};
-                        cols.forEach(c => (empty[c.id] = ''));
-                        setDcData(prev => ({ ...prev, [block.id]: [...blockRows, empty] }));
-                      }}
-                    >
-                      + הוסף שורה
-                    </button>
-                  </div>
+                  <EditableHorizontalBlock
+                    key={block.id}
+                    block={block}
+                    rows={blockRows}
+                    onChange={(newRows) => setDcData(prev => ({ ...prev, [block.id]: newRows }))}
+                  />
                 );
               })}
             </div>

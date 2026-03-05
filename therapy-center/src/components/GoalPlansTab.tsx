@@ -141,36 +141,82 @@ function DataCollectionSection({ kidId, goal, practitioners }: {
   });
 
   return (
-    <div className="dc-view-table-wrap">
-      <table className="dc-view-table">
-        <thead>
-          <tr>
-            <th style={thStyle}>תאריך</th>
-            <th style={thStyle}>מטפל/ת</th>
-            {allColumns.map(col => (
-              <th key={col.id} style={thStyle}>{col.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {flatRows.map((fr, idx) => (
-            <tr key={idx} style={{ background: fr.entryIdx % 2 === 0 ? 'white' : '#fafafa' }}>
-              {fr.isFirst && (
-                <td style={tdMergedStyle} rowSpan={fr.rowSpan}>{fr.dateStr}</td>
-              )}
-              {fr.isFirst && (
-                <td style={tdMergedStyle} rowSpan={fr.rowSpan}>{fr.therapistName}</td>
-              )}
+    <>
+      {/* Desktop: table view */}
+      <div className="dc-view-table-wrap dc-view-desktop">
+        <table className="dc-view-table">
+          <thead>
+            <tr>
+              <th style={thStyle}>תאריך</th>
+              <th style={thStyle}>מטפל/ת</th>
               {allColumns.map(col => (
-                <td key={col.id} style={tdStyle}>
-                  <CellView col={col} value={fr.values[col.id] || ''} />
-                </td>
+                <th key={col.id} style={thStyle}>{col.label}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {flatRows.map((fr, idx) => (
+              <tr key={idx} style={{ background: fr.entryIdx % 2 === 0 ? 'white' : '#fafafa' }}>
+                {fr.isFirst && (
+                  <td style={tdMergedStyle} rowSpan={fr.rowSpan}>{fr.dateStr}</td>
+                )}
+                {fr.isFirst && (
+                  <td style={tdMergedStyle} rowSpan={fr.rowSpan}>{fr.therapistName}</td>
+                )}
+                {allColumns.map(col => (
+                  <td key={col.id} style={tdStyle}>
+                    <CellView col={col} value={fr.values[col.id] || ''} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile: card view per entry */}
+      <div className="dc-view-mobile">
+        {entries.map((e, entryIdx) => {
+          const d = toDate(e.sessionDate as Parameters<typeof toDate>[0]);
+          const dateStr = d ? d.toLocaleDateString('he-IL') : '—';
+          const therapist = practitioners.find(p => p.id === e.practitionerId);
+          const therapistName = therapist?.name || '—';
+          const entryTables = normalizeDcEntry(e);
+
+          return (
+            <div key={entryIdx} className="dc-view-entry-card">
+              <div className="dc-view-entry-header">
+                <span>{dateStr}</span>
+                <span style={{ color: '#64748b' }}>{therapistName}</span>
+              </div>
+              {templateBlocks.map(block => {
+                const exact = entryTables.find(t => t.tableId === block.id);
+                let rows: GoalFormRow[];
+                if (exact) {
+                  rows = exact.rows;
+                } else if (templateBlocks.length === 1 && entryTables.length > 0) {
+                  rows = entryTables[0].rows;
+                } else {
+                  rows = [];
+                }
+                return rows.map((row, rowIdx) => (
+                  <div key={`${block.id}-${rowIdx}`} className="dc-view-entry-fields">
+                    {block.columns.map(col => (
+                      <div key={col.id} className="dc-view-entry-field">
+                        <span className="dc-view-entry-label">{col.label}</span>
+                        <span className="dc-view-entry-value">
+                          <CellView col={col} value={row[col.id] || ''} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ));
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
