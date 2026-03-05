@@ -96,13 +96,11 @@ export function ReadOnlyVerticalBlock({ block, row }: { block: GoalTableBlock; r
   return (
     <div>
       {title && <div style={{ fontWeight: 700, fontSize: '0.85em', color: '#475569', marginBottom: 6 }}>{title}</div>}
-      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+      <div className="dc-vertical-block">
         {columns.map(col => (
-          <div key={col.id} style={{ display: 'grid', gridTemplateColumns: '160px 1fr', borderBottom: '1px solid #f1f5f9' }}>
-            <div style={{ background: '#f8fafc', padding: '8px 12px', fontSize: '0.85em', fontWeight: 600, color: '#475569', borderLeft: '1px solid #e2e8f0' }}>
-              {col.label}
-            </div>
-            <div style={{ padding: '8px 12px', fontSize: '0.85em', color: '#334155' }}>
+          <div key={col.id} className="dc-vertical-row">
+            <div className="dc-vertical-label">{col.label}</div>
+            <div className="dc-vertical-value">
               <CellView col={col} value={row[col.id] || ''} />
             </div>
           </div>

@@ -141,8 +141,8 @@ function DataCollectionSection({ kidId, goal, practitioners }: {
   });
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85em' }}>
+    <div className="dc-view-table-wrap">
+      <table className="dc-view-table">
         <thead>
           <tr>
             <th style={thStyle}>תאריך</th>

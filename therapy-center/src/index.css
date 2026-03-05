@@ -1475,6 +1475,7 @@ body {
 }
 .dc-section-body {
   padding: 12px 16px 16px;
+  overflow: hidden;
 }
 
 /* DC Status Badges */
@@ -1493,6 +1494,11 @@ body {
 .dc-status-badge.filled {
   background: #dcfce7;
   color: #166534;
+}
+
+/* DC table desktop wrapper */
+.dc-table-desktop {
+  overflow-x: auto;
 }
 
 /* All DC Table */
@@ -1518,6 +1524,50 @@ body {
 }
 .dc-all-table tbody tr:hover {
   background: #f8fafc;
+}
+
+/* DC card list — hidden on desktop, shown on mobile */
+.dc-card-list {
+  display: none;
+}
+
+/* DC View Table (GoalPlansTab) */
+.dc-view-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.dc-view-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85em;
+}
+
+/* DC Vertical Block (read-only) */
+.dc-vertical-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.dc-vertical-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  border-bottom: 1px solid #f1f5f9;
+}
+.dc-vertical-row:last-child {
+  border-bottom: none;
+}
+.dc-vertical-label {
+  background: #f8fafc;
+  padding: 8px 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #475569;
+  border-left: 1px solid #e2e8f0;
+}
+.dc-vertical-value {
+  padding: 8px 12px;
+  font-size: 0.85em;
+  color: #334155;
 }
 
 /* Status Badges */
@@ -3158,6 +3208,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  overflow: hidden;
 }
 
 .session-card-mobile:hover {
@@ -3167,14 +3218,19 @@ body {
 .session-card-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: nowrap;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .session-card-date {
   font-weight: 700;
   color: #2d3748;
   font-size: 0.88em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .session-type-badge {
@@ -3182,6 +3238,17 @@ body {
   font-weight: 600;
   border-radius: 8px;
   padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.session-card-therapist {
+  color: #64748b;
+  font-size: 0.88em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .session-type-badge.therapy {
@@ -3192,11 +3259,6 @@ body {
 .session-type-badge.meeting {
   background: #f3e8ff;
   color: #7C3AED;
-}
-
-.session-card-therapist {
-  color: #64748b;
-  font-size: 0.88em;
 }
 
 .session-card-bottom {
@@ -3274,7 +3336,12 @@ body {
   }
 
   .form-view-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+    padding: 14px;
+  }
+  .form-view-stats .stat-value {
+    font-size: 0.95em;
   }
 
   /* Form responsive */
@@ -4301,6 +4368,126 @@ body:has(.app-shell) {
     border-right: none;
   }
 
+  /* DC section (collapsible) on mobile — no border, compact */
+  .dc-section {
+    border: none;
+    border-radius: 0;
+    margin-top: 8px;
+    background: transparent;
+  }
+  .dc-section-header {
+    padding: 10px 0;
+    background: transparent;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .dc-section-header:hover {
+    background: transparent;
+  }
+  .dc-section-body {
+    padding: 10px 0 0;
+  }
+
+  /* DC Modal — full-width bottom sheet on mobile */
+  .dc-modal {
+    min-width: unset !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .dc-edit-table thead th {
+    padding: 8px 8px;
+    font-size: 0.8em;
+  }
+  .dc-edit-table tbody td {
+    padding: 8px 8px;
+  }
+  .dc-edit-row-num {
+    width: 28px;
+  }
+  .dc-edit-row-action {
+    width: 24px;
+  }
+  .dc-edit-table-wrap {
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    margin: 0 -20px;
+  }
+  .dc-add-row {
+    margin: 0 -20px !important;
+    border-radius: 0 !important;
+  }
+
+  /* DC all-entries table — hide on mobile, show cards instead */
+  .dc-table-desktop {
+    display: none !important;
+  }
+  .dc-card-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* DC entry card — simple mobile card */
+  .dc-entry-card {
+    padding: 10px 12px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+  .dc-entry-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .dc-entry-card-goal {
+    font-weight: 600;
+    font-size: 0.88em;
+    color: #334155;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+  }
+  .dc-entry-card-meta {
+    font-size: 0.78em;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+  .dc-entry-card-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* DC View Table (GoalPlansTab) — scroll horizontally on mobile */
+  .dc-view-table-wrap {
+    margin: 0 -14px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .dc-view-table th,
+  .dc-view-table td {
+    padding: 5px 6px !important;
+    font-size: 0.78em !important;
+  }
+
+  /* GoalPlansTab — tighter on mobile */
+  .content-card h3 {
+    font-size: 1em;
+  }
+
+  /* DC Vertical block — narrower label on mobile */
+  .dc-vertical-row {
+    grid-template-columns: 100px 1fr;
+  }
+  .dc-vertical-label {
+    padding: 6px 8px;
+    font-size: 0.8em;
+  }
+  .dc-vertical-value {
+    padding: 6px 8px;
+    font-size: 0.8em;
+  }
+
   /* Content cards go edge-to-edge on mobile for app-like feel */
   .content-card {
     border-radius: 0;
@@ -4491,6 +4678,24 @@ body:has(.app-shell) {
     padding: 12px 14px;
     margin-bottom: 8px;
   }
+
+  /* Session card mobile — two-line layout */
+  .session-card-mobile {
+    flex-wrap: wrap;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .session-card-top {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .session-card-bottom {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 4px;
+  }
+
 
   /* List items on mobile */
   .list-item {

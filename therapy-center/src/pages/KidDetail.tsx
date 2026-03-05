@@ -1460,8 +1460,9 @@ export default function KidDetail() {
                   )}
                   {allDc.length === 0 ? (
                     <p className="empty-text">אין רשומות איסוף נתונים</p>
-                  ) : (
-                    <div style={{ overflowX: 'auto' }}>
+                  ) : (<>
+                    {/* Desktop: table view */}
+                    <div className="dc-table-desktop">
                       <table className="dc-all-table">
                         <thead>
                           <tr>
@@ -1517,7 +1518,45 @@ export default function KidDetail() {
                         </tbody>
                       </table>
                     </div>
-                  )}
+
+                    {/* Mobile: card view */}
+                    <div className="dc-card-list">
+                      {allDc.map(entry => {
+                        const therapist = practitioners.find((t: Practitioner) => t.id === entry.practitionerId);
+                        const dateStr = entry.sessionDate ? format(toDate(entry.sessionDate), 'dd/MM/yyyy') : '';
+                        const isPending = entry.status === 'pending';
+                        return (
+                          <div key={entry.id} className="dc-entry-card">
+                            <div className="dc-entry-card-top">
+                              <span className="dc-entry-card-goal">{entry.goalTitle}</span>
+                              <span className={`dc-status-badge ${isPending ? 'pending' : 'filled'}`}>
+                                {isPending ? 'ממתין' : 'מולא'}
+                              </span>
+                            </div>
+                            <div className="dc-entry-card-meta">
+                              {dateStr}{therapist ? ` · ${therapist.name}` : ''}
+                            </div>
+                            <div className="dc-entry-card-actions">
+                              {isPending ? (
+                                <button className="btn-primary btn-small" onClick={() => { setDcModalEntry(entry); setDcModalOpen(true); }}>מלא</button>
+                              ) : (
+                                <button className="btn-secondary btn-small" onClick={() => { setDcModalEntry(entry); setDcModalOpen(true); }}>ערוך</button>
+                              )}
+                              {dcDeleteConfirm === entry.id ? (
+                                <>
+                                  <button className="btn-danger btn-small" onClick={() => deleteDcMutation.mutate(entry)}>כן</button>
+                                  <button className="btn-secondary btn-small" onClick={() => setDcDeleteConfirm(null)}>לא</button>
+                                </>
+                              ) : (
+                                <button className="btn-secondary btn-small" onClick={() => setDcDeleteConfirm(entry.id)}
+                                  style={{ color: '#ef4444' }}>מחק</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>)}
                 </div>
               )}
             </div>

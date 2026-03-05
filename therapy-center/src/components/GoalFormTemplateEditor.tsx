@@ -182,6 +182,32 @@ function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isL
   );
 }
 
+// -------- Preview cell content helper --------
+function PreviewCellContent({ col, rowIdx }: { col: GoalColumnDef; rowIdx: number }) {
+  if (col.type === 'checkbox') {
+    const checked = rowIdx === 0;
+    return <span style={{ color: checked ? '#16a34a' : '#ef4444', fontWeight: 600 }}>{checked ? '✓' : '✗'}</span>;
+  }
+  if (col.type === 'date') {
+    return <span style={{ color: '#94a3b8' }}>{rowIdx === 0 ? '01/01/2025' : '15/03/2025'}</span>;
+  }
+  if (col.type === 'options') {
+    const opts = col.options || [];
+    if (opts.length === 0) return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>;
+    const val = opts[rowIdx % opts.length];
+    return (
+      <span style={{
+        background: '#eef2ff', color: '#4f46e5', borderRadius: 10,
+        padding: '1px 8px', fontSize: '0.92em', fontWeight: 500,
+      }}>
+        {val}
+      </span>
+    );
+  }
+  // text
+  return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>טקסט...</span>;
+}
+
 // -------- Block preview (used in both side panel and fullscreen) --------
 function BlockPreview({ block }: { block: GoalTableBlock }) {
   const { type, columns } = block;
@@ -204,8 +230,8 @@ function BlockPreview({ block }: { block: GoalTableBlock }) {
             <div style={{ background: '#f8fafc', padding: '7px 10px', fontSize: '0.8em', fontWeight: 600, color: '#475569', borderLeft: '1px solid #e2e8f0' }}>
               {col.label || '—'}
             </div>
-            <div style={{ padding: '7px 10px', fontSize: '0.8em', color: '#cbd5e1', fontStyle: 'italic' }}>
-              {col.type === 'date' ? '01/01/2025' : col.type === 'options' ? (col.options?.[0] || '—') : 'טקסט...'}
+            <div style={{ padding: '7px 10px', fontSize: '0.8em' }}>
+              <PreviewCellContent col={col} rowIdx={0} />
             </div>
           </div>
         ))}
@@ -232,8 +258,8 @@ function BlockPreview({ block }: { block: GoalTableBlock }) {
           {[0, 1].map(ri => (
             <tr key={ri}>
               {columns.map(col => (
-                <td key={col.id} style={{ padding: '6px 10px', border: '1px solid #f1f5f9', color: '#cbd5e1', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
-                  {col.type === 'date' ? (ri === 0 ? '01/01/2025' : '15/03/2025') : col.type === 'options' ? (col.options?.[ri % (col.options?.length || 1)] || '—') : 'טקסט...'}
+                <td key={col.id} style={{ padding: '6px 10px', border: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
+                  <PreviewCellContent col={col} rowIdx={ri} />
                 </td>
               ))}
             </tr>
