@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { goalDataApi } from '../api/client';
-import { normalizeTemplate, normalizeDcEntry } from '../types';
+import { normalizeTemplate, normalizeDcEntry, repeatedKey, emptyRowForColumns } from '../types';
 import { toDate } from '../utils/date';
-import type { Goal, KidGoalDataEntry, GoalFormRow, TableBlockData, Practitioner } from '../types';
+import type { Goal, KidGoalDataEntry, GoalFormRow, GoalColumnDef, GoalColumnType, TableBlockData, Practitioner } from '../types';
 import { EditableVerticalBlock, EditableHorizontalBlock, CellInput } from './GoalFormRenderer';
 
 interface DcEntryModalProps {
@@ -49,7 +49,7 @@ export default function DcEntryModal({
         if (existing && existing.rows.length > 0) {
           state[block.id] = existing.rows;
         } else {
-          state[block.id] = [Object.fromEntries(block.columns.map(c => [c.id, '']))];
+          state[block.id] = [emptyRowForColumns(block.columns)];
         }
       }
       setDcData(state);
@@ -72,7 +72,7 @@ export default function DcEntryModal({
     mutationFn: async () => {
       const tables: TableBlockData[] = templateBlocks.map(block => ({
         tableId: block.id,
-        rows: dcData[block.id] || [Object.fromEntries(block.columns.map(c => [c.id, '']))],
+        rows: dcData[block.id] || [emptyRowForColumns(block.columns)],
       }));
 
       if (isEditing || isFilling) {
@@ -161,7 +161,7 @@ export default function DcEntryModal({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {templateBlocks.map(block => {
-                const blockRows = dcData[block.id] || [Object.fromEntries(block.columns.map(c => [c.id, '']))];
+                const blockRows = dcData[block.id] || [emptyRowForColumns(block.columns)];
 
                 if (block.type === 'vertical') {
                   return (
@@ -186,7 +186,12 @@ export default function DcEntryModal({
                         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85em' }}>
                           <thead>
                             <tr>
-                              {block.columns.map(col => (
+                              {block.columns.map(col => col.type === 'repeated' ? (
+                                <th key={col.id} colSpan={col.repeatCount || 1} style={{ padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'center', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+                                  {col.label}
+                                  {col.description && <div style={{ fontSize: '0.78em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</div>}
+                                </th>
+                              ) : (
                                 <th key={col.id} style={{ padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
                                   {col.label}
                                   {col.description && <div style={{ fontSize: '0.78em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</div>}
@@ -198,17 +203,37 @@ export default function DcEntryModal({
                           <tbody>
                             {blockRows.map((row, rowIdx) => (
                               <tr key={rowIdx}>
-                                {block.columns.map(col => (
-                                  <td key={col.id} style={{ padding: '4px 6px', border: '1px solid #e2e8f0', verticalAlign: col.type === 'checkbox' ? 'middle' : 'top' }}>
-                                    <CellInput
-                                      col={col}
-                                      value={row[col.id] || ''}
-                                      onChange={v => onChangeRows(blockRows.map((r, i) => i === rowIdx ? { ...r, [col.id]: v } : r))}
-                                      colKey={`${rowIdx}-${col.id}`}
-                                      compact
-                                    />
-                                  </td>
-                                ))}
+                                {block.columns.flatMap(col => {
+                                  if (col.type === 'repeated') {
+                                    const count = col.repeatCount || 1;
+                                    const innerCol: GoalColumnDef = { id: '', label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options };
+                                    return Array.from({ length: count }).map((_, i) => {
+                                      const key = repeatedKey(col.id, i);
+                                      return (
+                                        <td key={key} style={{ padding: '2px 3px', border: '1px solid #e2e8f0', verticalAlign: 'middle', textAlign: 'center' }}>
+                                          <CellInput
+                                            col={{ ...innerCol, id: key }}
+                                            value={row[key] || ''}
+                                            onChange={v => onChangeRows(blockRows.map((r, ri) => ri === rowIdx ? { ...r, [key]: v } : r))}
+                                            colKey={`${rowIdx}-${key}`}
+                                            compact
+                                          />
+                                        </td>
+                                      );
+                                    });
+                                  }
+                                  return [(
+                                    <td key={col.id} style={{ padding: '4px 6px', border: '1px solid #e2e8f0', verticalAlign: col.type === 'checkbox' ? 'middle' : 'top' }}>
+                                      <CellInput
+                                        col={col}
+                                        value={row[col.id] || ''}
+                                        onChange={v => onChangeRows(blockRows.map((r, i) => i === rowIdx ? { ...r, [col.id]: v } : r))}
+                                        colKey={`${rowIdx}-${col.id}`}
+                                        compact
+                                      />
+                                    </td>
+                                  )];
+                                })}
                                 <td style={{ border: '1px solid #e2e8f0', textAlign: 'center', padding: '2px' }}>
                                   <button type="button" onClick={() => onChangeRows(blockRows.filter((_, i) => i !== rowIdx))}
                                     style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85em' }}>✕</button>
@@ -218,7 +243,7 @@ export default function DcEntryModal({
                           </tbody>
                         </table>
                       </div>
-                      <button type="button" onClick={() => onChangeRows([...blockRows, Object.fromEntries(block.columns.map(c => [c.id, '']))])}
+                      <button type="button" onClick={() => onChangeRows([...blockRows, emptyRowForColumns(block.columns)])}
                         style={{ border: '1.5px dashed #667eea', borderRadius: 7, background: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.83em', padding: '7px 18px', fontWeight: 600, marginTop: 8 }}>
                         + הוסף שורה
                       </button>

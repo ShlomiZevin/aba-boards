@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalDataApi, goalsApi } from '../api/client';
-import { GOAL_CATEGORIES, normalizeTemplate, normalizeDcEntry } from '../types';
+import { GOAL_CATEGORIES, normalizeTemplate, normalizeDcEntry, repeatedKey } from '../types';
 import type { Goal, KidGoalDataEntry, GoalFormRow, GoalColumnDef, Practitioner } from '../types';
 import { toDate } from '../utils/date';
 
@@ -126,7 +126,14 @@ function DataCollectionSection({ kidId, goal, practitioners }: {
         }
         const row = rows[rowIdx] || {};
         for (const col of block.columns) {
-          values[col.id] = row[col.id] || '';
+          if (col.type === 'repeated' && col.repeatCount) {
+            for (let i = 0; i < col.repeatCount; i++) {
+              const key = repeatedKey(col.id, i);
+              values[key] = row[key] || '';
+            }
+          } else {
+            values[col.id] = row[col.id] || '';
+          }
         }
       }
       flatRows.push({
@@ -140,41 +147,64 @@ function DataCollectionSection({ kidId, goal, practitioners }: {
     }
   });
 
+  const desktopTable = (
+    <table className="dc-view-table">
+      <thead>
+        <tr>
+          <th style={thStyle}>תאריך</th>
+          <th style={thStyle}>מטפל/ת</th>
+          {allColumns.map(col => col.type === 'repeated' ? (
+            <th key={col.id} colSpan={col.repeatCount || 1} style={{ ...thStyle, textAlign: 'center' }}>
+              {col.label}
+              {col.description && <div style={{ fontSize: '0.78em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</div>}
+            </th>
+          ) : (
+            <th key={col.id} style={thStyle}>
+              {col.label}
+              {col.description && <div style={{ fontSize: '0.78em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</div>}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {flatRows.map((fr, idx) => (
+          <tr key={idx} style={{ background: fr.entryIdx % 2 === 0 ? 'white' : '#fafafa' }}>
+            {fr.isFirst && (
+              <td style={tdMergedStyle} rowSpan={fr.rowSpan}>{fr.dateStr}</td>
+            )}
+            {fr.isFirst && (
+              <td style={tdMergedStyle} rowSpan={fr.rowSpan}>{fr.therapistName}</td>
+            )}
+            {allColumns.flatMap(col => {
+              if (col.type === 'repeated') {
+                const count = col.repeatCount || 1;
+                const innerCol = { type: (col.innerType || 'checkbox') as string };
+                return Array.from({ length: count }).map((_, i) => {
+                  const key = repeatedKey(col.id, i);
+                  return (
+                    <td key={key} style={{ ...tdStyle, textAlign: 'center', padding: '4px 3px' }}>
+                      <CellView col={innerCol} value={fr.values[key] || ''} />
+                    </td>
+                  );
+                });
+              }
+              return [(
+                <td key={col.id} style={tdStyle}>
+                  <CellView col={col} value={fr.values[col.id] || ''} />
+                </td>
+              )];
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
   return (
     <>
       {/* Desktop: table view */}
       <div className="dc-view-table-wrap dc-view-desktop">
-        <table className="dc-view-table">
-          <thead>
-            <tr>
-              <th style={thStyle}>תאריך</th>
-              <th style={thStyle}>מטפל/ת</th>
-              {allColumns.map(col => (
-                <th key={col.id} style={thStyle}>
-                  {col.label}
-                  {col.description && <div style={{ fontSize: '0.78em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</div>}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {flatRows.map((fr, idx) => (
-              <tr key={idx} style={{ background: fr.entryIdx % 2 === 0 ? 'white' : '#fafafa' }}>
-                {fr.isFirst && (
-                  <td style={tdMergedStyle} rowSpan={fr.rowSpan}>{fr.dateStr}</td>
-                )}
-                {fr.isFirst && (
-                  <td style={tdMergedStyle} rowSpan={fr.rowSpan}>{fr.therapistName}</td>
-                )}
-                {allColumns.map(col => (
-                  <td key={col.id} style={tdStyle}>
-                    <CellView col={col} value={fr.values[col.id] || ''} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {desktopTable}
       </div>
 
       {/* Mobile: card view per entry */}
@@ -204,17 +234,41 @@ function DataCollectionSection({ kidId, goal, practitioners }: {
                 }
                 return rows.map((row, rowIdx) => (
                   <div key={`${block.id}-${rowIdx}`} className="dc-view-entry-fields">
-                    {block.columns.map(col => (
-                      <div key={col.id} className="dc-view-entry-field">
-                        <span className="dc-view-entry-label">
-                          {col.label}
-                          {col.description && <span style={{ display: 'block', fontSize: '0.82em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</span>}
-                        </span>
-                        <span className="dc-view-entry-value">
-                          <CellView col={col} value={row[col.id] || ''} />
-                        </span>
-                      </div>
-                    ))}
+                    {block.columns.map(col => {
+                      if (col.type === 'repeated') {
+                        const count = col.repeatCount || 1;
+                        const innerCol = { type: (col.innerType || 'checkbox') as string };
+                        return (
+                          <div key={col.id} className="dc-view-entry-field">
+                            <span className="dc-view-entry-label">
+                              {col.label}
+                              {col.description && <span style={{ display: 'block', fontSize: '0.82em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</span>}
+                            </span>
+                            <span className="dc-view-entry-value" style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                              {Array.from({ length: count }).map((_, i) => {
+                                const key = repeatedKey(col.id, i);
+                                return (
+                                  <span key={key} style={{ border: '1px solid #e2e8f0', borderRadius: 4, padding: '0 4px', minWidth: 20, textAlign: 'center', display: 'inline-block' }}>
+                                    <CellView col={innerCol} value={row[key] || ''} />
+                                  </span>
+                                );
+                              })}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={col.id} className="dc-view-entry-field">
+                          <span className="dc-view-entry-label">
+                            {col.label}
+                            {col.description && <span style={{ display: 'block', fontSize: '0.82em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</span>}
+                          </span>
+                          <span className="dc-view-entry-value">
+                            <CellView col={col} value={row[col.id] || ''} />
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 ));
               })}
@@ -233,16 +287,48 @@ function GoalDcCard({ kidId, goal, practitioners }: {
   practitioners: Practitioner[];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   return (
     <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: 8, overflow: 'hidden', background: 'white' }}>
-      <button type="button" onClick={() => setExpanded(e => !e)} style={{
-        display: 'flex', width: '100%', alignItems: 'center', gap: 10,
-        padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'right',
-      }}>
-        <span style={{ fontSize: '0.9em', flex: 1, fontWeight: 500, color: '#334155' }}>{goal.title}</span>
-        <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{expanded ? '▲' : '▼'}</span>
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <button type="button" onClick={() => setExpanded(e => !e)} style={{
+          display: 'flex', flex: 1, alignItems: 'center', gap: 10,
+          padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'right',
+        }}>
+          <span style={{ fontSize: '0.9em', flex: 1, fontWeight: 500, color: '#334155' }}>{goal.title}</span>
+          <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{expanded ? '▲' : '▼'}</span>
+        </button>
+        <button type="button" onClick={() => setFullscreen(true)} className="dc-view-desktop"
+          style={{
+            background: 'none', border: '1px solid #e2e8f0', borderRadius: 6,
+            cursor: 'pointer', color: '#64748b', padding: '3px 8px', fontSize: '0.75em',
+            marginLeft: 8, flexShrink: 0,
+          }}
+          title="הצג במסך מלא"
+        >⛶</button>
+      </div>
+
+      {/* Fullscreen modal */}
+      {fullscreen && (
+        <div className="modal-overlay" onClick={() => setFullscreen(false)} style={{ zIndex: 1000 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'white', borderRadius: 12, width: '95vw', maxHeight: '92vh',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+              <span style={{ fontWeight: 700, fontSize: '0.95em', color: '#334155' }}>{goal.title}</span>
+              <button type="button" onClick={() => setFullscreen(false)}
+                style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', color: '#64748b', padding: '4px 12px', fontSize: '0.82em' }}>
+                סגור
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '12px 18px' }}>
+              <DataCollectionSection kidId={kidId} goal={goal} practitioners={practitioners} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {expanded && (
         <div style={{ padding: '0 14px 14px 14px' }}>

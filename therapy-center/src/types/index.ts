@@ -32,7 +32,7 @@ export interface Parent {
 }
 
 // Goal form template types (for תוכנית למידה and איסוף נתונים)
-export type GoalColumnType = 'text' | 'date' | 'options' | 'checkbox';
+export type GoalColumnType = 'text' | 'date' | 'options' | 'checkbox' | 'repeated';
 
 export interface GoalColumnDef {
   id: string;
@@ -41,6 +41,9 @@ export interface GoalColumnDef {
   type: GoalColumnType;
   options?: string[];
   wide?: boolean; // kept for backward compat with old stored data, not shown in UI
+  // "repeated" column: splits into N mini-cells under one header
+  repeatCount?: number;       // number of occurrences (e.g. 10)
+  innerType?: GoalColumnType; // type each mini-cell uses (not nested 'repeated')
 }
 
 // A table block — the fundamental unit of a form template.
@@ -62,6 +65,24 @@ export interface GoalFormTemplate {
 
 // A single row of filled data (columnId → value string)
 export type GoalFormRow = Record<string, string>;
+
+/** Storage key for occurrence `i` of a repeated column */
+export function repeatedKey(colId: string, i: number): string {
+  return `${colId}__${i}`;
+}
+
+/** Create an empty GoalFormRow, expanding repeated columns into sub-keys */
+export function emptyRowForColumns(columns: GoalColumnDef[]): GoalFormRow {
+  const row: GoalFormRow = {};
+  for (const col of columns) {
+    if (col.type === 'repeated' && col.repeatCount) {
+      for (let i = 0; i < col.repeatCount; i++) row[repeatedKey(col.id, i)] = '';
+    } else {
+      row[col.id] = '';
+    }
+  }
+  return row;
+}
 
 // Per-table filled data (rows can be 1 for vertical, N for horizontal)
 export interface TableBlockData {

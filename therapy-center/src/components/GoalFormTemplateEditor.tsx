@@ -15,7 +15,7 @@ function makeId() {
 }
 
 // -------- Column type — compact pill toggle --------
-const TYPE_LABELS: Record<GoalColumnType, string> = {
+const TYPE_LABELS: Record<string, string> = {
   text: 'טקסט',
   date: 'תאריך',
   options: 'אפשרויות',
@@ -116,8 +116,8 @@ function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isL
         padding: '7px 10px',
         background: 'white',
         border: '1.5px solid #e2e8f0',
-        borderRadius: col.type === 'options' ? '8px 8px 0 0' : 8,
-        borderBottom: col.type === 'options' ? '1px solid #f1f5f9' : undefined,
+        borderRadius: (['options', 'repeated'].includes(col.type) || (col.type === 'repeated' && col.innerType === 'options')) ? '8px 8px 0 0' : 8,
+        borderBottom: (['options', 'repeated'].includes(col.type) || (col.type === 'repeated' && col.innerType === 'options')) ? '1px solid #f1f5f9' : undefined,
       }}>
         {/* Order arrows */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
@@ -168,11 +168,35 @@ function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isL
           />
         </div>
 
-        {/* Type pills */}
+        {/* Type pills — show effective type (innerType for repeated, type otherwise) */}
         <TypePills
-          value={col.type}
-          onChange={t => onChange({ ...col, type: t, options: t === 'options' ? (col.options || []) : undefined })}
+          value={(col.type === 'repeated' ? (col.innerType || 'checkbox') : col.type) as GoalColumnType}
+          onChange={t => {
+            if (col.type === 'repeated') {
+              onChange({ ...col, innerType: t, options: t === 'options' ? (col.options || []) : undefined });
+            } else {
+              onChange({ ...col, type: t, options: t === 'options' ? (col.options || []) : undefined });
+            }
+          }}
         />
+
+        {/* Repeated toggle */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', flexShrink: 0 }}>
+          <input
+            type="checkbox"
+            checked={col.type === 'repeated'}
+            onChange={e => {
+              if (e.target.checked) {
+                onChange({ ...col, type: 'repeated', innerType: col.type === 'repeated' ? col.innerType : col.type, repeatCount: col.repeatCount || 10 });
+              } else {
+                const effectiveType = col.innerType || 'text';
+                onChange({ ...col, type: effectiveType, innerType: undefined, repeatCount: undefined });
+              }
+            }}
+            style={{ width: 14, height: 14, accentColor: '#667eea', cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: '0.73em', color: '#64748b', whiteSpace: 'nowrap' }}>חוזר</span>
+        </label>
 
         {/* Remove */}
         <button type="button" onClick={onRemove}
@@ -182,19 +206,44 @@ function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isL
           }}>✕</button>
       </div>
 
-      {/* Options editor — shown below when type=options */}
-      {col.type === 'options' && (
+      {/* Options editor — shown when effective type is options */}
+      {((col.type === 'options') || (col.type === 'repeated' && col.innerType === 'options')) && (
         <div style={{
           padding: '6px 10px',
           background: 'white',
           border: '1.5px solid #e2e8f0',
           borderTop: 'none',
-          borderRadius: '0 0 8px 8px',
+          borderRadius: col.type === 'repeated' ? undefined : '0 0 8px 8px',
         }}>
           <div style={{ fontSize: '0.73em', color: '#94a3b8', marginBottom: 4 }}>אפשרויות:</div>
           <OptionsEditor
             options={col.options || []}
             onChange={opts => onChange({ ...col, options: opts })}
+          />
+        </div>
+      )}
+
+      {/* Repeated column config — repeat count */}
+      {col.type === 'repeated' && (
+        <div style={{
+          padding: '8px 10px',
+          background: 'white',
+          border: '1.5px solid #e2e8f0',
+          borderTop: 'none',
+          borderRadius: '0 0 8px 8px',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ fontSize: '0.73em', color: '#94a3b8' }}>מספר חזרות:</span>
+          <input
+            type="number"
+            min={2}
+            max={50}
+            value={col.repeatCount || 10}
+            onChange={e => onChange({ ...col, repeatCount: Math.max(2, Math.min(50, parseInt(e.target.value) || 10)) })}
+            style={{
+              width: 70, padding: '4px 8px', border: '1.5px solid #e2e8f0',
+              borderRadius: 6, fontSize: '0.85em', fontFamily: 'inherit',
+            }}
           />
         </div>
       )}
@@ -222,6 +271,20 @@ function PreviewCellContent({ col, rowIdx }: { col: GoalColumnDef; rowIdx: numbe
       }}>
         {val}
       </span>
+    );
+  }
+  if (col.type === 'repeated') {
+    const count = col.repeatCount || 10;
+    const innerCol: GoalColumnDef = { id: 'preview', label: '', type: col.innerType || 'checkbox', options: col.options };
+    return (
+      <div style={{ display: 'flex', gap: 2 }}>
+        {Array.from({ length: Math.min(count, 6) }).map((_, i) => (
+          <div key={i} style={{ border: '1px solid #e2e8f0', borderRadius: 4, padding: '1px 4px', minWidth: 22, textAlign: 'center' }}>
+            <PreviewCellContent col={innerCol} rowIdx={i} />
+          </div>
+        ))}
+        {count > 6 && <span style={{ color: '#94a3b8', fontSize: '0.8em' }}>...+{count - 6}</span>}
+      </div>
     );
   }
   // text
@@ -265,7 +328,15 @@ function BlockPreview({ block }: { block: GoalTableBlock }) {
       <table style={{ borderCollapse: 'collapse', fontSize: '0.8em', minWidth: '100%' }}>
         <thead>
           <tr>
-            {columns.map(col => (
+            {columns.map(col => col.type === 'repeated' ? (
+              <th key={col.id} colSpan={col.repeatCount || 10} style={{
+                padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0',
+                textAlign: 'center', fontWeight: 600, color: '#475569',
+              }}>
+                <div style={{ whiteSpace: 'nowrap' }}>{col.label || '—'}</div>
+                {col.description && <div style={{ fontSize: '0.82em', color: '#94a3b8', fontWeight: 400, whiteSpace: 'nowrap' }}>{col.description}</div>}
+              </th>
+            ) : (
               <th key={col.id} style={{
                 padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0',
                 textAlign: 'right', fontWeight: 600, color: '#475569',
@@ -279,11 +350,22 @@ function BlockPreview({ block }: { block: GoalTableBlock }) {
         <tbody>
           {[0, 1].map(ri => (
             <tr key={ri}>
-              {columns.map(col => (
-                <td key={col.id} style={{ padding: '6px 10px', border: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
-                  <PreviewCellContent col={col} rowIdx={ri} />
-                </td>
-              ))}
+              {columns.flatMap(col => {
+                if (col.type === 'repeated') {
+                  const count = col.repeatCount || 10;
+                  const innerCol: GoalColumnDef = { id: 'inner', label: '', type: col.innerType || 'checkbox', options: col.options };
+                  return Array.from({ length: count }).map((_, i) => (
+                    <td key={`${col.id}__${i}`} style={{ padding: '4px 3px', border: '1px solid #f1f5f9', textAlign: 'center' }}>
+                      <PreviewCellContent col={innerCol} rowIdx={ri + i} />
+                    </td>
+                  ));
+                }
+                return [(
+                  <td key={col.id} style={{ padding: '6px 10px', border: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
+                    <PreviewCellContent col={col} rowIdx={ri} />
+                  </td>
+                )];
+              })}
             </tr>
           ))}
         </tbody>
@@ -528,7 +610,6 @@ function PresetStrip({ formType, onLoad }: {
               }}
             >
               <div style={{ fontSize: '0.87em', fontWeight: 700, color: '#15803d' }}>{g[presetNameField]}</div>
-              <div style={{ fontSize: '0.68em', color: '#64748b', marginTop: 1 }}>{g.title}</div>
             </button>
             <button
               type="button"
