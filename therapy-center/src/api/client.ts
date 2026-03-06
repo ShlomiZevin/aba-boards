@@ -170,11 +170,21 @@ export const goalsApi = {
 export const goalTemplatesApi = {
   updateTemplates: (
     libraryItemId: string,
-    data: { learningPlanTemplate?: GoalFormTemplate | null; dataCollectionTemplate?: GoalFormTemplate | null }
+    data: {
+      learningPlanTemplate?: GoalFormTemplate | null;
+      dataCollectionTemplate?: GoalFormTemplate | null;
+      dcPresetName?: string | null;
+      lpPresetName?: string | null;
+    }
   ) =>
     fetchApi<GoalLibraryItem>(`/goals/library/${libraryItemId}/templates`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+  bulkApply: (sourceId: string, targetIds: string[], formType: 'lp' | 'dc') =>
+    fetchApi<{ applied: number }>(`/goals/library/${sourceId}/apply-template`, {
+      method: 'POST',
+      body: JSON.stringify({ targetIds, formType }),
     }),
 };
 

@@ -561,10 +561,32 @@ async function updateGoalLibraryTemplates(id, data) {
       ? { ...data.dataCollectionTemplate, updatedAt: new Date() }
       : null;
   }
+  if (data.dcPresetName !== undefined) updates.dcPresetName = data.dcPresetName || null;
+  if (data.lpPresetName !== undefined) updates.lpPresetName = data.lpPresetName || null;
 
   await doc.ref.update(updates);
   const updated = await doc.ref.get();
   return { id: updated.id, ...updated.data() };
+}
+
+async function bulkApplyTemplate(sourceLibraryId, targetLibraryIds, formType) {
+  const db = getDb();
+  const sourceDoc = await db.collection('goalsLibrary').doc(sourceLibraryId).get();
+  if (!sourceDoc.exists) throw new Error('Source goal not found');
+  const templateField = formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate';
+  const template = sourceDoc.data()[templateField];
+  if (!template) throw new Error('Source has no template');
+
+  const sourceField = formType === 'lp' ? 'lpPresetSourceId' : 'dcPresetSourceId';
+  const batch = db.batch();
+  for (const targetId of targetLibraryIds) {
+    batch.update(db.collection('goalsLibrary').doc(targetId), {
+      [templateField]: { ...template, updatedAt: new Date() },
+      [sourceField]: sourceLibraryId,
+    });
+  }
+  await batch.commit();
+  return { applied: targetLibraryIds.length };
 }
 
 // ==================== GOAL LEARNING PLANS ====================
@@ -1604,6 +1626,7 @@ module.exports = {
   deleteGoalLibraryItem,
   addGoalLibraryItem,
   updateGoalLibraryTemplates,
+  bulkApplyTemplate,
   // Goal Learning Plans
   getGoalLearningPlan,
   saveGoalLearningPlan,

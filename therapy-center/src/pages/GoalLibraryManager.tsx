@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { goalsApi, kidsApi } from '../api/client';
-import { GOAL_CATEGORIES } from '../types';
+import { goalsApi, kidsApi, goalTemplatesApi } from '../api/client';
+import { GOAL_CATEGORIES, PRESET_DC_ACTIVITY, PRESET_DC_DTT } from '../types';
 import type { GoalCategoryId, GoalLibraryItem, Kid } from '../types';
 import GoalFormTemplateEditor from '../components/GoalFormTemplateEditor';
 
@@ -26,6 +26,9 @@ export default function GoalLibraryManager() {
 
   // Assign-to-kid modal
   const [showAssignModal, setShowAssignModal] = useState(false);
+
+  // Apply-template modal
+  const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [kidSearch, setKidSearch] = useState('');
   const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
   const [showKidDropdown, setShowKidDropdown] = useState(false);
@@ -303,6 +306,13 @@ export default function GoalLibraryManager() {
           >
             שייך לילד
           </button>
+          <button
+            className="btn-primary btn-small"
+            style={{ background: '#1d4ed8' }}
+            onClick={() => setShowApplyTemplateModal(true)}
+          >
+            החל תבנית
+          </button>
           <button className="btn-secondary btn-small" onClick={() => setSelectedIds(new Set())}>
             ביטול
           </button>
@@ -440,6 +450,200 @@ export default function GoalLibraryManager() {
           </div>
         </div>
       )}
+
+      {/* Apply Template Modal */}
+      {showApplyTemplateModal && (
+        <ApplyTemplateModal
+          targetIds={Array.from(selectedIds)}
+          allItems={items}
+          onClose={() => setShowApplyTemplateModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            setShowApplyTemplateModal(false);
+            setSelectedIds(new Set());
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// -------- Apply Template Modal --------
+function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
+  targetIds: string[];
+  allItems: GoalLibraryItem[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [selectedBuiltIn, setSelectedBuiltIn] = useState<string | null>(null);
+  const [appliedCount, setAppliedCount] = useState<number | null>(null);
+
+  const templateField = 'dataCollectionTemplate' as const;
+  const presetNameField = 'dcPresetName' as const;
+
+  // Sources: goals with a DC template (exclude targets)
+  const targetSet = new Set(targetIds);
+  const sources = allItems.filter(g => !targetSet.has(g.id) && g[templateField]);
+
+  // Built-in presets
+  const builtInPresets = [
+    { id: 'builtin_dc_activity', label: 'פעילות', template: PRESET_DC_ACTIVITY },
+    { id: 'builtin_dc_dtt', label: 'ניסויים DTT', template: PRESET_DC_DTT },
+  ];
+
+  // Saved presets (goals marked as preset)
+  const savedPresets = sources.filter(g => g[presetNameField]);
+  // Other goals with templates (not marked as preset)
+  const otherSources = sources.filter(g => !g[presetNameField]);
+
+  const applyMutation = useMutation({
+    mutationFn: async () => {
+      if (selectedBuiltIn) {
+        const preset = builtInPresets.find(p => p.id === selectedBuiltIn);
+        if (!preset) throw new Error('Preset not found');
+        for (const targetId of targetIds) {
+          await goalTemplatesApi.updateTemplates(targetId, {
+            [templateField]: preset.template,
+          });
+        }
+        return { applied: targetIds.length };
+      }
+      if (!selectedSourceId) throw new Error('No source selected');
+      const res = await goalTemplatesApi.bulkApply(selectedSourceId, targetIds, 'dc');
+      return res.data;
+    },
+    onSuccess: (res) => {
+      setAppliedCount(res?.applied || targetIds.length);
+    },
+  });
+
+  if (appliedCount !== null) {
+    return (
+      <div className="modal-overlay" onClick={onSuccess}>
+        <div className="modal" onClick={e => e.stopPropagation()} style={{ textAlign: 'center', padding: '32px 28px' }}>
+          <div style={{ fontSize: '2.5em', marginBottom: 10 }}>✓</div>
+          <div style={{ fontSize: '1.05em', fontWeight: 600, color: '#1e293b', marginBottom: 6 }}>
+            התבנית הוחלה על {appliedCount} מטרות
+          </div>
+          <button type="button" className="btn-primary" onClick={onSuccess} style={{ marginTop: 14 }}>סגור</button>
+        </div>
+      </div>
+    );
+  }
+
+  const hasSelection = !!selectedSourceId || !!selectedBuiltIn;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+        <h3 style={{ margin: '0 0 4px' }}>החלת תבנית על {targetIds.length} מטרות</h3>
+        <div style={{ fontSize: '0.82em', color: '#64748b', marginBottom: 14 }}>בחר תבנית איסוף נתונים</div>
+
+        {/* Template sources — single list */}
+        <div style={{ flex: 1, overflowY: 'auto', marginBottom: 14 }}>
+          <div style={{ fontSize: '0.76em', fontWeight: 700, color: '#64748b', marginBottom: 6 }}>תבניות מובנות:</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+            {builtInPresets.map(p => (
+              <label key={p.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                border: `1.5px solid ${selectedBuiltIn === p.id ? '#16a34a' : '#e2e8f0'}`,
+                borderRadius: 8, cursor: 'pointer',
+                background: selectedBuiltIn === p.id ? '#f0fdf4' : 'white',
+              }}>
+                <input
+                  type="radio"
+                  name="template-source"
+                  checked={selectedBuiltIn === p.id}
+                  onChange={() => { setSelectedBuiltIn(p.id); setSelectedSourceId(null); }}
+                  style={{ accentColor: '#16a34a' }}
+                />
+                <span style={{ fontSize: '0.88em', fontWeight: 600, color: '#334155' }}>{p.label}</span>
+              </label>
+            ))}
+            {savedPresets.map(g => {
+              const cat = GOAL_CATEGORIES.find(c => c.id === g.categoryId);
+              return (
+                <label key={g.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                  border: `1.5px solid ${selectedSourceId === g.id ? '#16a34a' : '#e2e8f0'}`,
+                  borderRadius: 8, cursor: 'pointer',
+                  background: selectedSourceId === g.id ? '#f0fdf4' : 'white',
+                }}>
+                  <input
+                    type="radio"
+                    name="template-source"
+                    checked={selectedSourceId === g.id}
+                    onChange={() => { setSelectedSourceId(g.id); setSelectedBuiltIn(null); }}
+                    style={{ accentColor: '#16a34a' }}
+                  />
+                  <span style={{ flex: 1, fontSize: '0.88em', fontWeight: 600, color: '#334155' }}>{g[presetNameField]}</span>
+                  {cat && (
+                    <span style={{ fontSize: '0.7em', color: cat.color, background: `${cat.color}18`, borderRadius: 8, padding: '1px 7px' }}>
+                      {cat.nameHe}
+                    </span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+
+          {/* Other goals with templates */}
+          {otherSources.length > 0 && (
+            <>
+              <div style={{ fontSize: '0.76em', fontWeight: 700, color: '#64748b', marginBottom: 6 }}>תבניות ממטרות קיימות:</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {otherSources.map(g => {
+                  const cat = GOAL_CATEGORIES.find(c => c.id === g.categoryId);
+                  return (
+                    <label key={g.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                      border: `1.5px solid ${selectedSourceId === g.id ? '#3b82f6' : '#e2e8f0'}`,
+                      borderRadius: 8, cursor: 'pointer',
+                      background: selectedSourceId === g.id ? '#eff6ff' : 'white',
+                    }}>
+                      <input
+                        type="radio"
+                        name="template-source"
+                        checked={selectedSourceId === g.id}
+                        onChange={() => { setSelectedSourceId(g.id); setSelectedBuiltIn(null); }}
+                        style={{ accentColor: '#3b82f6' }}
+                      />
+                      <span style={{ flex: 1, fontSize: '0.88em', color: '#334155' }}>{g.title}</span>
+                      {cat && (
+                        <span style={{ fontSize: '0.7em', color: cat.color, background: `${cat.color}18`, borderRadius: 8, padding: '1px 7px' }}>
+                          {cat.nameHe}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Error */}
+        {applyMutation.isError && (
+          <div style={{ color: '#ef4444', fontSize: '0.82em', marginBottom: 8 }}>
+            {(applyMutation.error as Error)?.message || 'שגיאה'}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>ביטול</button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!hasSelection || applyMutation.isPending}
+            onClick={() => applyMutation.mutate()}
+          >
+            {applyMutation.isPending ? 'מחיל...' : `החל על ${targetIds.length} מטרות`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

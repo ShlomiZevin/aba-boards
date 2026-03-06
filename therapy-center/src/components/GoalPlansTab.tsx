@@ -150,7 +150,10 @@ function DataCollectionSection({ kidId, goal, practitioners }: {
               <th style={thStyle}>תאריך</th>
               <th style={thStyle}>מטפל/ת</th>
               {allColumns.map(col => (
-                <th key={col.id} style={thStyle}>{col.label}</th>
+                <th key={col.id} style={thStyle}>
+                  {col.label}
+                  {col.description && <div style={{ fontSize: '0.78em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</div>}
+                </th>
               ))}
             </tr>
           </thead>
@@ -203,7 +206,10 @@ function DataCollectionSection({ kidId, goal, practitioners }: {
                   <div key={`${block.id}-${rowIdx}`} className="dc-view-entry-fields">
                     {block.columns.map(col => (
                       <div key={col.id} className="dc-view-entry-field">
-                        <span className="dc-view-entry-label">{col.label}</span>
+                        <span className="dc-view-entry-label">
+                          {col.label}
+                          {col.description && <span style={{ display: 'block', fontSize: '0.82em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</span>}
+                        </span>
                         <span className="dc-view-entry-value">
                           <CellView col={col} value={row[col.id] || ''} />
                         </span>

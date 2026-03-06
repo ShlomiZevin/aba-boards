@@ -37,6 +37,7 @@ export type GoalColumnType = 'text' | 'date' | 'options' | 'checkbox';
 export interface GoalColumnDef {
   id: string;
   label: string;
+  description?: string;
   type: GoalColumnType;
   options?: string[];
   wide?: boolean; // kept for backward compat with old stored data, not shown in UI
@@ -225,6 +226,10 @@ export interface GoalLibraryItem {
   isOrphan?: boolean;
   learningPlanTemplate?: GoalFormTemplate;
   dataCollectionTemplate?: GoalFormTemplate;
+  lpPresetName?: string | null;
+  dcPresetName?: string | null;
+  lpPresetSourceId?: string | null;
+  dcPresetSourceId?: string | null;
 }
 
 // Session types

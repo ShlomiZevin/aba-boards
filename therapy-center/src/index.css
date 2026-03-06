@@ -1384,12 +1384,16 @@ body {
 /* DC Edit Modal */
 .dc-modal {
   max-width: 95vw;
-  width: fit-content;
+  width: 90vw;
   min-width: 500px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
 }
+/* DC edit form: desktop table vs mobile cards */
+.dc-edit-desktop { display: block; }
+.dc-edit-mobile  { display: none;  }
+
 .dc-edit-table-wrap {
   overflow-x: auto;
   border: 1.5px solid #e2e8f0;
@@ -4431,6 +4435,10 @@ body:has(.app-shell) {
     width: 100% !important;
     max-width: 100% !important;
   }
+
+  /* DC edit form: swap table for cards on mobile */
+  .dc-edit-desktop { display: none !important; }
+  .dc-edit-mobile  { display: block !important; }
 
   /* DC all-entries table — hide on mobile, show cards instead */
   .dc-table-desktop {

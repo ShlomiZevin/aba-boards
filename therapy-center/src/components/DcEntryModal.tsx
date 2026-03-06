@@ -5,7 +5,7 @@ import { goalDataApi } from '../api/client';
 import { normalizeTemplate, normalizeDcEntry } from '../types';
 import { toDate } from '../utils/date';
 import type { Goal, KidGoalDataEntry, GoalFormRow, TableBlockData, Practitioner } from '../types';
-import { EditableVerticalBlock, EditableHorizontalBlock } from './GoalFormRenderer';
+import { EditableVerticalBlock, EditableHorizontalBlock, CellInput } from './GoalFormRenderer';
 
 interface DcEntryModalProps {
   kidId: string;
@@ -174,14 +174,65 @@ export default function DcEntryModal({
                   );
                 }
 
-                // Horizontal blocks → card-per-row layout
+                // Horizontal blocks → table on desktop, cards on mobile
+                const onChangeRows = (newRows: GoalFormRow[]) => setDcData(prev => ({ ...prev, [block.id]: newRows }));
                 return (
-                  <EditableHorizontalBlock
-                    key={block.id}
-                    block={block}
-                    rows={blockRows}
-                    onChange={(newRows) => setDcData(prev => ({ ...prev, [block.id]: newRows }))}
-                  />
+                  <div key={block.id}>
+                    {block.title && <div style={{ fontWeight: 700, fontSize: '0.87em', color: '#475569', marginBottom: 10 }}>{block.title}</div>}
+
+                    {/* Desktop: wide table */}
+                    <div className="dc-edit-desktop">
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85em' }}>
+                          <thead>
+                            <tr>
+                              {block.columns.map(col => (
+                                <th key={col.id} style={{ padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
+                                  {col.label}
+                                  {col.description && <div style={{ fontSize: '0.78em', color: '#94a3b8', fontWeight: 400 }}>{col.description}</div>}
+                                </th>
+                              ))}
+                              <th style={{ width: 40, background: '#f8fafc', border: '1px solid #e2e8f0' }} />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {blockRows.map((row, rowIdx) => (
+                              <tr key={rowIdx}>
+                                {block.columns.map(col => (
+                                  <td key={col.id} style={{ padding: '4px 6px', border: '1px solid #e2e8f0', verticalAlign: col.type === 'checkbox' ? 'middle' : 'top' }}>
+                                    <CellInput
+                                      col={col}
+                                      value={row[col.id] || ''}
+                                      onChange={v => onChangeRows(blockRows.map((r, i) => i === rowIdx ? { ...r, [col.id]: v } : r))}
+                                      colKey={`${rowIdx}-${col.id}`}
+                                      compact
+                                    />
+                                  </td>
+                                ))}
+                                <td style={{ border: '1px solid #e2e8f0', textAlign: 'center', padding: '2px' }}>
+                                  <button type="button" onClick={() => onChangeRows(blockRows.filter((_, i) => i !== rowIdx))}
+                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85em' }}>✕</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <button type="button" onClick={() => onChangeRows([...blockRows, Object.fromEntries(block.columns.map(c => [c.id, '']))])}
+                        style={{ border: '1.5px dashed #667eea', borderRadius: 7, background: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.83em', padding: '7px 18px', fontWeight: 600, marginTop: 8 }}>
+                        + הוסף שורה
+                      </button>
+                    </div>
+
+                    {/* Mobile: card-per-row */}
+                    <div className="dc-edit-mobile">
+                      <EditableHorizontalBlock
+                        block={{ ...block, title: undefined }}
+                        rows={blockRows}
+                        onChange={onChangeRows}
+                      />
+                    </div>
+                  </div>
                 );
               })}
             </div>

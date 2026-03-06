@@ -63,12 +63,17 @@ export function CellInput({ col, value, onChange, colKey, compact }: {
       </div>
     );
   }
+  const autoGrow = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
   return (
-    <input
-      type="text"
+    <textarea
       value={value || ''}
-      onChange={e => onChange(e.target.value)}
-      style={{ ...inputStyle }}
+      onChange={e => { onChange(e.target.value); autoGrow(e.target); }}
+      ref={el => { if (el) autoGrow(el); }}
+      rows={1}
+      style={{ ...inputStyle, resize: 'none', minHeight: compact ? 28 : 34, lineHeight: '1.4', overflow: 'hidden' }}
     />
   );
 }
@@ -99,7 +104,10 @@ export function ReadOnlyVerticalBlock({ block, row }: { block: GoalTableBlock; r
       <div className="dc-vertical-block">
         {columns.map(col => (
           <div key={col.id} className="dc-vertical-row">
-            <div className="dc-vertical-label">{col.label}</div>
+            <div className="dc-vertical-label">
+              {col.label}
+              {col.description && <div style={{ fontSize: '0.8em', color: '#94a3b8', fontWeight: 400, marginTop: 1 }}>{col.description}</div>}
+            </div>
             <div className="dc-vertical-value">
               <CellView col={col} value={row[col.id] || ''} />
             </div>
@@ -122,7 +130,8 @@ export function EditableVerticalBlock({ block, row, onChange }: {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {columns.map(col => (
           <div key={col.id}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85em', color: '#334155', marginBottom: 4 }}>{col.label}</label>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85em', color: '#334155', marginBottom: col.description ? 1 : 4 }}>{col.label}</label>
+            {col.description && <div style={{ fontSize: '0.76em', color: '#94a3b8', marginBottom: 4 }}>{col.description}</div>}
             <CellInput col={col} value={row[col.id] || ''} onChange={v => onChange({ ...row, [col.id]: v })} colKey={col.id} />
           </div>
         ))}
@@ -160,8 +169,9 @@ export function ReadOnlyHorizontalBlock({ block, rows, firstColumn, rowActions }
                 </th>
               )}
               {columns.map(col => (
-                <th key={col.id} style={{ padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>
-                  {col.label}
+                <th key={col.id} style={{ padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'right', fontWeight: 600, color: '#475569' }}>
+                  <div style={{ whiteSpace: 'nowrap' }}>{col.label}</div>
+                  {col.description && <div style={{ fontSize: '0.78em', color: '#94a3b8', fontWeight: 400, whiteSpace: 'nowrap' }}>{col.description}</div>}
                 </th>
               ))}
               {rowActions && <th style={{ width: 60, background: '#f8fafc', border: '1px solid #e2e8f0' }} />}
@@ -240,9 +250,10 @@ export function EditableHorizontalBlock({ block, rows, onChange }: {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px 16px' }}>
               {columns.map(col => (
                 <div key={col.id}>
-                  <label style={{ display: 'block', fontSize: '0.8em', fontWeight: 600, color: '#475569', marginBottom: 3 }}>
+                  <label style={{ display: 'block', fontSize: '0.8em', fontWeight: 600, color: '#475569', marginBottom: col.description ? 1 : 3 }}>
                     {col.label}
                   </label>
+                  {col.description && <div style={{ fontSize: '0.73em', color: '#94a3b8', marginBottom: 3 }}>{col.description}</div>}
                   <CellInput
                     col={col}
                     value={row[col.id] || ''}
