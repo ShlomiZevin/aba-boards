@@ -175,6 +175,8 @@ export const goalTemplatesApi = {
       dataCollectionTemplate?: GoalFormTemplate | null;
       dcPresetName?: string | null;
       lpPresetName?: string | null;
+      dcPresetSourceId?: string | null;
+      lpPresetSourceId?: string | null;
     }
   ) =>
     fetchApi<GoalLibraryItem>(`/goals/library/${libraryItemId}/templates`, {
