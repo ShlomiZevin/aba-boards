@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalsApi, kidsApi, goalTemplatesApi } from '../api/client';
 import { GOAL_CATEGORIES, PRESET_DC_ACTIVITY, PRESET_DC_DTT } from '../types';
-import type { GoalCategoryId, GoalLibraryItem, Kid } from '../types';
+import type { GoalCategoryId, GoalLibraryItem, GoalFormTemplate, Kid } from '../types';
 import GoalFormTemplateEditor from '../components/GoalFormTemplateEditor';
 
 export default function GoalLibraryManager() {
@@ -478,14 +478,11 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
 }) {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [selectedBuiltIn, setSelectedBuiltIn] = useState<string | null>(null);
+  const [replaceTitle, setReplaceTitle] = useState(true);
   const [appliedCount, setAppliedCount] = useState<number | null>(null);
 
   const templateField = 'dataCollectionTemplate' as const;
   const presetNameField = 'dcPresetName' as const;
-
-  // Sources: goals with a DC template (exclude targets)
-  const targetSet = new Set(targetIds);
-  const sources = allItems.filter(g => !targetSet.has(g.id) && g[templateField]);
 
   // Built-in presets
   const builtInPresets = [
@@ -493,10 +490,17 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
     { id: 'builtin_dc_dtt', label: 'ניסויים DTT', template: PRESET_DC_DTT },
   ];
 
-  // Saved presets (goals marked as preset)
-  const savedPresets = sources.filter(g => g[presetNameField]);
-  // Other goals with templates (not marked as preset)
-  const otherSources = sources.filter(g => !g[presetNameField]);
+  // Saved presets: all goals marked as preset with a template (always visible regardless of selection)
+  const savedPresets = allItems.filter(g => g[presetNameField] && g[templateField]);
+
+  // Other goals with templates (exclude targets + presets)
+  const targetSet = new Set(targetIds);
+  const otherSources = allItems.filter(g => !targetSet.has(g.id) && g[templateField] && !g[presetNameField]);
+
+  const withGoalTitle = (template: GoalFormTemplate, goalTitle: string): GoalFormTemplate => ({
+    ...template,
+    tables: template.tables.map(t => ({ ...t, title: goalTitle })),
+  });
 
   const applyMutation = useMutation({
     mutationFn: async () => {
@@ -504,13 +508,29 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
         const preset = builtInPresets.find(p => p.id === selectedBuiltIn);
         if (!preset) throw new Error('Preset not found');
         for (const targetId of targetIds) {
-          await goalTemplatesApi.updateTemplates(targetId, {
-            [templateField]: preset.template,
-          });
+          const target = allItems.find(g => g.id === targetId);
+          const tmpl = replaceTitle && target ? withGoalTitle(preset.template, target.title) : preset.template;
+          await goalTemplatesApi.updateTemplates(targetId, { [templateField]: tmpl });
         }
         return { applied: targetIds.length };
       }
       if (!selectedSourceId) throw new Error('No source selected');
+      if (replaceTitle) {
+        // Per-target apply so each gets its own title
+        const source = allItems.find(g => g.id === selectedSourceId);
+        const sourceTemplate = source?.[templateField];
+        if (!sourceTemplate) throw new Error('Source has no template');
+        const sourceField = 'dcPresetSourceId' as const;
+        for (const targetId of targetIds) {
+          const target = allItems.find(g => g.id === targetId);
+          const tmpl = target ? withGoalTitle(sourceTemplate, target.title) : sourceTemplate;
+          await goalTemplatesApi.updateTemplates(targetId, {
+            [templateField]: tmpl,
+            [sourceField]: selectedSourceId,
+          });
+        }
+        return { applied: targetIds.length };
+      }
       const res = await goalTemplatesApi.bulkApply(selectedSourceId, targetIds, 'dc');
       return res.data;
     },
@@ -623,6 +643,12 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
             </>
           )}
         </div>
+
+        {/* Replace block title option */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.84em', color: '#334155', marginBottom: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={replaceTitle} onChange={e => setReplaceTitle(e.target.checked)} style={{ accentColor: '#16a34a' }} />
+          החלף כותרת בלוק בשם המטרה
+        </label>
 
         {/* Error */}
         {applyMutation.isError && (

@@ -636,6 +636,7 @@ function ApplyToGoalsModal({ sourceGoal, formType, onClose }: {
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const [replaceTitle, setReplaceTitle] = useState(true);
   const [appliedCount, setAppliedCount] = useState<number | null>(null);
 
   const { data: libraryRes, isLoading } = useQuery({
@@ -655,8 +656,26 @@ function ApplyToGoalsModal({ sourceGoal, formType, onClose }: {
     goals: filtered.filter(g => g.categoryId === cat.id),
   })).filter(g => g.goals.length > 0);
 
+  const sourceIdField = formType === 'lp' ? 'lpPresetSourceId' : 'dcPresetSourceId';
   const bulkMutation = useMutation({
-    mutationFn: () => goalTemplatesApi.bulkApply(sourceGoal.id, Array.from(selectedIds), formType),
+    mutationFn: async () => {
+      const targetIdArr = Array.from(selectedIds);
+      if (replaceTitle && sourceGoal[templateField]) {
+        const srcTemplate = sourceGoal[templateField]!;
+        for (const targetId of targetIdArr) {
+          const target = allGoals.find(g => g.id === targetId);
+          const tmpl = target
+            ? { ...srcTemplate, tables: srcTemplate.tables.map(t => ({ ...t, title: target.title })) }
+            : srcTemplate;
+          await goalTemplatesApi.updateTemplates(targetId, {
+            [templateField]: tmpl,
+            [sourceIdField]: sourceGoal.id,
+          });
+        }
+        return { data: { applied: targetIdArr.length } };
+      }
+      return goalTemplatesApi.bulkApply(sourceGoal.id, targetIdArr, formType);
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
       queryClient.invalidateQueries({ queryKey: ['goals'] });
@@ -791,26 +810,32 @@ function ApplyToGoalsModal({ sourceGoal, formType, onClose }: {
 
         {/* Footer */}
         <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '11px 20px', borderTop: '1px solid #f1f5f9', flexShrink: 0,
+          display: 'flex', flexDirection: 'column', gap: 8,
         }}>
-          <span style={{ fontSize: '0.82em', color: '#64748b' }}>
-            {selectedIds.size > 0 ? `${selectedIds.size} נבחרו` : 'בחר מטרות'}
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {bulkMutation.isError && (
-              <span style={{ color: '#ef4444', fontSize: '0.82em', alignSelf: 'center' }}>שגיאה בהחלה</span>
-            )}
-            <button type="button" className="btn-secondary" onClick={onClose}>ביטול</button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => bulkMutation.mutate()}
-              disabled={selectedIds.size === 0 || bulkMutation.isPending}
-            >
-              {bulkMutation.isPending ? 'מחיל...' : `החל על ${selectedIds.size} מטרות`}
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.82em', color: '#64748b' }}>
+              {selectedIds.size > 0 ? `${selectedIds.size} נבחרו` : 'בחר מטרות'}
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {bulkMutation.isError && (
+                <span style={{ color: '#ef4444', fontSize: '0.82em', alignSelf: 'center' }}>שגיאה בהחלה</span>
+              )}
+              <button type="button" className="btn-secondary" onClick={onClose}>ביטול</button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => bulkMutation.mutate()}
+                disabled={selectedIds.size === 0 || bulkMutation.isPending}
+              >
+                {bulkMutation.isPending ? 'מחיל...' : `החל על ${selectedIds.size} מטרות`}
+              </button>
+            </div>
           </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82em', color: '#64748b', cursor: 'pointer' }}>
+            <input type="checkbox" checked={replaceTitle} onChange={e => setReplaceTitle(e.target.checked)} style={{ accentColor: '#16a34a' }} />
+            החלף כותרת בלוק בשם המטרה
+          </label>
         </div>
       </div>
     </div>
