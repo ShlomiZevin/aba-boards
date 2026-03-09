@@ -183,10 +183,10 @@ export const goalTemplatesApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  bulkApply: (sourceId: string, targetIds: string[], formType: 'lp' | 'dc') =>
+  bulkApply: (sourceId: string, targetIds: string[], formType: 'lp' | 'dc', options?: { replaceTitle?: boolean }) =>
     fetchApi<{ applied: number }>(`/goals/library/${sourceId}/apply-template`, {
       method: 'POST',
-      body: JSON.stringify({ targetIds, formType }),
+      body: JSON.stringify({ targetIds, formType, replaceTitle: options?.replaceTitle }),
     }),
 };
 

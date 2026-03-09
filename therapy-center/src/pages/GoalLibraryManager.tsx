@@ -565,23 +565,7 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
         return { applied: targetIds.length };
       }
       if (!selectedSourceId) throw new Error('No source selected');
-      if (replaceTitle) {
-        // Per-target apply so each gets its own title
-        const source = allItems.find(g => g.id === selectedSourceId);
-        const sourceTemplate = source?.[templateField];
-        if (!sourceTemplate) throw new Error('Source has no template');
-        const sourceField = 'dcPresetSourceId' as const;
-        for (const targetId of targetIds) {
-          const target = allItems.find(g => g.id === targetId);
-          const tmpl = target ? withGoalTitle(sourceTemplate, target.title) : sourceTemplate;
-          await goalTemplatesApi.updateTemplates(targetId, {
-            [templateField]: tmpl,
-            [sourceField]: selectedSourceId,
-          });
-        }
-        return { applied: targetIds.length };
-      }
-      const res = await goalTemplatesApi.bulkApply(selectedSourceId, targetIds, 'dc');
+      const res = await goalTemplatesApi.bulkApply(selectedSourceId, targetIds, 'dc', { replaceTitle });
       return res.data;
     },
     onSuccess: (res) => {

@@ -563,13 +563,15 @@ async function updateGoalLibraryTemplates(id, data) {
   }
   if (data.dcPresetName !== undefined) updates.dcPresetName = data.dcPresetName || null;
   if (data.lpPresetName !== undefined) updates.lpPresetName = data.lpPresetName || null;
+  if (data.dcPresetSourceId !== undefined) updates.dcPresetSourceId = data.dcPresetSourceId || null;
+  if (data.lpPresetSourceId !== undefined) updates.lpPresetSourceId = data.lpPresetSourceId || null;
 
   await doc.ref.update(updates);
   const updated = await doc.ref.get();
   return { id: updated.id, ...updated.data() };
 }
 
-async function bulkApplyTemplate(sourceLibraryId, targetLibraryIds, formType) {
+async function bulkApplyTemplate(sourceLibraryId, targetLibraryIds, formType, { replaceTitle } = {}) {
   const db = getDb();
   const sourceDoc = await db.collection('goalsLibrary').doc(sourceLibraryId).get();
   if (!sourceDoc.exists) throw new Error('Source goal not found');
@@ -577,11 +579,38 @@ async function bulkApplyTemplate(sourceLibraryId, targetLibraryIds, formType) {
   const template = sourceDoc.data()[templateField];
   if (!template) throw new Error('Source has no template');
 
+  // Debug: log column descriptions from source
+  console.log('[bulkApply] Source template columns:', JSON.stringify(
+    (template.tables || []).map(t => ({
+      title: t.title,
+      columns: (t.columns || []).map(c => ({ id: c.id, label: c.label, description: c.description }))
+    }))
+  ));
+
   const sourceField = formType === 'lp' ? 'lpPresetSourceId' : 'dcPresetSourceId';
+
+  // If replaceTitle, fetch target docs to get their titles
+  let targetTitles = {};
+  if (replaceTitle) {
+    const chunks = [];
+    for (let i = 0; i < targetLibraryIds.length; i += 30) chunks.push(targetLibraryIds.slice(i, i + 30));
+    const targetDocs = (await Promise.all(
+      chunks.map(chunk =>
+        db.collection('goalsLibrary').where('__name__', 'in', chunk).get()
+          .then(snap => snap.docs.map(d => ({ id: d.id, title: d.data().title })))
+      )
+    )).flat();
+    targetDocs.forEach(d => { targetTitles[d.id] = d.title; });
+  }
+
   const batch = db.batch();
   for (const targetId of targetLibraryIds) {
+    let tmpl = { ...template, updatedAt: new Date() };
+    if (replaceTitle && targetTitles[targetId]) {
+      tmpl.tables = (tmpl.tables || []).map(t => ({ ...t, title: targetTitles[targetId] }));
+    }
     batch.update(db.collection('goalsLibrary').doc(targetId), {
-      [templateField]: { ...template, updatedAt: new Date() },
+      [templateField]: tmpl,
       [sourceField]: sourceLibraryId,
     });
   }

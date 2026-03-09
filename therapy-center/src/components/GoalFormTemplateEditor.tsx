@@ -628,9 +628,10 @@ function PresetStrip({ formType, onLoad }: {
 }
 
 // -------- Apply to goals modal --------
-function ApplyToGoalsModal({ sourceGoal, formType, onClose }: {
+function ApplyToGoalsModal({ sourceGoal, formType, currentBlocks, onClose }: {
   sourceGoal: GoalLibraryItem;
   formType: 'lp' | 'dc';
+  currentBlocks?: GoalTableBlock[];
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -657,11 +658,15 @@ function ApplyToGoalsModal({ sourceGoal, formType, onClose }: {
   })).filter(g => g.goals.length > 0);
 
   const sourceIdField = formType === 'lp' ? 'lpPresetSourceId' : 'dcPresetSourceId';
+  // Use live editor blocks if provided, otherwise fall back to saved template
+  const srcTemplate: GoalFormTemplate | null = currentBlocks
+    ? { tables: currentBlocks }
+    : sourceGoal[templateField] ?? null;
+
   const bulkMutation = useMutation({
     mutationFn: async () => {
       const targetIdArr = Array.from(selectedIds);
-      if (replaceTitle && sourceGoal[templateField]) {
-        const srcTemplate = sourceGoal[templateField]!;
+      if (replaceTitle && srcTemplate) {
         for (const targetId of targetIdArr) {
           const target = allGoals.find(g => g.id === targetId);
           const tmpl = target
@@ -673,6 +678,12 @@ function ApplyToGoalsModal({ sourceGoal, formType, onClose }: {
           });
         }
         return { data: { applied: targetIdArr.length } };
+      }
+      // bulkApply reads from DB — save current blocks first to ensure DB is up to date
+      if (currentBlocks) {
+        await goalTemplatesApi.updateTemplates(sourceGoal.id, {
+          [templateField]: { tables: currentBlocks },
+        });
       }
       return goalTemplatesApi.bulkApply(sourceGoal.id, targetIdArr, formType);
     },
@@ -1209,6 +1220,7 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
           <ApplyToGoalsModal
             sourceGoal={goal}
             formType={formType}
+            currentBlocks={blocks}
             onClose={() => setShowApplyModal(false)}
           />
         )}

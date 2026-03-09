@@ -199,8 +199,8 @@ router.put('/goals/library/:id/templates', requireAdmin, asyncHandler(async (req
 
 // Bulk apply template to multiple goals (admin only)
 router.post('/goals/library/:id/apply-template', requireAdmin, asyncHandler(async (req, res) => {
-  const { targetIds, formType } = req.body;
-  const result = await therapyService.bulkApplyTemplate(req.params.id, targetIds, formType);
+  const { targetIds, formType, replaceTitle } = req.body;
+  const result = await therapyService.bulkApplyTemplate(req.params.id, targetIds, formType, { replaceTitle });
   res.json(result);
 }));
 
