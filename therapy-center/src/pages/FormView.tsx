@@ -114,7 +114,9 @@ export default function FormView() {
   // In therapist view: can view all forms, but only edit/delete own forms
   const isOwnForm = isParentView ? false : (!isTherapistView || form.practitionerId === contextPractitionerId);
 
-  const dateStr = format(toDate(form.sessionDate), 'dd/MM/yyyy');
+  const sessionDateObj = toDate(form.sessionDate);
+  const dateStr = format(sessionDateObj, 'dd/MM/yyyy');
+  const hourStr = format(sessionDateObj, 'HH:mm');
 
   // Get value for a field from form data
   const getFieldValue = (section: FormTemplateSection): string | number | undefined => {
@@ -182,6 +184,7 @@ export default function FormView() {
           <div className="stat">
             <div className="stat-label">תאריך</div>
             <div className="stat-value">{dateStr}</div>
+            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{hourStr}</div>
           </div>
           <div className="stat">
             <div className="stat-label">מטפלת</div>

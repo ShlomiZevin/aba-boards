@@ -86,8 +86,13 @@ function FlatPendingList({ kids }: { kids: Kid[] }) {
             </div>
             <div style={{ fontSize: 12, color: '#6b7280' }}>{entry.kidName}</div>
           </div>
-          <div style={{ fontSize: 12, color: '#92400e', fontWeight: 500, flexShrink: 0 }}>
-            {format(toDate(entry.sessionDate), 'dd/MM/yyyy')}
+          <div style={{ flexShrink: 0, textAlign: 'left' }}>
+            <div style={{ fontSize: 12, color: '#92400e', fontWeight: 500 }}>
+              {format(toDate(entry.sessionDate), 'dd/MM/yyyy')}
+            </div>
+            <div style={{ fontSize: 11, color: '#9ca3af' }}>
+              {format(toDate(entry.sessionDate), 'HH:mm')}
+            </div>
           </div>
         </Link>
       ))}
@@ -169,9 +174,14 @@ function KidFormsCard({ kid }: { kid: Kid }) {
                 textDecoration: 'none', color: 'inherit', fontSize: 13,
               }}>
                 <span style={{ fontWeight: 500 }}>{entry.goalTitle}</span>
-                <span style={{ color: '#6b7280', fontSize: 12 }}>
-                  {format(toDate(entry.sessionDate), 'dd/MM/yyyy')}
-                </span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ color: '#6b7280', fontSize: 12 }}>
+                    {format(toDate(entry.sessionDate), 'dd/MM/yyyy')}
+                  </div>
+                  <div style={{ color: '#9ca3af', fontSize: 11 }}>
+                    {format(toDate(entry.sessionDate), 'HH:mm')}
+                  </div>
+                </div>
               </Link>
             ))}
           </div>

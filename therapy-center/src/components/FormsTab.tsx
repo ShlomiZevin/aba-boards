@@ -45,7 +45,9 @@ function CompletedFormCard({
   therapists: Practitioner[];
 }) {
   const therapist = therapists.find((t) => t.id === form.practitionerId);
-  const dateStr = format(toDate(form.sessionDate), 'dd/MM/yyyy');
+  const d = toDate(form.sessionDate);
+  const dateStr = format(d, 'dd/MM/yyyy');
+  const hourStr = format(d, 'HH:mm');
   const goalsCount = form.goalsWorkedOn.length + form.additionalGoals.length;
 
   const cooperationClass =
@@ -56,6 +58,7 @@ function CompletedFormCard({
       <div className="form-card-content">
         <div>
           <h4>{dateStr}</h4>
+          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{hourStr}</div>
           {therapist && <p>{therapist.name}</p>}
         </div>
         <div className="stats">

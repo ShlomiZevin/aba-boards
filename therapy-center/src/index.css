@@ -3165,6 +3165,19 @@ body {
   gap: 12px;
 }
 
+.sessions-columns > div {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sessions-columns > div > .sessions-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: 4px;
+}
+
 .sessions-col-label {
   font-size: 0.78em;
   font-weight: 700;

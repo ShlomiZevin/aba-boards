@@ -1321,6 +1321,9 @@ export default function KidDetail() {
                       <div className="session-card-top">
                         <span className="session-card-date">
                           {format(toDate(session.scheduledDate), 'dd/MM/yyyy')}
+                          <span style={{ display: 'block', color: '#9ca3af', fontWeight: 500, fontSize: '0.85em', lineHeight: 1 }}>
+                            {format(toDate(session.scheduledDate), 'HH:mm')}
+                          </span>
                         </span>
                         <span className={`session-type-badge ${isMeeting ? 'meeting' : 'therapy'}`}>
                           {isMeeting ? 'ישיבה' : 'טיפול'}
@@ -1385,7 +1388,7 @@ export default function KidDetail() {
                         </div>
                         {futureSessions.length === 0
                           ? <p className="sessions-empty">אין מפגשים קרובים</p>
-                          : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{futureSessions.map(renderSession)}</div>
+                          : <div className="sessions-list">{futureSessions.map(renderSession)}</div>
                         }
                       </div>
                       <div>
@@ -1394,7 +1397,7 @@ export default function KidDetail() {
                         </div>
                         {pastSessions.length === 0
                           ? <p className="sessions-empty">אין מפגשים קודמים</p>
-                          : <div className="sessions-list" style={{ maxHeight: 320, overflowY: 'auto' }}>{pastSessions.map(renderSession)}</div>
+                          : <div className="sessions-list">{pastSessions.map(renderSession)}</div>
                         }
                       </div>
                     </div>

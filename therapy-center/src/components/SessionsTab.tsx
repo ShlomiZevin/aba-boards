@@ -119,13 +119,16 @@ function SessionCard({
 }) {
   const navigate = useNavigate();
   const therapist = therapists.find((t) => t.id === session.therapistId);
-  const dateStr = format(toDate(session.scheduledDate), 'dd/MM/yyyy HH:mm');
+  const d = toDate(session.scheduledDate);
+  const dateStr = format(d, 'dd/MM/yyyy');
+  const hourStr = format(d, 'HH:mm');
   const hasForm = session.status === 'completed' && session.formId;
 
   return (
     <div className="session-card">
       <div className="session-info">
         <h4>{dateStr}</h4>
+        <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 1 }}>{hourStr}</div>
         {therapist && <p>{therapist.name}</p>}
         <span
           className={`status-badge ${
