@@ -579,14 +579,6 @@ async function bulkApplyTemplate(sourceLibraryId, targetLibraryIds, formType, { 
   const template = sourceDoc.data()[templateField];
   if (!template) throw new Error('Source has no template');
 
-  // Debug: log column descriptions from source
-  console.log('[bulkApply] Source template columns:', JSON.stringify(
-    (template.tables || []).map(t => ({
-      title: t.title,
-      columns: (t.columns || []).map(c => ({ id: c.id, label: c.label, description: c.description }))
-    }))
-  ));
-
   const sourceField = formType === 'lp' ? 'lpPresetSourceId' : 'dcPresetSourceId';
 
   // If replaceTitle, fetch target docs to get their titles

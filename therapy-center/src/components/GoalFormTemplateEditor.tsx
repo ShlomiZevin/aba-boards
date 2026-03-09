@@ -599,8 +599,13 @@ function PresetStrip({ formType, onLoad }: {
             <div style={{ fontSize: '0.71em', color: '#64748b', marginTop: 1 }}>{p.desc}</div>
           </button>
         ))}
-        {savedPresets.map(g => (
-          <div key={g.id} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #86efac', borderRadius: 8, overflow: 'hidden' }}>
+        {savedPresets.map(g => {
+          const cols = (g[templateField]?.tables || []).flatMap(t => t.columns || []);
+          const colSummary = cols.length > 0
+            ? cols.map(c => c.label).join(', ')
+            : '';
+          return (
+          <div key={g.id} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #93c5fd', borderRadius: 8, overflow: 'hidden' }}>
             <button
               type="button"
               onClick={() => onLoad(g[templateField]!, g[presetNameField] as string)}
@@ -609,19 +614,22 @@ function PresetStrip({ formType, onLoad }: {
                 textAlign: 'right', border: 'none',
               }}
             >
-              <div style={{ fontSize: '0.87em', fontWeight: 700, color: '#15803d' }}>{g[presetNameField]}</div>
+              <div style={{ fontSize: '0.87em', fontWeight: 700, color: '#1e40af' }}>{g[presetNameField]}</div>
+              {colSummary && <div style={{ fontSize: '0.68em', color: '#94a3b8', marginTop: 1, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cols.length} עמודות: {colSummary}</div>}
+              <div style={{ fontSize: '0.65em', color: '#cbd5e1', marginTop: 1 }}>{g.title}</div>
             </button>
             <button
               type="button"
               onClick={() => removePresetMutation.mutate(g.id)}
               title="הסר מתבניות מוכנות"
               style={{
-                background: '#f8fafc', border: 'none', borderRight: '1px solid #bbf7d0',
+                background: '#f8fafc', border: 'none', borderRight: '1px solid #93c5fd',
                 color: '#94a3b8', cursor: 'pointer', padding: '0 7px', fontSize: '0.8em',
               }}
             >✕</button>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

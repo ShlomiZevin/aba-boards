@@ -543,10 +543,6 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
   // Saved presets: all goals marked as preset with a template (always visible regardless of selection)
   const savedPresets = allItems.filter(g => g[presetNameField] && g[templateField]);
 
-  // Other goals with templates (exclude targets + presets)
-  const targetSet = new Set(targetIds);
-  const otherSources = allItems.filter(g => !targetSet.has(g.id) && g[templateField] && !g[presetNameField]);
-
   const withGoalTitle = (template: GoalFormTemplate, goalTitle: string): GoalFormTemplate => ({
     ...template,
     tables: template.tables.map(t => ({ ...t, title: goalTitle })),
@@ -618,23 +614,29 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
             ))}
             {savedPresets.map(g => {
               const cat = GOAL_CATEGORIES.find(c => c.id === g.categoryId);
+              const cols = (g[templateField]?.tables || []).flatMap(t => t.columns || []);
+              const colSummary = cols.length > 0 ? cols.map(c => c.label).join(', ') : '';
               return (
                 <label key={g.id} style={{
                   display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-                  border: `1.5px solid ${selectedSourceId === g.id ? '#16a34a' : '#e2e8f0'}`,
+                  border: `1.5px solid ${selectedSourceId === g.id ? '#3b82f6' : '#bfdbfe'}`,
                   borderRadius: 8, cursor: 'pointer',
-                  background: selectedSourceId === g.id ? '#f0fdf4' : 'white',
+                  background: selectedSourceId === g.id ? '#eff6ff' : '#f8fafc',
                 }}>
                   <input
                     type="radio"
                     name="template-source"
                     checked={selectedSourceId === g.id}
                     onChange={() => { setSelectedSourceId(g.id); setSelectedBuiltIn(null); }}
-                    style={{ accentColor: '#16a34a' }}
+                    style={{ accentColor: '#3b82f6' }}
                   />
-                  <span style={{ flex: 1, fontSize: '0.88em', fontWeight: 600, color: '#334155' }}>{g[presetNameField]}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.88em', fontWeight: 600, color: '#1e40af' }}>{g[presetNameField]}</div>
+                    {colSummary && <div style={{ fontSize: '0.72em', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cols.length} עמודות: {colSummary}</div>}
+                    <div style={{ fontSize: '0.68em', color: '#cbd5e1' }}>{g.title}</div>
+                  </div>
                   {cat && (
-                    <span style={{ fontSize: '0.7em', color: cat.color, background: `${cat.color}18`, borderRadius: 8, padding: '1px 7px' }}>
+                    <span style={{ fontSize: '0.7em', color: cat.color, background: `${cat.color}18`, borderRadius: 8, padding: '1px 7px', flexShrink: 0 }}>
                       {cat.nameHe}
                     </span>
                   )}
@@ -643,39 +645,6 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
             })}
           </div>
 
-          {/* Other goals with templates */}
-          {otherSources.length > 0 && (
-            <>
-              <div style={{ fontSize: '0.76em', fontWeight: 700, color: '#64748b', marginBottom: 6 }}>תבניות ממטרות קיימות:</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {otherSources.map(g => {
-                  const cat = GOAL_CATEGORIES.find(c => c.id === g.categoryId);
-                  return (
-                    <label key={g.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-                      border: `1.5px solid ${selectedSourceId === g.id ? '#3b82f6' : '#e2e8f0'}`,
-                      borderRadius: 8, cursor: 'pointer',
-                      background: selectedSourceId === g.id ? '#eff6ff' : 'white',
-                    }}>
-                      <input
-                        type="radio"
-                        name="template-source"
-                        checked={selectedSourceId === g.id}
-                        onChange={() => { setSelectedSourceId(g.id); setSelectedBuiltIn(null); }}
-                        style={{ accentColor: '#3b82f6' }}
-                      />
-                      <span style={{ flex: 1, fontSize: '0.88em', color: '#334155' }}>{g.title}</span>
-                      {cat && (
-                        <span style={{ fontSize: '0.7em', color: cat.color, background: `${cat.color}18`, borderRadius: 8, padding: '1px 7px' }}>
-                          {cat.nameHe}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            </>
-          )}
         </div>
 
         {/* Replace block title option */}
