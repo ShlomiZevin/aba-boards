@@ -405,13 +405,6 @@ function RegularDashboard() {
     enabled: !isTherapistView,
   });
 
-  const { data: practitionerInfoRes } = useQuery({
-    queryKey: ['practitioner-info', practitionerId],
-    queryFn: () => practitionersApi.getInfo(practitionerId!),
-    enabled: isTherapistView && !!practitionerId,
-  });
-  const practitionerName = practitionerInfoRes?.data?.name || '';
-
   const createKidMutation = useMutation({
     mutationFn: (data: { name: string; age?: string; gender?: string }) =>
       kidsApi.create(data),
@@ -432,15 +425,6 @@ function RegularDashboard() {
 
   return (
     <div className="container">
-      {/* Therapist greeting — admin view uses AppShell instead */}
-      {isTherapistView && (
-        <div className="header-card">
-          <img src={`${BASE}doing-logo-transparent2.png`} alt="Doing" className="logo" />
-          <h1>{practitionerName ? `שלום, ${practitionerName}` : 'הילדים שלי'}</h1>
-          <p>הילדים שלי</p>
-        </div>
-      )}
-
       {/* Alerts */}
       {!isTherapistView && alerts.length > 0 && (
         <div className="alerts-box">

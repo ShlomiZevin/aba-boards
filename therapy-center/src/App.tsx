@@ -15,7 +15,10 @@ import Login from './pages/Login';
 import AdminManagement from './pages/AdminManagement';
 import NotificationCenter from './pages/NotificationCenter';
 import GoalLibraryManager from './pages/GoalLibraryManager';
+import FormsOverview from './pages/FormsOverview';
+import TherapistNotifications from './pages/TherapistNotifications';
 import AppShell from './components/AppShell';
+import TherapistShell from './components/TherapistShell';
 import { setTherapistAuth, setParentAuth } from './api/client';
 import './index.css';
 
@@ -69,16 +72,20 @@ function TherapistRoutes() {
 
   return (
     <TherapistContext.Provider value={{ isTherapistView: true, isParentView: false, practitionerId: practitionerId || null }}>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/kid/:kidId" element={<KidDetail />} />
-        <Route path="/kid/:kidId/goals" element={<GoalsPage />} />
-        <Route path="/form/new" element={<FormFill />} />
-        <Route path="/form/:formId/edit" element={<FormFill />} />
-        <Route path="/form/:formId/view" element={<FormView />} />
-        <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
-        <Route path="*" element={<Navigate to={`/t/${practitionerId}`} replace />} />
-      </Routes>
+      <TherapistShell>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/kid/:kidId" element={<KidDetail />} />
+          <Route path="/kid/:kidId/goals" element={<GoalsPage />} />
+          <Route path="/forms" element={<FormsOverview />} />
+          <Route path="/notifications" element={<TherapistNotifications />} />
+          <Route path="/form/new" element={<FormFill />} />
+          <Route path="/form/:formId/edit" element={<FormFill />} />
+          <Route path="/form/:formId/view" element={<FormView />} />
+          <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
+          <Route path="*" element={<Navigate to={`/t/${practitionerId}`} replace />} />
+        </Routes>
+      </TherapistShell>
     </TherapistContext.Provider>
   );
 }
@@ -137,6 +144,7 @@ function App() {
             <Route path="/" element={<AdminLayout><Dashboard /></AdminLayout>} />
             <Route path="/kid/:kidId" element={<AdminLayout><KidDetail /></AdminLayout>} />
             <Route path="/kid/:kidId/goals" element={<AdminLayout><GoalsPage /></AdminLayout>} />
+            <Route path="/forms" element={<AdminLayout><FormsOverview /></AdminLayout>} />
             <Route path="/goal-library" element={<AdminLayout><GoalLibraryManager /></AdminLayout>} />
             <Route path="/form/new" element={<AdminLayout><FormFill /></AdminLayout>} />
             <Route path="/form/:formId/edit" element={<AdminLayout><FormFill /></AdminLayout>} />
