@@ -36,6 +36,8 @@ export default function GoalLibraryManager() {
   const kidSearchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [showDetachConfirm, setShowDetachConfirm] = useState(false);
+
   const { data: response, isLoading } = useQuery({
     queryKey: ['goals-library-all'],
     queryFn: () => goalsApi.getAllLibrary(),
@@ -88,6 +90,24 @@ export default function GoalLibraryManager() {
       setSelectedIds(new Set());
       setSelectedKidId(null);
       setKidSearch('');
+    },
+  });
+
+  const detachMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        await goalTemplatesApi.updateTemplates(id, {
+          dataCollectionTemplate: null,
+          dcPresetName: null,
+          dcPresetSourceId: null,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      setShowDetachConfirm(false);
+      setSelectedIds(new Set());
     },
   });
 
@@ -313,6 +333,13 @@ export default function GoalLibraryManager() {
           >
             החל תבנית
           </button>
+          <button
+            className="btn-small"
+            style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: '0.85em' }}
+            onClick={() => setShowDetachConfirm(true)}
+          >
+            נתק מתבנית
+          </button>
           <button className="btn-secondary btn-small" onClick={() => setSelectedIds(new Set())}>
             ביטול
           </button>
@@ -445,6 +472,29 @@ export default function GoalLibraryManager() {
                 onClick={() => assignMutation.mutate({ kidId: selectedKidId!, goals: selectedGoals })}
               >
                 {assignMutation.isPending ? `משייך ${selectedGoals.length} מטרות...` : 'שייך'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detach Confirm */}
+      {showDetachConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDetachConfirm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ textAlign: 'center', padding: '24px 28px', maxWidth: 400 }}>
+            <h3 style={{ margin: '0 0 10px' }}>ניתוק תבנית</h3>
+            <div style={{ fontSize: '0.9em', color: '#64748b', marginBottom: 16 }}>
+              למחוק את תבנית איסוף הנתונים מ-{selectedIds.size} מטרות?
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setShowDetachConfirm(false)}>ביטול</button>
+              <button
+                type="button"
+                style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600 }}
+                disabled={detachMutation.isPending}
+                onClick={() => detachMutation.mutate(Array.from(selectedIds))}
+              >
+                {detachMutation.isPending ? 'מנתק...' : 'נתק'}
               </button>
             </div>
           </div>
