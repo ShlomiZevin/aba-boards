@@ -11,6 +11,42 @@ const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
+// ==================== AI CHAT ====================
+
+const { handleChat } = require('../services/chat-center');
+
+router.post('/chat', requireAdmin, asyncHandler(async (req, res) => {
+  const { messages, kidId, stream } = req.body;
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'Messages array is required' });
+  }
+
+  if (stream) {
+    // SSE streaming mode — send tool status updates in real time
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+
+    const onToolStatus = (status) => {
+      res.write(`data: ${JSON.stringify(status)}\n\n`);
+    };
+
+    try {
+      const result = await handleChat(req.adminId, messages, kidId || null, onToolStatus);
+      res.write(`data: ${JSON.stringify({ type: 'done', ...result })}\n\n`);
+    } catch (err) {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
+    }
+    res.end();
+  } else {
+    // Regular JSON response (backwards compatible)
+    const result = await handleChat(req.adminId, messages, kidId || null);
+    res.json(result);
+  }
+}));
+
 // ==================== KIDS ====================
 
 router.get('/kids/all-grouped', requireSuperAdmin, asyncHandler(async (req, res) => {

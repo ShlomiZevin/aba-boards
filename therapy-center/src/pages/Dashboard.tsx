@@ -439,8 +439,8 @@ function RegularDashboard() {
           <h2>הילדים</h2>
           {!isTherapistView && (
             <div style={{ display: 'flex', gap: '8px' }}>
-              <a href="/therapy/board-builder" className="btn-secondary btn-small" style={{ textDecoration: 'none' }}>
-                🎨 בנה לוח
+              <a href="/therapy/chat" className="btn-secondary btn-small" style={{ textDecoration: 'none' }}>
+                🤖 צ׳אט AI
               </a>
               <button onClick={() => setShowCreateKid(true)} className="btn-primary btn-small">
                 + הוסף ילד

@@ -18,6 +18,7 @@ import GoalLibraryManager from './pages/GoalLibraryManager';
 import FormsOverview from './pages/FormsOverview';
 import TherapistNotifications from './pages/TherapistNotifications';
 import BoardBuilder from './pages/BoardBuilder';
+import ChatCenter from './pages/ChatCenter';
 import AppShell from './components/AppShell';
 import TherapistShell from './components/TherapistShell';
 import { setTherapistAuth, setParentAuth } from './api/client';
@@ -156,6 +157,7 @@ function App() {
             <Route path="/practitioners" element={<AdminLayout><AllPractitioners /></AdminLayout>} />
             <Route path="/notifications" element={<AdminLayout><NotificationCenter /></AdminLayout>} />
             <Route path="/admin-management" element={<AdminLayout><AdminManagement /></AdminLayout>} />
+            <Route path="/chat" element={<AdminLayout><ChatCenter /></AdminLayout>} />
             <Route path="/board-builder" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
             <Route path="/board-builder/:kidId" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
 

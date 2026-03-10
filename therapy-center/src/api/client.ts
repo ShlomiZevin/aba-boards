@@ -435,3 +435,81 @@ export const adminApi = {
       body: JSON.stringify({ newKey }),
     }),
 };
+
+// AI Chat API
+export interface ChatResponse {
+  reply: string;
+  boardUpdated?: boolean;
+  toolsUsed?: string[];
+}
+
+export interface ChatStatusEvent {
+  type: 'thinking' | 'tool' | 'done' | 'error';
+  label?: string;
+  tool?: string;
+  reply?: string;
+  boardUpdated?: boolean;
+  toolsUsed?: string[];
+  error?: string;
+}
+
+export const chatApi = {
+  send: (messages: { role: string; content: string }[], kidId?: string | null) =>
+    fetchApi<ChatResponse>('/chat', {
+      method: 'POST',
+      body: JSON.stringify({ messages, kidId }),
+    }),
+
+  sendStream: async (
+    messages: { role: string; content: string }[],
+    kidId: string | null,
+    onStatus: (event: ChatStatusEvent) => void,
+  ): Promise<ChatResponse> => {
+    const response = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ messages, kidId, stream: true }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result: ChatResponse = { reply: '' };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event: ChatStatusEvent = JSON.parse(line.slice(6));
+          onStatus(event);
+          if (event.type === 'done') {
+            result = {
+              reply: event.reply || '',
+              boardUpdated: event.boardUpdated,
+              toolsUsed: event.toolsUsed,
+            };
+          }
+          if (event.type === 'error') {
+            throw new Error(event.error || 'Chat error');
+          }
+        } catch (e) {
+          if (e instanceof SyntaxError) continue; // skip malformed SSE lines
+          throw e;
+        }
+      }
+    }
+
+    return result;
+  },
+};
