@@ -333,6 +333,60 @@ export interface SessionForm {
   updatedAt: Date;
 }
 
+// ==================== Board Builder Types ====================
+
+export type BoardItemType = 'header' | 'task' | 'bank' | 'progress' | 'goal';
+export type TaskType = 'regular' | 'bonus' | 'calm-down';
+export type HeaderSize = 'small' | 'medium' | 'large';
+export type CoinStyle = 'points' | 'shekel' | 'dollar' | 'custom';
+export type ColorSchema = 'purple' | 'pink' | 'blue' | 'dark';
+export type CalmDownActivity = 'paint' | 'bubbles' | 'xylophone' | 'breathing' | 'scooter';
+
+export interface BoardTaskData {
+  id: number;
+  icon: string;
+  title: string;
+  type: TaskType;
+  requiresTestimony?: boolean;
+  trackTime?: boolean;
+  activeDays?: number[];
+  activityType?: CalmDownActivity;
+}
+
+export interface BoardLayoutItem {
+  id: number;
+  type: BoardItemType;
+  // Header
+  size?: HeaderSize;
+  text?: string;
+  // Bank
+  label?: string;
+  // Progress
+  title?: string;
+  // Task
+  taskType?: TaskType;
+  taskData?: BoardTaskData;
+  // Goal
+  icon?: string;
+  pointsRequired?: number;
+}
+
+export interface BoardLayout {
+  items: BoardLayoutItem[];
+}
+
+export interface BoardSettings {
+  dailyReward: number;
+  coinStyle: CoinStyle;
+  coinImageName?: string;
+  colorSchema: ColorSchema;
+  showDino: boolean;
+  soundsEnabled: boolean;
+  builderPin: string;
+  kidDescription: string;
+  behaviorGoals: string;
+}
+
 // Kid type (from existing collection)
 export interface Kid {
   id: string;
@@ -344,10 +398,26 @@ export interface Kid {
   adminId?: string;
   // Board data (present in full Firestore document)
   totalMoney?: number;
-  tasks?: { id: number; [key: string]: unknown }[];
+  tasks?: BoardTaskData[];
   dailyReward?: number;
   completedTasks?: number[];
   completedBonusTasks?: number[];
+  // Board layout & settings
+  boardLayout?: BoardLayout;
+  headerLabel?: string;
+  savingsLabel?: string;
+  regularTasksHeader?: string;
+  bonusTasksHeader?: string;
+  calmDownHeader?: string;
+  coinStyle?: CoinStyle;
+  coinImageName?: string;
+  colorSchema?: ColorSchema;
+  showDino?: boolean;
+  soundsEnabled?: boolean;
+  builderPin?: string;
+  kidDescription?: string;
+  behaviorGoals?: string;
+  personalInfo?: string;
 }
 
 // Super admin kid management

@@ -83,7 +83,7 @@ ${taskInstructions}
 Rewards: ${request.rewards || 'לא צוין'}`;
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userMessage }],
@@ -200,4 +200,96 @@ async function createBoardFromRequest(requestId) {
   };
 }
 
-module.exports = { generateBoardFromRequest, createBoardFromRequest };
+const CHAT_SYSTEM_PROMPT = `You help edit a children's behavioral reward board via chat conversation.
+You receive the current board state (JSON) and the user's request in Hebrew.
+
+If the user asks to MODIFY the board (add/remove/change tasks, goals, headers, etc.):
+Return JSON: { "reply": "הסבר קצר מה שינית...", "boardLayout": { "items": [...] } }
+
+If the user asks a QUESTION or doesn't require board changes:
+Return JSON: { "reply": "תשובה..." }
+
+IMPORTANT: Output ONLY valid JSON. No markdown, no code fences.
+
+BOARD LAYOUT ITEM TYPES:
+1. Bank: { "id": N, "type": "bank", "label": "..." }
+2. Progress: { "id": N, "type": "progress", "title": "ההתקדמות שלי היום" }
+3. Header: { "id": N, "type": "header", "size": "large|medium|small", "text": "..." }
+4. Regular task: { "id": N, "type": "task", "taskType": "regular", "taskData": { "id": T, "icon": "emoji", "title": "...", "type": "regular", "requiresTestimony": false, "trackTime": false, "activeDays": [0,1,2,3,4,5,6] } }
+5. Bonus task: { "id": N, "type": "task", "taskType": "bonus", "taskData": { "id": T, "icon": "emoji", "title": "...", "type": "bonus", "minReward": 1, "maxReward": 5, "bonusType": "instant", "requiresTestimony": false, "trackTime": false, "activeDays": [0,1,2,3,4,5,6] } }
+6. Composite task: { "id": N, "type": "task", "taskType": "composite", "taskData": { "id": T, "icon": "emoji", "title": "...", "type": "composite", "subtasks": [{"id":1,"title":"..."},{"id":2,"title":"..."}], "requiresTestimony": false, "trackTime": false, "activeDays": [0,1,2,3,4,5,6] } }
+7. Calm-down: { "id": N, "type": "task", "taskType": "calm-down", "taskData": { "id": T, "icon": "emoji", "title": "...", "type": "calm-down", "activityType": "paint|breathing|bubbles|scooter|xylophone", "activeDays": [0,1,2,3,4,5,6] } }
+8. Goal/Reward: { "id": N, "type": "goal", "icon": "emoji", "title": "...", "pointsRequired": number }
+
+RULES:
+- Keep existing item IDs when modifying — only assign new IDs for new items
+- Use sequential IDs for new items starting from max existing ID + 1
+- activeDays: 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat (Israel week)
+- School tasks: activeDays [0,1,2,3,4], daily tasks: [0,1,2,3,4,5,6]
+- Always keep bank and progress as first two items
+- Reply in Hebrew
+- Keep task titles short and clear`;
+
+async function chatBoardEdit(kidInfo, currentBoard, userMessage, history) {
+  const messages = [];
+
+  // Add conversation history
+  if (history && history.length > 0) {
+    for (const msg of history) {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+  }
+
+  // Build current message with board context
+  const contextMessage = `Current board state:
+${JSON.stringify(currentBoard, null, 2)}
+
+Kid info: ${kidInfo.name || 'לא ידוע'}, age ${kidInfo.age || '?'}, ${kidInfo.gender === 'boy' ? 'בן' : kidInfo.gender === 'girl' ? 'בת' : 'לא ידוע'}
+
+User request: ${userMessage}`;
+
+  messages.push({ role: 'user', content: contextMessage });
+
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 4096,
+    system: CHAT_SYSTEM_PROMPT,
+    messages,
+  });
+
+  const text = response.content[0].text.trim();
+
+  // Try multiple strategies to extract JSON from the response
+  let jsonText = text;
+
+  // Strip code fences
+  if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+  }
+
+  // Strategy 1: Direct parse
+  try {
+    return JSON.parse(jsonText);
+  } catch {}
+
+  // Strategy 2: Find JSON object within text (Claude sometimes prefixes with plain text)
+  const jsonMatch = text.match(/\{[\s\S]*"reply"[\s\S]*\}$/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch {}
+  }
+
+  // Strategy 3: Find any JSON object in the text
+  const braceStart = text.indexOf('{');
+  if (braceStart >= 0) {
+    try {
+      return JSON.parse(text.slice(braceStart));
+    } catch {}
+  }
+
+  // Fallback: wrap plain text as reply
+  return { reply: text };
+}
+
+module.exports = { generateBoardFromRequest, createBoardFromRequest, chatBoardEdit };

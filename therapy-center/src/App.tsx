@@ -17,6 +17,7 @@ import NotificationCenter from './pages/NotificationCenter';
 import GoalLibraryManager from './pages/GoalLibraryManager';
 import FormsOverview from './pages/FormsOverview';
 import TherapistNotifications from './pages/TherapistNotifications';
+import BoardBuilder from './pages/BoardBuilder';
 import AppShell from './components/AppShell';
 import TherapistShell from './components/TherapistShell';
 import { setTherapistAuth, setParentAuth } from './api/client';
@@ -155,6 +156,11 @@ function App() {
             <Route path="/practitioners" element={<AdminLayout><AllPractitioners /></AdminLayout>} />
             <Route path="/notifications" element={<AdminLayout><NotificationCenter /></AdminLayout>} />
             <Route path="/admin-management" element={<AdminLayout><AdminManagement /></AdminLayout>} />
+            <Route path="/board-builder" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
+            <Route path="/board-builder/:kidId" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
+
+            {/* Public board builder — PIN-protected, no admin auth */}
+            <Route path="/build/:kidId" element={<BoardBuilder isPublic />} />
 
             {/* Therapist routes — no auth required, URL is the identity */}
             <Route path="/t/:practitionerId/*" element={<TherapistRoutes />} />

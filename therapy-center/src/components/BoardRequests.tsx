@@ -24,7 +24,7 @@ function formatDate(ts?: { _seconds: number }) {
 
 function buildCustomerMessage(childName: string, kidId: string) {
   const encoded = encodeURIComponent(kidId);
-  return `הלוח של ${childName}: https://startdoing.co.il/board.html?kid=${encoded}\nלוח ניהול של ${childName}: https://startdoing.co.il/board-builder.html?kid=${encoded} (סיסמה: 1234. ניתן לשנות בלוח)`;
+  return `הלוח של ${childName}: https://startdoing.co.il/board.html?kid=${encoded}\nעריכת הלוח: https://startdoing.co.il/board.html?kid=${encoded}&mode=edit (סיסמה: 1234. ניתן לשנות בלוח)`;
 }
 
 function buildJson(request: BoardRequest) {

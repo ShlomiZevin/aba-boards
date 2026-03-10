@@ -114,9 +114,9 @@ function KidCard({ kid, isTherapistView, links, variant = 'default', onDetach, o
         )}
         {!isTherapistView && !isOtherAdmin && (
           <>
-            <a href={`/board-builder.html?kid=${kid.id}`} className="kid-action-btn with-label">
+            <a href={`/board.html?kid=${kid.id}&mode=edit`} className="kid-action-btn with-label">
               <span className="action-icon">🎨</span>
-              <span className="action-label">בנה לוח</span>
+              <span className="action-label">ערוך לוח</span>
             </a>
             <a href={`/stats.html?kid=${kid.id}`} className="kid-action-btn with-label">
               <span className="action-icon">📊</span>
@@ -438,9 +438,14 @@ function RegularDashboard() {
         <div className="content-card-header">
           <h2>הילדים</h2>
           {!isTherapistView && (
-            <button onClick={() => setShowCreateKid(true)} className="btn-primary btn-small">
-              + הוסף ילד
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <a href="/therapy/board-builder" className="btn-secondary btn-small" style={{ textDecoration: 'none' }}>
+                🎨 בנה לוח
+              </a>
+              <button onClick={() => setShowCreateKid(true)} className="btn-primary btn-small">
+                + הוסף ילד
+              </button>
+            </div>
           )}
         </div>
 

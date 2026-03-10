@@ -1413,10 +1413,21 @@ async function initializeGoalCategories() {
 async function updateKid(id, data) {
   const db = getDb();
   const updates = {};
-  if (data.name !== undefined) updates.name = data.name;
-  if (data.age !== undefined) updates.age = data.age;
-  if (data.gender !== undefined) updates.gender = data.gender;
-  if (data.imageName !== undefined) updates.imageName = data.imageName;
+  const allowedFields = [
+    'name', 'age', 'gender', 'imageName',
+    // Board layout & tasks
+    'boardLayout', 'tasks',
+    // Board section labels
+    'headerLabel', 'savingsLabel', 'regularTasksHeader', 'bonusTasksHeader', 'calmDownHeader',
+    // Kid profile
+    'kidDescription', 'behaviorGoals', 'personalInfo',
+    // Board settings
+    'dailyReward', 'coinStyle', 'coinImageName', 'colorSchema',
+    'showDino', 'soundsEnabled', 'builderPin',
+  ];
+  for (const field of allowedFields) {
+    if (data[field] !== undefined) updates[field] = data[field];
+  }
   await db.collection('kids').doc(id).update(updates);
   const doc = await db.collection('kids').doc(id).get();
   return { id: doc.id, ...doc.data() };

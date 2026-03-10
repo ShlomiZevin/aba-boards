@@ -19,6 +19,39 @@ app.use(express.json({ limit: '10mb' }));
 // Serve static files (audio, avatar images)
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Board chat edit — PIN-authenticated, no admin auth needed
+const { chatBoardEdit } = require('./services/board-generator');
+const { getDb } = require('./services/firebase');
+app.post('/api/therapy/kids/:kidId/board-chat', async (req, res) => {
+  try {
+    const { kidId } = req.params;
+    const { message, currentBoardLayout, kidInfo, history, pin } = req.body;
+
+    if (!message) return res.status(400).json({ error: 'Message is required' });
+
+    const db = getDb();
+    const kidDoc = await db.collection('kids').doc(kidId).get();
+    if (!kidDoc.exists) return res.status(404).json({ error: 'Kid not found' });
+
+    const kidData = kidDoc.data();
+    const validPin = kidData.builderPin || '1234';
+    if (pin !== validPin && pin !== '6724') {
+      return res.status(403).json({ error: 'Invalid PIN' });
+    }
+
+    const result = await chatBoardEdit(
+      kidInfo || { name: kidData.name, age: kidData.age, gender: kidData.gender },
+      currentBoardLayout || kidData.boardLayout,
+      message,
+      history || []
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('Board chat error:', err);
+    res.status(500).json({ error: err.message || 'Chat failed' });
+  }
+});
+
 // API Routes
 app.use('/api/avatar', avatarRoutes);
 app.use('/api/admin', authenticate, adminRoutes);

@@ -731,7 +731,7 @@ export default function KidDetail() {
             {!isSimplifiedView && (
               <>
                 <a href={`/board.html?kid=${kidId}`} className="kid-toolbar-btn" title="לוח">📱<span className="toolbar-label">לוח</span></a>
-                <a href={`/board-builder.html?kid=${kidId}`} className="kid-toolbar-btn" title="בנה לוח">🎨<span className="toolbar-label">בנה לוח</span></a>
+                <a href={`/board.html?kid=${kidId}&mode=edit`} className="kid-toolbar-btn" title="ערוך לוח">🎨<span className="toolbar-label">ערוך לוח</span></a>
                 <a href={`/stats.html?kid=${kidId}`} className="kid-toolbar-btn" title="סטטיסטיקה">📊<span className="toolbar-label">סטטיסטיקה</span></a>
               </>
             )}
@@ -834,8 +834,8 @@ export default function KidDetail() {
                 color="#667eea"
               />
               <QuickActionLink
-                href={`/board-builder.html?kid=${kidId}`}
-                label="בנה לוח"
+                href={`/board.html?kid=${kidId}&mode=edit`}
+                label="ערוך לוח"
                 icon="🎨"
                 color="#48bb78"
               />
