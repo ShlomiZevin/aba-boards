@@ -569,9 +569,18 @@ function PresetStrip({ formType, onLoad }: {
 
   const presetNameField = formType === 'lp' ? 'lpPresetName' : 'dcPresetName';
   const templateField = formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate';
-  const savedPresets = ((libraryRes?.data || []) as GoalLibraryItem[]).filter(
+  const allWithPreset = ((libraryRes?.data || []) as GoalLibraryItem[]).filter(
     g => g[presetNameField] && g[templateField]
   );
+  // Deduplicate by column fingerprint (same columns = same template)
+  const seen = new Set<string>();
+  const savedPresets = allWithPreset.filter(g => {
+    const cols = (g[templateField]?.tables || []).flatMap(t => t.columns || []);
+    const key = cols.map(c => `${c.label}|${c.description || ''}`).join(';;');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
   const removePresetMutation = useMutation({
     mutationFn: (goalId: string) =>
@@ -721,8 +730,8 @@ function ApplyToGoalsModal({ sourceGoal, formType, currentBlocks, onClose }: {
 
   if (appliedCount !== null) {
     return (
-      <div className="modal-overlay" style={{ zIndex: 300 }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{
+      <div className="modal-overlay" style={{ zIndex: 300 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div style={{
           background: 'white', borderRadius: 14, padding: '32px 28px', textAlign: 'center',
           boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxWidth: 400,
         }}>
@@ -737,9 +746,8 @@ function ApplyToGoalsModal({ sourceGoal, formType, currentBlocks, onClose }: {
   }
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 300 }} onClick={onClose}>
+    <div className="modal-overlay" style={{ zIndex: 300 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div
-        onClick={e => e.stopPropagation()}
         style={{
           background: 'white', borderRadius: 14, width: 'min(520px, 95vw)',
           maxHeight: '85vh', display: 'flex', flexDirection: 'column',
@@ -1009,7 +1017,7 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
   const hasColumns = blocks.some(b => b.columns.length > 0);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
 
       {/* ── Fullscreen preview overlay ── */}
       {previewFullscreen && (
@@ -1235,8 +1243,8 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
 
         {/* Update linked goals prompt */}
         {showUpdateLinked && (
-          <div className="modal-overlay" style={{ zIndex: 300 }} onClick={() => { setShowUpdateLinked(null); onClose(); }}>
-            <div onClick={e => e.stopPropagation()} style={{
+          <div className="modal-overlay" style={{ zIndex: 300 }} onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowUpdateLinked(null); onClose(); } }}>
+            <div style={{
               background: 'white', borderRadius: 14, padding: '28px 24px', textAlign: 'center',
               boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxWidth: 420, width: '90vw',
             }}>

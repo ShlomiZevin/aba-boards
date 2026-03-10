@@ -540,8 +540,16 @@ function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
     { id: 'builtin_dc_dtt', label: 'ניסויים DTT', template: PRESET_DC_DTT },
   ];
 
-  // Saved presets: all goals marked as preset with a template (always visible regardless of selection)
-  const savedPresets = allItems.filter(g => g[presetNameField] && g[templateField]);
+  // Deduplicate saved presets by column fingerprint
+  const allWithPreset = allItems.filter(g => g[presetNameField] && g[templateField]);
+  const seenKeys = new Set<string>();
+  const savedPresets = allWithPreset.filter(g => {
+    const cols = (g[templateField]?.tables || []).flatMap(t => t.columns || []);
+    const key = cols.map(c => `${c.label}|${c.description || ''}`).join(';;');
+    if (seenKeys.has(key)) return false;
+    seenKeys.add(key);
+    return true;
+  });
 
   const withGoalTitle = (template: GoalFormTemplate, goalTitle: string): GoalFormTemplate => ({
     ...template,
