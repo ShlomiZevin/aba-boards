@@ -176,15 +176,15 @@ export default function GoalsWeeklyTable({
   );
 
   // ---------- Mobile: compact list ----------
-  // Build session date labels for header
+  // Build session date labels for header (just day number)
   const sessionLabels = [
-    ...weekForms.map((f: SessionForm) => format(toDate(f.sessionDate), 'dd/MM')),
-    ...unfilledSessions.map((s: Session) => format(toDate(s.scheduledDate), 'dd/MM')),
+    ...weekForms.map((f: SessionForm) => format(toDate(f.sessionDate), 'd')),
+    ...unfilledSessions.map((s: Session) => format(toDate(s.scheduledDate), 'd')),
   ];
   const sessionCount = weekForms.length + unfilledSessions.length;
 
-  // Grid columns: [checkbox?] [name 1fr] [session cells 28px each]
-  const gridCols = `${onToggleGoal ? '26px ' : ''}1fr ${sessionCount > 0 ? `repeat(${sessionCount}, 28px)` : ''}`.trim();
+  // Grid columns: [checkbox?] [name 1fr] [session cells 24px each]
+  const gridCols = `${onToggleGoal ? '24px ' : ''}1fr ${sessionCount > 0 ? `repeat(${sessionCount}, 24px)` : ''}`.trim();
 
   const mobileList = (
     <div className="goals-weekly-mobile" style={{ '--gwm-cols': gridCols } as React.CSSProperties}>

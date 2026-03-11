@@ -362,32 +362,32 @@ export default function FormFill() {
 
         <form onSubmit={handleSubmit}>
           {/* Basic Info - always shown */}
-          <div className="form-row-3">
-            <div className="form-group">
-              <label>איש/ת צוות *</label>
-              {isTherapistView ? (
-                <input
-                  type="text"
-                  value={practitioners.find((p) => p.id === practitionerId)?.name || ''}
-                  disabled
-                  style={{ backgroundColor: '#f1f5f9' }}
-                />
-              ) : (
-                <select
-                  value={practitionerId}
-                  onChange={(e) => setPractitionerId(e.target.value)}
-                  required
-                >
-                  <option value="">בחר איש/ת צוות</option>
-                  {practitioners.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.type})
-                      </option>
-                    ))}
-                </select>
-              )}
-            </div>
+          <div className="form-group">
+            <label>איש/ת צוות *</label>
+            {isTherapistView ? (
+              <input
+                type="text"
+                value={practitioners.find((p) => p.id === practitionerId)?.name || ''}
+                disabled
+                style={{ backgroundColor: '#f1f5f9' }}
+              />
+            ) : (
+              <select
+                value={practitionerId}
+                onChange={(e) => setPractitionerId(e.target.value)}
+                required
+              >
+                <option value="">בחר איש/ת צוות</option>
+                {practitioners.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.type})
+                    </option>
+                  ))}
+              </select>
+            )}
+          </div>
 
+          <div className="form-row-2">
             <div className="form-group">
               <label>תאריך הטיפול *</label>
               <input
