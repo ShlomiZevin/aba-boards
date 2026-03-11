@@ -7,6 +7,11 @@
   box-sizing: border-box;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 html {
   direction: rtl;
 }
@@ -15,7 +20,6 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
-  overflow-x: hidden;
   padding: 20px;
   color: #4a5568;
 }
@@ -3387,6 +3391,14 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .container {
+    padding: 0 4px;
+  }
+  .content-card {
+    padding: 14px 10px;
+    overflow: hidden;
+  }
+
   .kids-grid {
     grid-template-columns: 1fr;
   }
@@ -3402,8 +3414,8 @@ body {
 
   /* Form responsive */
   .form-row-2 {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
   .form-row-3 {
     grid-template-columns: 1fr;
@@ -3422,16 +3434,17 @@ body {
   }
 
   .form-row-2 .form-group {
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
   .form-row-2 .form-group input[type="date"],
   .form-row-2 .form-group input[type="time"] {
-    padding: 8px 10px;
-    font-size: 14px;
+    padding: 6px 8px !important;
+    font-size: 16px;
+    height: 36px;
   }
   .form-row-2 .form-group label {
-    font-size: 0.82em;
-    margin-bottom: 2px;
+    font-size: 0.78em;
+    margin-bottom: 1px;
   }
 
   .form-actions {
