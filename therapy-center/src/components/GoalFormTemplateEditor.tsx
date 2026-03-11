@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalTemplatesApi, goalsApi } from '../api/client';
+import ConfirmModal from './ConfirmModal';
 import {
-  PRESET_LP_PROGRAM,
-  PRESET_DC_ACTIVITY,
-  PRESET_DC_DTT,
   GOAL_CATEGORIES,
   normalizeTemplate,
 } from '../types';
@@ -555,13 +553,6 @@ function PresetStrip({ formType, onLoad }: {
   onLoad: (t: GoalFormTemplate, presetName?: string) => void;
 }) {
   const queryClient = useQueryClient();
-  const builtInPresets = formType === 'lp'
-    ? [{ label: '📋 תוכנית למידה', desc: 'פרטי תוכנית + טבלת פריטים', preset: PRESET_LP_PROGRAM }]
-    : [
-        { label: '🏃 פעילות', desc: 'שיתוף פעולה / סיוע / קשיים', preset: PRESET_DC_ACTIVITY },
-        { label: '✓✗ ניסויים DTT', desc: 'פריט / תגובה / הערות', preset: PRESET_DC_DTT },
-      ];
-
   const { data: libraryRes } = useQuery({
     queryKey: ['goals-library-all'],
     queryFn: () => goalsApi.getAllLibrary(),
@@ -590,57 +581,51 @@ function PresetStrip({ formType, onLoad }: {
     },
   });
 
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const confirmPreset = savedPresets.find(g => g.id === confirmRemoveId);
+
+  if (savedPresets.length === 0) return null;
+
   return (
-    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '9px 14px' }}>
-      <div style={{ fontSize: '0.74em', fontWeight: 700, color: '#166534', marginBottom: 7 }}>תבניות מוכנות:</div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {builtInPresets.map(p => (
-          <button
-            key={p.label}
-            type="button"
-            onClick={() => onLoad(p.preset)}
-            style={{
-              padding: '6px 13px', border: '1.5px solid #86efac', borderRadius: 8,
-              background: 'white', cursor: 'pointer', textAlign: 'right',
-            }}
-          >
-            <div style={{ fontSize: '0.87em', fontWeight: 700, color: '#15803d' }}>{p.label}</div>
-            <div style={{ fontSize: '0.71em', color: '#64748b', marginTop: 1 }}>{p.desc}</div>
-          </button>
-        ))}
-        {savedPresets.map(g => {
-          const cols = (g[templateField]?.tables || []).flatMap(t => t.columns || []);
-          const colSummary = cols.length > 0
-            ? cols.map(c => c.label).join(', ')
-            : '';
-          return (
-          <div key={g.id} style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #93c5fd', borderRadius: 8, overflow: 'hidden' }}>
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.72em', fontWeight: 700, color: '#64748b' }}>תבניות:</span>
+        {savedPresets.map(g => (
+          <div key={g.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 0, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 20, overflow: 'hidden' }}>
             <button
               type="button"
               onClick={() => onLoad(g[templateField]!, g[presetNameField] as string)}
               style={{
-                padding: '6px 13px', background: 'white', cursor: 'pointer',
-                textAlign: 'right', border: 'none',
+                padding: '2px 8px 2px 10px', background: 'none', cursor: 'pointer',
+                border: 'none', fontSize: '0.78em', fontWeight: 600, color: '#334155',
+                whiteSpace: 'nowrap',
               }}
             >
-              <div style={{ fontSize: '0.87em', fontWeight: 700, color: '#1e40af' }}>{g[presetNameField]}</div>
-              {colSummary && <div style={{ fontSize: '0.68em', color: '#94a3b8', marginTop: 1, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cols.length} עמודות: {colSummary}</div>}
-              <div style={{ fontSize: '0.65em', color: '#cbd5e1', marginTop: 1 }}>{g.title}</div>
+              {g[presetNameField]}
             </button>
             <button
               type="button"
-              onClick={() => removePresetMutation.mutate(g.id)}
-              title="הסר מתבניות מוכנות"
+              onClick={() => setConfirmRemoveId(g.id)}
+              title="הסר מתבניות"
               style={{
-                background: '#f8fafc', border: 'none', borderRight: '1px solid #93c5fd',
-                color: '#94a3b8', cursor: 'pointer', padding: '0 7px', fontSize: '0.8em',
+                background: 'none', border: 'none', borderRight: '1px solid #e2e8f0',
+                color: '#94a3b8', cursor: 'pointer', padding: '2px 6px', fontSize: '0.7em',
+                lineHeight: 1,
               }}
             >✕</button>
           </div>
-          );
-        })}
+        ))}
       </div>
-    </div>
+      {confirmPreset && (
+        <ConfirmModal
+          title="הסרת תבנית"
+          message={`להסיר את "${confirmPreset[presetNameField]}" מרשימת התבניות?`}
+          confirmText="הסר"
+          onConfirm={() => { removePresetMutation.mutate(confirmRemoveId!); setConfirmRemoveId(null); }}
+          onCancel={() => setConfirmRemoveId(null)}
+        />
+      )}
+    </>
   );
 }
 
