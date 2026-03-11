@@ -32,6 +32,7 @@ export default function FormFill() {
     isTherapistView && contextPractitionerId ? contextPractitionerId : ''
   );
   const [sessionDate, setSessionDate] = useState(dateParam || format(new Date(), 'yyyy-MM-dd'));
+  const [sessionTime, setSessionTime] = useState(format(new Date(), 'HH:mm'));
 
   // Dynamic field values (replaces individual state vars)
   const [fieldValues, setFieldValues] = useState<Record<string, string | number>>({
@@ -75,7 +76,9 @@ export default function FormFill() {
     const form = existingFormRes.data;
     setKidId(form.kidId);
     setPractitionerId(form.practitionerId);
-    setSessionDate(format(toDate(form.sessionDate), 'yyyy-MM-dd'));
+    const formDateObj = toDate(form.sessionDate);
+    setSessionDate(format(formDateObj, 'yyyy-MM-dd'));
+    setSessionTime(format(formDateObj, 'HH:mm'));
 
     // Build field values from form data
     const values: Record<string, string | number> = {};
@@ -127,6 +130,7 @@ export default function FormFill() {
     if (session) {
       const sessionDateObj = toDate(session.scheduledDate);
       setSessionDate(format(sessionDateObj, 'yyyy-MM-dd'));
+      setSessionTime(format(sessionDateObj, 'HH:mm'));
       if (isTherapistView && contextPractitionerId) {
         setPractitionerId(contextPractitionerId);
       } else if (session.therapistId) {
@@ -215,7 +219,7 @@ export default function FormFill() {
       sessionId,
       kidId,
       practitionerId,
-      sessionDate: new Date(sessionDate),
+      sessionDate: new Date(`${sessionDate}T${sessionTime}:00`),
       // Known fields with defaults
       cooperation: (knownFields.cooperation as number) || 70,
       sessionDuration: (knownFields.sessionDuration as number) || 45,
@@ -358,7 +362,7 @@ export default function FormFill() {
 
         <form onSubmit={handleSubmit}>
           {/* Basic Info - always shown */}
-          <div className="form-row-2">
+          <div className="form-row-3">
             <div className="form-group">
               <label>איש/ת צוות *</label>
               {isTherapistView ? (
@@ -393,6 +397,15 @@ export default function FormFill() {
                 required
                 disabled={!!sessionId}
                 style={sessionId ? { backgroundColor: '#f1f5f9' } : undefined}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>שעה</label>
+              <input
+                type="time"
+                value={sessionTime}
+                onChange={(e) => setSessionTime(e.target.value)}
               />
             </div>
           </div>
