@@ -19,6 +19,7 @@ import FormsOverview from './pages/FormsOverview';
 import TherapistNotifications from './pages/TherapistNotifications';
 import BoardBuilder from './pages/BoardBuilder';
 import ChatCenter from './pages/ChatCenter';
+import LandingPage from './pages/LandingPage';
 import AppShell from './components/AppShell';
 import TherapistShell from './components/TherapistShell';
 import { setTherapistAuth, setParentAuth } from './api/client';
@@ -140,6 +141,7 @@ function App() {
           <ScrollToTop />
           <Routes>
             {/* Public */}
+            <Route path="/welcome" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
 
             {/* Protected admin routes — wrapped in AppShell for sidebar navigation */}
