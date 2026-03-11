@@ -496,6 +496,19 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [onScroll]);
 
+  // Set page title & meta for the landing page
+  useEffect(() => {
+    const prev = document.title;
+    document.title = 'Doing | הכלי המקצועי לניהול טיפול ילדים';
+    const meta = document.querySelector('meta[name="description"]');
+    const prevDesc = meta?.getAttribute('content') || '';
+    if (meta) meta.setAttribute('content', 'פלטפורמת Doing מאפשרת למרכזי טיפול לנהל מטפלות, מפגשים, טפסים, יעדים ולוחות משימות — הכל במקום אחד, מופעל בינה מלאכותית.');
+    return () => {
+      document.title = prev;
+      if (meta) meta.setAttribute('content', prevDesc);
+    };
+  }, []);
+
   return (
     <div className="lp-root" dir="rtl">
       {/* ---------- floating nav ---------- */}
