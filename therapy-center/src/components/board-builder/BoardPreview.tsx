@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import type { BoardLayoutItem, BoardSettings, ColorSchema } from '../../types';
+import type { BoardLayoutItem, BoardSettings } from '../../types';
 import type { KidInfo } from '../../hooks/useBoardState';
 import InsertLine from './InsertLine';
 
