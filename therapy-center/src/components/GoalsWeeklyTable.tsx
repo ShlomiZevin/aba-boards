@@ -96,8 +96,11 @@ export default function GoalsWeeklyTable({
     );
   }
 
-  return (
-    <div className="goals-weekly-table-container">
+  const hasPrevSessions = weekForms.length > 0 || unfilledSessions.length > 0;
+
+  // ---------- Desktop: full table ----------
+  const desktopTable = (
+    <div className="goals-weekly-table-container goals-weekly-desktop">
       <table className="goals-weekly-table">
         <thead>
           <tr>
@@ -170,5 +173,65 @@ export default function GoalsWeeklyTable({
         </tbody>
       </table>
     </div>
+  );
+
+  // ---------- Mobile: compact list ----------
+  // Build session date labels for header
+  const sessionLabels = [
+    ...weekForms.map((f: SessionForm) => format(toDate(f.sessionDate), 'dd/MM')),
+    ...unfilledSessions.map((s: Session) => format(toDate(s.scheduledDate), 'dd/MM')),
+  ];
+  const sessionCount = weekForms.length + unfilledSessions.length;
+
+  // Grid columns: [checkbox?] [name 1fr] [session cells 28px each]
+  const gridCols = `${onToggleGoal ? '26px ' : ''}1fr ${sessionCount > 0 ? `repeat(${sessionCount}, 28px)` : ''}`.trim();
+
+  const mobileList = (
+    <div className="goals-weekly-mobile" style={{ '--gwm-cols': gridCols } as React.CSSProperties}>
+      {/* Date headers row */}
+      {hasPrevSessions && (
+        <div className="gwm-row gwm-header-row">
+          {onToggleGoal && <span className="gwm-cell gwm-cb-cell" />}
+          <span className="gwm-cell gwm-name-cell" style={{ fontSize: '0.68em', color: '#94a3b8' }}>מטרה</span>
+          {sessionLabels.map((d, i) => (
+            <span key={i} className="gwm-cell gwm-session-cell" style={{ fontSize: '0.6em', color: i >= weekForms.length ? '#d97706' : '#64748b' }}>{d}</span>
+          ))}
+        </div>
+      )}
+      {goalsByCategory.map(cat => (
+        <Fragment key={cat.id}>
+          <div className="gwm-row gwm-cat-row" style={{ color: cat.color }}>{cat.nameHe}</div>
+          {cat.goals.map(goal => (
+            <div key={goal.id} className="gwm-row gwm-goal-row" onClick={() => onToggleGoal?.(goal.id)}>
+              {onToggleGoal && (
+                <span className="gwm-cell gwm-cb-cell">
+                  <input type="checkbox" checked={selectedGoals.has(goal.id)} readOnly />
+                </span>
+              )}
+              <span className="gwm-cell gwm-name-cell">{goal.title}</span>
+              {weekForms.map((f: SessionForm, idx: number) => (
+                <span key={f.id} className="gwm-cell gwm-session-cell">
+                  {formGoalSets[idx].has(goal.id)
+                    ? <span style={{ color: '#22c55e', fontWeight: 700 }}>✓</span>
+                    : <span style={{ color: '#e2e8f0' }}>✕</span>}
+                </span>
+              ))}
+              {unfilledSessions.map((s: Session) => (
+                <span key={s.id} className="gwm-cell gwm-session-cell">
+                  <span style={{ color: '#fbbf24' }}>?</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </Fragment>
+      ))}
+    </div>
+  );
+
+  return (
+    <>
+      {desktopTable}
+      {mobileList}
+    </>
   );
 }
