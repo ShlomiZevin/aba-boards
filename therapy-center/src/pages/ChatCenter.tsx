@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { kidsApi, chatApi } from '../api/client';
+import ConfirmModal from '../components/ConfirmModal';
 import type { Kid } from '../types';
 
 interface ChatMessage {
@@ -88,6 +89,8 @@ export default function ChatCenter() {
     inputRef.current?.focus();
   };
 
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
   const clearChat = () => {
     setMessages([
       {
@@ -96,6 +99,7 @@ export default function ChatCenter() {
         content: 'שלום! איך אפשר לעזור?',
       },
     ]);
+    setShowClearConfirm(false);
   };
 
   return (
@@ -113,7 +117,7 @@ export default function ChatCenter() {
               <option key={kid.id} value={kid.id}>{kid.name}</option>
             ))}
           </select>
-          <button className="chat-clear-btn" onClick={clearChat} title="ניקוי שיחה">🗑</button>
+          <button className="chat-clear-btn" onClick={() => setShowClearConfirm(true)} title="ניקוי שיחה">🗑</button>
         </div>
       </div>
 
@@ -163,6 +167,15 @@ export default function ChatCenter() {
           ➤
         </button>
       </div>
+      {showClearConfirm && (
+        <ConfirmModal
+          title="ניקוי שיחה"
+          message="לנקות את כל השיחה?"
+          confirmText="נקה"
+          onConfirm={clearChat}
+          onCancel={() => setShowClearConfirm(false)}
+        />
+      )}
     </div>
   );
 }
