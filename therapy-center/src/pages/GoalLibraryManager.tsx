@@ -267,32 +267,19 @@ export default function GoalLibraryManager() {
                 <span className="goal-library-title">{item.title}</span>
                 <span className="goal-library-count" title="ילדים פעילים">{item.activeCount ?? item.usageCount}</span>
                 <button
-                  title="תוכנית למידה — עריכת תבנית"
-                  onClick={() => setEditingTemplate({ goal: item, type: 'lp' })}
-                  style={{
-                    background: item.learningPlanTemplate ? '#ede9fe' : 'none',
-                    border: '1px solid',
-                    borderColor: item.learningPlanTemplate ? '#c4b5fd' : '#e2e8f0',
-                    borderRadius: 5, cursor: 'pointer', fontSize: '0.72em', padding: '2px 6px',
-                    color: item.learningPlanTemplate ? '#7c3aed' : '#94a3b8',
-                    fontWeight: 600,
-                  }}
-                >
-                  ת״ל
-                </button>
-                <button
-                  title="איסוף נתונים — עריכת תבנית"
+                  title="איסוף נתונים — עריכת טופס"
                   onClick={() => setEditingTemplate({ goal: item, type: 'dc' })}
                   style={{
-                    background: item.dataCollectionTemplate ? '#dcfce7' : 'none',
+                    background: item.dataCollectionTemplate ? '#dcfce7' : '#f8fafc',
                     border: '1px solid',
-                    borderColor: item.dataCollectionTemplate ? '#86efac' : '#e2e8f0',
-                    borderRadius: 5, cursor: 'pointer', fontSize: '0.72em', padding: '2px 6px',
-                    color: item.dataCollectionTemplate ? '#166534' : '#94a3b8',
+                    borderColor: item.dataCollectionTemplate ? '#86efac' : '#cbd5e1',
+                    borderRadius: 6, cursor: 'pointer', fontSize: '0.73em', padding: '3px 10px',
+                    color: item.dataCollectionTemplate ? '#166534' : '#64748b',
                     fontWeight: 600,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
                   }}
                 >
-                  א״נ
+                  {item.dataCollectionTemplate ? '📋 טופס איסוף' : '+ טופס איסוף'}
                 </button>
                 {confirmingDelete === item.id ? (
                   <span className="goal-library-confirm">
