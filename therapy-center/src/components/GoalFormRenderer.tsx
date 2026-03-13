@@ -1,5 +1,70 @@
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { GoalTableBlock, GoalFormRow, GoalColumnDef, GoalColumnType } from '../types';
 import { repeatedKey, emptyRowForColumns } from '../types';
+
+// ---- Custom option picker (replaces native <select> in compact mode) ----
+function CellOptionPicker({ col, value, onChange }: {
+  col: GoalColumnDef; value: string; onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node)) return;
+      if (popoverRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleOpen = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 2, left: rect.left + rect.width / 2 });
+    }
+    setOpen(!open);
+  };
+
+  return (
+    <>
+      <div
+        ref={triggerRef}
+        className={`cell-option-trigger${value ? '' : ' empty'}`}
+        onClick={handleOpen}
+      >
+        {value || '—'}
+      </div>
+      {open && createPortal(
+        <div
+          ref={popoverRef}
+          className="cell-option-popover"
+          style={{ top: pos.top, left: pos.left }}
+        >
+          <button
+            type="button"
+            className={`cell-option-pill${!value ? ' selected' : ''}`}
+            onClick={() => { onChange(''); setOpen(false); }}
+          >—</button>
+          {(col.options || []).map(opt => (
+            <button
+              key={opt}
+              type="button"
+              className={`cell-option-pill${value === opt ? ' selected' : ''}`}
+              onClick={() => { onChange(opt); setOpen(false); }}
+            >{opt}</button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 const inputStyle: React.CSSProperties = {
   width: '100%', fontSize: '0.85em',
@@ -30,20 +95,9 @@ export function CellInput({ col, value, onChange, colKey, compact }: {
     );
   }
   if (col.type === 'options') {
-    // Compact mode: dropdown select
+    // Compact mode: custom option picker
     if (compact) {
-      return (
-        <select
-          value={value || ''}
-          onChange={e => onChange(e.target.value)}
-          style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' }}
-        >
-          <option value="">בחר...</option>
-          {(col.options || []).map(opt => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
-      );
+      return <CellOptionPicker col={col} value={value} onChange={onChange} />;
     }
     return (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
