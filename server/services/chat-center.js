@@ -205,8 +205,22 @@ BOARD LAYOUT ITEM TYPES:
 Today's date: ${new Date().toISOString().split('T')[0]}`;
 }
 
+async function resolveKidId(kidId, adminId) {
+  // If kidId looks like a name (contains Hebrew/spaces, no typical ID chars), resolve it
+  if (kidId && !/^[a-zA-Z0-9_-]{10,}$/.test(kidId)) {
+    const kids = await therapyService.getAllKids(adminId);
+    const match = kids.find(k => k.name === kidId || k.name.includes(kidId));
+    if (match) return match.id;
+  }
+  return kidId;
+}
+
 async function executeToolCall(toolName, input, adminId) {
   try {
+    // Auto-resolve kidId if AI passed a name instead of an ID
+    if (input.kidId && toolName !== 'list_kids' && toolName !== 'create_kid') {
+      input.kidId = await resolveKidId(input.kidId, adminId);
+    }
     switch (toolName) {
       case 'list_kids': {
         const kids = await therapyService.getAllKids(adminId);
@@ -245,12 +259,14 @@ async function executeToolCall(toolName, input, adminId) {
         let forms = await therapyService.getFormsForKid(input.kidId);
         forms.sort((a, b) => (toTimestamp(b.sessionDate) || 0) - (toTimestamp(a.sessionDate) || 0));
         if (input.fromDate) {
-          const from = new Date(input.fromDate).getTime();
-          forms = forms.filter(f => (toTimestamp(f.sessionDate) || 0) >= from);
+          const from = new Date(input.fromDate);
+          from.setHours(0, 0, 0, 0);
+          forms = forms.filter(f => (toTimestamp(f.sessionDate) || 0) >= from.getTime());
         }
         if (input.toDate) {
-          const to = new Date(input.toDate).getTime();
-          forms = forms.filter(f => (toTimestamp(f.sessionDate) || 0) <= to);
+          const to = new Date(input.toDate);
+          to.setHours(23, 59, 59, 999);
+          forms = forms.filter(f => (toTimestamp(f.sessionDate) || 0) <= to.getTime());
         }
         forms = forms.slice(0, input.limit || 10);
         return forms.map(f => ({
