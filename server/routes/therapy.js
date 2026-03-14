@@ -133,6 +133,11 @@ router.delete('/kids/:kidId/practitioners/:practitionerId', asyncHandler(async (
   res.status(204).send();
 }));
 
+router.post('/practitioners', asyncHandler(async (req, res) => {
+  const practitioner = await therapyService.createPractitioner(req.body, req.adminId);
+  res.status(201).json(practitioner);
+}));
+
 router.put('/practitioners/:id', asyncHandler(async (req, res) => {
   const practitioner = await therapyService.updatePractitioner(req.params.id, req.body);
   res.json(practitioner);

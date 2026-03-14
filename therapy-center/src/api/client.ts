@@ -115,6 +115,11 @@ export const practitionersApi = {
       method: 'POST',
       body: JSON.stringify({ practitionerId }),
     }),
+  create: (data: Omit<Practitioner, 'id' | 'createdAt'>) =>
+    fetchApi<Practitioner>('/practitioners', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   getMyTherapists: () => fetchApi<Practitioner[]>('/practitioners/my-therapists'),
   getKidsForPractitioner: (practitionerId: string) =>
     fetchApi<Kid[]>(`/practitioners/${practitionerId}/kids`),

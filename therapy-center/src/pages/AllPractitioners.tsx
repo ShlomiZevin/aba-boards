@@ -52,10 +52,58 @@ function EditModal({ practitioner, onSave, onClose, isPending }: {
   );
 }
 
+function CreateModal({ onSave, onClose, isPending }: {
+  onSave: (data: Omit<Practitioner, 'id' | 'createdAt'>) => void;
+  onClose: () => void;
+  isPending: boolean;
+}) {
+  const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [email, setEmail] = useState('');
+  const [type, setType] = useState<PractitionerType>('מטפלת');
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3>הוספת איש צוות</h3>
+        <form onSubmit={(e) => { e.preventDefault(); onSave({ name, mobile: mobile || undefined, email: email || undefined, type } as any); }}>
+          <div className="form-group">
+            <label>שם</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+          </div>
+          <div className="form-group">
+            <label>סוג</label>
+            <select value={type} onChange={(e) => setType(e.target.value as PractitionerType)}>
+              <option value="מטפלת">מטפלת</option>
+              <option value="מנתחת התנהגות">מנתחת התנהגות</option>
+              <option value="מדריכת הורים">מדריכת הורים</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>טלפון (לא חובה)</label>
+            <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} dir="ltr" />
+          </div>
+          <div className="form-group">
+            <label>אימייל (לא חובה)</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
+          </div>
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="btn-secondary">ביטול</button>
+            <button type="submit" className="btn-primary" disabled={isPending || !name.trim()}>
+              {isPending ? 'מוסיף...' : 'הוסף'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function AllPractitioners() {
   const queryClient = useQueryClient();
   const [toDelete, setToDelete] = useState<Practitioner | null>(null);
   const [editing, setEditing] = useState<Practitioner | null>(null);
+  const [creating, setCreating] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
   const copyTherapistLink = (id: string) => {
@@ -82,6 +130,14 @@ export default function AllPractitioners() {
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: (data: Omit<Practitioner, 'id' | 'createdAt'>) => practitionersApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myTherapists'] });
+      setCreating(false);
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Practitioner> }) =>
       practitionersApi.update(id, data),
@@ -101,8 +157,11 @@ export default function AllPractitioners() {
   return (
     <div className="container">
       <div className="content-card">
-        <div className="content-card-header">
+        <div className="content-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2>אנשי צוות</h2>
+          <button className="btn-primary" style={{ fontSize: '0.85em', padding: '6px 16px' }} onClick={() => setCreating(true)}>
+            + הוסף איש צוות
+          </button>
         </div>
         {isLoading ? (
           <div className="loading">טוען...</div>
@@ -162,6 +221,14 @@ export default function AllPractitioners() {
           ))
         )}
       </div>
+
+      {creating && (
+        <CreateModal
+          onSave={(data) => createMutation.mutate(data)}
+          onClose={() => setCreating(false)}
+          isPending={createMutation.isPending}
+        />
+      )}
 
       {editing && (
         <EditModal

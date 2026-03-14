@@ -283,6 +283,22 @@ async function addPractitionerToKid(kidId, data, addedBy) {
   return { id: practitionerId, ...practitioner };
 }
 
+async function createPractitioner(data, createdBy) {
+  const db = getDb();
+  const practitionerId = uuidv4();
+  const practitioner = {
+    name: data.name,
+    mobile: data.mobile || null,
+    email: data.email || null,
+    type: data.type || 'מטפלת',
+    isSuperAdmin: false,
+    createdAt: new Date(),
+    createdBy: createdBy || null,
+  };
+  await db.collection('practitioners').doc(practitionerId).set(practitioner);
+  return { id: practitionerId, ...practitioner };
+}
+
 async function updatePractitioner(id, data) {
   const db = getDb();
   const updates = {};
@@ -1638,6 +1654,7 @@ module.exports = {
   getPractitionersForKid,
   getPractitionerById,
   addPractitionerToKid,
+  createPractitioner,
   linkExistingPractitionerToKid,
   updatePractitioner,
   unlinkPractitioner,
