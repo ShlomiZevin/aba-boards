@@ -1648,6 +1648,42 @@ body {
   color: #334155;
 }
 
+/* LP inline table — minimal inputs that blend with table cells */
+.lp-table textarea,
+.lp-table input[type="text"],
+.lp-table input[type="date"] {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 4px 6px !important;
+  min-height: unset !important;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.9em;
+  color: #1e293b;
+  resize: none;
+  line-height: 1.4;
+}
+.lp-table textarea:focus,
+.lp-table input[type="text"]:focus,
+.lp-table input[type="date"]:focus {
+  background: #f0f4ff !important;
+}
+.lp-table td {
+  padding: 2px 4px !important;
+  vertical-align: middle !important;
+}
+.lp-table .cell-option-trigger {
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+}
+.lp-table .cell-option-trigger:hover {
+  background: #f0f4ff;
+}
+
 /* DC Vertical Block (read-only) */
 .dc-vertical-block {
   border: 1px solid #e2e8f0;
