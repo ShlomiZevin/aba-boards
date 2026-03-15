@@ -7370,8 +7370,8 @@ input.bb-kid-name::placeholder {
   box-shadow: 0 2px 12px rgba(139,92,246,.08);
 }
 .lp-stat-number {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   color: #8b5cf6;
 }
 .lp-stat-label { font-size: 12px; color: #6b7280; margin-top: 2px; }
@@ -7853,7 +7853,7 @@ input.bb-kid-name::placeholder {
 
 /* ---------- AI SECTION ---------- */
 .lp-section-ai {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
   position: relative;
   overflow: hidden;
 }
@@ -7881,27 +7881,37 @@ input.bb-kid-name::placeholder {
   gap: 16px;
 }
 .lp-ai-card {
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 16px;
-  padding: 20px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 22px;
   transition: all .3s;
 }
 .lp-ai-card:hover {
-  background: rgba(255,255,255,.1);
-  border-color: rgba(167,139,250,.3);
+  background: #263348;
+  border-color: #8b5cf6;
   transform: translateY(-2px);
 }
-.lp-ai-card-icon { font-size: 28px; margin-bottom: 10px; }
+.lp-ai-card-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139,92,246,.15);
+  border-radius: 10px;
+}
 .lp-ai-card-title {
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: #f1f5f9;
   margin-bottom: 6px;
 }
 .lp-ai-card-desc {
   font-size: 13px;
-  color: rgba(255,255,255,.55);
+  color: #94a3b8;
   line-height: 1.5;
 }
 .lp-ai-highlight {
@@ -7909,9 +7919,9 @@ input.bb-kid-name::placeholder {
   display: flex;
   gap: 20px;
   align-items: flex-start;
-  background: rgba(167,139,250,.1);
-  border: 1px solid rgba(167,139,250,.2);
-  border-radius: 20px;
+  background: #1e293b;
+  border: 1px solid #8b5cf6;
+  border-radius: 12px;
   padding: 28px;
   position: relative;
 }
@@ -7919,12 +7929,12 @@ input.bb-kid-name::placeholder {
 .lp-ai-highlight-title {
   font-size: 17px;
   font-weight: 800;
-  color: #fff;
+  color: #f1f5f9;
   margin-bottom: 8px;
 }
 .lp-ai-highlight-desc {
   font-size: 14px;
-  color: rgba(255,255,255,.6);
+  color: #94a3b8;
   line-height: 1.6;
 }
 
@@ -8276,7 +8286,7 @@ input.bb-kid-name::placeholder {
   .lp-feature-title { font-size: 22px; }
   .lp-hero-badge { font-size: 12px; padding: 6px 14px; }
   .lp-hero-subtitle { font-size: 16px; }
-  .lp-stat-number { font-size: 20px; }
+  .lp-stat-number { font-size: 16px; }
 }
 
 @media (max-width: 480px) {

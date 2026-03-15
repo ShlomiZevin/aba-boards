@@ -571,17 +571,17 @@ export default function LandingPage() {
           <Reveal delay={400}>
             <div className="lp-hero-stats">
               <div className="lp-stat">
-                <div className="lp-stat-number"><AnimatedCounter end={500} suffix="+" /></div>
+                <div className="lp-stat-number"><AnimatedCounter end={83} suffix="" /></div>
                 <div className="lp-stat-label">ילדים מנוהלים</div>
               </div>
               <div className="lp-stat-divider" />
               <div className="lp-stat">
-                <div className="lp-stat-number"><AnimatedCounter end={120} suffix="+" /></div>
+                <div className="lp-stat-number"><AnimatedCounter end={14} suffix="" /></div>
                 <div className="lp-stat-label">מטפלות פעילות</div>
               </div>
               <div className="lp-stat-divider" />
               <div className="lp-stat">
-                <div className="lp-stat-number"><AnimatedCounter end={10000} suffix="+" /></div>
+                <div className="lp-stat-number"><AnimatedCounter end={1247} suffix="" /></div>
                 <div className="lp-stat-label">טפסים שמולאו</div>
               </div>
             </div>
