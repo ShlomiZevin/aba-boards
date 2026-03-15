@@ -104,7 +104,7 @@ function ParticleField() {
         if (p.y > canvas.height) p.y = 0;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(102, 126, 234, ${p.o})`;
+        ctx.fillStyle = `rgba(167, 139, 250, ${p.o})`;
         ctx.fill();
       }
       // Draw connections
@@ -117,7 +117,7 @@ function ParticleField() {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(102, 126, 234, ${0.06 * (1 - dist / 120)})`;
+            ctx.strokeStyle = `rgba(167, 139, 250, ${0.06 * (1 - dist / 120)})`;
             ctx.stroke();
           }
         }
@@ -146,9 +146,9 @@ function MockupBoard() {
   return (
     <div className="lp-mockup-board">
       <div className="lp-mockup-header">
-        <div className="lp-mockup-avatar">👦</div>
+        <img src="/therapy/tamar.jpg" alt="תמר" className="lp-mockup-avatar-img" />
         <div>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>הלוח של יואב</div>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>הלוח של תמר</div>
           <div style={{ fontSize: 12, opacity: .6 }}>5 משימות להיום</div>
         </div>
       </div>
@@ -171,10 +171,10 @@ function MockupBoard() {
 
 function MockupGoals() {
   const goals = [
-    { name: 'קשר עין', progress: 78, color: '#667eea' },
-    { name: 'תקשורת מילולית', progress: 45, color: '#f59e0b' },
-    { name: 'משחק משותף', progress: 92, color: '#10b981' },
-    { name: 'ויסות רגשי', progress: 60, color: '#ef4444' },
+    { name: 'משחק חברתי בתורות', progress: 78, color: '#667eea' },
+    { name: 'העתקת דגם קוביות', progress: 45, color: '#f59e0b' },
+    { name: 'מיון קטגוריות', progress: 92, color: '#10b981' },
+    { name: 'למידה בספרים', progress: 60, color: '#ef4444' },
   ];
   return (
     <div className="lp-mockup-goals">
@@ -203,10 +203,10 @@ function MockupGoals() {
 function MockupChat() {
   const [typingIdx, setTypingIdx] = useState(0);
   const messages = [
-    { role: 'user' as const, text: 'תכין לי טופס הערכה ליואב עם התמקדות בתקשורת' },
-    { role: 'ai' as const, text: 'הכנתי טופס הערכה עם 4 סעיפים: קשר עין, תקשורת מילולית, הבנת הוראות, ויוזמת אינטראקציה. רוצה שאוסיף משהו?' },
+    { role: 'user' as const, text: 'תכין לי טופס הערכה ליואב עם התמקדות במיומנויות קוגניטיביות' },
+    { role: 'ai' as const, text: 'הכנתי טופס הערכה עם 4 סעיפים: משחק חברתי בתורות, העתקת דגם קוביות, מיון קטגוריות, ולמידה בספרים. רוצה שאוסיף משהו?' },
     { role: 'user' as const, text: 'תוסיף גם חלק על ויסות רגשי. מה המצב של המטרות שלו השבוע?' },
-    { role: 'ai' as const, text: 'הוספתי! לגבי המטרות: קשר עין ב\u200E-78% (עלייה), תקשורת מילולית ב\u200E-45% (יציב), משחק משותף ב\u200E-92% (מצוין!) 🎉' },
+    { role: 'ai' as const, text: 'הוספתי! לגבי המטרות: משחק בתורות ב\u200E-78% (עלייה), העתקת דגם ב\u200E-45% (יציב), מיון קטגוריות ב\u200E-92% (מצוין!) 🎉' },
   ];
 
   useEffect(() => {
@@ -300,7 +300,7 @@ function MockupForm() {
         </div>
       </div>
       <div className="lp-mockup-form-section">
-        <div className="lp-mockup-form-label">מטרה: קשר עין</div>
+        <div className="lp-mockup-form-label">מטרה: משחק חברתי בתורות</div>
         <div className="lp-mockup-form-grid">
           <div className="lp-mockup-form-cell">
             <div style={{ fontSize: 11, color: '#888' }}>ניסיונות</div>
@@ -319,7 +319,7 @@ function MockupForm() {
       <div className="lp-mockup-form-section">
         <div className="lp-mockup-form-label">הערות</div>
         <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#555', minHeight: 40 }}>
-          התקדמות יפה בקשר עין. הגיב טוב למשחק עם בובות...
+          התקדמות יפה במשחק בתורות. הגיב טוב למשחק עם בובות...
         </div>
       </div>
     </div>
@@ -358,7 +358,7 @@ function MockupTeam() {
 function MockupNotifications() {
   const notifs = [
     { icon: '🔔', text: 'רונית כהן מילאה טופס מעקב ליואב', time: 'לפני 5 דק׳', color: '#667eea' },
-    { icon: '📊', text: 'המטרה "קשר עין" הגיעה ל\u200E-78% \u2014 שיא חדש!', time: 'לפני שעה', color: '#10b981' },
+    { icon: '📊', text: 'המטרה "מיון קטגוריות" הגיעה ל\u200E-92% \u2014 שיא חדש!', time: 'לפני שעה', color: '#10b981' },
     { icon: '📋', text: 'תזכורת: טופס הערכה שבועי של נועם טרם מולא', time: 'לפני 3 שע׳', color: '#f59e0b' },
     { icon: '👥', text: 'ישיבת צוות מתוזמנת ליום ד׳ ב\u200E-14:00', time: 'מחר', color: '#8b5cf6' },
   ];
@@ -408,7 +408,7 @@ function AICapabilities() {
 /*  Logo component using actual image                                 */
 /* ------------------------------------------------------------------ */
 function Logo({ size = 'normal' }: { size?: 'normal' | 'large' }) {
-  const h = size === 'large' ? 48 : 32;
+  const h = size === 'large' ? 64 : 44;
   return (
     <div className="lp-logo">
       <img src="/therapy/doing-logo-transparent2.png" alt="Doing" style={{ height: h, width: 'auto' }} />
@@ -541,16 +541,14 @@ export default function LandingPage() {
           </Reveal>
           <Reveal delay={100}>
             <h1 className="lp-hero-title">
-              <span className="lp-gradient-text">הכלי המקצועי</span>
+              <span className="lp-gradient-text">מערכת חכמה ומקצועית</span>
               <br />
-              לניהול טיפול ילדים
+              לניהול מטרות טיפול, איסוף נתונים ומעקב טיפולי
             </h1>
           </Reveal>
           <Reveal delay={200}>
             <p className="lp-hero-subtitle">
-              {'נהלו ילדים, מטפלות, סשנים, מטרות וטפסים \u2014 הכל במקום אחד.'}
-              <br />
-              עם עוזר בינה מלאכותית שעושה בשבילכם את העבודה הקשה.
+              {'נהלו מטרות טיפול, תעדו מפגשים ואספו נתונים בצורה מסודרת וברורה \u2014 הכל במקום אחד. המערכת מאפשרת עבודה דיגיטלית נוחה למטפלים, למנחים ולהורים, עם גישה למידע בזמן אמת.'}
             </p>
           </Reveal>
           <Reveal delay={300}>
@@ -589,11 +587,6 @@ export default function LandingPage() {
             </div>
           </Reveal>
         </div>
-        <Reveal delay={300}>
-          <div className="lp-hero-visual">
-            <MockupBoard />
-          </div>
-        </Reveal>
       </section>
 
       {/* ---------- FEATURES ---------- */}
@@ -612,7 +605,7 @@ export default function LandingPage() {
             <Reveal>
               <div className="lp-feature-text">
                 <div className="lp-feature-number">01</div>
-                <h3 className="lp-feature-title">ניהול ילדים ולוחות משימות</h3>
+                <h3 className="lp-feature-title">לוח משימות אישי לכל ילד</h3>
                 <p className="lp-feature-desc">
                   {'כל ילד מקבל פרופיל מלא עם תמונה, גיל, ופרטים רלוונטיים. ליצור לוח משימות ויזואלי עם אמוג\'ים שהילד אוהב \u2014 תוך שניות. ההורים מקבלים קישור לצפייה בלוח ובהתקדמות.'}
                 </p>
