@@ -44,6 +44,15 @@ export default function RichTextEditor({
     },
   });
 
+  // Sync external value changes into the editor (e.g. when form data loads after mount)
+  const editorContent = editor?.getHTML();
+  if (editor && value !== editorContent && value !== '') {
+    // Only update if the editor has empty/default content and we received real content
+    if (!editorContent || editorContent === '<p></p>') {
+      editor.commands.setContent(value);
+    }
+  }
+
   if (!editor) {
     return null;
   }

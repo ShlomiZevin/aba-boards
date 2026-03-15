@@ -281,6 +281,21 @@ export default function GoalLibraryManager() {
                 >
                   {item.dataCollectionTemplate ? '📋 טופס איסוף' : '+ טופס איסוף'}
                 </button>
+                <button
+                  title="תוכנית למידה — עריכת טופס"
+                  onClick={() => setEditingTemplate({ goal: item, type: 'lp' })}
+                  style={{
+                    background: item.learningPlanTemplate ? '#dbeafe' : '#f8fafc',
+                    border: '1px solid',
+                    borderColor: item.learningPlanTemplate ? '#93c5fd' : '#cbd5e1',
+                    borderRadius: 6, cursor: 'pointer', fontSize: '0.73em', padding: '3px 10px',
+                    color: item.learningPlanTemplate ? '#1e40af' : '#64748b',
+                    fontWeight: 600,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  {item.learningPlanTemplate ? '📘 ת. למידה' : '+ ת. למידה'}
+                </button>
                 {confirmingDelete === item.id ? (
                   <span className="goal-library-confirm">
                     בטוח?

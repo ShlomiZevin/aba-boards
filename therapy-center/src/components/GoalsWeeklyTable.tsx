@@ -61,7 +61,10 @@ export default function GoalsWeeklyTable({
     .filter((f: SessionForm) => !f.sessionId || allSessionIds.has(f.sessionId))
     .filter((f: SessionForm) => {
       const fDate = toDate(f.sessionDate);
-      return fDate <= formDate; // Only show forms from earlier or same day
+      // Compare dates only (ignore time) so same-day forms aren't excluded
+      const fDateOnly = new Date(fDate.getFullYear(), fDate.getMonth(), fDate.getDate());
+      const formDateOnly = new Date(formDate.getFullYear(), formDate.getMonth(), formDate.getDate());
+      return fDateOnly <= formDateOnly;
     })
     .sort((a: SessionForm, b: SessionForm) =>
       toDate(a.sessionDate).getTime() - toDate(b.sessionDate).getTime()

@@ -7,6 +7,7 @@ import type {
   GoalFormTemplate,
   GoalFormRow,
   KidGoalLearningPlan,
+  LearningPlanVersion,
   KidGoalDataEntry,
   TableBlockData,
   Session,
@@ -203,6 +204,21 @@ export const goalPlansApi = {
     fetchApi<KidGoalLearningPlan>(`/kids/${kidId}/goal-plans/${goalLibraryId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+  getVersions: (kidId: string, goalLibraryId: string) =>
+    fetchApi<LearningPlanVersion[]>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions`),
+  saveVersion: (kidId: string, goalLibraryId: string, data?: { versionLabel?: string }) =>
+    fetchApi<LearningPlanVersion>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+  getVersion: (kidId: string, goalLibraryId: string, versionId: string) =>
+    fetchApi<LearningPlanVersion>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions/${versionId}`),
+  deleteVersion: (kidId: string, goalLibraryId: string, versionId: string) =>
+    fetchApi<void>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions/${versionId}`, { method: 'DELETE' }),
+  restoreVersion: (kidId: string, goalLibraryId: string, versionId: string) =>
+    fetchApi<KidGoalLearningPlan>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions/${versionId}/restore`, {
+      method: 'POST',
     }),
 };
 

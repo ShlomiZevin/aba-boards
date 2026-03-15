@@ -264,6 +264,47 @@ router.put('/kids/:kidId/goal-plans/:goalLibraryId', asyncHandler(async (req, re
   res.json(plan);
 }));
 
+// ==================== GOAL LEARNING PLAN VERSIONS ====================
+
+router.get('/kids/:kidId/goal-plans/:goalLibraryId/versions', asyncHandler(async (req, res) => {
+  const versions = await therapyService.getLearningPlanVersions(req.params.kidId, req.params.goalLibraryId);
+  res.json(versions);
+}));
+
+router.post('/kids/:kidId/goal-plans/:goalLibraryId/versions', asyncHandler(async (req, res) => {
+  const createdBy = req.practitionerId || req.adminId || 'unknown';
+  const version = await therapyService.saveLearningPlanVersion(
+    req.params.kidId,
+    req.params.goalLibraryId,
+    req.body,
+    createdBy
+  );
+  res.json(version);
+}));
+
+router.get('/kids/:kidId/goal-plans/:goalLibraryId/versions/:versionId', asyncHandler(async (req, res) => {
+  const version = await therapyService.getLearningPlanVersion(
+    req.params.kidId, req.params.goalLibraryId, req.params.versionId
+  );
+  if (!version) return res.status(404).json({ error: 'Version not found' });
+  res.json(version);
+}));
+
+router.delete('/kids/:kidId/goal-plans/:goalLibraryId/versions/:versionId', asyncHandler(async (req, res) => {
+  await therapyService.deleteLearningPlanVersion(
+    req.params.kidId, req.params.goalLibraryId, req.params.versionId
+  );
+  res.json({ success: true });
+}));
+
+router.post('/kids/:kidId/goal-plans/:goalLibraryId/versions/:versionId/restore', asyncHandler(async (req, res) => {
+  const restoredBy = req.practitionerId || req.adminId || 'unknown';
+  const plan = await therapyService.restoreLearningPlanVersion(
+    req.params.kidId, req.params.goalLibraryId, req.params.versionId, restoredBy
+  );
+  res.json(plan);
+}));
+
 // ==================== GOAL DATA COLLECTION ====================
 
 router.get('/kids/:kidId/goal-data/:goalLibraryId', asyncHandler(async (req, res) => {

@@ -53,6 +53,7 @@ import FormTemplateEditor from '../components/FormTemplateEditor';
 import ImageCropModal from '../components/ImageCropModal';
 import GoalProgressChart from '../components/GoalProgressChart';
 import GoalPlansTab from '../components/GoalPlansTab';
+import LearningPlansTab from '../components/LearningPlansTab';
 import DcEntryModal from '../components/DcEntryModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -216,7 +217,7 @@ export default function KidDetail() {
   const isSuperAdmin = isAdmin && (authUser?.isSuperAdmin ?? false);
 
   // Tab state
-  type KidTab = 'overview' | 'progress' | 'sessions' | 'notifications' | 'plans';
+  type KidTab = 'overview' | 'progress' | 'sessions' | 'notifications' | 'plans' | 'learning-plans';
   const [kidTab, setKidTab] = useState<KidTab>('sessions');
 
   // State
@@ -873,6 +874,11 @@ export default function KidDetail() {
             <button className={`kid-tab${kidTab === 'plans' ? ' active' : ''}`} onClick={() => setKidTab('plans')}>
               איסוף נתונים
             </button>
+            {!isParentView && (
+              <button className={`kid-tab${kidTab === 'learning-plans' ? ' active' : ''}`} onClick={() => setKidTab('learning-plans')}>
+                תוכניות למידה
+              </button>
+            )}
           </div>
         );
       })()}
@@ -1717,6 +1723,16 @@ export default function KidDetail() {
         />
       )}
 
+      {/* === LEARNING PLANS TAB === */}
+      {kidTab === 'learning-plans' && (
+        <LearningPlansTab
+          kidId={kidId!}
+          goals={goals}
+          isReadOnly={isReadOnly}
+          isAdmin={isAdmin}
+        />
+      )}
+
       {/* Admin-only Modals — always rendered, outside tabs */}
       {isAdmin && (
         <>
@@ -2349,7 +2365,8 @@ export default function KidDetail() {
           { key: 'progress' as const, label: 'התקדמות' },
           { key: 'overview' as const, label: 'סקירה' },
           { key: 'notifications' as const, label: 'הודעות' },
-          { key: 'plans' as const, label: 'תוכניות' },
+          { key: 'plans' as const, label: 'א. נתונים' },
+          ...(!isParentView ? [{ key: 'learning-plans' as const, label: 'ת. למידה' }] : []),
         ] as const).map(tab => (
           <button
             key={tab.key}

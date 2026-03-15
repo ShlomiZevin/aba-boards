@@ -100,6 +100,15 @@ export interface KidGoalLearningPlan {
   updatedBy: string;
 }
 
+export interface LearningPlanVersion {
+  id: string;
+  tables: TableBlockData[];
+  goalTitle: string;
+  createdAt: Date;
+  createdBy: string;
+  versionLabel?: string;
+}
+
 export interface KidGoalDataEntry {
   id: string;
   kidId: string;

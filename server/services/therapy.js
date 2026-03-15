@@ -669,6 +669,85 @@ async function saveGoalLearningPlan(kidId, goalLibraryId, data, updatedBy) {
   }
 }
 
+// ==================== GOAL LEARNING PLAN VERSIONS ====================
+
+// Helper: find the LP doc for a kid+goal
+async function _findLpDoc(kidId, goalLibraryId) {
+  const db = getDb();
+  const snapshot = await db.collection('kidGoalLearningPlans')
+    .where('kidId', '==', kidId)
+    .where('goalLibraryId', '==', goalLibraryId)
+    .limit(1)
+    .get();
+  if (snapshot.empty) return null;
+  return snapshot.docs[0];
+}
+
+async function saveLearningPlanVersion(kidId, goalLibraryId, data, createdBy) {
+  const lpDoc = await _findLpDoc(kidId, goalLibraryId);
+  if (!lpDoc) throw new Error('Learning plan not found — save the plan first');
+
+  const lpData = lpDoc.data();
+  const versionId = uuidv4();
+  const version = {
+    tables: lpData.tables || [],
+    goalTitle: lpData.goalTitle || '',
+    createdAt: new Date(),
+    createdBy: createdBy || 'unknown',
+    versionLabel: data.versionLabel || '',
+  };
+
+  await lpDoc.ref.collection('versions').doc(versionId).set(version);
+  return { id: versionId, ...version };
+}
+
+async function getLearningPlanVersions(kidId, goalLibraryId) {
+  const lpDoc = await _findLpDoc(kidId, goalLibraryId);
+  if (!lpDoc) return [];
+
+  const snapshot = await lpDoc.ref.collection('versions')
+    .orderBy('createdAt', 'desc')
+    .get();
+
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function getLearningPlanVersion(kidId, goalLibraryId, versionId) {
+  const lpDoc = await _findLpDoc(kidId, goalLibraryId);
+  if (!lpDoc) return null;
+
+  const vDoc = await lpDoc.ref.collection('versions').doc(versionId).get();
+  if (!vDoc.exists) return null;
+  return { id: vDoc.id, ...vDoc.data() };
+}
+
+async function deleteLearningPlanVersion(kidId, goalLibraryId, versionId) {
+  const lpDoc = await _findLpDoc(kidId, goalLibraryId);
+  if (!lpDoc) throw new Error('Learning plan not found');
+
+  await lpDoc.ref.collection('versions').doc(versionId).delete();
+  return { deleted: true };
+}
+
+async function restoreLearningPlanVersion(kidId, goalLibraryId, versionId, restoredBy) {
+  const lpDoc = await _findLpDoc(kidId, goalLibraryId);
+  if (!lpDoc) throw new Error('Learning plan not found');
+
+  const vDoc = await lpDoc.ref.collection('versions').doc(versionId).get();
+  if (!vDoc.exists) throw new Error('Version not found');
+
+  const vData = vDoc.data();
+  const updateData = {
+    tables: vData.tables || [],
+    goalTitle: vData.goalTitle || '',
+    updatedAt: new Date(),
+    updatedBy: restoredBy || 'unknown',
+  };
+
+  await lpDoc.ref.update(updateData);
+  return { id: lpDoc.id, ...lpDoc.data(), ...updateData };
+}
+
 // ==================== GOAL DATA COLLECTION ====================
 
 async function getGoalDataEntries(kidId, goalLibraryId) {
@@ -1679,6 +1758,12 @@ module.exports = {
   // Goal Learning Plans
   getGoalLearningPlan,
   saveGoalLearningPlan,
+  // Goal Learning Plan Versions
+  saveLearningPlanVersion,
+  getLearningPlanVersions,
+  getLearningPlanVersion,
+  deleteLearningPlanVersion,
+  restoreLearningPlanVersion,
   // Goal Data Collection
   getGoalDataEntries,
   addGoalDataEntry,
