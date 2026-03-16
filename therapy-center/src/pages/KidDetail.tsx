@@ -1730,6 +1730,7 @@ export default function KidDetail() {
           goals={goals}
           isReadOnly={isReadOnly}
           isAdmin={isAdmin}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
 

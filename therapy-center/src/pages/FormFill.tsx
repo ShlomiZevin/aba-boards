@@ -167,7 +167,7 @@ export default function FormFill() {
 
   const kid = kidRes?.data;
   const practitioners = practitionersRes?.data || [];
-  const goals = (goalsRes?.data || []).filter((g: Goal) => g.isActive);
+  const goals = (goalsRes?.data || []).filter((g: Goal) => g.isActive !== false);
 
   const toggleGoal = (goalId: string) => {
     const newSet = new Set(selectedGoals);

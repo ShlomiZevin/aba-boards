@@ -15,11 +15,18 @@ const asyncHandler = (fn) => (req, res, next) => {
 
 const { handleChat } = require('../services/chat-center');
 
-router.post('/chat', requireAdmin, asyncHandler(async (req, res) => {
+router.post('/chat', asyncHandler(async (req, res) => {
+  // Block parent access but allow admin + therapist
+  if (req.authType === 'parent') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
   const { messages, kidId, stream } = req.body;
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required' });
   }
+
+  const source = req.authType === 'therapist' ? 'therapist' : 'admin';
 
   if (stream) {
     // SSE streaming mode — send tool status updates in real time
@@ -34,7 +41,7 @@ router.post('/chat', requireAdmin, asyncHandler(async (req, res) => {
     };
 
     try {
-      const result = await handleChat(req.adminId, messages, kidId || null, onToolStatus);
+      const result = await handleChat(req.adminId, messages, kidId || null, onToolStatus, source);
       res.write(`data: ${JSON.stringify({ type: 'done', ...result })}\n\n`);
     } catch (err) {
       res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
@@ -42,7 +49,7 @@ router.post('/chat', requireAdmin, asyncHandler(async (req, res) => {
     res.end();
   } else {
     // Regular JSON response (backwards compatible)
-    const result = await handleChat(req.adminId, messages, kidId || null);
+    const result = await handleChat(req.adminId, messages, kidId || null, null, source);
     res.json(result);
   }
 }));
@@ -368,13 +375,19 @@ router.post('/kids/:kidId/goal-data/:goalLibraryId/bulk', requireAdmin, asyncHan
 router.post('/kids/:kidId/goal-forms/:goalLibraryId/upload', requireAdmin, upload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'לא נבחר קובץ' });
 
+  // Only .docx is supported (mammoth doesn't handle .doc binary format)
+  const fileName = req.file.originalname || '';
+  if (fileName.toLowerCase().endsWith('.doc') && !fileName.toLowerCase().endsWith('.docx')) {
+    return res.status(400).json({ error: 'פורמט .doc אינו נתמך — נא להמיר את הקובץ ל-.docx (Word 2007+)' });
+  }
+
   const formType = req.body.formType; // 'lp' | 'dc'
   if (!formType || !['lp', 'dc'].includes(formType)) {
     return res.status(400).json({ error: 'formType חייב להיות lp או dc' });
   }
 
-  // updateStructure is only honoured for super-admins
-  const updateStructure = req.isSuperAdmin && req.body.updateStructure === 'true';
+  // updateStructure: super-admins can always update; regular admins can update only if no template exists yet
+  const updateStructure = req.body.updateStructure === 'true' && (req.isSuperAdmin || req.body.formType === 'lp');
 
   console.log('[upload route] kidId:', req.params.kidId, 'goalLibraryId:', req.params.goalLibraryId, 'formType:', formType, 'fileSize:', req.file.size, 'updateStructure:', updateStructure);
 

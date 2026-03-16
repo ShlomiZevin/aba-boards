@@ -12,6 +12,7 @@ import {
 } from './GoalFormRenderer';
 import { toDate } from '../utils/date';
 import ConfirmModal from './ConfirmModal';
+import GoalFileUpload from './GoalFileUpload';
 
 // -------- Version History Modal --------
 function VersionHistoryModal({ kidId, libraryItemId, templateBlocks, onRestore, onClose }: {
@@ -139,10 +140,11 @@ function VersionHistoryModal({ kidId, libraryItemId, templateBlocks, onRestore, 
 }
 
 // -------- Learning Plan Card (per goal) --------
-function LearningPlanCard({ kidId, goal, isAdmin }: {
+function LearningPlanCard({ kidId, goal, isAdmin, isSuperAdmin }: {
   kidId: string;
   goal: Goal;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
 }) {
   const queryClient = useQueryClient();
   const libraryItemId = goal.libraryItemId!;
@@ -157,6 +159,7 @@ function LearningPlanCard({ kidId, goal, isAdmin }: {
   const [fullscreen, setFullscreen] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [showUpload, setShowUpload] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lpQueryKey = ['goal-lp', kidId, libraryItemId];
@@ -435,6 +438,11 @@ function LearningPlanCard({ kidId, goal, isAdmin }: {
         היסטוריה
       </button>
 
+      <button type="button" onClick={() => setShowUpload(true)}
+        style={{ background: 'none', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer', fontSize: '0.78em', padding: '4px 12px', borderRadius: 6 }}>
+        📄 העלה קובץ
+      </button>
+
       {saveVersionMutation.isError && <span style={{ color: '#ef4444', fontSize: '0.75em' }}>שגיאה בשמירת גרסה</span>}
 
       {planRes?.updatedAt && (
@@ -474,6 +482,21 @@ function LearningPlanCard({ kidId, goal, isAdmin }: {
           templateBlocks={templateBlocks}
           onRestore={() => { setShowVersionModal(false); reinitFromPlan(); }}
           onClose={() => setShowVersionModal(false)}
+        />
+      )}
+
+      {showUpload && (
+        <GoalFileUpload
+          kidId={kidId}
+          goal={goal}
+          formType="lp"
+          isSuperAdmin={isSuperAdmin}
+          onClose={() => setShowUpload(false)}
+          onSaved={() => {
+            setShowUpload(false);
+            reinitFromPlan();
+            queryClient.invalidateQueries({ queryKey: lpQueryKey });
+          }}
         />
       )}
     </>
@@ -524,21 +547,66 @@ interface Props {
   goals: Goal[];
   isReadOnly: boolean;
   isAdmin: boolean;
+  isSuperAdmin?: boolean;
 }
 
-export default function LearningPlansTab({ kidId, goals, isAdmin }: Props) {
-  const activeGoals = goals.filter(g => {
-    if (!g.isActive || !g.libraryItemId) return false;
+// -------- Upload-only card for goals without LP template --------
+function UploadOnlyCard({ kidId, goal, isSuperAdmin }: {
+  kidId: string;
+  goal: Goal;
+  isSuperAdmin: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [showUpload, setShowUpload] = useState(false);
+
+  return (
+    <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: 8, overflow: 'hidden', background: 'white' }}>
+      <div style={{ display: 'flex', alignItems: 'center', background: '#fafbfd', padding: '11px 14px', gap: 10 }}>
+        <span style={{ fontSize: '0.9em', flex: 1, fontWeight: 500, color: '#64748b' }}>{goal.title}</span>
+        <button type="button" onClick={() => setShowUpload(true)}
+          style={{ background: '#eef2ff', border: '1px solid #c7d2fe', color: '#4f46e5', cursor: 'pointer', fontSize: '0.78em', fontWeight: 600, padding: '4px 14px', borderRadius: 6 }}>
+          📄 העלה קובץ
+        </button>
+      </div>
+      {showUpload && (
+        <GoalFileUpload
+          kidId={kidId}
+          goal={goal}
+          formType="lp"
+          isSuperAdmin={isSuperAdmin}
+          forceUpdateStructure
+          onClose={() => setShowUpload(false)}
+          onSaved={() => {
+            setShowUpload(false);
+            queryClient.invalidateQueries({ queryKey: ['goal-lp', kidId, goal.libraryItemId] });
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function LearningPlansTab({ kidId, goals, isAdmin, isSuperAdmin = false }: Props) {
+  // All active goals with a libraryItemId
+  const allActiveGoals = goals.filter(g => g.isActive && g.libraryItemId);
+
+  // Split: goals with LP template vs without
+  const goalsWithTemplate = allActiveGoals.filter(g => {
     const blocks = normalizeTemplate(g.learningPlanTemplate ?? null);
     return blocks.some(b => b.columns.length > 0);
   });
+  const goalsWithoutTemplate = isAdmin ? allActiveGoals.filter(g => {
+    const blocks = normalizeTemplate(g.learningPlanTemplate ?? null);
+    return !blocks.some(b => b.columns.length > 0);
+  }) : [];
 
-  if (activeGoals.length === 0) {
+  if (goalsWithTemplate.length === 0 && goalsWithoutTemplate.length === 0) {
     return (
       <div className="content-card">
         <div className="empty-state">
-          <p>אין מטרות עם תבנית תוכנית למידה מוגדרת</p>
-          {isAdmin && <p style={{ fontSize: '0.85em', color: '#94a3b8' }}>הגדר תבניות דרך ניהול מטרות בספרייה</p>}
+          <p>אין מטרות פעילות</p>
         </div>
       </div>
     );
@@ -546,23 +614,27 @@ export default function LearningPlansTab({ kidId, goals, isAdmin }: Props) {
 
   const byCategory = GOAL_CATEGORIES.map(cat => ({
     cat,
-    goals: activeGoals.filter(g => g.categoryId === cat.id),
-  })).filter(({ goals }) => goals.length > 0);
+    withTemplate: goalsWithTemplate.filter(g => g.categoryId === cat.id),
+    withoutTemplate: goalsWithoutTemplate.filter(g => g.categoryId === cat.id),
+  })).filter(({ withTemplate, withoutTemplate }) => withTemplate.length > 0 || withoutTemplate.length > 0);
 
   return (
     <div className="content-card">
       <h3 style={{ marginBottom: 16, color: '#334155', borderBottom: '2px solid #c7d2fe', paddingBottom: 10 }}>תוכניות למידה</h3>
-      {byCategory.map(({ cat, goals: catGoals }) => (
+      {byCategory.map(({ cat, withTemplate, withoutTemplate }) => (
         <div key={cat.id} style={{ marginBottom: 20 }}>
           <div style={{
             fontSize: '0.8em', fontWeight: 700, color: cat.color,
             textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
             borderBottom: `2px solid ${cat.color}20`, paddingBottom: 4,
           }}>
-            {cat.nameHe} ({catGoals.length})
+            {cat.nameHe} ({withTemplate.length + withoutTemplate.length})
           </div>
-          {catGoals.map(goal => (
-            <LearningPlanCard key={goal.id} kidId={kidId} goal={goal} isAdmin={isAdmin} />
+          {withTemplate.map(goal => (
+            <LearningPlanCard key={goal.id} kidId={kidId} goal={goal} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+          ))}
+          {withoutTemplate.map(goal => (
+            <UploadOnlyCard key={goal.id} kidId={kidId} goal={goal} isSuperAdmin={isSuperAdmin} />
           ))}
         </div>
       ))}

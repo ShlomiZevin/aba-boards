@@ -270,6 +270,8 @@ export interface GoalFormUploadResult {
   columns: import('../types').GoalColumnDef[] | null;
   rows: GoalFormRow[] | null;
   entries: (GoalFormRow & { sessionDate: string })[] | null;
+  /** Multi-block LP results: [{tableId, columns?, rows}] */
+  tables?: { tableId: string; columns?: import('../types').GoalColumnDef[] | null; rows: GoalFormRow[] }[];
 }
 
 export const goalFormUploadApi = {

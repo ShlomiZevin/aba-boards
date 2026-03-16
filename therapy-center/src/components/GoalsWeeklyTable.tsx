@@ -70,6 +70,7 @@ export default function GoalsWeeklyTable({
       toDate(a.sessionDate).getTime() - toDate(b.sessionDate).getTime()
     );
   const weekSessions = allSessions.filter((s: Session) => {
+    if (s.type === 'meeting') return false; // meetings don't have goals
     const sDate = toDate(s.scheduledDate);
     return sDate >= sunday && sDate <= saturdayEnd && sDate <= formDate;
   });

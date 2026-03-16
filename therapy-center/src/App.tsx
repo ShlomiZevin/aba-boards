@@ -82,6 +82,7 @@ function TherapistRoutes() {
           <Route path="/kid/:kidId/goals" element={<GoalsPage />} />
           <Route path="/forms" element={<FormsOverview />} />
           <Route path="/notifications" element={<TherapistNotifications />} />
+          <Route path="/chat" element={<ChatCenter />} />
           <Route path="/form/new" element={<FormFill />} />
           <Route path="/form/:formId/edit" element={<FormFill />} />
           <Route path="/form/:formId/view" element={<FormView />} />

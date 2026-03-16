@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalFormUploadApi, goalDataApi, goalPlansApi, goalTemplatesApi, type GoalFormUploadResult } from '../api/client';
-import { ReadOnlyGoalTable } from './GoalFormRenderer';
+import { ReadOnlyGoalTable, ReadOnlyVerticalBlock } from './GoalFormRenderer';
 import { normalizeTemplate } from '../types';
-import type { Goal, GoalFormRow, GoalColumnDef } from '../types';
-// GoalFormUploadResult.targetBlockId is used to know which template block the extracted data belongs to
+import type { Goal, GoalFormRow, GoalColumnDef, GoalTableBlock } from '../types';
 
 interface Props {
   kidId: string;
@@ -12,20 +11,22 @@ interface Props {
   formType: 'lp' | 'dc';
   isSuperAdmin: boolean;
   practitionerId?: string;
+  /** When true, always send updateStructure=true (e.g. no template exists yet) */
+  forceUpdateStructure?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
 type Step = 'pick' | 'processing' | 'preview' | 'saving';
 
-export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, practitionerId, onClose, onSaved }: Props) {
+export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, practitionerId, forceUpdateStructure, onClose, onSaved }: Props) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const libraryItemId = goal.libraryItemId!;
 
   const [step, setStep] = useState<Step>('pick');
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
-  const [updateStructure, setUpdateStructure] = useState(false);
+  const [updateStructure, setUpdateStructure] = useState(forceUpdateStructure ?? false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GoalFormUploadResult | null>(null);
 
@@ -37,7 +38,8 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
     setError(null);
     setStep('processing');
 
-    const res = await goalFormUploadApi.upload(kidId, libraryItemId, file, formType, updateStructure && isSuperAdmin);
+    const shouldUpdateStructure = forceUpdateStructure || (updateStructure && isSuperAdmin);
+    const res = await goalFormUploadApi.upload(kidId, libraryItemId, file, formType, shouldUpdateStructure);
 
     if (!res.success || !res.data) {
       setError(res.error || 'שגיאה בעיבוד הקובץ');
@@ -46,7 +48,10 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
     }
 
     const data = res.data;
-    const hasContent = formType === 'lp' ? (data.rows && data.rows.length > 0) : (data.entries && data.entries.length > 0);
+    // Check for content: multi-block tables, single-block rows, or DC entries
+    const hasContent = formType === 'lp'
+      ? (data.tables && data.tables.some(t => t.rows && t.rows.length > 0)) || (data.rows && data.rows.length > 0)
+      : (data.entries && data.entries.length > 0);
     if (!hasContent) {
       setError('לא נמצאו נתונים בקובץ. ייתכן שהמבנה שונה מהתבנית הקיימת.');
       setStep('pick');
@@ -61,20 +66,63 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
   const saveLpMutation = useMutation({
     mutationFn: async () => {
       if (!result) return;
-      const blockId = result.targetBlockId || 'uploaded';
-      // If super-admin chose updateStructure and Claude returned new columns, update template first
-      if (isSuperAdmin && updateStructure && result.columns && result.columns.length > 0) {
-        await goalTemplatesApi.updateTemplates(libraryItemId, {
-          learningPlanTemplate: { tables: [{ id: blockId, title: '', type: 'horizontal', columns: result.columns }] },
+
+      const shouldUpdate = forceUpdateStructure || (isSuperAdmin && updateStructure);
+
+      // Multi-block tables (new format)
+      if (result.tables && result.tables.length > 0) {
+        // If updateStructure and Claude returned new columns in any table
+        if (shouldUpdate) {
+          const tablesWithNewCols = result.tables.filter(t => t.columns && t.columns.length > 0);
+          if (tablesWithNewCols.length > 0) {
+            const tmpl = formType === 'lp' ? goal.learningPlanTemplate : goal.dataCollectionTemplate;
+            const existingBlocks = normalizeTemplate(tmpl ?? null);
+
+            let updatedTables;
+            if (existingBlocks.length === 0) {
+              // No template exists — use Claude's suggested structure entirely
+              updatedTables = tablesWithNewCols.map(t => ({
+                id: t.tableId, title: '', type: 'horizontal' as const, columns: t.columns!,
+              }));
+            } else {
+              // Merge: update columns for blocks that Claude changed, keep existing for others
+              updatedTables = existingBlocks.map(block => {
+                const uploaded = result.tables!.find(t => t.tableId === block.id);
+                if (uploaded?.columns && uploaded.columns.length > 0) {
+                  return { id: block.id, title: block.title || '', type: block.type, columns: uploaded.columns };
+                }
+                return { id: block.id, title: block.title || '', type: block.type, columns: block.columns };
+              });
+            }
+            await goalTemplatesApi.updateTemplates(libraryItemId, {
+              learningPlanTemplate: { tables: updatedTables },
+            });
+            queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+          }
+        }
+
+        await goalPlansApi.save(kidId, libraryItemId, {
+          goalTitle: result.goalTitle,
+          tables: result.tables.map(t => ({ tableId: t.tableId, rows: t.rows || [] })),
         });
-        queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
-        queryClient.invalidateQueries({ queryKey: ['goals'] });
+      } else {
+        // Legacy single-block fallback
+        const blockId = result.targetBlockId || 'uploaded';
+        if (shouldUpdate && result.columns && result.columns.length > 0) {
+          await goalTemplatesApi.updateTemplates(libraryItemId, {
+            learningPlanTemplate: { tables: [{ id: blockId, title: '', type: 'horizontal', columns: result.columns }] },
+          });
+          queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+          queryClient.invalidateQueries({ queryKey: ['goals'] });
+        }
+        await goalPlansApi.save(kidId, libraryItemId, {
+          goalTitle: result.goalTitle,
+          tables: [{ tableId: blockId, rows: result.rows || [] }],
+        });
       }
-      await goalPlansApi.save(kidId, libraryItemId, {
-        goalTitle: result.goalTitle,
-        tables: [{ tableId: blockId, rows: result.rows || [] }],
-      });
-      queryClient.invalidateQueries({ queryKey: ['goal-plan', kidId, libraryItemId] });
+
+      queryClient.invalidateQueries({ queryKey: ['goal-lp', kidId, libraryItemId] });
     },
     onSuccess: onSaved,
     onError: (e: Error) => setError(e.message || 'שגיאה בשמירה'),
@@ -116,17 +164,55 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
     else saveDcMutation.mutate();
   }
 
-  // ---- Derive preview columns from result or goal ----
+  // ---- Preview helpers ----
+  const templateBlocks = normalizeTemplate(
+    (formType === 'lp' ? goal.learningPlanTemplate : goal.dataCollectionTemplate) ?? null
+  );
+
+  // For multi-block LP, build preview per block
+  function hasMultiBlockResult(): boolean {
+    return formType === 'lp' && !!result?.tables && result.tables.length > 0;
+  }
+
+  function renderMultiBlockPreview() {
+    if (!result?.tables) return null;
+    return result.tables.map(table => {
+      const block = templateBlocks.find(b => b.id === table.tableId);
+      const cols = (table.columns && table.columns.length > 0) ? table.columns : (block?.columns || []);
+      const rows = table.rows || [];
+      const isVertical = block?.type === 'vertical';
+      const title = block?.title || table.tableId;
+
+      return (
+        <div key={table.tableId} style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: '0.82em', color: '#4338ca', background: '#eef2ff', padding: '6px 10px', borderRadius: '6px 6px 0 0', border: '1px solid #c7d2fe', borderBottom: 'none' }}>
+            {title} ({isVertical ? 'שדות' : `${rows.length} שורות`})
+          </div>
+          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '0 0 8px 8px' }}>
+            {isVertical && rows[0] ? (
+              <ReadOnlyVerticalBlock block={{ ...block!, columns: cols as GoalColumnDef[] } as GoalTableBlock} row={rows[0]} />
+            ) : (
+              <ReadOnlyGoalTable columns={cols as GoalColumnDef[]} rows={rows} />
+            )}
+          </div>
+          {table.columns && table.columns.length > 0 && isSuperAdmin && updateStructure && (
+            <div style={{ fontSize: '0.75em', color: '#92400e', marginTop: 4 }}>
+              ⚠️ מבנה עמודות חדש יעודכן בתבנית
+            </div>
+          )}
+        </div>
+      );
+    });
+  }
+
+  // Legacy single-block preview
   function previewColumns(): GoalColumnDef[] {
     if (result?.columns && result.columns.length > 0) return result.columns;
-    const tmpl = formType === 'lp' ? goal.learningPlanTemplate : goal.dataCollectionTemplate;
-    const blocks = normalizeTemplate(tmpl ?? null);
-    // Show columns from the target block specifically, or all columns if block not found
     if (result?.targetBlockId) {
-      const targetBlock = blocks.find(b => b.id === result.targetBlockId);
+      const targetBlock = templateBlocks.find(b => b.id === result.targetBlockId);
       if (targetBlock) return targetBlock.columns;
     }
-    return blocks.flatMap(b => b.columns);
+    return templateBlocks.flatMap(b => b.columns);
   }
 
   function previewRows(): GoalFormRow[] {
@@ -150,16 +236,18 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
   }
 
   const formLabel = formType === 'lp' ? 'תוכנית למידה' : 'איסוף נתונים';
-  const cols = previewColumns();
-  const rows = previewRows();
-  const dates = previewDates();
+
+  // Count total rows across all blocks for summary
+  const totalRows = hasMultiBlockResult()
+    ? (result?.tables || []).reduce((sum, t) => sum + (t.rows?.length || 0), 0)
+    : previewRows().length;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal"
         onClick={e => e.stopPropagation()}
-        style={{ maxWidth: 680, width: '95vw', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}
+        style={{ maxWidth: 720, width: '95vw', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
@@ -190,7 +278,7 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
             >
               <div style={{ fontSize: '2em', marginBottom: 6 }}>📄</div>
               <div style={{ fontSize: '0.88em', color: '#4f46e5', fontWeight: 600 }}>לחץ לבחירת קובץ</div>
-              <div style={{ fontSize: '0.75em', color: '#94a3b8', marginTop: 4 }}>doc, docx עד 20MB</div>
+              <div style={{ fontSize: '0.75em', color: '#94a3b8', marginTop: 4 }}>docx עד 20MB</div>
               <input
                 ref={fileRef}
                 type="file"
@@ -209,8 +297,8 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
               )}
             </div>
 
-            {/* Super-admin: updateStructure toggle */}
-            {isSuperAdmin && (
+            {/* Super-admin: updateStructure toggle (hidden when forced) */}
+            {isSuperAdmin && !forceUpdateStructure && (
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85em', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
                 <input
                   type="checkbox"
@@ -232,13 +320,12 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
             )}
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-              <button type="button" className="btn-secondary" onClick={onClose}>ביטול</button>
+              <button type="button" onClick={onClose} style={{ background: 'rgba(167,139,250,.08)', color: '#a78bfa', border: 'none', padding: '8px 18px', borderRadius: 8, fontWeight: 600, fontSize: '0.9em', cursor: 'pointer' }}>ביטול</button>
               <button
                 type="button"
-                className="btn-primary"
                 onClick={handleProcess}
                 disabled={step === 'processing'}
-                style={{ minWidth: 120 }}
+                style={{ background: '#8b5cf6', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: 8, fontWeight: 600, fontSize: '0.9em', cursor: 'pointer', minWidth: 120, opacity: step === 'processing' ? 0.6 : 1 }}
               >
                 {step === 'processing' ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -254,29 +341,45 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
         {/* Step: preview */}
         {step === 'preview' && result && (
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontSize: '0.85em', fontWeight: 600, color: '#334155' }}>
+              {formType === 'lp'
+                ? `נמצאו נתונים (${totalRows} שורות) — בדוק ואשר:`
+                : `נמצאו ${totalRows} רשומות — בדוק ואשר:`}
+            </div>
+
+            {/* Multi-block preview */}
+            {hasMultiBlockResult() ? (
+              <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                {renderMultiBlockPreview()}
+              </div>
+            ) : (
+              /* Single-block preview */
+              (() => {
+                const cols = previewColumns();
+                const rows = previewRows();
+                const dates = previewDates();
+                return cols.length > 0 && rows.length > 0 ? (
+                  <div style={{ overflowX: 'auto', maxHeight: 360, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                    <ReadOnlyGoalTable
+                      columns={cols}
+                      rows={rows}
+                      firstColumn={dates ? { label: 'תאריך', values: dates } : undefined}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ color: '#94a3b8', fontSize: '0.85em' }}>לא ניתן להציג תצוגה מקדימה — אין עמודות תואמות.</div>
+                );
+              })()
+            )}
+
             {/* Structure update notice */}
-            {result.columns && result.columns.length > 0 && isSuperAdmin && updateStructure && (
+            {isSuperAdmin && updateStructure && (
+              (result.columns && result.columns.length > 0) ||
+              (result.tables && result.tables.some(t => t.columns && t.columns.length > 0))
+            ) && (
               <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 14px', fontSize: '0.83em', color: '#92400e' }}>
                 ⚠️ Claude זיהה מבנה שונה מהתבנית הקיימת ויעדכן את העמודות בעת השמירה.
               </div>
-            )}
-
-            <div style={{ fontSize: '0.85em', fontWeight: 600, color: '#334155' }}>
-              {formType === 'lp'
-                ? `נמצאו ${rows.length} שורות בתוכנית הלמידה — בדוק ואשר:`
-                : `נמצאו ${rows.length} רשומות — בדוק ואשר:`}
-            </div>
-
-            {cols.length > 0 && rows.length > 0 ? (
-              <div style={{ overflowX: 'auto', maxHeight: 360, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
-                <ReadOnlyGoalTable
-                  columns={cols}
-                  rows={rows}
-                  firstColumn={dates ? { label: 'תאריך', values: dates } : undefined}
-                />
-              </div>
-            ) : (
-              <div style={{ color: '#94a3b8', fontSize: '0.85em' }}>לא ניתן להציג תצוגה מקדימה — אין עמודות תואמות.</div>
             )}
 
             {formType === 'lp' && (
@@ -297,12 +400,12 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
             )}
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" className="btn-secondary" onClick={() => { setStep('pick'); setResult(null); }}>חזור</button>
+              <button type="button" onClick={() => { setStep('pick'); setResult(null); }} style={{ background: 'rgba(167,139,250,.08)', color: '#a78bfa', border: 'none', padding: '8px 18px', borderRadius: 8, fontWeight: 600, fontSize: '0.9em', cursor: 'pointer' }}>חזור</button>
               <button
                 type="button"
-                className="btn-primary"
                 onClick={handleSave}
                 disabled={isSaving}
+                style={{ background: '#8b5cf6', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: 8, fontWeight: 600, fontSize: '0.9em', cursor: 'pointer', opacity: isSaving ? 0.6 : 1 }}
               >
                 {isSaving ? 'שומר...' : 'אשר ושמור'}
               </button>

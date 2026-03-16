@@ -933,17 +933,18 @@ async function extractGoalFormFromFile(goalLibraryId, fileBuffer, { formType, up
 
   // Normalize to blocks — supports both old flat format and new multi-table format
   const templateBlocks = normalizeTemplateBlocks(currentTemplate);
-  // Target the first horizontal block for data extraction (most meaningful for LP rows / DC entries)
-  const targetBlock = templateBlocks.find(b => b.type === 'horizontal') || templateBlocks[0] || null;
-  const targetBlockId = targetBlock ? targetBlock.id : 'uploaded';
-  const currentColumns = targetBlock ? (targetBlock.columns || []) : [];
 
-  console.log('[upload] goal:', goalTitle, 'blocks:', templateBlocks.length, 'targetBlock:', targetBlockId, 'columns:', currentColumns.length);
+  console.log('[upload] goal:', goalTitle, 'blocks:', templateBlocks.length);
 
-  // 3. Build Claude prompt
-  const columnDescription = currentColumns.length > 0
-    ? `העמודות הנוכחיות של הטבלה "${targetBlockId}" (השתמש ב-id המדויק של כל עמודה):\n${JSON.stringify(currentColumns, null, 2)}\n\nסוגי הטבלאות: vertical = שדות בודדים (שורה אחת), horizontal = טבלה עם מספר שורות.`
-    : 'אין תבנית עמודות קיימת — אתה יכול להציע מבנה חדש.';
+  // 3. Build Claude prompt — describe ALL blocks so Claude can fill both vertical and horizontal
+  let blocksDescription;
+  if (templateBlocks.length > 0) {
+    blocksDescription = `הטבלאות בתבנית הנוכחית:\n${JSON.stringify(templateBlocks.map(b => ({
+      id: b.id, type: b.type, title: b.title || '', columns: b.columns
+    })), null, 2)}\n\nסוגי טבלאות: vertical = שדות בודדים (שורה אחת, key-value), horizontal = טבלה עם מספר שורות (רשימת פריטים).`;
+  } else {
+    blocksDescription = 'אין תבנית עמודות קיימת — אתה צריך להציע מבנה חדש.';
+  }
 
   let systemPrompt;
   let userPrompt;
@@ -951,27 +952,42 @@ async function extractGoalFormFromFile(goalLibraryId, fileBuffer, { formType, up
   if (formType === 'lp') {
     systemPrompt = updateStructure
       ? `אתה מחלץ נתונים מתוכנית למידה (LP) של ABA לפי מטרה טיפולית.
-${columnDescription}
+${blocksDescription}
 
 החזר JSON בפורמט הבא:
 {
-  "columns": [/* אם מבנה הקובץ שונה מהעמודות הקיימות, הצע עמודות מעודכנות */],
-  "rows": [{ "col_id": "ערך", ... }, ...]
+  "tables": [
+    { "tableId": "block_id", "columns": [/* עמודות מעודכנות אם המבנה שונה */], "rows": [{ "col_id": "ערך", ... }] },
+    ...
+  ]
 }
 
 כל עמודה חדשה: id (string ללא רווחים), label (string עברי), type ("text"|"date"|"options"), options: string[] (רק עבור type options).
-אם המבנה תואם — השתמש ב-columns הקיימים ללא שינוי.
+טבלת vertical = שורה אחת עם ערכים. טבלת horizontal = מספר שורות.
+אם המבנה תואם — השתמש ב-columns הקיימים ללא שינוי (החזר columns: null עבור אותה טבלה).
+שים לב: הקובץ כולל בדרך כלל חלק עליון עם שדות (שם, גירוי, תגובה, רמזים) — זו טבלה vertical. ולמטה רשימת פריטים — זו טבלה horizontal.
 החזר ONLY JSON תקין, ללא הסברים.`
       : `אתה מחלץ נתונים מתוכנית למידה (LP) של ABA לפי מטרה טיפולית.
-${columnDescription}
+${blocksDescription}
 
 החזר JSON בפורמט הבא:
-{ "rows": [{ "col_id": "ערך", ... }, ...] }
+{ "tables": [{ "tableId": "block_id", "rows": [{ "col_id": "ערך", ... }] }, ...] }
 
-השתמש ב-id של העמודות הקיימות בלבד. שורה ריקה = "". החזר ONLY JSON תקין.`;
+השתמש ב-id של הטבלאות והעמודות הקיימות בלבד. שורה ריקה = "".
+טבלת vertical = שורה אחת בלבד. טבלת horizontal = מספר שורות.
+שים לב: הקובץ כולל בדרך כלל חלק עליון עם שדות (שם, גירוי, תגובה, רמזים) — זו טבלה vertical. ולמטה רשימת פריטים — זו טבלה horizontal.
+החזר ONLY JSON תקין.`;
 
     userPrompt = `מטרה: ${goalTitle}\n\nתוכן הקובץ:\n${docText}`;
   } else {
+    // DC keeps the old single-block logic — entries are always horizontal
+    const targetBlock = templateBlocks.find(b => b.type === 'horizontal') || templateBlocks[0] || null;
+    const targetBlockId = targetBlock ? targetBlock.id : 'uploaded';
+    const currentColumns = targetBlock ? (targetBlock.columns || []) : [];
+    const columnDescription = currentColumns.length > 0
+      ? `העמודות הנוכחיות של הטבלה "${targetBlockId}":\n${JSON.stringify(currentColumns, null, 2)}`
+      : 'אין תבנית עמודות קיימת.';
+
     systemPrompt = updateStructure
       ? `אתה מחלץ רשומות איסוף נתונים (DC) של ABA לפי מטרה טיפולית.
 ${columnDescription}
@@ -1020,15 +1036,34 @@ ${columnDescription}
     throw new Error('Claude לא החזיר JSON תקין: ' + rawText.slice(0, 200));
   }
 
-  console.log('[upload] parsed — rows:', parsed.rows?.length, 'entries:', parsed.entries?.length, 'columns:', parsed.columns?.length);
+  console.log('[upload] parsed keys:', Object.keys(parsed));
+
+  // LP now returns tables array; DC keeps old format
+  if (formType === 'lp' && parsed.tables) {
+    console.log('[upload] LP tables:', parsed.tables.length, parsed.tables.map(t => ({ id: t.tableId, rows: t.rows?.length })));
+    return {
+      goalTitle,
+      formType,
+      tables: parsed.tables,  // [{ tableId, columns?, rows }]
+      // Legacy fields for backward compat
+      targetBlockId: parsed.tables[0]?.tableId || 'uploaded',
+      columns: null,
+      rows: null,
+      entries: null,
+    };
+  }
+
+  // Fallback for old single-block LP response or DC
+  const targetBlock = templateBlocks.find(b => b.type === 'horizontal') || templateBlocks[0] || null;
+  const targetBlockId = targetBlock ? targetBlock.id : 'uploaded';
 
   return {
     goalTitle,
     formType,
-    targetBlockId,                     // which block the rows/entries belong to
-    columns: parsed.columns || null,   // only present if updateStructure=true and Claude suggested changes
-    rows: parsed.rows || null,         // for LP
-    entries: parsed.entries || null,   // for DC
+    targetBlockId,
+    columns: parsed.columns || null,
+    rows: parsed.rows || null,
+    entries: parsed.entries || null,
   };
 }
 
