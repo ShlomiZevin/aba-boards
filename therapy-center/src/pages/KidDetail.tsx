@@ -820,7 +820,12 @@ export default function KidDetail() {
               )}
             </div>
             {isParentView && (
-              <div className="readonly-badge">צפייה בלבד</div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                <div className="readonly-badge">צפייה בלבד</div>
+                <Link to={`/p/${kidId}/chat`} className="kid-toolbar-btn" style={{ fontSize: '0.85rem', padding: '4px 12px', borderRadius: '8px', background: '#7c3aed', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  🤖 <span>צ׳אט AI</span>
+                </Link>
+              </div>
             )}
           </div>
         </div>

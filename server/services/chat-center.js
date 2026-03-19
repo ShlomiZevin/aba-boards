@@ -169,8 +169,34 @@ const CHAT_TOOLS = [
 
 function buildSystemPrompt(kidId, source) {
   const isTherapist = source === 'therapist';
+  const isParent = source === 'parent';
 
-  const basePrompt = isTherapist
+  const basePrompt = isParent
+    ? `את עוזרת חמה ומקצועית להורים במערכת "Doing" לניהול טיפול ABA.
+את עוזרת להורים להבין את תהליך הטיפול של הילד/ה שלהם, לעקוב אחרי ההתקדמות, ולקבל טיפים מעשיים.
+
+## האישיות שלך
+- חמה, תומכת, סבלנית
+- מסבירה מושגים מקצועיים בשפה פשוטה ונגישה
+- מעודדת ומחזקת את ההורים
+- לא מתנשאת, לא משתמשת בז׳רגון מקצועי מיותר
+
+## מה את עושה
+- עוזרת להורים להבין את המטרות של הילד/ה
+- מסבירה מה קורה בטיפולים
+- נותנת טיפים איך לתרגל בבית
+- עוזרת להבין את הנתונים וההתקדמות
+- מעודדת ותומכת בתהליך
+
+## מה את לא עושה
+- לא משנה את הלוח או המשימות (רק המטפלת יכולה)
+- לא נותנת אבחנות
+- לא סותרת את ההנחיות של המטפלת
+- לא חושפת מידע טכני או מערכתי
+
+יש לך גישה רק לילד/ה שלך. אי אפשר לגשת לילדים אחרים.`
+
+    : isTherapist
     ? `את מדריכה מקצועית בעולם ניתוח ההתנהגות היישומי (ABA), שעוזרת למטפלים להפוך מטרות טיפול, נתונים והתקדמות לתהליך ברור, מדיד וישים.
 
 ## הערכים שלך
@@ -220,7 +246,8 @@ function buildSystemPrompt(kidId, source) {
 
 את עוזרת להפוך תהליך טיפולי למשהו: *מדיד, ברור ומנוהל.*
 
-את עובדת במסגרת מערכת "Doing" לניהול טיפול ABA.`
+את עובדת במסגרת מערכת "Doing" לניהול טיפול ABA.
+יש לך גישה רק לילדים שמשויכים אלייך. אל תנסי לגשת לילדים אחרים.`
 
     : `You are an AI assistant and ABA therapy specialist for a therapy center admin panel called "Doing".
 You help the admin manage kids' therapy data and reward boards, AND provide professional ABA guidance.
@@ -261,29 +288,54 @@ BOARD LAYOUT ITEM TYPES:
 Today's date: ${new Date().toISOString().split('T')[0]}`;
 }
 
-async function resolveKidId(kidId, adminId) {
+async function resolveKidId(kidId, adminId, practitionerId) {
   // If kidId looks like a name (contains Hebrew/spaces, no typical ID chars), resolve it
   if (kidId && !/^[a-zA-Z0-9_-]{10,}$/.test(kidId)) {
-    const kids = await therapyService.getAllKids(adminId);
+    const kids = practitionerId
+      ? await therapyService.getKidsForPractitioner(practitionerId)
+      : await therapyService.getAllKids(adminId);
     const match = kids.find(k => k.name === kidId || k.name.includes(kidId));
     if (match) return match.id;
   }
   return kidId;
 }
 
-async function executeToolCall(toolName, input, adminId) {
+async function executeToolCall(toolName, input, adminId, { practitionerId, parentKidId } = {}) {
   try {
     // Auto-resolve kidId if AI passed a name instead of an ID
     if (input.kidId && toolName !== 'list_kids' && toolName !== 'create_kid') {
-      input.kidId = await resolveKidId(input.kidId, adminId);
+      input.kidId = await resolveKidId(input.kidId, adminId, practitionerId);
     }
+
+    // Parent scoping — locked to their one kid
+    if (parentKidId) {
+      if (toolName === 'create_kid') return { error: 'אין לך הרשאה ליצור ילדים' };
+      if (toolName === 'update_board_layout') return { error: 'אין לך הרשאה לשנות את הלוח' };
+      if (input.kidId && input.kidId !== parentKidId) return { error: 'אין לך גישה לילד/ה זה/זו' };
+    }
+
+    // If therapist, validate they have access to this kid
+    if (practitionerId && input.kidId && toolName !== 'list_kids' && toolName !== 'create_kid') {
+      const myKids = await therapyService.getKidsForPractitioner(practitionerId);
+      const hasAccess = myKids.some(k => k.id === input.kidId);
+      if (!hasAccess) return { error: 'אין לך גישה לילד/ה זה/זו' };
+    }
+
     switch (toolName) {
       case 'list_kids': {
-        const kids = await therapyService.getAllKids(adminId);
+        // Parents only see their one kid, therapists see assigned kids, admins see all
+        if (parentKidId) {
+          const kid = await therapyService.getKidById(parentKidId);
+          return kid ? [{ id: kid.id, name: kid.name, age: kid.age, gender: kid.gender }] : [];
+        }
+        const kids = practitionerId
+          ? await therapyService.getKidsForPractitioner(practitionerId)
+          : await therapyService.getAllKids(adminId);
         return kids.map(k => ({ id: k.id, name: k.name, age: k.age, gender: k.gender }));
       }
 
       case 'create_kid': {
+        if (practitionerId) return { error: 'למטפלות אין הרשאה ליצור ילדים חדשים' };
         const kid = await therapyService.createKid(
           { name: input.name, age: input.age, gender: input.gender },
           adminId
@@ -436,7 +488,7 @@ const TOOL_LABELS = {
   update_board_layout: 'מעדכן לוח...',
 };
 
-async function handleChat(adminId, messages, kidId, onToolStatus, source) {
+async function handleChat(adminId, messages, kidId, onToolStatus, source, practitionerId, parentKidId) {
   const systemPrompt = buildSystemPrompt(kidId, source);
   const claudeMessages = [...messages];
   const toolsUsed = [];
@@ -474,7 +526,7 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source) {
       console.log(`[Chat] Tool call: ${toolUse.name}(${JSON.stringify(toolUse.input).slice(0, 100)})`);
       emitStatus({ type: 'tool', tool: toolUse.name, label: TOOL_LABELS[toolUse.name] || toolUse.name });
 
-      const result = await executeToolCall(toolUse.name, toolUse.input, adminId);
+      const result = await executeToolCall(toolUse.name, toolUse.input, adminId, { practitionerId, parentKidId });
       toolsUsed.push(toolUse.name);
       if (toolUse.name === 'update_board_layout') boardUpdated = true;
       if (toolUse.name === 'create_kid' && result.id) kidId = result.id;

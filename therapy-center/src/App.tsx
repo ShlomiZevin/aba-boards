@@ -111,6 +111,7 @@ function ParentRoutes() {
     <TherapistContext.Provider value={{ isTherapistView: false, isParentView: true, practitionerId: null, parentKidId: kidId || null }}>
       <Routes>
         <Route path="/" element={<KidDetail />} />
+        <Route path="/chat" element={<ChatCenter />} />
         <Route path="/form/:formId/view" element={<FormView />} />
         <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
         <Route path="*" element={<Navigate to={`/p/${kidId}`} replace />} />

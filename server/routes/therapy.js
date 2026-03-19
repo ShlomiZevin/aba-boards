@@ -16,17 +16,20 @@ const asyncHandler = (fn) => (req, res, next) => {
 const { handleChat } = require('../services/chat-center');
 
 router.post('/chat', asyncHandler(async (req, res) => {
-  // Block parent access but allow admin + therapist
-  if (req.authType === 'parent') {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-
   const { messages, kidId, stream } = req.body;
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required' });
   }
 
-  const source = req.authType === 'therapist' ? 'therapist' : 'admin';
+  let source = 'admin';
+  if (req.authType === 'therapist') source = 'therapist';
+  else if (req.authType === 'parent') source = 'parent';
+
+  const practitionerId = req.practitionerId || null;
+  const parentKidId = req.authType === 'parent' ? req.kidViewId : null;
+
+  // Parents are locked to their own kid
+  const effectiveKidId = parentKidId || kidId || null;
 
   if (stream) {
     // SSE streaming mode — send tool status updates in real time
@@ -41,7 +44,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
     };
 
     try {
-      const result = await handleChat(req.adminId, messages, kidId || null, onToolStatus, source);
+      const result = await handleChat(req.adminId, messages, effectiveKidId, onToolStatus, source, practitionerId, parentKidId);
       res.write(`data: ${JSON.stringify({ type: 'done', ...result })}\n\n`);
     } catch (err) {
       res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
@@ -49,7 +52,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
     res.end();
   } else {
     // Regular JSON response (backwards compatible)
-    const result = await handleChat(req.adminId, messages, kidId || null, null, source);
+    const result = await handleChat(req.adminId, messages, effectiveKidId, null, source, practitionerId, parentKidId);
     res.json(result);
   }
 }));

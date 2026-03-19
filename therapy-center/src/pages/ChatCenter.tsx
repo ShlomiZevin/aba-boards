@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { kidsApi, chatApi } from '../api/client';
+import { useTherapist } from '../contexts/TherapistContext';
 import ConfirmModal from '../components/ConfirmModal';
 import type { Kid } from '../types';
 
@@ -17,15 +19,17 @@ interface ChatMessage {
 }
 
 export default function ChatCenter() {
+  const { isParentView, parentKidId } = useTherapist();
+
+  const welcomeMessage = isParentView
+    ? 'שלום! אני העוזרת של Doing. אפשר לשאול אותי שאלות על ההתקדמות של הילד/ה, להבין את המטרות, או לקבל טיפים. איך אפשר לעזור?'
+    : 'שלום! אני העוזרת החכמה של Doing. אפשר לשאול אותי שאלות על הילדים, לבנות לוחות חדשים, או לבקש סיכומים. איך אפשר לעזור?';
+
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: 'שלום! אני העוזרת החכמה של Doing. אפשר לשאול אותי שאלות על הילדים, לבנות לוחות חדשים, או לבקש סיכומים. איך אפשר לעזור?',
-    },
+    { id: 'welcome', role: 'assistant', content: welcomeMessage },
   ]);
   const [input, setInput] = useState('');
-  const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
+  const [selectedKidId, setSelectedKidId] = useState<string | null>(parentKidId || null);
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -33,6 +37,7 @@ export default function ChatCenter() {
   const { data: kidsResult } = useQuery({
     queryKey: ['kids'],
     queryFn: () => kidsApi.getAll(),
+    enabled: !isParentView,
   });
   const kids: Kid[] = kidsResult?.success ? (kidsResult.data ?? []) : [];
 
@@ -105,18 +110,23 @@ export default function ChatCenter() {
   return (
     <div className="chat-center-page">
       <div className="chat-center-topbar">
+        {isParentView && (
+          <Link to={`/p/${parentKidId}`} style={{ color: '#7c3aed', textDecoration: 'none', fontSize: '1.1rem' }}>→ חזרה</Link>
+        )}
         <div className="chat-center-title">🤖 צ׳אט AI</div>
         <div className="chat-center-controls">
-          <select
-            className="chat-kid-select"
-            value={selectedKidId || ''}
-            onChange={e => setSelectedKidId(e.target.value || null)}
-          >
-            <option value="">כל הילדים</option>
-            {kids.map(kid => (
-              <option key={kid.id} value={kid.id}>{kid.name}</option>
-            ))}
-          </select>
+          {!isParentView && (
+            <select
+              className="chat-kid-select"
+              value={selectedKidId || ''}
+              onChange={e => setSelectedKidId(e.target.value || null)}
+            >
+              <option value="">כל הילדים</option>
+              {kids.map(kid => (
+                <option key={kid.id} value={kid.id}>{kid.name}</option>
+              ))}
+            </select>
+          )}
           <button className="chat-clear-btn" onClick={() => setShowClearConfirm(true)} title="ניקוי שיחה">🗑</button>
         </div>
       </div>
@@ -155,7 +165,7 @@ export default function ChatCenter() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && sendMessage()}
-          placeholder="שאלו שאלה, בקשו לבנות לוח, או בקשו סיכום..."
+          placeholder={isParentView ? "שאלו שאלה על הילד/ה, על ההתקדמות, או בקשו טיפים..." : "שאלו שאלה, בקשו לבנות לוח, או בקשו סיכום..."}
           disabled={isSending}
           autoFocus
         />
