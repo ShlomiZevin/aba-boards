@@ -236,6 +236,33 @@ PAYPAL_MODE (sandbox / live)
 
 ---
 
+## Dev Environment
+
+A test center admin account has been created for development:
+- **Access key (passkey):** `8888`
+- **Admin name:** Kosta
+- Log in at `/login` with this key to access the therapy center as a regular (non-super) admin
+- Use this account to test the full journey: profile editing, trial countdown, paywall, payment flow
+- **Super admin key:** `6724` (Michal) — use this ONLY to verify super admin exemption from billing
+- **WARNING: The super admin account (`6724` / Michal) has REAL production data — real kids, real therapists, real session forms. DO NOT modify, delete, or experiment with any data under this account. Only log in to verify that the super admin is exempt from billing/trial restrictions. All development and testing should be done using Kosta's account (`8888`) or new accounts created via the signup flow.**
+
+---
+
+## About the Tool (Doing — Therapy Center)
+
+Doing is a management platform for ABA (Applied Behavior Analysis) therapy centers in Israel. It helps center admins, therapists, and parents track children's therapy progress. The main capabilities:
+
+- **Kids management** — profiles, assigned therapists, session history
+- **Goals tracking** — measurable therapy goals with progress graphs over time
+- **Session forms** — customizable forms therapists fill during/after sessions, feeding data into goal progress
+- **Calendar** — weekly/monthly view of all sessions across therapists
+- **Team management** — assign therapists to kids, control who sees what
+- **AI assistant** — Hebrew-speaking AI that can create forms, suggest goals, analyze progress
+
+The core value: replaces Excel spreadsheets, paper forms, and WhatsApp coordination with one system. The free-to-pro journey is what turns this from an invite-only tool into a self-service product anyone can sign up for and pay for.
+
+---
+
 ## Testing Checklist
 
 - [ ] Can sign up from landing page with all fields

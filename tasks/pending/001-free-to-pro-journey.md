@@ -303,6 +303,14 @@ Use **PayPal JavaScript SDK** (`@paypal/react-paypal-js`) to render PayPal subsc
 
 ---
 
+## Dev Environment
+
+- **Test center admin:** passkey `8888` (admin name: Kosta) — use for testing the full journey
+- **Super admin:** passkey `6724` (Michal, `adminId: 'michal-super-admin'`) — always exempt from billing
+- **CRITICAL: The super admin account has REAL production data — real kids, real therapists, real session forms and goals. DO NOT create, modify, or delete ANY data under this account. Only use it to verify super admin exemption from billing/trial. All dev/test work must use Kosta's account (`8888`) or new self-signup accounts.**
+
+---
+
 ## Edge Cases & Notes
 
 - **Super admin is ALWAYS exempt** — `adminId === 'michal-super-admin'` or `isSuperAdmin === true` skips all subscription checks
