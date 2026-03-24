@@ -315,6 +315,28 @@ router.post('/kids/:kidId/goal-plans/:goalLibraryId/versions/:versionId/restore'
   res.json(plan);
 }));
 
+// ==================== CATEGORY LP TEMPLATES ====================
+
+router.get('/category-lp-templates', asyncHandler(async (req, res) => {
+  const templates = await therapyService.getAllCategoryLpTemplates();
+  res.json(templates);
+}));
+
+router.get('/category-lp-templates/:categoryId', asyncHandler(async (req, res) => {
+  const template = await therapyService.getCategoryLpTemplate(req.params.categoryId);
+  res.json(template);
+}));
+
+router.put('/category-lp-templates/:categoryId', requireAdmin, asyncHandler(async (req, res) => {
+  const result = await therapyService.saveCategoryLpTemplate(req.params.categoryId, req.body);
+  res.json(result);
+}));
+
+router.delete('/category-lp-templates/:categoryId', requireSuperAdmin, asyncHandler(async (req, res) => {
+  await therapyService.deleteCategoryLpTemplate(req.params.categoryId);
+  res.json({ success: true });
+}));
+
 // ==================== GOAL DATA COLLECTION ====================
 
 router.get('/kids/:kidId/goal-data/:goalLibraryId', asyncHandler(async (req, res) => {

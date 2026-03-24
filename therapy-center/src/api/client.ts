@@ -18,6 +18,8 @@ import type {
   BoardRequest,
   ApiResponse,
   GroupedKidsResponse,
+  CategoryLpTemplate,
+  GoalTableBlock,
 } from '../types';
 
 // Auto-detect: dev uses Vite proxy, production uses Cloud Run
@@ -220,6 +222,19 @@ export const goalPlansApi = {
     fetchApi<KidGoalLearningPlan>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions/${versionId}/restore`, {
       method: 'POST',
     }),
+};
+
+// Category LP Templates API
+export const categoryLpTemplatesApi = {
+  getAll: () => fetchApi<CategoryLpTemplate[]>('/category-lp-templates'),
+  get: (categoryId: string) => fetchApi<CategoryLpTemplate>(`/category-lp-templates/${categoryId}`),
+  save: (categoryId: string, data: { tables: GoalTableBlock[] }) =>
+    fetchApi<CategoryLpTemplate>(`/category-lp-templates/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (categoryId: string) =>
+    fetchApi<void>(`/category-lp-templates/${categoryId}`, { method: 'DELETE' }),
 };
 
 // Goal Data Collection API (per kid)

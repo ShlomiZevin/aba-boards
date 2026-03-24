@@ -109,6 +109,28 @@ export interface LearningPlanVersion {
   versionLabel?: string;
 }
 
+// ---- Category-level LP templates ----
+
+export const CATEGORY_LP_PREFIX = 'cat__';
+
+export function categoryLpId(categoryId: GoalCategoryId): string {
+  return `${CATEGORY_LP_PREFIX}${categoryId}`;
+}
+
+export function isCategoryLpId(goalLibraryId: string): boolean {
+  return goalLibraryId.startsWith(CATEGORY_LP_PREFIX);
+}
+
+export function categoryIdFromLpId(goalLibraryId: string): GoalCategoryId {
+  return goalLibraryId.slice(CATEGORY_LP_PREFIX.length) as GoalCategoryId;
+}
+
+export interface CategoryLpTemplate {
+  id: string;              // = categoryId
+  tables: GoalTableBlock[];
+  updatedAt?: Date;
+}
+
 export interface KidGoalDataEntry {
   id: string;
   kidId: string;

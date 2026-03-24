@@ -13,16 +13,20 @@ interface Props {
   practitionerId?: string;
   /** When true, always send updateStructure=true (e.g. no template exists yet) */
   forceUpdateStructure?: boolean;
+  /** Override the libraryItemId (e.g. for category LP: "cat__motor-gross") */
+  libraryItemIdOverride?: string;
+  /** Override how the template structure is saved (e.g. for category LP templates) */
+  onSaveTemplate?: (template: { tables: GoalTableBlock[] }) => Promise<void>;
   onClose: () => void;
   onSaved: () => void;
 }
 
 type Step = 'pick' | 'processing' | 'preview' | 'saving';
 
-export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, practitionerId, forceUpdateStructure, onClose, onSaved }: Props) {
+export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, practitionerId, forceUpdateStructure, libraryItemIdOverride, onSaveTemplate, onClose, onSaved }: Props) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const libraryItemId = goal.libraryItemId!;
+  const libraryItemId = libraryItemIdOverride || goal.libraryItemId!;
 
   const [step, setStep] = useState<Step>('pick');
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
@@ -69,6 +73,20 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
 
       const shouldUpdate = forceUpdateStructure || (isSuperAdmin && updateStructure);
 
+      // Helper to save template structure (goal or category)
+      const saveTemplateStructure = async (tables: GoalTableBlock[]) => {
+        if (onSaveTemplate) {
+          await onSaveTemplate({ tables });
+          queryClient.invalidateQueries({ queryKey: ['category-lp-templates'] });
+        } else {
+          await goalTemplatesApi.updateTemplates(libraryItemId, {
+            learningPlanTemplate: { tables },
+          });
+        }
+        queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+        queryClient.invalidateQueries({ queryKey: ['goals'] });
+      };
+
       // Multi-block tables (new format)
       if (result.tables && result.tables.length > 0) {
         // If updateStructure and Claude returned new columns in any table
@@ -78,7 +96,7 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
             const tmpl = formType === 'lp' ? goal.learningPlanTemplate : goal.dataCollectionTemplate;
             const existingBlocks = normalizeTemplate(tmpl ?? null);
 
-            let updatedTables;
+            let updatedTables: GoalTableBlock[];
             if (existingBlocks.length === 0) {
               // No template exists — use Claude's suggested structure entirely
               updatedTables = tablesWithNewCols.map(t => ({
@@ -94,11 +112,7 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
                 return { id: block.id, title: block.title || '', type: block.type, columns: block.columns };
               });
             }
-            await goalTemplatesApi.updateTemplates(libraryItemId, {
-              learningPlanTemplate: { tables: updatedTables },
-            });
-            queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
-            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            await saveTemplateStructure(updatedTables);
           }
         }
 
@@ -110,11 +124,7 @@ export default function GoalFileUpload({ kidId, goal, formType, isSuperAdmin, pr
         // Legacy single-block fallback
         const blockId = result.targetBlockId || 'uploaded';
         if (shouldUpdate && result.columns && result.columns.length > 0) {
-          await goalTemplatesApi.updateTemplates(libraryItemId, {
-            learningPlanTemplate: { tables: [{ id: blockId, title: '', type: 'horizontal', columns: result.columns }] },
-          });
-          queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
-          queryClient.invalidateQueries({ queryKey: ['goals'] });
+          await saveTemplateStructure([{ id: blockId, title: '', type: 'horizontal', columns: result.columns }]);
         }
         await goalPlansApi.save(kidId, libraryItemId, {
           goalTitle: result.goalTitle,

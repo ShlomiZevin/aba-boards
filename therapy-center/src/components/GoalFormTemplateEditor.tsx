@@ -859,9 +859,13 @@ interface Props {
   goal: GoalLibraryItem;
   formType: 'lp' | 'dc';
   onClose: () => void;
+  /** Override default save behavior (e.g. for category templates) */
+  onSaveOverride?: (template: GoalFormTemplate) => Promise<unknown>;
+  /** When true, hide preset/linked-goals/apply sections */
+  isCategoryTemplate?: boolean;
 }
 
-export default function GoalFormTemplateEditor({ goal, formType, onClose }: Props) {
+export default function GoalFormTemplateEditor({ goal, formType, onClose, onSaveOverride, isCategoryTemplate }: Props) {
   const queryClient = useQueryClient();
 
   const existingTemplate = formType === 'lp' ? goal.learningPlanTemplate : goal.dataCollectionTemplate;
@@ -948,6 +952,12 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
   const saveMutation = useMutation({
     mutationFn: async () => {
       const template: GoalFormTemplate = { tables: blocks };
+
+      if (onSaveOverride) {
+        await onSaveOverride(template);
+        return;
+      }
+
       const templateKey = formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate';
 
       // Save template on this goal only (never set presetName on a linked target)
@@ -959,6 +969,13 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+      queryClient.invalidateQueries({ queryKey: ['category-lp-templates'] });
+
+      if (isCategoryTemplate) {
+        onClose();
+        return;
+      }
+
       // Find goals to update: all connected goals except current one
       const allLinked = isLinkedTarget
         ? [
@@ -985,15 +1002,21 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () =>
-      goalTemplatesApi.updateTemplates(goal.id, {
+    mutationFn: () => {
+      if (isCategoryTemplate && onSaveOverride) {
+        // For category templates, delete means save empty tables
+        return onSaveOverride({ tables: [] });
+      }
+      return goalTemplatesApi.updateTemplates(goal.id, {
         [formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate']: null,
         [presetNameField]: null,
         [sourceIdField]: null,
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+      queryClient.invalidateQueries({ queryKey: ['category-lp-templates'] });
       onClose();
     },
   });
@@ -1064,9 +1087,11 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
         </div>
 
         {/* Preset strip */}
+        {!isCategoryTemplate && (
         <div style={{ padding: '11px 20px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
           <PresetStrip formType={formType} onLoad={loadPreset} />
         </div>
+        )}
 
         {/* Two-column main area */}
         <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -1135,7 +1160,8 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
-          {/* Row 1: Preset options */}
+          {/* Row 1: Preset options (hidden for category templates) */}
+          {!isCategoryTemplate && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10, padding: '8px 20px',
             background: '#f8fafc', borderBottom: '1px solid #f1f5f9',
@@ -1177,6 +1203,7 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose }: Prop
               </button>
             )}
           </div>
+          )}
 
           {/* Row 2: Action buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px' }}>

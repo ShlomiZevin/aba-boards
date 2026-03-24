@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { goalsApi, kidsApi, goalTemplatesApi } from '../api/client';
+import { goalsApi, kidsApi, goalTemplatesApi, categoryLpTemplatesApi } from '../api/client';
 import { GOAL_CATEGORIES, PRESET_DC_ACTIVITY, PRESET_DC_DTT } from '../types';
-import type { GoalCategoryId, GoalLibraryItem, GoalFormTemplate, Kid } from '../types';
+import type { GoalCategoryId, GoalLibraryItem, GoalFormTemplate, CategoryLpTemplate, Kid } from '../types';
 import GoalFormTemplateEditor from '../components/GoalFormTemplateEditor';
 
 export default function GoalLibraryManager() {
@@ -48,6 +48,20 @@ export default function GoalLibraryManager() {
     queryFn: () => kidsApi.getAll(),
   });
   const kids: Kid[] = kidsRes?.data || [];
+
+  // Category LP templates
+  const { data: catLpRes } = useQuery({
+    queryKey: ['category-lp-templates'],
+    queryFn: () => categoryLpTemplatesApi.getAll(),
+  });
+  const catLpTemplates: CategoryLpTemplate[] = catLpRes?.data || [];
+  const catLpMap = useMemo(() => {
+    const m = new Map<string, CategoryLpTemplate>();
+    catLpTemplates.forEach(t => m.set(t.id, t));
+    return m;
+  }, [catLpTemplates]);
+
+  const [editingCategoryLp, setEditingCategoryLp] = useState<{ categoryId: GoalCategoryId; nameHe: string } | null>(null);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => goalsApi.deleteLibraryItem(id),
@@ -243,6 +257,31 @@ export default function GoalLibraryManager() {
           ))}
         </div>
 
+        {/* Category LP template buttons */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+          <span style={{ fontSize: '0.78em', color: '#64748b', fontWeight: 600, alignSelf: 'center', marginLeft: 6 }}>ת. למידה לקטגוריה:</span>
+          {GOAL_CATEGORIES.map(cat => {
+            const has = catLpMap.has(cat.id) && (catLpMap.get(cat.id)!.tables?.length ?? 0) > 0;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setEditingCategoryLp({ categoryId: cat.id, nameHe: cat.nameHe })}
+                style={{
+                  background: has ? '#ede9fe' : '#f8fafc',
+                  border: '1px solid',
+                  borderColor: has ? '#c4b5fd' : '#cbd5e1',
+                  borderRadius: 6, cursor: 'pointer', fontSize: '0.73em', padding: '3px 10px',
+                  color: has ? '#6d28d9' : '#64748b',
+                  fontWeight: 600,
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                {has ? '📘' : '+'} {cat.nameHe}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Content */}
         {isLoading ? (
           <div className="loading">טוען...</div>
@@ -397,6 +436,26 @@ export default function GoalLibraryManager() {
           goal={editingTemplate.goal}
           formType={editingTemplate.type}
           onClose={() => setEditingTemplate(null)}
+        />
+      )}
+
+      {editingCategoryLp && (
+        <GoalFormTemplateEditor
+          goal={{
+            id: editingCategoryLp.categoryId,
+            title: editingCategoryLp.nameHe,
+            categoryId: editingCategoryLp.categoryId,
+            usageCount: 0,
+            learningPlanTemplate: catLpMap.has(editingCategoryLp.categoryId)
+              ? { tables: catLpMap.get(editingCategoryLp.categoryId)!.tables }
+              : undefined,
+          }}
+          formType="lp"
+          onClose={() => setEditingCategoryLp(null)}
+          isCategoryTemplate
+          onSaveOverride={async (template) => {
+            await categoryLpTemplatesApi.save(editingCategoryLp.categoryId, { tables: template.tables });
+          }}
         />
       )}
 

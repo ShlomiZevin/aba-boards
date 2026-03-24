@@ -748,6 +748,41 @@ async function restoreLearningPlanVersion(kidId, goalLibraryId, versionId, resto
   return { id: lpDoc.id, ...lpDoc.data(), ...updateData };
 }
 
+// ==================== CATEGORY LP TEMPLATES ====================
+
+const VALID_CATEGORY_IDS = ['motor-gross', 'motor-fine', 'language', 'play-social', 'cognitive', 'adl', 'general'];
+
+async function getAllCategoryLpTemplates() {
+  const db = getDb();
+  const snapshot = await db.collection('categoryLpTemplates').get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function getCategoryLpTemplate(categoryId) {
+  const db = getDb();
+  const doc = await db.collection('categoryLpTemplates').doc(categoryId).get();
+  if (!doc.exists) return null;
+  return { id: doc.id, ...doc.data() };
+}
+
+async function saveCategoryLpTemplate(categoryId, data) {
+  if (!VALID_CATEGORY_IDS.includes(categoryId)) {
+    throw new Error('Invalid category ID');
+  }
+  const db = getDb();
+  const docData = {
+    tables: data.tables || [],
+    updatedAt: new Date(),
+  };
+  await db.collection('categoryLpTemplates').doc(categoryId).set(docData, { merge: true });
+  return { id: categoryId, ...docData };
+}
+
+async function deleteCategoryLpTemplate(categoryId) {
+  const db = getDb();
+  await db.collection('categoryLpTemplates').doc(categoryId).delete();
+}
+
 // ==================== GOAL DATA COLLECTION ====================
 
 async function getGoalDataEntries(kidId, goalLibraryId) {
@@ -922,14 +957,24 @@ async function extractGoalFormFromFile(goalLibraryId, fileBuffer, { formType, up
   }
   console.log('[upload] extracted text length:', docText.length);
 
-  // 2. Fetch goal library item to get goal title + current template
+  // 2. Fetch goal library item (or category LP template) to get goal title + current template
   const db = getDb();
-  const libDoc = await db.collection('goalsLibrary').doc(goalLibraryId).get();
-  if (!libDoc.exists) throw new Error('Goal library item not found');
+  const isCategoryLp = goalLibraryId.startsWith('cat__');
+  let goalTitle, currentTemplate;
 
-  const libData = libDoc.data();
-  const goalTitle = libData.title || '';
-  const currentTemplate = formType === 'lp' ? libData.learningPlanTemplate : libData.dataCollectionTemplate;
+  if (isCategoryLp) {
+    const categoryId = goalLibraryId.slice(5); // remove "cat__"
+    const CATEGORY_NAMES = { 'motor-gross': 'מוטוריקה גסה', 'motor-fine': 'מוטוריקה עדינה', 'language': 'שפה/תקשורת', 'play-social': 'משחק/חברה', 'cognitive': 'קוגנטיבי', 'adl': 'ADL', 'general': 'כללי' };
+    goalTitle = CATEGORY_NAMES[categoryId] || categoryId;
+    const catDoc = await db.collection('categoryLpTemplates').doc(categoryId).get();
+    currentTemplate = catDoc.exists ? { tables: catDoc.data().tables || [] } : null;
+  } else {
+    const libDoc = await db.collection('goalsLibrary').doc(goalLibraryId).get();
+    if (!libDoc.exists) throw new Error('Goal library item not found');
+    const libData = libDoc.data();
+    goalTitle = libData.title || '';
+    currentTemplate = formType === 'lp' ? libData.learningPlanTemplate : libData.dataCollectionTemplate;
+  }
 
   // Normalize to blocks — supports both old flat format and new multi-table format
   const templateBlocks = normalizeTemplateBlocks(currentTemplate);
@@ -1799,6 +1844,11 @@ module.exports = {
   getLearningPlanVersion,
   deleteLearningPlanVersion,
   restoreLearningPlanVersion,
+  // Category LP Templates
+  getAllCategoryLpTemplates,
+  getCategoryLpTemplate,
+  saveCategoryLpTemplate,
+  deleteCategoryLpTemplate,
   // Goal Data Collection
   getGoalDataEntries,
   addGoalDataEntry,
