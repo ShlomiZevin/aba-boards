@@ -20,6 +20,8 @@ import TherapistNotifications from './pages/TherapistNotifications';
 import BoardBuilder from './pages/BoardBuilder';
 import ChatCenter from './pages/ChatCenter';
 import LandingPage from './pages/LandingPage';
+import LandingPageV2 from './pages/LandingPageV2';
+import LandingPageV3 from './pages/LandingPageV3';
 import AppShell from './components/AppShell';
 import TherapistShell from './components/TherapistShell';
 import { setTherapistAuth, setParentAuth } from './api/client';
@@ -144,6 +146,8 @@ function App() {
           <Routes>
             {/* Public */}
             <Route path="/welcome" element={<LandingPage />} />
+            <Route path="/welcome-v2" element={<LandingPageV2 />} />
+            <Route path="/welcome-v3" element={<LandingPageV3 />} />
             <Route path="/login" element={<Login />} />
 
             {/* Protected admin routes — wrapped in AppShell for sidebar navigation */}

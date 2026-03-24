@@ -468,6 +468,95 @@ function AnimatedDino() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Hero System Preview — professional app window mockup               */
+/* ------------------------------------------------------------------ */
+function HeroSystemPreview() {
+  return (
+    <div className="lp-hero-preview">
+      {/* Browser chrome */}
+      <div className="lp-preview-chrome">
+        <div className="lp-preview-dots">
+          <span /><span /><span />
+        </div>
+        <div className="lp-preview-url">app.startdoing.co.il</div>
+      </div>
+
+      {/* App sidebar + content */}
+      <div className="lp-preview-body">
+        {/* Sidebar */}
+        <div className="lp-preview-sidebar">
+          <div className="lp-preview-sidebar-logo">Doing</div>
+          <div className="lp-preview-menu-item lp-preview-menu-active">דשבורד</div>
+          <div className="lp-preview-menu-item">מטופלים</div>
+          <div className="lp-preview-menu-item">מטרות</div>
+          <div className="lp-preview-menu-item">טפסים</div>
+          <div className="lp-preview-menu-item">לוח זמנים</div>
+          <div className="lp-preview-menu-item">AI</div>
+        </div>
+
+        {/* Main content */}
+        <div className="lp-preview-main">
+          {/* Top metrics */}
+          <div className="lp-preview-metrics">
+            {[
+              { label: 'מטופלים פעילים', value: '83', trend: '+12%' },
+              { label: 'סשנים השבוע', value: '47', trend: '+8%' },
+              { label: 'מטרות בהתקדמות', value: '156', trend: '+23%' },
+            ].map((m, i) => (
+              <div key={i} className="lp-preview-metric">
+                <div className="lp-preview-metric-label">{m.label}</div>
+                <div className="lp-preview-metric-row">
+                  <span className="lp-preview-metric-value">{m.value}</span>
+                  <span className="lp-preview-metric-trend">{m.trend}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Chart area */}
+          <div className="lp-preview-chart">
+            <div className="lp-preview-chart-title">התקדמות מטרות — 4 שבועות אחרונים</div>
+            <div className="lp-preview-chart-bars">
+              {[45, 58, 62, 71, 68, 78, 82, 88].map((h, i) => (
+                <div key={i} className="lp-preview-bar-col">
+                  <div className="lp-preview-bar" style={{ height: `${h}%` }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent activity table */}
+          <div className="lp-preview-table">
+            <div className="lp-preview-table-header">
+              <span>מטופל</span>
+              <span>מטרה</span>
+              <span>התקדמות</span>
+              <span>סטטוס</span>
+            </div>
+            {[
+              { name: 'ת.כ', goal: 'משחק חברתי בתורות', progress: 78, status: 'בטיפול' },
+              { name: 'י.ל', goal: 'העתקת דגם קוביות', progress: 92, status: 'הושג' },
+              { name: 'נ.ש', goal: 'מיון קטגוריות', progress: 45, status: 'בטיפול' },
+            ].map((r, i) => (
+              <div key={i} className="lp-preview-table-row">
+                <span className="lp-preview-table-name">{r.name}</span>
+                <span>{r.goal}</span>
+                <span>
+                  <div className="lp-preview-progress">
+                    <div className="lp-preview-progress-fill" style={{ width: `${r.progress}%` }} />
+                  </div>
+                </span>
+                <span className={`lp-preview-status ${r.status === 'הושג' ? 'lp-preview-status-done' : ''}`}>{r.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WhatsAppFloat() {
   return (
     <a
@@ -486,6 +575,7 @@ function WhatsAppFloat() {
 /* ------------------------------------------------------------------ */
 /*  Main Landing Page                                                 */
 /* ------------------------------------------------------------------ */
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const [scrollY, setScrollY] = useState(0);
@@ -496,10 +586,9 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [onScroll]);
 
-  // Set page title & meta for the landing page
   useEffect(() => {
     const prev = document.title;
-    document.title = 'Doing | הכלי המקצועי לניהול טיפול ילדים';
+    document.title = 'Doing | פלטפורמת ניהול טיפול למרכזים מקצועיים';
     const meta = document.querySelector('meta[name="description"]');
     const prevDesc = meta?.getAttribute('content') || '';
     if (meta) meta.setAttribute('content', 'פלטפורמת Doing מאפשרת למרכזי טיפול לנהל מטפלות, מפגשים, טפסים, יעדים ולוחות משימות — הכל במקום אחד, מופעל בינה מלאכותית.');
@@ -511,83 +600,74 @@ export default function LandingPage() {
 
   return (
     <div className="lp-root" dir="rtl">
-      {/* ---------- floating nav ---------- */}
+      {/* ---------- NAV ---------- */}
       <nav className={`lp-nav ${scrollY > 60 ? 'lp-nav-scrolled' : ''}`}>
         <div className="lp-nav-inner">
-          <Logo />
+          <Logo size="large" />
           <div className="lp-nav-links">
             <a href="#features">יכולות</a>
             <a href="#ai">בינה מלאכותית</a>
             <a href="#benefits">יתרונות</a>
-            <a href="#dino">דינו</a>
+            <a href="#contact">צור קשר</a>
           </div>
-          <button className="lp-nav-cta" onClick={() => navigate('/login')}>
-            {'כניסה למערכת \u2190'}
-          </button>
+          <div className="lp-nav-actions">
+            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="lp-nav-link-secondary">
+              יצירת קשר
+            </a>
+            <button className="lp-nav-cta" onClick={() => navigate('/login')}>
+              כניסה למערכת
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* ---------- HERO ---------- */}
+      <div className="lp-hero-wrapper">
       <section className="lp-hero">
-        <div className="lp-hero-bg">
-          <ParticleField />
-          <div className="lp-hero-shape lp-hero-shape-1" />
-          <div className="lp-hero-shape lp-hero-shape-2" />
-          <div className="lp-hero-shape lp-hero-shape-3" />
-        </div>
         <div className="lp-hero-content">
-          <Reveal>
-            <div className="lp-hero-badge">{'🚀 פלטפורמת ניהול טיפול \u2014 מופעלת בינה מלאכותית'}</div>
-          </Reveal>
-          <Reveal delay={100}>
-            <h1 className="lp-hero-title">
-              <span className="lp-gradient-text">מערכת חכמה ומקצועית</span>
-              <br />
-              לניהול מטרות טיפול, איסוף נתונים ומעקב טיפולי
-            </h1>
-          </Reveal>
-          <Reveal delay={200}>
-            <p className="lp-hero-subtitle">
-              {'נהלו מטרות טיפול, תעדו מפגשים ואספו נתונים בצורה מסודרת וברורה \u2014 הכל במקום אחד. המערכת מאפשרת עבודה דיגיטלית נוחה למטפלים, למנחים ולהורים, עם גישה למידע בזמן אמת.'}
-            </p>
-          </Reveal>
-          <Reveal delay={300}>
-            <div className="lp-hero-actions">
-              <button className="lp-btn lp-btn-primary lp-btn-glow" onClick={() => navigate('/login')}>
-                {'התחילו לעשות \u2014 חינם'}
-                <span className="lp-btn-arrow">←</span>
-              </button>
-              <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="lp-btn lp-btn-whatsapp"
-              >
-                <img src={WA_ICON} alt="" width="20" height="20" className="lp-wa-icon" style={{ width: 20, height: 20 }} />
-                דברו איתנו
-              </a>
+          <div className="lp-hero-label">פלטפורמת ניהול טיפול למרכזים מקצועיים</div>
+          <h1 className="lp-hero-title">
+            ניהול מטרות טיפול, איסוף נתונים
+            <br />
+            <span className="lp-hero-title-accent">ומעקב טיפולי במקום אחד</span>
+          </h1>
+          <p className="lp-hero-subtitle">
+            Doing מאפשרת למרכזי טיפול לנהל מטרות, לתעד מפגשים ולאסוף נתונים קליניים בצורה מסודרת. מערכת אחת שמחליפה אקסלים, תיקיות ונייר — עם בינה מלאכותית שמבינה טיפול.
+          </p>
+          <div className="lp-hero-actions">
+            <button className="lp-btn lp-btn-primary" onClick={() => navigate('/login')}>
+              התחילו לעבוד עם Doing
+              <span className="lp-btn-arrow">&larr;</span>
+            </button>
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="lp-btn lp-btn-outline"
+            >
+              תיאום הדגמה
+            </a>
+          </div>
+          <div className="lp-hero-trust">
+            <div className="lp-trust-item">
+              <span className="lp-trust-icon">&#10003;</span>
+              <span>ללא התחייבות</span>
             </div>
-          </Reveal>
-          <Reveal delay={400}>
-            <div className="lp-hero-stats">
-              <div className="lp-stat">
-                <div className="lp-stat-number"><AnimatedCounter end={83} suffix="" /></div>
-                <div className="lp-stat-label">ילדים מנוהלים</div>
-              </div>
-              <div className="lp-stat-divider" />
-              <div className="lp-stat">
-                <div className="lp-stat-number"><AnimatedCounter end={14} suffix="" /></div>
-                <div className="lp-stat-label">מטפלות פעילות</div>
-              </div>
-              <div className="lp-stat-divider" />
-              <div className="lp-stat">
-                <div className="lp-stat-number"><AnimatedCounter end={1247} suffix="" /></div>
-                <div className="lp-stat-label">טפסים שמולאו</div>
-              </div>
+            <div className="lp-trust-item">
+              <span className="lp-trust-icon">&#10003;</span>
+              <span>הקמה תוך דקות</span>
             </div>
-          </Reveal>
+            <div className="lp-trust-item">
+              <span className="lp-trust-icon">&#10003;</span>
+              <span>תמיכה מקצועית</span>
+            </div>
+          </div>
+        </div>
+        <div className="lp-hero-visual">
+          <HeroSystemPreview />
         </div>
       </section>
+      </div>
 
       {/* ---------- FEATURES ---------- */}
       <section id="features" className="lp-section">
