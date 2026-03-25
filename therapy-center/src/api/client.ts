@@ -472,6 +472,35 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ newKey }),
     }),
+  updateProfile: (data: { name: string; mobile?: string; email?: string }) =>
+    fetchAdminApi<{ success: boolean; name: string; mobile: string; email: string }>('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  getSubscription: () =>
+    fetchAdminApi<{ plan: string; status: string; trialEndDate: string | null; proEndDate: string | null; billingCycle: string | null; nextPaymentDate: string | null; paypalSubscriptionId: string | null; isSuperAdmin?: boolean }>('/subscription'),
+  createSubscription: (billingCycle: 'monthly' | 'yearly') =>
+    fetchAdminApi<{ approvalUrl: string; subscriptionId: string }>('/subscription/create', {
+      method: 'POST',
+      body: JSON.stringify({ billingCycle }),
+    }),
+  activateSubscription: (subscriptionId: string) =>
+    fetchAdminApi<{ success: boolean }>('/subscription/activate', {
+      method: 'POST',
+      body: JSON.stringify({ subscriptionId }),
+    }),
+  cancelSubscription: () =>
+    fetchAdminApi<{ success: boolean }>('/subscription/cancel', { method: 'POST' }),
+  signup: (data: { name: string; mobile: string; email: string; key: string }) =>
+    fetch(`${ADMIN_API_BASE}/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(async r => {
+      const d = await r.json();
+      if (!r.ok) return { success: false as const, error: d.error || 'שגיאה' };
+      return { success: true as const, data: d as { key: string; adminId: string; name: string } };
+    }),
 };
 
 // AI Chat API

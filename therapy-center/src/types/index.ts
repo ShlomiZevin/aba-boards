@@ -538,6 +538,29 @@ export interface BoardRequest {
   submittedAt?: { _seconds: number; _nanoseconds: number };
 }
 
+// Subscription types
+export type SubscriptionPlan = 'trial' | 'pro';
+export type SubscriptionStatus = 'active' | 'expired' | 'cancelled';
+export type BillingCycle = 'monthly' | 'yearly';
+
+export interface Subscription {
+  adminId: string;
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  trialStartDate: Date;
+  trialEndDate: Date;
+  proStartDate?: Date;
+  proEndDate?: Date;
+  billingCycle?: BillingCycle;
+  priceILS?: number;
+  paypalSubscriptionId?: string;
+  paypalPayerId?: string;
+  lastPaymentDate?: Date;
+  nextPaymentDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // API response types
 export interface ApiResponse<T> {
   success: boolean;

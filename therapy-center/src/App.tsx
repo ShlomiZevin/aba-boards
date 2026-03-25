@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import TherapistContext from './contexts/TherapistContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Dashboard from './pages/Dashboard';
@@ -12,6 +13,9 @@ import MeetingFormFill from './pages/MeetingFormFill';
 import MeetingFormView from './pages/MeetingFormView';
 import AllPractitioners from './pages/AllPractitioners';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
+import SubscriptionSuccess from './pages/SubscriptionSuccess';
+import SubscriptionCancel from './pages/SubscriptionCancel';
 import AdminManagement from './pages/AdminManagement';
 import NotificationCenter from './pages/NotificationCenter';
 import GoalLibraryManager from './pages/GoalLibraryManager';
@@ -23,6 +27,7 @@ import LandingPage from './pages/LandingPage';
 import LandingPageV2 from './pages/LandingPageV2';
 import LandingPageV3 from './pages/LandingPageV3';
 import AppShell from './components/AppShell';
+import SubscriptionGate from './components/SubscriptionGate';
 import TherapistShell from './components/TherapistShell';
 import { setTherapistAuth, setParentAuth } from './api/client';
 import './index.css';
@@ -132,13 +137,25 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
-      <AppShell>{children}</AppShell>
+      <AppShell>
+        <SubscriptionGate>
+          {children}
+        </SubscriptionGate>
+      </AppShell>
     </AuthGuard>
   );
 }
 
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || '';
+
 function App() {
   return (
+    <PayPalScriptProvider options={{
+      clientId: PAYPAL_CLIENT_ID,
+      vault: true,
+      intent: 'subscription',
+      currency: 'ILS',
+    }}>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter basename="/therapy">
@@ -149,6 +166,9 @@ function App() {
             <Route path="/welcome-v2" element={<LandingPageV2 />} />
             <Route path="/welcome-v3" element={<LandingPageV3 />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+            <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
 
             {/* Protected admin routes — wrapped in AppShell for sidebar navigation */}
             <Route path="/" element={<AdminLayout><Dashboard /></AdminLayout>} />
@@ -183,6 +203,7 @@ function App() {
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
+    </PayPalScriptProvider>
   );
 }
 

@@ -420,7 +420,7 @@ export default function LandingPageV3() {
               {'מערכת אחת שמחליפה אקסלים, תיקיות ונייר — עם בינה מלאכותית שמבינה טיפול.'}
             </p>
             <div className="v3-hero-btns">
-              <button className="v3-btn v3-btn-fill" onClick={() => navigate('/login')}>{'התחילו בחינם'}</button>
+              <button className="v3-btn v3-btn-fill" onClick={() => navigate('/signup')}>{'התחילו בחינם'}</button>
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="v3-btn v3-btn-out">{'תיאום הדגמה \u2190'}</a>
             </div>
             <div className="v3-hero-trust">
@@ -572,7 +572,7 @@ export default function LandingPageV3() {
           <h2>מוכנים לשדרג את ניהול הטיפול?</h2>
           <p>הצטרפו למרכזי טיפול שכבר עובדים עם Doing</p>
           <div className="v3-cta-btns">
-            <button className="v3-btn v3-btn-fill v3-btn-lg" onClick={() => navigate('/login')}>{'התחילו לעשות — חינם'}<Ico d={ICONS.arrowL} size={15} /></button>
+            <button className="v3-btn v3-btn-fill v3-btn-lg" onClick={() => navigate('/signup')}>{'התחילו לעשות — חינם'}<Ico d={ICONS.arrowL} size={15} /></button>
             <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="v3-btn v3-btn-wa">
               <img src={WA_ICON} alt="" width={20} height={20} /> דברו איתנו בוואטסאפ
             </a>

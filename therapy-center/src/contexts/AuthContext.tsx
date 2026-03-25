@@ -1,9 +1,22 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 
-interface AuthUser {
+export interface SubscriptionInfo {
+  plan: string;
+  status: string;
+  trialEndDate: string | null;
+  proEndDate: string | null;
+  billingCycle: string | null;
+  nextPaymentDate: string | null;
+  paypalSubscriptionId: string | null;
+}
+
+export interface AuthUser {
   adminId: string;
   isSuperAdmin: boolean;
   name: string;
+  mobile?: string;
+  email?: string;
+  subscription: SubscriptionInfo | null;
 }
 
 interface AuthContextType {
@@ -12,6 +25,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   setKey: (key: string) => Promise<boolean>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
+  updateUserProfile: (name: string, mobile: string, email: string) => void;
+  updateSubscription: (sub: SubscriptionInfo) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -64,8 +80,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  const refreshUser = useCallback(async () => {
+    const storedKey = localStorage.getItem(STORAGE_KEY);
+    if (!storedKey) return;
+    const u = await fetchMe(storedKey);
+    if (u) setUser(u);
+  }, []);
+
+  function updateUserProfile(name: string, mobile: string, email: string) {
+    setUser(prev => prev ? { ...prev, name, mobile, email } : prev);
+  }
+
+  function updateSubscription(sub: SubscriptionInfo) {
+    setUser(prev => prev ? { ...prev, subscription: sub } : prev);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, setKey, logout }}>
+    <AuthContext.Provider value={{
+      user, isLoading, isAuthenticated: !!user,
+      setKey, logout, refreshUser, updateUserProfile, updateSubscription,
+    }}>
       {children}
     </AuthContext.Provider>
   );

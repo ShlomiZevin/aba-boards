@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@paypal/react-paypal-js": "^9.0.2",
     "@tanstack/react-query": "^5.90.21",
     "@tiptap/extension-underline": "^3.19.0",
     "@tiptap/react": "^3.19.0",

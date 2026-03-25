@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const BASE = import.meta.env.BASE_URL;
@@ -111,6 +111,13 @@ export default function Login() {
             {loading ? '...' : 'כניסה'}
           </button>
         </form>
+
+        <p style={{ marginTop: 20, fontSize: 13, color: '#9ca3af' }}>
+          אין לך חשבון?{' '}
+          <Link to="/signup" style={{ color: '#667eea', textDecoration: 'none', fontWeight: 600 }}>
+            הרשמה חינם
+          </Link>
+        </p>
       </div>
     </div>
   );

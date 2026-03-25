@@ -6,8 +6,10 @@ const cors = require('cors');
 
 const avatarRoutes = require('./routes/avatar');
 const therapyRoutes = require('./routes/therapy');
-const adminRoutes = require('./routes/admin');
+const { router: adminRoutes, publicRouter: adminPublicRoutes } = require('./routes/admin');
+const { router: paypalRoutes, publicRouter: webhookRoutes } = require('./routes/paypal');
 const { authenticate } = require('./middleware/auth');
+const { requireActiveSubscription } = require('./middleware/subscription');
 const { initializeSuperAdmin, initializeGoalCategories } = require('./services/therapy');
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -54,11 +56,14 @@ app.post('/api/therapy/kids/:kidId/board-chat', async (req, res) => {
 
 // API Routes
 app.use('/api/avatar', avatarRoutes);
-app.use('/api/admin', authenticate, adminRoutes);
-app.use('/api/therapy', authenticate, therapyRoutes);
+app.use('/api/admin', adminPublicRoutes);                          // public: /signup
+app.use('/api/admin', authenticate, adminRoutes);                  // protected: all other admin routes
+app.use('/api/admin/subscription', authenticate, paypalRoutes);    // protected: PayPal subscription routes
+app.use('/api/webhooks', webhookRoutes);                           // public: PayPal webhook
+app.use('/api/therapy', authenticate, requireActiveSubscription, therapyRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
