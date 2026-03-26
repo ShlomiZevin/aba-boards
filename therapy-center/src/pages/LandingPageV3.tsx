@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type ReactNode, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const WHATSAPP_URL = 'https://wa.me/972542801162';
@@ -39,31 +39,6 @@ function Reveal({ children, delay = 0 }: { children: ReactNode; delay?: number }
     return () => obs.disconnect();
   }, []);
   return <div ref={ref} className="v3-reveal" style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(20px)', transitionDelay: `${delay}ms` }}>{children}</div>;
-}
-
-/* ── Animated counter ── */
-function Counter({ end }: { end: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) {
-        obs.disconnect();
-        let start = 0;
-        const step = Math.ceil(end / 40);
-        const id = setInterval(() => {
-          start += step;
-          if (start >= end) { setVal(end); clearInterval(id); }
-          else setVal(start);
-        }, 25);
-      }
-    }, { threshold: 0.5 });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [end]);
-  return <span ref={ref}>{val}</span>;
 }
 
 /* ── Feature tab contents ── */
@@ -196,7 +171,7 @@ function TeamMockup() {
   );
 }
 
-const MOCKUPS: Record<string, () => JSX.Element> = { goals: GoalsMockup, calendar: CalendarMockup, forms: FormMockup, team: TeamMockup };
+const MOCKUPS: Record<string, () => ReactElement> = { goals: GoalsMockup, calendar: CalendarMockup, forms: FormMockup, team: TeamMockup };
 
 /* ── Hero Dashboard Mockup ── */
 function HeroDashboard() {
