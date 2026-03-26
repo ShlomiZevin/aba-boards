@@ -34,5 +34,6 @@ export function useTherapistLinks() {
     },
     meetingFormEdit: (formId: string) => `/meeting-form/${formId}/edit`,
     meetingFormView: (formId: string) => `${prefix}/meeting-form/${formId}/view`,
+    summaryView: (summaryId: string) => `${prefix}/summary/${summaryId}/view`,
   };
 }

@@ -165,6 +165,21 @@ const CHAT_TOOLS = [
       required: ['kidId', 'boardLayout'],
     },
   },
+  {
+    name: 'save_summary',
+    description: 'Save a therapy progress summary for a kid. Use when the admin asks to save/create/generate a summary document from the discussion. Include the full summary content, a short title, and the date range covered.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        kidId: { type: 'string', description: 'Kid ID' },
+        title: { type: 'string', description: 'Short title for the summary (e.g. "סיכום חודשי מרץ 2026")' },
+        content: { type: 'string', description: 'Full summary text in Hebrew (markdown)' },
+        fromDate: { type: 'string', description: 'ISO date - start of period covered' },
+        toDate: { type: 'string', description: 'ISO date - end of period covered' },
+      },
+      required: ['kidId', 'content', 'fromDate', 'toDate'],
+    },
+  },
 ];
 
 function buildSystemPrompt(kidId, source) {
@@ -273,6 +288,7 @@ IMPORTANT RULES:
 - Keep board task titles short and clear in Hebrew.
 - For school tasks use activeDays [0,1,2,3,4] (Sun-Thu in Israel), daily tasks use [0,1,2,3,4,5,6].
 - If the user mentions a kid by name (not ID), use list_kids to find their ID first.
+- When the user asks to save/create a summary of the discussion, use save_summary with the complete summary content (in markdown), a descriptive Hebrew title, and the date range that was discussed. The summary will be saved as a viewable document in the therapy center.
 ${kidId ? `- The user has pre-selected kid ID: "${kidId}". Use this kidId unless they mention a different kid.` : ''}
 
 BOARD LAYOUT ITEM TYPES:
@@ -464,6 +480,20 @@ async function executeToolCall(toolName, input, adminId, { practitionerId, paren
         return { success: true };
       }
 
+      case 'save_summary': {
+        if (practitionerId) return { error: 'למטפלות אין הרשאה ליצור סיכומים' };
+        if (parentKidId) return { error: 'אין לך הרשאה ליצור סיכומים' };
+        const summary = await therapyService.createSummary({
+          kidId: input.kidId,
+          adminId,
+          title: input.title || '',
+          content: input.content,
+          fromDate: input.fromDate,
+          toDate: input.toDate,
+        });
+        return { success: true, summaryId: summary.id };
+      }
+
       default:
         return { error: `Unknown tool: ${toolName}` };
     }
@@ -486,6 +516,7 @@ const TOOL_LABELS = {
   get_learning_plan: 'טוען תוכנית לימוד...',
   get_board_layout: 'טוען לוח...',
   update_board_layout: 'מעדכן לוח...',
+  save_summary: 'שומר סיכום...',
 };
 
 async function handleChat(adminId, messages, kidId, onToolStatus, source, practitionerId, parentKidId) {
@@ -493,6 +524,7 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
   const claudeMessages = [...messages];
   const toolsUsed = [];
   let boardUpdated = false;
+  let summaryCreated = false;
 
   const emitStatus = (status) => {
     if (onToolStatus) onToolStatus(status);
@@ -515,7 +547,7 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
     if (toolUseBlocks.length === 0) {
       // No tools — extract text reply
       const textBlock = response.content.find(b => b.type === 'text');
-      return { reply: textBlock?.text || '', boardUpdated, toolsUsed };
+      return { reply: textBlock?.text || '', boardUpdated, summaryCreated, toolsUsed };
     }
 
     // Execute tool calls
@@ -529,6 +561,7 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
       const result = await executeToolCall(toolUse.name, toolUse.input, adminId, { practitionerId, parentKidId });
       toolsUsed.push(toolUse.name);
       if (toolUse.name === 'update_board_layout') boardUpdated = true;
+      if (toolUse.name === 'save_summary' && result.success) summaryCreated = true;
       if (toolUse.name === 'create_kid' && result.id) kidId = result.id;
 
       toolResults.push({
@@ -542,7 +575,7 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
     emitStatus({ type: 'thinking', label: 'מנתח נתונים וכותב תשובה...' });
   }
 
-  return { reply: 'לא הצלחתי לעבד את הבקשה. נסו שוב.', boardUpdated, toolsUsed };
+  return { reply: 'לא הצלחתי לעבד את הבקשה. נסו שוב.', boardUpdated, summaryCreated, toolsUsed };
 }
 
 module.exports = { handleChat };

@@ -13,6 +13,7 @@ import type {
   Session,
   SessionForm,
   MeetingForm,
+  Summary,
   FormTemplate,
   Notification,
   BoardRequest,
@@ -366,6 +367,23 @@ export const meetingFormsApi = {
   delete: (id: string) => fetchApi<void>(`/meeting-forms/${id}`, { method: 'DELETE' }),
 };
 
+// Summaries API
+export const summariesApi = {
+  getForKid: (kidId: string) => fetchApi<Summary[]>(`/kids/${kidId}/summaries`),
+  getById: (id: string) => fetchApi<Summary>(`/summaries/${id}`),
+  create: (data: { kidId: string; title: string; content: string; fromDate: string; toDate: string }) =>
+    fetchApi<Summary>('/summaries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<Summary>) =>
+    fetchApi<Summary>(`/summaries/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) => fetchApi<void>(`/summaries/${id}`, { method: 'DELETE' }),
+};
+
 // Forms API
 export const formTemplateApi = {
   get: (kidId: string) =>
@@ -507,6 +525,7 @@ export const adminApi = {
 export interface ChatResponse {
   reply: string;
   boardUpdated?: boolean;
+  summaryCreated?: boolean;
   toolsUsed?: string[];
 }
 
@@ -516,6 +535,7 @@ export interface ChatStatusEvent {
   tool?: string;
   reply?: string;
   boardUpdated?: boolean;
+  summaryCreated?: boolean;
   toolsUsed?: string[];
   error?: string;
 }

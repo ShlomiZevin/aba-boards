@@ -5,13 +5,13 @@ import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { kidsApi, practitionersApi, parentsApi, goalsApi, sessionsApi, notificationsApi, goalDataApi } from '../api/client';
+import { kidsApi, practitionersApi, parentsApi, goalsApi, sessionsApi, notificationsApi, goalDataApi, summariesApi } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { useAuth } from '../contexts/AuthContext';
 import { toDate } from '../utils/date';
 import { GOAL_CATEGORIES } from '../types';
-import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification, KidGoalDataEntry } from '../types';
+import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification, KidGoalDataEntry, Summary } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
 
 // Distinct colors for therapists on the calendar (vivid for therapy, pastel for meetings)
@@ -253,6 +253,7 @@ export default function KidDetail() {
   const [dcDeleteConfirm, setDcDeleteConfirm] = useState<string | null>(null);
   const [dcSectionExpanded, setDcSectionExpanded] = useState(true);
   const [sessionsSectionExpanded, setSessionsSectionExpanded] = useState(true);
+  const [summariesExpanded, setSummariesExpanded] = useState(true);
 
   // Form state for modals
   const [newName, setNewName] = useState('');
@@ -302,6 +303,12 @@ export default function KidDetail() {
     queryFn: () => goalDataApi.getAllEntries(kidId!),
     enabled: !!kidId,
     staleTime: 0,
+  });
+
+  const { data: summariesRes } = useQuery({
+    queryKey: ['summaries', kidId],
+    queryFn: () => summariesApi.getForKid(kidId!),
+    enabled: !!kidId,
   });
 
   const { data: myTherapistsRes } = useQuery({
@@ -1587,6 +1594,59 @@ export default function KidDetail() {
             onClose={() => { setDcModalOpen(false); setDcModalEntry(null); }}
           />
         )}
+
+        {/* Summaries Section — collapsible */}
+        {(() => {
+          const summaries: Summary[] = (summariesRes?.data || []);
+          const sorted = [...summaries].sort((a, b) => {
+            const ta = toDate(a.createdAt)?.getTime() || 0;
+            const tb = toDate(b.createdAt)?.getTime() || 0;
+            return tb - ta;
+          });
+          return (
+            <div className="dc-section">
+              <div className="dc-section-header" onClick={() => setSummariesExpanded(e => !e)}>
+                <div className="dc-section-title">
+                  <span>📝</span>
+                  סיכומים
+                  <span className="dc-section-total">({sorted.length})</span>
+                </div>
+                <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{summariesExpanded ? '▲' : '▼'}</span>
+              </div>
+              {summariesExpanded && (
+                <div className="dc-section-body">
+                  {sorted.length === 0 ? (
+                    <p className="empty-text">אין סיכומים</p>
+                  ) : (
+                    <div className="dc-entries-mobile">
+                      {sorted.map(s => {
+                        const from = toDate(s.fromDate);
+                        const to = toDate(s.toDate);
+                        return (
+                          <Link
+                            key={s.id}
+                            to={links.summaryView(s.id)}
+                            className="dc-entry-card"
+                            style={{ textDecoration: 'none', color: 'inherit', display: 'block', cursor: 'pointer' }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ fontWeight: 600, color: '#2d3748' }}>
+                                {s.title || 'סיכום תקופתי'}
+                              </div>
+                              <div style={{ fontSize: '0.8em', color: '#94a3b8' }}>
+                                {from ? format(from, 'dd/MM') : '?'} - {to ? format(to, 'dd/MM/yy') : '?'}
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
       </>}
 

@@ -323,6 +323,19 @@ export interface MeetingForm {
   updatedAt: Date;
 }
 
+// Summary types
+export interface Summary {
+  id: string;
+  kidId: string;
+  adminId: string;
+  title: string;
+  content: string;
+  fromDate: Date;
+  toDate: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Form types
 export interface GoalSnapshot {
   goalId: string;

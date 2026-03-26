@@ -23,6 +23,7 @@ import FormsOverview from './pages/FormsOverview';
 import TherapistNotifications from './pages/TherapistNotifications';
 import BoardBuilder from './pages/BoardBuilder';
 import ChatCenter from './pages/ChatCenter';
+import SummaryView from './pages/SummaryView';
 import LandingPage from './pages/LandingPage';
 import LandingPageV2 from './pages/LandingPageV2';
 import LandingPageV3 from './pages/LandingPageV3';
@@ -94,6 +95,7 @@ function TherapistRoutes() {
           <Route path="/form/:formId/edit" element={<FormFill />} />
           <Route path="/form/:formId/view" element={<FormView />} />
           <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
+          <Route path="/summary/:summaryId/view" element={<SummaryView />} />
           <Route path="*" element={<Navigate to={`/t/${practitionerId}`} replace />} />
         </Routes>
       </TherapistShell>
@@ -121,6 +123,7 @@ function ParentRoutes() {
         <Route path="/chat" element={<ChatCenter />} />
         <Route path="/form/:formId/view" element={<FormView />} />
         <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
+        <Route path="/summary/:summaryId/view" element={<SummaryView />} />
         <Route path="*" element={<Navigate to={`/p/${kidId}`} replace />} />
       </Routes>
     </TherapistContext.Provider>
@@ -182,6 +185,7 @@ function App() {
             <Route path="/meeting-form/new" element={<AdminLayout><MeetingFormFill /></AdminLayout>} />
             <Route path="/meeting-form/:formId/edit" element={<AdminLayout><MeetingFormFill /></AdminLayout>} />
             <Route path="/meeting-form/:formId/view" element={<AdminLayout><MeetingFormView /></AdminLayout>} />
+            <Route path="/summary/:summaryId/view" element={<AdminLayout><SummaryView /></AdminLayout>} />
             <Route path="/practitioners" element={<AdminLayout><AllPractitioners /></AdminLayout>} />
             <Route path="/notifications" element={<AdminLayout><NotificationCenter /></AdminLayout>} />
             <Route path="/admin-management" element={<AdminLayout><AdminManagement /></AdminLayout>} />

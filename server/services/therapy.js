@@ -1503,6 +1503,58 @@ async function updateFormTemplate(kidId, template) {
   return { sections: template.sections, updatedAt: new Date() };
 }
 
+// ==================== SUMMARIES ====================
+
+async function getSummariesForKid(kidId) {
+  const db = getDb();
+  const snap = await db.collection('summaries').where('kidId', '==', kidId).get();
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function getSummaryById(id) {
+  const db = getDb();
+  const doc = await db.collection('summaries').doc(id).get();
+  if (!doc.exists) return null;
+  return { id: doc.id, ...doc.data() };
+}
+
+async function createSummary(data) {
+  const db = getDb();
+  const id = uuidv4();
+  const now = new Date();
+  const summaryDoc = {
+    kidId: data.kidId,
+    adminId: data.adminId || null,
+    title: data.title || '',
+    content: data.content,
+    fromDate: new Date(data.fromDate),
+    toDate: new Date(data.toDate),
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.collection('summaries').doc(id).set(summaryDoc);
+  return { id, ...summaryDoc };
+}
+
+async function updateSummary(id, data) {
+  const db = getDb();
+  const updates = {};
+  const allowed = ['title', 'content', 'fromDate', 'toDate'];
+  for (const key of allowed) {
+    if (data[key] !== undefined) {
+      updates[key] = (key === 'fromDate' || key === 'toDate') ? new Date(data[key]) : data[key];
+    }
+  }
+  updates.updatedAt = new Date();
+  await db.collection('summaries').doc(id).update(updates);
+  return { id, ...updates };
+}
+
+async function deleteSummary(id) {
+  const db = getDb();
+  await db.collection('summaries').doc(id).delete();
+}
+
 // ==================== BOARD REQUESTS ====================
 
 async function getBoardRequests() {
@@ -1896,6 +1948,12 @@ module.exports = {
   deleteAllNotifications,
   dismissNotification,
   dismissNotificationByAdmin,
+  // Summaries
+  getSummariesForKid,
+  getSummaryById,
+  createSummary,
+  updateSummary,
+  deleteSummary,
   // Board Requests
   getBoardRequests,
   updateBoardRequest,

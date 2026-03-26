@@ -16,6 +16,7 @@ interface ChatMessage {
   statusLabel?: string;
   toolsUsed?: string[];
   boardUpdated?: boolean;
+  summaryCreated?: boolean;
 }
 
 export default function ChatCenter() {
@@ -78,6 +79,7 @@ export default function ChatCenter() {
         content: result.reply,
         toolsUsed: result.toolsUsed,
         boardUpdated: result.boardUpdated,
+        summaryCreated: result.summaryCreated,
       };
       setMessages(prev => prev.filter(m => !m.isLoading).concat(aiMsg));
     } catch {
@@ -149,6 +151,9 @@ export default function ChatCenter() {
                 </div>
                 {msg.boardUpdated && (
                   <div className="chat-center-board-badge">✅ הלוח עודכן</div>
+                )}
+                {msg.summaryCreated && (
+                  <div className="chat-center-board-badge">📝 הסיכום נשמר</div>
                 )}
               </>
             )}

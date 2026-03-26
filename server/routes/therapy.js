@@ -610,6 +610,34 @@ router.delete('/notifications/:id', requireAdmin, asyncHandler(async (req, res) 
   res.status(204).send();
 }));
 
+// ==================== SUMMARIES ====================
+
+router.get('/kids/:kidId/summaries', asyncHandler(async (req, res) => {
+  const summaries = await therapyService.getSummariesForKid(req.params.kidId);
+  res.json(summaries);
+}));
+
+router.get('/summaries/:id', asyncHandler(async (req, res) => {
+  const summary = await therapyService.getSummaryById(req.params.id);
+  if (!summary) return res.status(404).json({ error: 'Summary not found' });
+  res.json(summary);
+}));
+
+router.post('/summaries', requireAdmin, asyncHandler(async (req, res) => {
+  const summary = await therapyService.createSummary({ ...req.body, adminId: req.adminId });
+  res.status(201).json(summary);
+}));
+
+router.put('/summaries/:id', requireAdmin, asyncHandler(async (req, res) => {
+  const summary = await therapyService.updateSummary(req.params.id, req.body);
+  res.json(summary);
+}));
+
+router.delete('/summaries/:id', requireAdmin, asyncHandler(async (req, res) => {
+  await therapyService.deleteSummary(req.params.id);
+  res.status(204).send();
+}));
+
 // ==================== BOARD REQUESTS ====================
 
 const { createBoardFromRequest } = require('../services/board-generator');
