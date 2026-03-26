@@ -551,11 +551,12 @@ export const chatApi = {
     messages: { role: string; content: string }[],
     kidId: string | null,
     onStatus: (event: ChatStatusEvent) => void,
+    extraBody?: Record<string, unknown>,
   ): Promise<ChatResponse> => {
     const response = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ messages, kidId, stream: true }),
+      body: JSON.stringify({ messages, kidId, stream: true, ...extraBody }),
     });
 
     if (!response.ok) {
@@ -584,6 +585,7 @@ export const chatApi = {
             result = {
               reply: event.reply || '',
               boardUpdated: event.boardUpdated,
+              summaryCreated: event.summaryCreated,
               toolsUsed: event.toolsUsed,
             };
           }

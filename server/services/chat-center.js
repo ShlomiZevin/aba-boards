@@ -21,10 +21,34 @@ function formatDate(val) {
   return new Date(ts).toISOString().split('T')[0]; // "2026-03-09"
 }
 
+// Resolve kidId from name or ID — shared by all tools that accept kidName
+// Detects if a Hebrew name was incorrectly passed as kidId and treats it as kidName
+async function resolveKidId(input, adminId) {
+  let { kidId, kidName } = input;
+  // If kidId looks like a Hebrew name (not a UUID), treat it as kidName
+  if (kidId && /[\u0590-\u05FF]/.test(kidId)) {
+    kidName = kidName || kidId;
+    kidId = null;
+  }
+  if (kidId) return { kidId, kidName: kidName || kidId };
+  if (!kidName) return { error: 'חובה לספק שם ילד או מזהה ילד' };
+  const kids = await therapyService.getAllKids(adminId);
+  const name = kidName.trim();
+  const match = kids.find(k => k.name === name) || kids.find(k => k.name.includes(name) || name.includes(k.name));
+  if (!match) return { error: `לא נמצא ילד בשם "${name}"` };
+  return { kidId: match.id, kidName: match.name };
+}
+
+// All tools accept kidName OR kidId — resolveKidId handles name→ID resolution server-side
+const KID_ID_PROPS = {
+  kidId: { type: 'string', description: 'Kid ID (if known)' },
+  kidName: { type: 'string', description: 'Kid name in Hebrew (if ID not known)' },
+};
+
 const CHAT_TOOLS = [
   {
     name: 'list_kids',
-    description: 'List all kids managed by this admin. Returns name, id, age, gender for each.',
+    description: 'List all kids managed by this admin. Returns name, id, age, gender for each. Only use when you need to show a list of all kids — NOT to resolve a single kid name.',
     input_schema: { type: 'object', properties: {}, required: [] },
   },
   {
@@ -42,127 +66,132 @@ const CHAT_TOOLS = [
   },
   {
     name: 'get_kid_profile',
-    description: 'Get full profile for a kid: name, age, gender, kidDescription, behaviorGoals, personalInfo, board settings.',
+    description: 'Get full profile for a kid: name, age, gender, kidDescription, behaviorGoals, personalInfo, board settings. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
-      properties: { kidId: { type: 'string' } },
-      required: ['kidId'],
+      properties: { ...KID_ID_PROPS },
     },
   },
   {
     name: 'get_goals',
-    description: 'Get therapy goals for a kid. Returns goal titles, categories, active status.',
+    description: 'Get therapy goals for a kid. Returns goal titles, categories, active status. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
       properties: {
-        kidId: { type: 'string' },
+        ...KID_ID_PROPS,
         activeOnly: { type: 'boolean', description: 'If true, only active goals' },
       },
-      required: ['kidId'],
     },
   },
   {
     name: 'get_session_forms',
-    description: 'Get therapy session forms for a kid. Each has: cooperation %, mood, concentration, successes, difficulties, notes, goals worked on, date, practitioner. Sorted by date desc.',
+    description: 'Get therapy session forms for a kid. Each has: cooperation %, mood, concentration, successes, difficulties, notes, goals worked on, date, practitioner. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
       properties: {
-        kidId: { type: 'string' },
+        ...KID_ID_PROPS,
         limit: { type: 'number', description: 'Max forms to return (default 10)' },
         fromDate: { type: 'string', description: 'ISO date - forms from this date onward' },
         toDate: { type: 'string', description: 'ISO date - forms up to this date' },
       },
-      required: ['kidId'],
     },
   },
   {
     name: 'get_meeting_forms',
-    description: 'Get team/parent meeting forms for a kid. Each has: attendees, general notes, behavior notes, ADL, programs, tasks.',
+    description: 'Get team/parent meeting forms for a kid. Each has: attendees, general notes, behavior notes, ADL, programs, tasks. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
       properties: {
-        kidId: { type: 'string' },
+        ...KID_ID_PROPS,
         limit: { type: 'number', description: 'Max forms to return (default 5)' },
       },
-      required: ['kidId'],
     },
   },
   {
     name: 'get_sessions',
-    description: 'Get therapy sessions for a kid. Each has: date, therapist, status (scheduled/completed/missed), type.',
+    description: 'Get therapy sessions for a kid. Each has: date, therapist, status (scheduled/completed/missed), type. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
       properties: {
-        kidId: { type: 'string' },
+        ...KID_ID_PROPS,
         fromDate: { type: 'string', description: 'ISO date filter' },
         toDate: { type: 'string', description: 'ISO date filter' },
         status: { type: 'string', description: 'Filter: scheduled, completed, missed, pending_form' },
       },
-      required: ['kidId'],
     },
   },
   {
     name: 'get_practitioners',
-    description: 'Get practitioners (therapists/behavior analysts) assigned to a kid.',
+    description: 'Get practitioners (therapists/behavior analysts) assigned to a kid. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
-      properties: { kidId: { type: 'string' } },
-      required: ['kidId'],
+      properties: { ...KID_ID_PROPS },
     },
   },
   {
     name: 'get_parents',
-    description: 'Get parent contact info for a kid.',
+    description: 'Get parent contact info for a kid. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
-      properties: { kidId: { type: 'string' } },
-      required: ['kidId'],
+      properties: { ...KID_ID_PROPS },
     },
   },
   {
     name: 'get_data_entries',
-    description: 'Get structured data collection entries for a specific goal. Returns per-session data tables.',
+    description: 'Get structured data collection entries for a specific goal. Returns per-session data tables. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
       properties: {
-        kidId: { type: 'string' },
+        ...KID_ID_PROPS,
         goalLibraryId: { type: 'string', description: 'Goal library item ID' },
         limit: { type: 'number', description: 'Max entries (default 10)' },
       },
-      required: ['kidId', 'goalLibraryId'],
+      required: ['goalLibraryId'],
     },
   },
   {
     name: 'get_learning_plan',
-    description: 'Get the learning plan for a specific goal. Contains structured tables with items, stimuli, responses, mastery.',
+    description: 'Get the learning plan for a specific goal. Contains structured tables with items, stimuli, responses, mastery. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
       properties: {
-        kidId: { type: 'string' },
+        ...KID_ID_PROPS,
         goalLibraryId: { type: 'string' },
       },
-      required: ['kidId', 'goalLibraryId'],
+      required: ['goalLibraryId'],
     },
   },
   {
     name: 'get_board_layout',
-    description: 'Get the current reward board layout for a kid. Contains tasks, rewards, calm-down activities.',
+    description: 'Get the current reward board layout for a kid. Contains tasks, rewards, calm-down activities. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
-      properties: { kidId: { type: 'string' } },
-      required: ['kidId'],
+      properties: { ...KID_ID_PROPS },
     },
   },
   {
     name: 'update_board_layout',
-    description: 'Update the board layout for a kid. Use when user asks to modify/add/remove tasks/rewards on the board. Must provide the complete boardLayout.',
+    description: 'Update the board layout for a kid. Use when user asks to modify/add/remove tasks/rewards on the board. Must provide the complete boardLayout. Accepts kid name or ID.',
     input_schema: {
       type: 'object',
       properties: {
-        kidId: { type: 'string' },
+        ...KID_ID_PROPS,
         boardLayout: { type: 'object', description: 'Complete boardLayout with items array' },
       },
-      required: ['kidId', 'boardLayout'],
+      required: ['boardLayout'],
+    },
+  },
+  {
+    name: 'get_summary_data',
+    description: 'Get all data needed to write a periodic summary for a kid: session forms + data collection entries for a date range. Accepts kid name or ID. Use this SINGLE tool for summaries — do not call any other tools alongside it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ...KID_ID_PROPS,
+        fromDate: { type: 'string', description: 'ISO date - start of period (e.g. "2026-03-01")' },
+        toDate: { type: 'string', description: 'ISO date - end of period (e.g. "2026-03-15")' },
+      },
+      required: ['fromDate', 'toDate'],
     },
   },
   {
@@ -171,13 +200,14 @@ const CHAT_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        kidId: { type: 'string', description: 'Kid ID' },
+        kidId: { type: 'string', description: 'Kid ID (use the ID returned by get_summary_data)' },
+        kidName: { type: 'string', description: 'Kid name (fallback if ID not available)' },
         title: { type: 'string', description: 'Short title for the summary (e.g. "סיכום חודשי מרץ 2026")' },
         content: { type: 'string', description: 'Full summary text in Hebrew (markdown)' },
         fromDate: { type: 'string', description: 'ISO date - start of period covered' },
         toDate: { type: 'string', description: 'ISO date - end of period covered' },
       },
-      required: ['kidId', 'content', 'fromDate', 'toDate'],
+      required: ['content', 'fromDate', 'toDate'],
     },
   },
 ];
@@ -287,8 +317,9 @@ IMPORTANT RULES:
 - For new boards, follow the structure: bank → progress → header + tasks → bonus header + bonus tasks → calm-down header + calm-down tasks → goals header + goals.
 - Keep board task titles short and clear in Hebrew.
 - For school tasks use activeDays [0,1,2,3,4] (Sun-Thu in Israel), daily tasks use [0,1,2,3,4,5,6].
-- If the user mentions a kid by name (not ID), use list_kids to find their ID first.
-- When the user asks to save/create a summary, use save_summary with the summary content exactly as it was already written in the conversation (in markdown). Do NOT regenerate, re-fetch data, or rewrite the summary — take the text that was already composed and agreed upon in the chat and pass it directly as the content. Include a descriptive Hebrew title and the date range that was discussed. The summary will be saved as a viewable document in the therapy center.
+- If the user mentions a kid by name (not ID): for summaries use get_summary_data (it resolves names internally), for everything else use list_kids to find their ID first.
+- SUMMARY WORKFLOW: When asked to prepare a periodic summary (סיכום תקופתי), call EXACTLY ONE tool: get_summary_data(kidName, fromDate, toDate). Do NOT call any other tools in the same turn — no list_kids, no get_session_forms, no get_data_entries, no get_goals, no get_sessions. get_summary_data resolves the kid name, fetches all data, and returns the kidId.
+- When writing a summary, return ONLY the summary document itself in markdown. Do NOT add introductions like "הנה הסיכום", do NOT add closing remarks like "האם תרצי לשמור?", and do NOT add meta-commentary about how many sessions were used. Just the clean summary content — it will be saved as-is.
 ${kidId ? `- The user has pre-selected kid ID: "${kidId}". Use this kidId unless they mention a different kid.` : ''}
 
 BOARD LAYOUT ITEM TYPES:
@@ -304,23 +335,16 @@ BOARD LAYOUT ITEM TYPES:
 Today's date: ${new Date().toISOString().split('T')[0]}`;
 }
 
-async function resolveKidId(kidId, adminId, practitionerId) {
-  // If kidId looks like a name (contains Hebrew/spaces, no typical ID chars), resolve it
-  if (kidId && !/^[a-zA-Z0-9_-]{10,}$/.test(kidId)) {
-    const kids = practitionerId
-      ? await therapyService.getKidsForPractitioner(practitionerId)
-      : await therapyService.getAllKids(adminId);
-    const match = kids.find(k => k.name === kidId || k.name.includes(kidId));
-    if (match) return match.id;
-  }
-  return kidId;
-}
-
 async function executeToolCall(toolName, input, adminId, { practitionerId, parentKidId } = {}) {
   try {
-    // Auto-resolve kidId if AI passed a name instead of an ID
-    if (input.kidId && toolName !== 'list_kids' && toolName !== 'create_kid') {
-      input.kidId = await resolveKidId(input.kidId, adminId, practitionerId);
+    // Resolve kidName → kidId for all tools that need it (except list_kids, create_kid)
+    const needsKidId = !['list_kids', 'create_kid'].includes(toolName);
+    if (needsKidId && (input.kidName || input.kidId)) {
+      const resolveStart = Date.now();
+      const resolved = await resolveKidId(input, adminId);
+      console.log(`[resolveKidId] Resolved in ${((Date.now() - resolveStart) / 1000).toFixed(1)}s — kidId=${resolved.kidId || 'none'}, error=${resolved.error || 'none'}`);
+      if (resolved.error) return resolved;
+      input.kidId = resolved.kidId;
     }
 
     // Parent scoping — locked to their one kid
@@ -480,9 +504,82 @@ async function executeToolCall(toolName, input, adminId, { practitionerId, paren
         return { success: true };
       }
 
+      case 'get_summary_data': {
+        const resolvedKidId = input.kidId;
+
+        // Fetch session forms + DC entries in parallel for the date range
+        const from = new Date(input.fromDate);
+        from.setHours(0, 0, 0, 0);
+        const to = new Date(input.toDate);
+        to.setHours(23, 59, 59, 999);
+
+        const fetchStart = Date.now();
+        const [allForms, allDcEntries, goals] = await Promise.all([
+          therapyService.getFormsForKid(resolvedKidId),
+          therapyService.getAllDcEntries(resolvedKidId),
+          therapyService.getGoalsForKid(resolvedKidId),
+        ]);
+        console.log(`[get_summary_data] Firestore fetch done in ${((Date.now() - fetchStart) / 1000).toFixed(1)}s (forms=${allForms.length}, dc=${allDcEntries.length}, goals=${goals.length})`);
+
+        // Filter forms by date range
+        const forms = allForms
+          .filter(f => {
+            const ts = toTimestamp(f.sessionDate);
+            return ts && ts >= from.getTime() && ts <= to.getTime();
+          })
+          .sort((a, b) => (toTimestamp(a.sessionDate) || 0) - (toTimestamp(b.sessionDate) || 0))
+          .map(f => ({
+            sessionDate: formatDate(f.sessionDate),
+            cooperation: f.cooperation,
+            sessionDuration: f.sessionDuration,
+            sittingDuration: f.sittingDuration,
+            mood: stripHtml(f.mood),
+            concentrationLevel: stripHtml(f.concentrationLevel),
+            newReinforcers: stripHtml(f.newReinforcers),
+            wordsProduced: stripHtml(f.wordsProduced),
+            successes: stripHtml(f.successes),
+            difficulties: stripHtml(f.difficulties),
+            notes: stripHtml(f.notes),
+            goalsWorkedOn: f.goalsWorkedOn,
+            breakActivities: stripHtml(f.breakActivities),
+            endOfSessionActivity: stripHtml(f.endOfSessionActivity),
+          }));
+
+        // Filter DC entries by date range
+        const dcEntries = allDcEntries
+          .filter(e => {
+            const ts = toTimestamp(e.sessionDate);
+            return ts && ts >= from.getTime() && ts <= to.getTime();
+          })
+          .map(e => ({
+            sessionDate: formatDate(e.sessionDate),
+            goalLibraryId: e.goalLibraryId,
+            goalTitle: e.goalTitle,
+            tables: e.tables,
+            status: e.status,
+          }));
+
+        // Active goals for context
+        const activeGoals = goals.filter(g => g.isActive).map(g => ({
+          id: g.id, title: g.title, categoryId: g.categoryId, libraryItemId: g.libraryItemId,
+        }));
+
+        return {
+          kidId: resolvedKidId,
+          kidName: input.kidName || resolvedKidId,
+          sessionCount: forms.length,
+          sessionForms: forms,
+          dataCollectionEntries: dcEntries,
+          activeGoals,
+        };
+      }
+
       case 'save_summary': {
         if (practitionerId) return { error: 'למטפלות אין הרשאה ליצור סיכומים' };
         if (parentKidId) return { error: 'אין לך הרשאה ליצור סיכומים' };
+        if (!input.kidId) return { error: 'חובה לספק מזהה ילד' };
+        console.log(`[save_summary] Saving summary for kid=${input.kidId}, content length=${(input.content || '').length} chars`);
+        const saveStart = Date.now();
         const summary = await therapyService.createSummary({
           kidId: input.kidId,
           adminId,
@@ -491,6 +588,7 @@ async function executeToolCall(toolName, input, adminId, { practitionerId, paren
           fromDate: input.fromDate,
           toDate: input.toDate,
         });
+        console.log(`[save_summary] Firestore write done in ${((Date.now() - saveStart) / 1000).toFixed(1)}s (summaryId=${summary.id})`);
         return { success: true, summaryId: summary.id };
       }
 
@@ -516,37 +614,54 @@ const TOOL_LABELS = {
   get_learning_plan: 'טוען תוכנית לימוד...',
   get_board_layout: 'טוען לוח...',
   update_board_layout: 'מעדכן לוח...',
+  get_summary_data: 'אוסף נתונים לסיכום...',
   save_summary: 'שומר סיכום...',
 };
 
-async function handleChat(adminId, messages, kidId, onToolStatus, source, practitionerId, parentKidId) {
-  const systemPrompt = buildSystemPrompt(kidId, source);
+async function handleChat(adminId, messages, kidId, onToolStatus, source, practitionerId, parentKidId, options = {}) {
+  const { saveSummaryOnly } = options;
   const claudeMessages = [...messages];
   const toolsUsed = [];
   let boardUpdated = false;
   let summaryCreated = false;
+  const chatStart = Date.now();
 
   const emitStatus = (status) => {
     if (onToolStatus) onToolStatus(status);
   };
 
-  emitStatus({ type: 'thinking', label: 'חושב...' });
+  const elapsed = () => `${((Date.now() - chatStart) / 1000).toFixed(1)}s`;
 
-  // Tool execution loop (max 8 iterations)
-  for (let i = 0; i < 8; i++) {
+  // When saveSummaryOnly, override system prompt and tools — AI can ONLY save_summary
+  const saveSummaryTools = CHAT_TOOLS.filter(t => t.name === 'save_summary');
+  const systemPrompt = saveSummaryOnly
+    ? `You are saving a summary document. Look at the conversation history and extract the summary that was already written. Use save_summary with that EXACT content (in markdown). Do NOT rewrite, regenerate, or fetch any data. Just save what was already composed. Always respond in Hebrew. Use kidName to identify the kid — the system will resolve the ID automatically.`
+    : buildSystemPrompt(kidId, source);
+  const tools = saveSummaryOnly ? saveSummaryTools : CHAT_TOOLS;
+
+  console.log(`[Chat ${elapsed()}] Starting chat (saveSummaryOnly=${!!saveSummaryOnly}, kidId=${kidId}, msgCount=${messages.length})`);
+  emitStatus({ type: 'thinking', label: saveSummaryOnly ? 'שומר סיכום...' : 'חושב...' });
+
+  // Tool execution loop (max 8 iterations, 1 for saveSummaryOnly)
+  const maxIterations = saveSummaryOnly ? 2 : 8;
+  for (let i = 0; i < maxIterations; i++) {
+    console.log(`[Chat ${elapsed()}] Claude API call #${i + 1} (${claudeMessages.length} msgs, ${tools.length} tools)`);
+    const apiStart = Date.now();
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: systemPrompt,
       messages: claudeMessages,
-      tools: CHAT_TOOLS,
+      tools,
     });
+    console.log(`[Chat ${elapsed()}] Claude API responded in ${((Date.now() - apiStart) / 1000).toFixed(1)}s (stop=${response.stop_reason}, input=${response.usage?.input_tokens}, output=${response.usage?.output_tokens})`);
 
     const toolUseBlocks = response.content.filter(b => b.type === 'tool_use');
 
     if (toolUseBlocks.length === 0) {
       // No tools — extract text reply
       const textBlock = response.content.find(b => b.type === 'text');
+      console.log(`[Chat ${elapsed()}] Done — text reply (${(textBlock?.text || '').length} chars)`);
       return { reply: textBlock?.text || '', boardUpdated, summaryCreated, toolsUsed };
     }
 
@@ -555,10 +670,12 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
 
     const toolResults = [];
     for (const toolUse of toolUseBlocks) {
-      console.log(`[Chat] Tool call: ${toolUse.name}(${JSON.stringify(toolUse.input).slice(0, 100)})`);
+      console.log(`[Chat ${elapsed()}] Tool call: ${toolUse.name}(${JSON.stringify(toolUse.input).slice(0, 200)})`);
       emitStatus({ type: 'tool', tool: toolUse.name, label: TOOL_LABELS[toolUse.name] || toolUse.name });
 
+      const toolStart = Date.now();
       const result = await executeToolCall(toolUse.name, toolUse.input, adminId, { practitionerId, parentKidId });
+      console.log(`[Chat ${elapsed()}] Tool ${toolUse.name} done in ${((Date.now() - toolStart) / 1000).toFixed(1)}s (result: ${JSON.stringify(result).length} bytes)`);
       toolsUsed.push(toolUse.name);
       if (toolUse.name === 'update_board_layout') boardUpdated = true;
       if (toolUse.name === 'save_summary' && result.success) summaryCreated = true;
@@ -571,10 +688,17 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
       });
     }
 
+    // Short-circuit: if saveSummaryOnly and summary was saved, return immediately
+    if (saveSummaryOnly && summaryCreated) {
+      console.log(`[Chat ${elapsed()}] saveSummaryOnly — summary saved, returning immediately`);
+      return { reply: 'הסיכום נשמר בהצלחה! 📝', boardUpdated, summaryCreated, toolsUsed };
+    }
+
     claudeMessages.push({ role: 'user', content: toolResults });
     emitStatus({ type: 'thinking', label: 'מנתח נתונים וכותב תשובה...' });
   }
 
+  console.log(`[Chat ${elapsed()}] FAILED — hit max iterations (${maxIterations}), tools used: ${toolsUsed.join(', ')}`);
   return { reply: 'לא הצלחתי לעבד את הבקשה. נסו שוב.', boardUpdated, summaryCreated, toolsUsed };
 }
 

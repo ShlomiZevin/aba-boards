@@ -16,7 +16,7 @@ const asyncHandler = (fn) => (req, res, next) => {
 const { handleChat } = require('../services/chat-center');
 
 router.post('/chat', asyncHandler(async (req, res) => {
-  const { messages, kidId, stream } = req.body;
+  const { messages, kidId, stream, saveSummaryOnly } = req.body;
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required' });
   }
@@ -44,7 +44,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
     };
 
     try {
-      const result = await handleChat(req.adminId, messages, effectiveKidId, onToolStatus, source, practitionerId, parentKidId);
+      const result = await handleChat(req.adminId, messages, effectiveKidId, onToolStatus, source, practitionerId, parentKidId, { saveSummaryOnly });
       res.write(`data: ${JSON.stringify({ type: 'done', ...result })}\n\n`);
     } catch (err) {
       res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
@@ -52,7 +52,7 @@ router.post('/chat', asyncHandler(async (req, res) => {
     res.end();
   } else {
     // Regular JSON response (backwards compatible)
-    const result = await handleChat(req.adminId, messages, effectiveKidId, null, source, practitionerId, parentKidId);
+    const result = await handleChat(req.adminId, messages, effectiveKidId, null, source, practitionerId, parentKidId, { saveSummaryOnly });
     res.json(result);
   }
 }));
