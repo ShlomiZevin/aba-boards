@@ -288,7 +288,7 @@ IMPORTANT RULES:
 - Keep board task titles short and clear in Hebrew.
 - For school tasks use activeDays [0,1,2,3,4] (Sun-Thu in Israel), daily tasks use [0,1,2,3,4,5,6].
 - If the user mentions a kid by name (not ID), use list_kids to find their ID first.
-- When the user asks to save/create a summary of the discussion, use save_summary with the complete summary content (in markdown), a descriptive Hebrew title, and the date range that was discussed. The summary will be saved as a viewable document in the therapy center.
+- When the user asks to save/create a summary, use save_summary with the summary content exactly as it was already written in the conversation (in markdown). Do NOT regenerate, re-fetch data, or rewrite the summary — take the text that was already composed and agreed upon in the chat and pass it directly as the content. Include a descriptive Hebrew title and the date range that was discussed. The summary will be saved as a viewable document in the therapy center.
 ${kidId ? `- The user has pre-selected kid ID: "${kidId}". Use this kidId unless they mention a different kid.` : ''}
 
 BOARD LAYOUT ITEM TYPES:
