@@ -521,6 +521,27 @@ export const adminApi = {
     }),
 };
 
+// Crew Hours API
+export interface CrewHoursEntry {
+  practitionerId: string;
+  practitionerName: string;
+  practitionerType: string;
+  totalMinutes: number;
+  sessionCount: number;
+  kids: { kidId: string; kidName: string; totalMinutes: number; sessionCount: number }[];
+}
+
+export const crewHoursApi = {
+  get: (filters?: { from?: string; to?: string; kidId?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.from) params.append('from', filters.from);
+    if (filters?.to) params.append('to', filters.to);
+    if (filters?.kidId) params.append('kidId', filters.kidId);
+    const query = params.toString();
+    return fetchApi<CrewHoursEntry[]>(`/crew-hours${query ? `?${query}` : ''}`);
+  },
+};
+
 // AI Chat API
 export interface ChatResponse {
   reply: string;

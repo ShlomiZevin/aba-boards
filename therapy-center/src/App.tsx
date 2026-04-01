@@ -23,6 +23,7 @@ import FormsOverview from './pages/FormsOverview';
 import TherapistNotifications from './pages/TherapistNotifications';
 import BoardBuilder from './pages/BoardBuilder';
 import ChatCenter from './pages/ChatCenter';
+import CrewHours from './pages/CrewHours';
 import SummaryView from './pages/SummaryView';
 import LandingPage from './pages/LandingPage';
 import LandingPageV2 from './pages/LandingPageV2';
@@ -187,6 +188,7 @@ function App() {
             <Route path="/meeting-form/:formId/view" element={<AdminLayout><MeetingFormView /></AdminLayout>} />
             <Route path="/summary/:summaryId/view" element={<AdminLayout><SummaryView /></AdminLayout>} />
             <Route path="/practitioners" element={<AdminLayout><AllPractitioners /></AdminLayout>} />
+            <Route path="/crew-hours" element={<AdminLayout><CrewHours /></AdminLayout>} />
             <Route path="/notifications" element={<AdminLayout><NotificationCenter /></AdminLayout>} />
             <Route path="/admin-management" element={<AdminLayout><AdminManagement /></AdminLayout>} />
             <Route path="/chat" element={<AdminLayout><ChatCenter /></AdminLayout>} />

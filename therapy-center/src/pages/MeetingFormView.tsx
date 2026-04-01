@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { meetingFormsApi, kidsApi } from '../api/client';
+import { meetingFormsApi, kidsApi, goalsApi, practitionersApi } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import ConfirmModal from '../components/ConfirmModal';
 import { toDate } from '../utils/date';
-import type { MeetingAttendee } from '../types';
+import type { MeetingAttendee, Goal } from '../types';
+import GoalsWeeklyTable from '../components/GoalsWeeklyTable';
 
 
 
@@ -54,6 +55,18 @@ export default function MeetingFormView() {
     enabled: !!form?.kidId,
   });
 
+  const { data: goalsRes } = useQuery({
+    queryKey: ['goals', form?.kidId],
+    queryFn: () => goalsApi.getForKid(form!.kidId),
+    enabled: !!form?.kidId,
+  });
+
+  const { data: practitionersRes } = useQuery({
+    queryKey: ['practitioners', form?.kidId],
+    queryFn: () => practitionersApi.getForKid(form!.kidId),
+    enabled: !!form?.kidId,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => meetingFormsApi.delete(formId!),
     onSuccess: () => {
@@ -63,6 +76,8 @@ export default function MeetingFormView() {
   });
 
   const kid = kidRes?.data;
+  const goals = (goalsRes?.data || []).filter((g: Goal) => g.isActive !== false);
+  const practitioners = practitionersRes?.data || [];
 
   if (isLoading) {
     return (
@@ -162,6 +177,20 @@ export default function MeetingFormView() {
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Goals Weekly Table (read-only reference) */}
+        {goals.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontWeight: 600, marginBottom: '8px', color: '#4a5568' }}>מטרות - סטטוס שבועי</div>
+            <GoalsWeeklyTable
+              kidId={form.kidId}
+              goals={goals}
+              selectedGoals={new Set()}
+              currentFormDate={format(toDate(form.sessionDate), 'yyyy-MM-dd')}
+              practitioners={practitioners}
+            />
           </div>
         )}
 

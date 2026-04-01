@@ -1580,6 +1580,101 @@ async function deleteBoardRequest(id) {
   await db.collection('boardRequests').doc(id).delete();
 }
 
+// ==================== CREW HOURS ====================
+
+async function getCrewHours(adminId, { from, to, kidId } = {}) {
+  const db = getDb();
+
+  // Get admin's kids (or filter to specific kid)
+  let kidIds;
+  if (kidId) {
+    kidIds = [kidId];
+  } else {
+    const kidsSnap = await db.collection('kids')
+      .where('adminId', '==', adminId)
+      .get();
+    kidIds = kidsSnap.docs.map(d => d.id);
+  }
+
+  if (kidIds.length === 0) return [];
+
+  // Firestore 'in' queries are limited to 30 items, batch if needed
+  const allForms = [];
+  for (let i = 0; i < kidIds.length; i += 30) {
+    const batch = kidIds.slice(i, i + 30);
+    const snap = await db.collection('sessionForms')
+      .where('kidId', 'in', batch)
+      .get();
+    allForms.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
+
+  // Parse dates and filter by range
+  const fromDate = from ? new Date(from) : null;
+  const toDate = to ? new Date(to) : null;
+  if (toDate) toDate.setHours(23, 59, 59, 999);
+
+  const filtered = allForms.filter(f => {
+    if (!f.practitionerId || !f.sessionDuration) return false;
+    const d = f.sessionDate?.seconds
+      ? new Date(f.sessionDate.seconds * 1000)
+      : new Date(f.sessionDate);
+    if (fromDate && d < fromDate) return false;
+    if (toDate && d > toDate) return false;
+    return true;
+  });
+
+  // Aggregate by practitioner
+  const byPractitioner = {};
+  for (const f of filtered) {
+    if (!byPractitioner[f.practitionerId]) {
+      byPractitioner[f.practitionerId] = { totalMinutes: 0, sessionCount: 0, kids: {} };
+    }
+    const entry = byPractitioner[f.practitionerId];
+    entry.totalMinutes += Number(f.sessionDuration) || 0;
+    entry.sessionCount += 1;
+    if (!entry.kids[f.kidId]) entry.kids[f.kidId] = { totalMinutes: 0, sessionCount: 0 };
+    entry.kids[f.kidId].totalMinutes += Number(f.sessionDuration) || 0;
+    entry.kids[f.kidId].sessionCount += 1;
+  }
+
+  // Fetch practitioner names
+  const practitionerIds = Object.keys(byPractitioner);
+  const practitionerMap = {};
+  for (let i = 0; i < practitionerIds.length; i += 30) {
+    const batch = practitionerIds.slice(i, i + 30);
+    const snap = await db.getAll(...batch.map(id => db.collection('practitioners').doc(id)));
+    for (const doc of snap) {
+      if (doc.exists) practitionerMap[doc.id] = { id: doc.id, ...doc.data() };
+    }
+  }
+
+  // Fetch kid names
+  const allKidIds = [...new Set(filtered.map(f => f.kidId))];
+  const kidMap = {};
+  for (let i = 0; i < allKidIds.length; i += 30) {
+    const batch = allKidIds.slice(i, i + 30);
+    const snap = await db.getAll(...batch.map(id => db.collection('kids').doc(id)));
+    for (const doc of snap) {
+      if (doc.exists) kidMap[doc.id] = doc.data().name || doc.id;
+    }
+  }
+
+  // Build result
+  return practitionerIds.map(pid => ({
+    practitionerId: pid,
+    practitionerName: practitionerMap[pid]?.name || 'לא ידוע',
+    practitionerType: practitionerMap[pid]?.type || '',
+    totalMinutes: byPractitioner[pid].totalMinutes,
+    sessionCount: byPractitioner[pid].sessionCount,
+    kids: Object.entries(byPractitioner[pid].kids).map(([kid, data]) => ({
+      kidId: kid,
+      kidName: kidMap[kid] || kid,
+      totalMinutes: data.totalMinutes,
+      sessionCount: data.sessionCount,
+    })),
+  })).sort((a, b) => b.totalMinutes - a.totalMinutes);
+}
+
 // ==================== INIT ====================
 
 async function initializeSuperAdmin() {
@@ -1958,6 +2053,8 @@ module.exports = {
   getBoardRequests,
   updateBoardRequest,
   deleteBoardRequest,
+  // Crew Hours
+  getCrewHours,
   // Init
   initializeSuperAdmin,
   initializeGoalCategories,

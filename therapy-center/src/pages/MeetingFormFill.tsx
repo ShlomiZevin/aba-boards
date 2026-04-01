@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { kidsApi, practitionersApi, parentsApi, sessionsApi, meetingFormsApi } from '../api/client';
+import { kidsApi, practitionersApi, parentsApi, sessionsApi, meetingFormsApi, goalsApi } from '../api/client';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { toDate } from '../utils/date';
-import type { Practitioner, Parent, MeetingAttendee, MeetingForm, Session } from '../types';
+import type { Practitioner, Parent, MeetingAttendee, MeetingForm, Session, Goal } from '../types';
 import RichTextEditor from '../components/RichTextEditor';
+import GoalsWeeklyTable from '../components/GoalsWeeklyTable';
 
 
 
@@ -95,6 +96,12 @@ export default function MeetingFormFill() {
     enabled: !!kidId,
   });
 
+  const { data: goalsRes } = useQuery({
+    queryKey: ['goals', kidId],
+    queryFn: () => goalsApi.getForKid(kidId),
+    enabled: !!kidId,
+  });
+
   const submitMutation = useMutation({
     mutationFn: (data: Omit<MeetingForm, 'id' | 'createdAt' | 'updatedAt'>) =>
       meetingFormsApi.submit(data),
@@ -119,6 +126,7 @@ export default function MeetingFormFill() {
   const kid = kidRes?.data;
   const practitioners = practitionersRes?.data || [];
   const parents = parentsRes?.data || [];
+  const goals = (goalsRes?.data || []).filter((g: Goal) => g.isActive !== false);
 
   const toggleAttendee = (id: string, name: string, type: 'parent' | 'practitioner') => {
     const existing = selectedAttendees.find((a) => a.id === id);
@@ -248,6 +256,20 @@ export default function MeetingFormFill() {
               )}
             </div>
           </div>
+
+          {/* Goals Weekly Table (read-only reference) */}
+          {goals.length > 0 && (
+            <div className="form-group">
+              <label style={{ marginBottom: '12px' }}>מטרות - סטטוס שבועי</label>
+              <GoalsWeeklyTable
+                kidId={kidId}
+                goals={goals}
+                selectedGoals={new Set()}
+                currentFormDate={sessionDate}
+                practitioners={practitioners}
+              />
+            </div>
+          )}
 
           {/* Rich Text Fields */}
           <div className="form-group">

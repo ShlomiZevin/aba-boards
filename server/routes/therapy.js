@@ -638,6 +638,14 @@ router.delete('/summaries/:id', requireAdmin, asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
+// ==================== CREW HOURS ====================
+
+router.get('/crew-hours', asyncHandler(async (req, res) => {
+  const { from, to, kidId } = req.query;
+  const hours = await therapyService.getCrewHours(req.adminId, { from, to, kidId });
+  res.json(hours);
+}));
+
 // ==================== BOARD REQUESTS ====================
 
 const { createBoardFromRequest } = require('../services/board-generator');
