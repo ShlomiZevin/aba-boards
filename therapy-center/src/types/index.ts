@@ -312,6 +312,8 @@ export interface MeetingForm {
   kidId: string;
   sessionDate: Date;
   attendees: MeetingAttendee[];
+  goalsWorkedOn: GoalSnapshot[];
+  additionalGoals: string[];
   generalNotes: string;
   behaviorNotes: string;
   adl: string;

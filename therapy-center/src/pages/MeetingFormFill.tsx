@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { kidsApi, practitionersApi, parentsApi, sessionsApi, meetingFormsApi, goalsApi } from '../api/client';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { toDate } from '../utils/date';
-import type { Practitioner, Parent, MeetingAttendee, MeetingForm, Session, Goal } from '../types';
+import type { Practitioner, Parent, MeetingAttendee, MeetingForm, Session, Goal, GoalSnapshot } from '../types';
 import RichTextEditor from '../components/RichTextEditor';
 import GoalsWeeklyTable from '../components/GoalsWeeklyTable';
 
@@ -34,6 +34,9 @@ export default function MeetingFormFill() {
   const [programsOutsideRoom, setProgramsOutsideRoom] = useState('');
   const [learningProgramsInRoom, setLearningProgramsInRoom] = useState('');
   const [tasks, setTasks] = useState('');
+  const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
+  const [additionalGoals, setAdditionalGoals] = useState<string[]>([]);
+  const [newGoalText, setNewGoalText] = useState('');
   const [initialized, setInitialized] = useState(false);
 
   // Load existing form for edit mode
@@ -65,6 +68,8 @@ export default function MeetingFormFill() {
     setProgramsOutsideRoom(form.programsOutsideRoom || '');
     setLearningProgramsInRoom(form.learningProgramsInRoom || '');
     setTasks(form.tasks || '');
+    setSelectedGoals(new Set((form.goalsWorkedOn || []).map((g: GoalSnapshot) => g.goalId)));
+    setAdditionalGoals(form.additionalGoals || []);
     setInitialized(true);
   }, [isEditMode, existingFormRes, initialized]);
 
@@ -128,6 +133,27 @@ export default function MeetingFormFill() {
   const parents = parentsRes?.data || [];
   const goals = (goalsRes?.data || []).filter((g: Goal) => g.isActive !== false);
 
+  const toggleGoal = (goalId: string) => {
+    const newSet = new Set(selectedGoals);
+    if (newSet.has(goalId)) {
+      newSet.delete(goalId);
+    } else {
+      newSet.add(goalId);
+    }
+    setSelectedGoals(newSet);
+  };
+
+  const addCustomGoal = () => {
+    if (newGoalText.trim()) {
+      setAdditionalGoals([...additionalGoals, newGoalText.trim()]);
+      setNewGoalText('');
+    }
+  };
+
+  const removeCustomGoal = (index: number) => {
+    setAdditionalGoals(additionalGoals.filter((_, i) => i !== index));
+  };
+
   const toggleAttendee = (id: string, name: string, type: 'parent' | 'practitioner') => {
     const existing = selectedAttendees.find((a) => a.id === id);
     if (existing) {
@@ -141,11 +167,19 @@ export default function MeetingFormFill() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const goalsWorkedOn: GoalSnapshot[] = Array.from(selectedGoals).map((goalId) => {
+      const goal = goals.find((g: Goal) => g.id === goalId)!;
+      return { goalId: goal.id, goalTitle: goal.title, categoryId: goal.categoryId };
+    });
+
     const data = {
       sessionId,
       kidId,
       sessionDate: new Date(sessionDate),
       attendees: selectedAttendees,
+      goalsWorkedOn,
+      additionalGoals,
       generalNotes,
       behaviorNotes,
       adl,
@@ -257,20 +291,6 @@ export default function MeetingFormFill() {
             </div>
           </div>
 
-          {/* Goals Weekly Table (read-only reference) */}
-          {goals.length > 0 && (
-            <div className="form-group">
-              <label style={{ marginBottom: '12px' }}>מטרות - סטטוס שבועי</label>
-              <GoalsWeeklyTable
-                kidId={kidId}
-                goals={goals}
-                selectedGoals={new Set()}
-                currentFormDate={sessionDate}
-                practitioners={practitioners}
-              />
-            </div>
-          )}
-
           {/* Rich Text Fields */}
           <div className="form-group">
             <label>נקודות כלליות</label>
@@ -299,6 +319,49 @@ export default function MeetingFormFill() {
           <div className="form-group">
             <label>משימות</label>
             <RichTextEditor value={tasks} onChange={setTasks} />
+          </div>
+
+          {/* Goals Section */}
+          <div className="form-group">
+            <label style={{ marginBottom: '12px' }}>מטרות שעבדנו עליהן</label>
+
+            <GoalsWeeklyTable
+              kidId={kidId}
+              goals={goals}
+              selectedGoals={selectedGoals}
+              onToggleGoal={toggleGoal}
+              currentFormDate={sessionDate}
+              currentFormId={isEditMode ? formId : undefined}
+              practitioners={practitioners}
+            />
+
+            {/* Additional Goals */}
+            <div className="custom-goals">
+              <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#4a5568', marginBottom: '8px' }}>
+                מטרות נוספות (לא ברשימה)
+              </div>
+
+              {additionalGoals.map((goal, idx) => (
+                <span key={idx} className="custom-goal-tag">
+                  {goal}
+                  <button type="button" onClick={() => removeCustomGoal(idx)}>
+                    ✕
+                  </button>
+                </span>
+              ))}
+
+              <div className="add-custom-goal">
+                <input
+                  type="text"
+                  value={newGoalText}
+                  onChange={(e) => setNewGoalText(e.target.value)}
+                  placeholder="הוסף מטרה נוספת..."
+                />
+                <button type="button" onClick={addCustomGoal} className="btn-secondary btn-small">
+                  הוסף
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="form-actions">

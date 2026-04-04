@@ -180,20 +180,6 @@ export default function MeetingFormView() {
           </div>
         )}
 
-        {/* Goals Weekly Table (read-only reference) */}
-        {goals.length > 0 && (
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontWeight: 600, marginBottom: '8px', color: '#4a5568' }}>מטרות - סטטוס שבועי</div>
-            <GoalsWeeklyTable
-              kidId={form.kidId}
-              goals={goals}
-              selectedGoals={new Set()}
-              currentFormDate={format(toDate(form.sessionDate), 'yyyy-MM-dd')}
-              practitioners={practitioners}
-            />
-          </div>
-        )}
-
         {/* Rich Text Fields */}
         <FieldRow label="נקודות כלליות">
           <RichTextDisplay html={form.generalNotes} />
@@ -216,6 +202,37 @@ export default function MeetingFormView() {
         <FieldRow label="משימות">
           <RichTextDisplay html={form.tasks} />
         </FieldRow>
+
+        {/* Goals */}
+        <div className="goals-list">
+          <h4>מטרות שעבדנו עליהן</h4>
+
+          <GoalsWeeklyTable
+            kidId={form.kidId}
+            goals={goals}
+            selectedGoals={new Set((form.goalsWorkedOn || []).map((g: { goalId: string }) => g.goalId))}
+            currentFormDate={format(toDate(form.sessionDate), 'yyyy-MM-dd')}
+            currentFormId={form.id}
+            practitioners={practitioners}
+          />
+
+          {(form.additionalGoals || []).length > 0 && (
+            <div className="goals-category">
+              <div className="goals-category-name" style={{ color: '#64748b' }}>
+                מטרות נוספות
+              </div>
+              <ul>
+                {form.additionalGoals.map((g: string, idx: number) => (
+                  <li key={idx}>{g}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {(form.goalsWorkedOn || []).length === 0 && (form.additionalGoals || []).length === 0 && (
+            <p style={{ color: '#a0aec0' }}>לא צוינו מטרות</p>
+          )}
+        </div>
 
         <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '2px solid #f0f4f8', fontSize: '0.85em', color: '#a0aec0' }}>
           נוצר ב-{format(toDate(form.createdAt), 'dd/MM/yyyy HH:mm')}

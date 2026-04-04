@@ -354,11 +354,13 @@ router.post('/kids/:kidId/goal-data/:goalLibraryId', asyncHandler(async (req, re
 }));
 
 router.put('/kids/:kidId/goal-data/:goalLibraryId/:entryId', asyncHandler(async (req, res) => {
+  const requesterId = req.practitionerId || req.adminId || null;
   const entry = await therapyService.updateGoalDataEntry(
     req.params.kidId,
     req.params.goalLibraryId,
     req.params.entryId,
-    req.body
+    req.body,
+    requesterId
   );
   res.json(entry);
 }));

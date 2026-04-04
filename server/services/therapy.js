@@ -815,7 +815,7 @@ async function addGoalDataEntry(kidId, goalLibraryId, data) {
   return { id, ...entry };
 }
 
-async function updateGoalDataEntry(kidId, goalLibraryId, entryId, data) {
+async function updateGoalDataEntry(kidId, goalLibraryId, entryId, data, requesterId) {
   const db = getDb();
   const doc = await db.collection('kidGoalDataEntries').doc(entryId).get();
   if (!doc.exists) throw new Error('Entry not found');
@@ -827,7 +827,12 @@ async function updateGoalDataEntry(kidId, goalLibraryId, entryId, data) {
     tables: data.tables || [],
     status: 'filled',
     updatedAt: new Date(),
+    updatedBy: requesterId || null,
   };
+  // Set filledBy only on first fill (pending → filled), never overwrite
+  if (existing.status === 'pending' && requesterId) {
+    updates.filledBy = requesterId;
+  }
   await doc.ref.update(updates);
   return { id: entryId, ...existing, ...updates };
 }
@@ -1794,6 +1799,8 @@ async function submitMeetingForm(data) {
     kidId: data.kidId,
     sessionDate,
     attendees: data.attendees || [],
+    goalsWorkedOn: data.goalsWorkedOn || [],
+    additionalGoals: data.additionalGoals || [],
     generalNotes: data.generalNotes || '',
     behaviorNotes: data.behaviorNotes || '',
     adl: data.adl || '',
@@ -1811,12 +1818,36 @@ async function submitMeetingForm(data) {
     await db.collection('sessions').doc(data.sessionId).update({ status: 'completed', formId });
   }
 
+  // Auto-create pending DC entries for goals that have DC templates (unassigned)
+  const goalsWorkedOn = data.goalsWorkedOn || [];
+  if (goalsWorkedOn.length > 0) {
+    try {
+      const goals = await getGoalsForKid(data.kidId);
+      for (const snapshot of goalsWorkedOn) {
+        const goal = goals.find(g => g.id === snapshot.goalId);
+        if (!goal || !goal.libraryItemId) continue;
+        const dcBlocks = normalizeTemplateBlocks(goal.dataCollectionTemplate);
+        if (dcBlocks.length === 0 || !dcBlocks.some(b => b.columns && b.columns.length > 0)) continue;
+        await addGoalDataEntry(data.kidId, goal.libraryItemId, {
+          goalTitle: goal.title,
+          sessionDate: data.sessionDate,
+          practitionerId: null,
+          tables: [],
+          status: 'pending',
+          meetingFormId: formId,
+        });
+      }
+    } catch (err) {
+      console.error('[submitMeetingForm] Failed to auto-create pending DC entries:', err);
+    }
+  }
+
   return { id: formId, ...form };
 }
 
 async function updateMeetingForm(id, data) {
   const db = getDb();
-  const allowed = ['attendees', 'generalNotes', 'behaviorNotes', 'adl',
+  const allowed = ['attendees', 'goalsWorkedOn', 'additionalGoals', 'generalNotes', 'behaviorNotes', 'adl',
     'grossMotorPrograms', 'programsOutsideRoom', 'learningProgramsInRoom', 'tasks', 'sessionDate'];
   const updates = { updatedAt: new Date() };
   for (const field of allowed) {
