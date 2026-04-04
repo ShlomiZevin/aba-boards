@@ -18,6 +18,25 @@ function fmtHours(m: number) {
   return `${h}:${String(mins).padStart(2, '0')} שע׳`;
 }
 
+function fmtDate(iso: string) {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString('he-IL', { weekday: 'short' });
+  return `${day} ${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+function fmtTime(iso: string) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function fmtTimeRange(iso: string, durationMin: number) {
+  const start = new Date(iso);
+  const end = new Date(start.getTime() + durationMin * 60000);
+  const s = fmtTime(start.toISOString());
+  const e = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+  return `${s} – ${e}`;
+}
+
 function getMonthRange(offset: number) {
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
@@ -49,10 +68,10 @@ export default function CrewHours() {
         <h2>שעות צוות</h2>
       </div>
 
-      {/* Month navigation */}
+      {/* Month navigation — RTL: right arrow (&#9654;) = back in time, left arrow (&#9664;) = forward */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 24 }}>
         <button
-          onClick={() => setMonthOffset(o => o + 1)}
+          onClick={() => setMonthOffset(o => o - 1)}
           className="btn-secondary"
           style={{ padding: '6px 14px', fontSize: 14, minWidth: 0 }}
         >&#9654;</button>
@@ -60,7 +79,7 @@ export default function CrewHours() {
           {monthLabel}
         </span>
         <button
-          onClick={() => setMonthOffset(o => o - 1)}
+          onClick={() => setMonthOffset(o => o + 1)}
           disabled={monthOffset >= 0}
           className="btn-secondary"
           style={{ padding: '6px 14px', fontSize: 14, minWidth: 0, opacity: monthOffset >= 0 ? 0.35 : 1 }}
@@ -91,61 +110,83 @@ export default function CrewHours() {
             <span><strong style={{ color: '#2d3748', fontSize: 16 }}>{entries.length}</strong> אנשי צוות</span>
           </div>
 
-          {/* Table */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid #f0f4f8' }}>
-                <th style={{ textAlign: 'right', padding: '10px 6px', fontWeight: 600, color: '#64748b', fontSize: 12 }}>שם</th>
-                <th style={{ textAlign: 'right', padding: '10px 6px', fontWeight: 600, color: '#64748b', fontSize: 12 }}>תפקיד</th>
-                <th style={{ textAlign: 'center', padding: '10px 6px', fontWeight: 600, color: '#64748b', fontSize: 12 }}>טיפולים</th>
-                <th style={{ textAlign: 'left', padding: '10px 6px', fontWeight: 600, color: '#64748b', fontSize: 12 }}>שעות</th>
-                <th style={{ width: 30 }} />
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => {
-                const isExpanded = expandedId === entry.practitionerId;
-                return (
-                  <tr
-                    key={entry.practitionerId}
-                    onClick={() => setExpandedId(isExpanded ? null : entry.practitionerId)}
-                    style={{ borderBottom: '1px solid #f0f4f8', cursor: 'pointer' }}
-                  >
-                    <td style={{ padding: '12px 6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: '50%',
-                          background: crewColor(entry.practitionerId), color: 'white',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 13, fontWeight: 700, flexShrink: 0,
-                        }}>
-                          {entry.practitionerName.charAt(0)}
-                        </div>
-                        <span style={{ fontWeight: 500 }}>{entry.practitionerName}</span>
+          {/* Practitioner rows */}
+          {entries.map((entry) => {
+            const isExpanded = expandedId === entry.practitionerId;
+            return (
+              <div key={entry.practitionerId} style={{ borderBottom: '1px solid #f0f4f8' }}>
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : entry.practitionerId)}
+                  style={{
+                    display: 'flex', alignItems: 'center', width: '100%', padding: '14px 4px',
+                    background: 'none', border: 'none', cursor: 'pointer', gap: 12, textAlign: 'right',
+                  }}
+                >
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%',
+                    background: crewColor(entry.practitionerId), color: 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 13, fontWeight: 700, flexShrink: 0,
+                  }}>
+                    {entry.practitionerName.charAt(0)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontWeight: 500, fontSize: 14 }}>{entry.practitionerName}</span>
+                    {entry.practitionerType && (
+                      <span style={{ fontSize: 12, color: '#9ca3af', marginRight: 8 }}>{entry.practitionerType}</span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 13, color: '#64748b', minWidth: 60, textAlign: 'center' }}>{entry.sessionCount} {entry.sessionCount === 1 ? 'טיפול' : 'טיפולים'}</span>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: '#2d3748', minWidth: 70, textAlign: 'left' }}>{fmtHours(entry.totalMinutes)}</span>
+                  <span style={{
+                    fontSize: 11, color: '#9ca3af', transition: 'transform 0.2s',
+                    transform: isExpanded ? 'rotate(90deg)' : 'none',
+                  }}>◄</span>
+                </button>
+
+                {/* Drill-down */}
+                {isExpanded && (
+                  <div style={{ padding: '0 4px 16px 4px', marginRight: 44 }}>
+                    {/* Per-kid summary */}
+                    {entry.kids.length > 1 && (
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 4 }}>לפי ילד/ה</div>
+                        {entry.kids.map(kid => (
+                          <div key={kid.kidId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', padding: '2px 0' }}>
+                            <span>{kid.kidName}</span>
+                            <span>{fmtHours(kid.totalMinutes)} · {kid.sessionCount} {kid.sessionCount === 1 ? 'טיפול' : 'טיפולים'}</span>
+                          </div>
+                        ))}
                       </div>
-                      {/* Expanded kid breakdown inline */}
-                      {isExpanded && entry.kids.length > 0 && (
-                        <div style={{ marginTop: 8, marginRight: 42 }}>
-                          {entry.kids.map(kid => (
-                            <div key={kid.kidId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', padding: '3px 0' }}>
-                              <span>{kid.kidName}</span>
-                              <span>{fmtHours(kid.totalMinutes)} · {kid.sessionCount} {kid.sessionCount === 1 ? 'טיפול' : 'טיפולים'}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '12px 6px', color: '#64748b', fontSize: 13, verticalAlign: 'top', paddingTop: 16 }}>{entry.practitionerType || '—'}</td>
-                    <td style={{ padding: '12px 6px', textAlign: 'center', fontWeight: 500, verticalAlign: 'top', paddingTop: 16 }}>{entry.sessionCount}</td>
-                    <td style={{ padding: '12px 6px', textAlign: 'left', fontWeight: 600, color: '#2d3748', verticalAlign: 'top', paddingTop: 16 }}>{fmtHours(entry.totalMinutes)}</td>
-                    <td style={{ verticalAlign: 'top', paddingTop: 16, color: '#9ca3af', fontSize: 11, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'none' }}>
-                      ◄
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    )}
+
+                    {/* Session details table */}
+                    <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 4 }}>פירוט טיפולים</div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #f0f4f8' }}>
+                          <th style={{ textAlign: 'right', padding: '6px 4px', fontWeight: 600, color: '#9ca3af', fontSize: 11 }}>תאריך</th>
+                          <th style={{ textAlign: 'right', padding: '6px 4px', fontWeight: 600, color: '#9ca3af', fontSize: 11 }}>ילד/ה</th>
+                          <th style={{ textAlign: 'center', padding: '6px 4px', fontWeight: 600, color: '#9ca3af', fontSize: 11 }}>שעות</th>
+                          <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 600, color: '#9ca3af', fontSize: 11 }}>משך</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {entry.sessions.map((s, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #f8f9fa' }}>
+                            <td style={{ padding: '5px 4px', color: '#4a5568' }}>{fmtDate(s.date)}</td>
+                            <td style={{ padding: '5px 4px', color: '#64748b' }}>{s.kidName}</td>
+                            <td style={{ padding: '5px 4px', textAlign: 'center', color: '#4a5568', fontSize: 12, direction: 'ltr' }}>{fmtTimeRange(s.date, s.duration)}</td>
+                            <td style={{ padding: '5px 4px', textAlign: 'left', fontWeight: 500, color: '#2d3748' }}>{fmtHours(s.duration)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </>
       )}
     </div>

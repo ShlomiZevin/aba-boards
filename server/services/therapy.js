@@ -1632,13 +1632,22 @@ async function getCrewHours(adminId, { from, to, kidId } = {}) {
   const byPractitioner = {};
   for (const f of filtered) {
     if (!byPractitioner[f.practitionerId]) {
-      byPractitioner[f.practitionerId] = { totalMinutes: 0, sessionCount: 0, kids: {} };
+      byPractitioner[f.practitionerId] = { totalMinutes: 0, sessionCount: 0, kids: {}, sessions: [] };
     }
     const entry = byPractitioner[f.practitionerId];
-    entry.totalMinutes += Number(f.sessionDuration) || 0;
+    const duration = Number(f.sessionDuration) || 0;
+    const sessionDate = f.sessionDate?.seconds
+      ? new Date(f.sessionDate.seconds * 1000)
+      : new Date(f.sessionDate);
+    entry.totalMinutes += duration;
     entry.sessionCount += 1;
+    entry.sessions.push({
+      date: sessionDate.toISOString(),
+      duration,
+      kidId: f.kidId,
+    });
     if (!entry.kids[f.kidId]) entry.kids[f.kidId] = { totalMinutes: 0, sessionCount: 0 };
-    entry.kids[f.kidId].totalMinutes += Number(f.sessionDuration) || 0;
+    entry.kids[f.kidId].totalMinutes += duration;
     entry.kids[f.kidId].sessionCount += 1;
   }
 
@@ -1664,19 +1673,41 @@ async function getCrewHours(adminId, { from, to, kidId } = {}) {
     }
   }
 
-  // Build result
-  return practitionerIds.map(pid => ({
-    practitionerId: pid,
-    practitionerName: practitionerMap[pid]?.name || 'לא ידוע',
-    practitionerType: practitionerMap[pid]?.type || '',
-    totalMinutes: byPractitioner[pid].totalMinutes,
-    sessionCount: byPractitioner[pid].sessionCount,
-    kids: Object.entries(byPractitioner[pid].kids).map(([kid, data]) => ({
+  // Build result — group by practitioner name (not ID) so deleted+recreated practitioners merge
+  const byName = {};
+  for (const pid of practitionerIds) {
+    if (!practitionerMap[pid]) continue;
+    const name = practitionerMap[pid].name;
+    const type = practitionerMap[pid].type || '';
+    if (!byName[name]) {
+      byName[name] = { practitionerId: pid, practitionerType: type, totalMinutes: 0, sessionCount: 0, kids: {}, sessions: [] };
+    }
+    const group = byName[name];
+    group.totalMinutes += byPractitioner[pid].totalMinutes;
+    group.sessionCount += byPractitioner[pid].sessionCount;
+    for (const [kid, data] of Object.entries(byPractitioner[pid].kids)) {
+      if (!group.kids[kid]) group.kids[kid] = { totalMinutes: 0, sessionCount: 0 };
+      group.kids[kid].totalMinutes += data.totalMinutes;
+      group.kids[kid].sessionCount += data.sessionCount;
+    }
+    group.sessions.push(...byPractitioner[pid].sessions);
+  }
+
+  return Object.entries(byName).map(([name, group]) => ({
+    practitionerId: group.practitionerId,
+    practitionerName: name,
+    practitionerType: group.practitionerType,
+    totalMinutes: group.totalMinutes,
+    sessionCount: group.sessionCount,
+    kids: Object.entries(group.kids).map(([kid, data]) => ({
       kidId: kid,
       kidName: kidMap[kid] || kid,
       totalMinutes: data.totalMinutes,
       sessionCount: data.sessionCount,
     })),
+    sessions: group.sessions
+      .map(s => ({ ...s, kidName: kidMap[s.kidId] || s.kidId }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
   })).sort((a, b) => b.totalMinutes - a.totalMinutes);
 }
 

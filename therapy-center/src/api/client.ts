@@ -522,6 +522,13 @@ export const adminApi = {
 };
 
 // Crew Hours API
+export interface CrewHoursSession {
+  date: string;
+  duration: number;
+  kidId: string;
+  kidName: string;
+}
+
 export interface CrewHoursEntry {
   practitionerId: string;
   practitionerName: string;
@@ -529,6 +536,7 @@ export interface CrewHoursEntry {
   totalMinutes: number;
   sessionCount: number;
   kids: { kidId: string; kidName: string; totalMinutes: number; sessionCount: number }[];
+  sessions: CrewHoursSession[];
 }
 
 export const crewHoursApi = {
