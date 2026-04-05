@@ -28,6 +28,7 @@ import SummaryView from './pages/SummaryView';
 import LandingPage from './pages/LandingPage';
 import LandingPageV2 from './pages/LandingPageV2';
 import LandingPageV3 from './pages/LandingPageV3';
+import LandingNew from './pages/LandingNew';
 import AppShell from './components/AppShell';
 import SubscriptionGate from './components/SubscriptionGate';
 import TherapistShell from './components/TherapistShell';
@@ -169,6 +170,7 @@ function App() {
             <Route path="/welcome" element={<LandingPage />} />
             <Route path="/welcome-v2" element={<LandingPageV2 />} />
             <Route path="/welcome-v3" element={<LandingPageV3 />} />
+            <Route path="/welcome-new" element={<LandingNew />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/subscription/success" element={<SubscriptionSuccess />} />
