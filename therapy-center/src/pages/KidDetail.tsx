@@ -235,9 +235,11 @@ function CrewHoursTab({ kidId }: { kidId: string }) {
   const { from, to, label: monthLabel } = useMemo(() => {
     const now = new Date();
     const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
-    const fr = d.toISOString().slice(0, 10);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (dt: Date) => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+    const fr = fmt(d);
     const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-    const t = last.toISOString().slice(0, 10);
+    const t = fmt(last);
     const label = d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
     return { from: fr, to: t, label };
   }, [monthOffset]);

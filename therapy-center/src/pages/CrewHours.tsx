@@ -37,12 +37,15 @@ function fmtTimeRange(iso: string, durationMin: number) {
   return `${s} – ${e}`;
 }
 
+function pad(n: number) { return String(n).padStart(2, '0'); }
+function localDateStr(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
 function getMonthRange(offset: number) {
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  const from = d.toISOString().slice(0, 10);
+  const from = localDateStr(d);
   const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  const to = last.toISOString().slice(0, 10);
+  const to = localDateStr(last);
   const label = d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
   return { from, to, label };
 }
