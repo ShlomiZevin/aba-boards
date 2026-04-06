@@ -1587,7 +1587,7 @@ async function deleteBoardRequest(id) {
 
 // ==================== CREW HOURS ====================
 
-async function getCrewHours(adminId, { from, to, kidId } = {}) {
+async function getCrewHours(adminId, { from, to, kidId, filterPractitionerId } = {}) {
   const db = getDb();
 
   // Get admin's kids (or filter to specific kid)
@@ -1620,6 +1620,7 @@ async function getCrewHours(adminId, { from, to, kidId } = {}) {
 
   const filtered = allForms.filter(f => {
     if (!f.practitionerId || !f.sessionDuration) return false;
+    if (filterPractitionerId && f.practitionerId !== filterPractitionerId) return false;
     const d = f.sessionDate?.seconds
       ? new Date(f.sessionDate.seconds * 1000)
       : new Date(f.sessionDate);

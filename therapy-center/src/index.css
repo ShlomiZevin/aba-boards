@@ -10253,15 +10253,16 @@ input.bb-kid-name::placeholder {
 .ln-hero-text {
   flex: 1;
   min-width: 0;
-  text-align: right;
 }
 
 /* ---- STAT COUNTERS ---- */
 .ln-stats-row {
   display: flex;
-  justify-content: flex-start;
-  gap: 36px;
-  margin-top: 28px;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
 }
 .ln-stat-item {
   text-align: center;
@@ -10309,12 +10310,17 @@ input.bb-kid-name::placeholder {
   margin-bottom: 18px;
   letter-spacing: -.5px;
   color: #4c1d95;
+  text-align: center;
 }
 .ln-hero-subtitle {
   font-size: 16px;
   line-height: 1.7;
   color: #78716c;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  text-align: right;
+  max-width: 440px;
+  margin-right: auto;
+  margin-left: auto;
 }
 
 /* Buttons */
@@ -10322,7 +10328,7 @@ input.bb-kid-name::placeholder {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
-  justify-content: flex-start;
+  justify-content: center;
 }
 .ln-btn {
   display: inline-flex;

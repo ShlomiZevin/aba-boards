@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { kidsApi, chatApi, summariesApi } from '../api/client';
+import { kidsApi, chatApi, summariesApi, practitionersApi } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 import ConfirmModal from '../components/ConfirmModal';
 import type { Kid } from '../types';
@@ -21,7 +21,7 @@ interface ChatMessage {
 }
 
 export default function ChatCenter() {
-  const { isParentView, parentKidId } = useTherapist();
+  const { isParentView, parentKidId, isTherapistView, practitionerId } = useTherapist();
 
   const welcomeMessage = isParentView
     ? 'שלום! אני העוזרת של Doing. אפשר לשאול אותי שאלות על ההתקדמות של הילד/ה, להבין את המטרות, או לקבל טיפים. איך אפשר לעזור?'
@@ -37,11 +37,14 @@ export default function ChatCenter() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: kidsResult } = useQuery({
-    queryKey: ['kids'],
-    queryFn: () => kidsApi.getAll(),
+    queryKey: isTherapistView ? ['therapist-kids', practitionerId] : ['kids'],
+    queryFn: () => isTherapistView && practitionerId
+      ? practitionersApi.getKidsForPractitioner(practitionerId)
+      : kidsApi.getAll(),
     enabled: !isParentView,
   });
   const kids: Kid[] = kidsResult?.success ? (kidsResult.data ?? []) : [];
+  const requiresKidSelection = isTherapistView && !selectedKidId;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,7 +52,7 @@ export default function ChatCenter() {
 
   const sendMessage = async (extraBody?: Record<string, unknown>, overrideText?: string) => {
     const text = (overrideText || input).trim();
-    if (!text || isSending) return;
+    if (!text || isSending || requiresKidSelection) return;
 
     setInput('');
     const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: text };
@@ -179,7 +182,10 @@ export default function ChatCenter() {
               value={selectedKidId || ''}
               onChange={e => setSelectedKidId(e.target.value || null)}
             >
-              <option value="">כל הילדים</option>
+              {isTherapistView
+                ? <option value="">בחרו ילד/ה</option>
+                : <option value="">כל הילדים</option>
+              }
               {kids.map(kid => (
                 <option key={kid.id} value={kid.id}>{kid.name}</option>
               ))}
@@ -235,14 +241,14 @@ export default function ChatCenter() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
-          placeholder={isParentView ? "שאלו שאלה על הילד/ה, על ההתקדמות, או בקשו טיפים..." : "שאלו שאלה, בקשו לבנות לוח, או בקשו סיכום..."}
-          disabled={isSending}
+          placeholder={requiresKidSelection ? "יש לבחור ילד/ה לפני שליחת הודעה" : isParentView ? "שאלו שאלה על הילד/ה, על ההתקדמות, או בקשו טיפים..." : "שאלו שאלה, בקשו לבנות לוח, או בקשו סיכום..."}
+          disabled={isSending || requiresKidSelection}
           autoFocus
         />
         <button
           className="chat-center-send-btn"
           onClick={() => sendMessage()}
-          disabled={isSending || !input.trim()}
+          disabled={isSending || !input.trim() || requiresKidSelection}
         >
           ➤
         </button>

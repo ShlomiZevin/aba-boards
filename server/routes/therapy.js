@@ -31,6 +31,19 @@ router.post('/chat', asyncHandler(async (req, res) => {
   // Parents are locked to their own kid
   const effectiveKidId = parentKidId || kidId || null;
 
+  // Therapists MUST provide a kidId — prevents data leaks across kids
+  if (req.authType === 'therapist' && !effectiveKidId) {
+    return res.status(400).json({ error: 'Therapists must select a kid before chatting' });
+  }
+
+  // Verify therapist has access to the selected kid
+  if (req.authType === 'therapist' && effectiveKidId && practitionerId) {
+    const myKids = await therapyService.getKidsForPractitioner(practitionerId);
+    if (!myKids.some(k => k.id === effectiveKidId)) {
+      return res.status(403).json({ error: 'No access to this kid' });
+    }
+  }
+
   if (stream) {
     // SSE streaming mode — send tool status updates in real time
     res.writeHead(200, {
@@ -644,7 +657,9 @@ router.delete('/summaries/:id', requireAdmin, asyncHandler(async (req, res) => {
 
 router.get('/crew-hours', asyncHandler(async (req, res) => {
   const { from, to, kidId } = req.query;
-  const hours = await therapyService.getCrewHours(req.adminId, { from, to, kidId });
+  // Therapists see only their own hours
+  const filterPractitionerId = req.authType === 'therapist' ? req.practitionerId : null;
+  const hours = await therapyService.getCrewHours(req.adminId, { from, to, kidId, filterPractitionerId });
   res.json(hours);
 }));
 

@@ -1049,7 +1049,7 @@ export default function KidDetail() {
                 תוכניות למידה
               </button>
             )}
-            {(isParentView || isAdmin) && (
+            {(isParentView || isAdmin || isTherapistView) && (
               <button className={`kid-tab${kidTab === 'crew-hours' ? ' active' : ''}`} onClick={() => setKidTab('crew-hours')}>
                 שעות צוות
               </button>
@@ -2601,7 +2601,7 @@ export default function KidDetail() {
           { key: 'notifications' as const, label: 'הודעות' },
           { key: 'plans' as const, label: 'א. נתונים' },
           ...(!isParentView ? [{ key: 'learning-plans' as const, label: 'ת. למידה' }] : []),
-          ...((isParentView || isAdmin) ? [{ key: 'crew-hours' as const, label: 'שעות' }] : []),
+          ...((isParentView || isAdmin || isTherapistView) ? [{ key: 'crew-hours' as const, label: 'שעות' }] : []),
         ] as const).map(tab => (
           <button
             key={tab.key}
