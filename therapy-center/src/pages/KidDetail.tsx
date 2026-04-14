@@ -56,6 +56,7 @@ import GoalProgressChart from '../components/GoalProgressChart';
 import GoalPlansTab from '../components/GoalPlansTab';
 import LearningPlansTab from '../components/LearningPlansTab';
 import DcEntryModal from '../components/DcEntryModal';
+import CreatePendingDcModal from '../components/CreatePendingDcModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 
@@ -408,6 +409,7 @@ export default function KidDetail() {
   const [pendingReadIds, setPendingReadIds] = useState<Set<string>>(new Set());
   const [dcModalEntry, setDcModalEntry] = useState<KidGoalDataEntry | null>(null);
   const [dcModalOpen, setDcModalOpen] = useState(false);
+  const [createPendingDcOpen, setCreatePendingDcOpen] = useState(false);
   const [dcDeleteConfirm, setDcDeleteConfirm] = useState<string | null>(null);
   const [dcSectionExpanded, setDcSectionExpanded] = useState(true);
   const [sessionsSectionExpanded, setSessionsSectionExpanded] = useState(true);
@@ -1636,10 +1638,15 @@ export default function KidDetail() {
               {dcSectionExpanded && (
                 <div className="dc-section-body">
                   {!isReadOnly && (
-                    <div style={{ marginBottom: 12 }}>
+                    <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button className="btn-primary btn-small" onClick={() => { setDcModalEntry(null); setDcModalOpen(true); }}>
-                        + הוסף רשומה
+                        + הוסף טופס איסוף נתונים
                       </button>
+                      {isAdmin && (
+                        <button className="btn-secondary btn-small" onClick={() => setCreatePendingDcOpen(true)}>
+                          + צור טופס ממתין
+                        </button>
+                      )}
                     </div>
                   )}
                   {allDc.length === 0 ? (
@@ -1755,6 +1762,15 @@ export default function KidDetail() {
             practitioners={practitioners}
             entry={dcModalEntry}
             onClose={() => { setDcModalOpen(false); setDcModalEntry(null); }}
+          />
+        )}
+
+        {createPendingDcOpen && (
+          <CreatePendingDcModal
+            kidId={kidId!}
+            goals={goals}
+            practitioners={practitioners}
+            onClose={() => setCreatePendingDcOpen(false)}
           />
         )}
 

@@ -1396,6 +1396,14 @@ body {
   display: flex;
   flex-direction: column;
 }
+/* Small DC modal for create-pending */
+.dc-modal-small {
+  max-width: 420px;
+  width: 90vw;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
 /* Cell option picker (custom select for compact options) */
 .cell-option-trigger {
   cursor: pointer;

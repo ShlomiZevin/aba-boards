@@ -245,7 +245,7 @@ export const goalDataApi = {
   addEntry: (
     kidId: string,
     goalLibraryId: string,
-    data: { goalTitle: string; sessionDate: string; practitionerId?: string; tables: TableBlockData[] }
+    data: { goalTitle: string; sessionDate: string; practitionerId?: string; tables: TableBlockData[]; status?: string }
   ) =>
     fetchApi<KidGoalDataEntry>(`/kids/${kidId}/goal-data/${goalLibraryId}`, {
       method: 'POST',

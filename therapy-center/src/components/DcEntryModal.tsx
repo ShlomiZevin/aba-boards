@@ -103,7 +103,7 @@ export default function DcEntryModal({
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {/* Add mode: goal selector + date */}
           {isAdding && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20, maxWidth: 400 }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.9em', fontWeight: 600, color: '#475569', marginBottom: 6 }}>
                   מטרה
@@ -114,6 +114,7 @@ export default function DcEntryModal({
                   style={{
                     width: '100%', padding: '10px 14px', borderRadius: 8,
                     border: '1.5px solid #e2e8f0', fontSize: '0.95em', fontFamily: 'inherit',
+                    maxWidth: 400, boxSizing: 'border-box',
                   }}
                 >
                   <option value="">בחר מטרה...</option>
@@ -264,9 +265,9 @@ export default function DcEntryModal({
           )}
         </div>
 
-        {hasTemplate && selectedGoalLibraryId && (
-          <div className="modal-actions" style={{ flexShrink: 0, marginTop: 16 }}>
-            <button className="btn-secondary" onClick={onClose}>ביטול</button>
+        <div className="modal-actions" style={{ flexShrink: 0, marginTop: 16 }}>
+          <button className="btn-secondary" onClick={onClose}>ביטול</button>
+          {hasTemplate && selectedGoalLibraryId && (
             <button
               className="btn-primary"
               disabled={saveMutation.isPending}
@@ -274,8 +275,8 @@ export default function DcEntryModal({
             >
               {saveMutation.isPending ? 'שומר...' : 'שמור'}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
