@@ -107,6 +107,7 @@ export default function ChatCenter() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [summaryKidId, setSummaryKidId] = useState('');
   const [summaryWeeks, setSummaryWeeks] = useState('2');
+  const [summaryDetail, setSummaryDetail] = useState<'short' | 'full'>('short');
   const pendingSummaryMeta = useRef<{ kidId: string; kidName: string; fromDate: string; toDate: string } | null>(null);
 
   const requestSummary = () => {
@@ -135,7 +136,7 @@ export default function ChatCenter() {
     pendingSummaryMeta.current = { kidId: summaryKidId, kidName: kid.name, fromDate: from, toDate: to };
     setShowSummaryModal(false);
     setSelectedKidId(summaryKidId);
-    sendMessage(undefined, prompt);
+    sendMessage({ summaryDetail }, prompt);
   };
 
   const saveSummaryDirect = async (msg: ChatMessage) => {
@@ -304,6 +305,18 @@ export default function ChatCenter() {
                 <option value="4">חודש אחרון</option>
                 <option value="6">6 שבועות אחרונים</option>
                 <option value="8">חודשיים אחרונים</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: '0.9rem' }}>רמת פירוט</label>
+              <select
+                className="chat-kid-select"
+                style={{ width: '100%' }}
+                value={summaryDetail}
+                onChange={e => setSummaryDetail(e.target.value as 'short' | 'full')}
+              >
+                <option value="short">מקוצר (מהיר)</option>
+                <option value="full">מלא (איטי יותר)</option>
               </select>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-start' }}>

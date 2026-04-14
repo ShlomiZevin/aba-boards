@@ -1437,7 +1437,42 @@ async function updateForm(id, data) {
 
   await db.collection('sessionForms').doc(id).update(updates);
   const doc = await db.collection('sessionForms').doc(id).get();
-  return { id: doc.id, ...doc.data() };
+  const form = doc.data();
+
+  // Auto-create pending DC entries for any goals that don't already have one for this form
+  const goalsWorkedOn = form.goalsWorkedOn || [];
+  if (goalsWorkedOn.length > 0) {
+    try {
+      const goals = await getGoalsForKid(form.kidId);
+      // Find existing DC entries linked to this session form
+      const existingDcSnap = await db.collection('kidGoalDataEntries')
+        .where('sessionFormId', '==', id)
+        .get();
+      const existingGoalLibIds = new Set(existingDcSnap.docs.map(d => d.data().goalLibraryId));
+
+      for (const snapshot of goalsWorkedOn) {
+        const goal = goals.find(g => g.id === snapshot.goalId);
+        if (!goal || !goal.libraryItemId) continue;
+        // Skip if DC entry already exists for this goal+form
+        if (existingGoalLibIds.has(goal.libraryItemId)) continue;
+        const dcBlocks = normalizeTemplateBlocks(goal.dataCollectionTemplate);
+        if (dcBlocks.length === 0 || !dcBlocks.some(b => b.columns && b.columns.length > 0)) continue;
+        console.log('[updateForm] Auto-DC: Creating pending entry for goal', goal.title);
+        await addGoalDataEntry(form.kidId, goal.libraryItemId, {
+          goalTitle: goal.title,
+          sessionDate: form.sessionDate.toDate ? form.sessionDate.toDate() : new Date(form.sessionDate),
+          practitionerId: form.practitionerId || null,
+          tables: [],
+          status: 'pending',
+          sessionFormId: id,
+        });
+      }
+    } catch (err) {
+      console.error('[updateForm] Failed to auto-create pending DC entries:', err);
+    }
+  }
+
+  return { id: doc.id, ...form };
 }
 
 async function deleteForm(id) {

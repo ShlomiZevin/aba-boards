@@ -194,22 +194,6 @@ const CHAT_TOOLS = [
       required: ['fromDate', 'toDate'],
     },
   },
-  {
-    name: 'save_summary',
-    description: 'Save a therapy progress summary for a kid. Use when the admin asks to save/create/generate a summary document from the discussion. Include the full summary content, a short title, and the date range covered.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        kidId: { type: 'string', description: 'Kid ID (use the ID returned by get_summary_data)' },
-        kidName: { type: 'string', description: 'Kid name (fallback if ID not available)' },
-        title: { type: 'string', description: 'Short title for the summary (e.g. "סיכום חודשי מרץ 2026")' },
-        content: { type: 'string', description: 'Full summary text in Hebrew (markdown)' },
-        fromDate: { type: 'string', description: 'ISO date - start of period covered' },
-        toDate: { type: 'string', description: 'ISO date - end of period covered' },
-      },
-      required: ['content', 'fromDate', 'toDate'],
-    },
-  },
 ];
 
 function buildSystemPrompt(kidId, source) {
@@ -335,14 +319,14 @@ BOARD LAYOUT ITEM TYPES:
 Today's date: ${new Date().toISOString().split('T')[0]}`;
 }
 
-async function executeToolCall(toolName, input, adminId, { practitionerId, parentKidId } = {}) {
+async function executeToolCall(toolName, input, adminId, { practitionerId, parentKidId, summaryDetail } = {}) {
   try {
     // Resolve kidName → kidId for all tools that need it (except list_kids, create_kid)
     const needsKidId = !['list_kids', 'create_kid'].includes(toolName);
     if (needsKidId && (input.kidName || input.kidId)) {
       const resolveStart = Date.now();
       const resolved = await resolveKidId(input, adminId);
-      console.log(`[resolveKidId] Resolved in ${((Date.now() - resolveStart) / 1000).toFixed(1)}s — kidId=${resolved.kidId || 'none'}, error=${resolved.error || 'none'}`);
+      console.log(`[resolveKidId] Resolved in ${((Date.now() - resolveStart) / 1000).toFixed(1)}s — kidId=${resolved.kidId || 'none'}, kidName=${resolved.kidName || 'none'}, error=${resolved.error || 'none'}, input was: kidId=${input.kidId || 'none'} kidName=${input.kidName || 'none'}`);
       if (resolved.error) return resolved;
       input.kidId = resolved.kidId;
     }
@@ -527,8 +511,25 @@ async function executeToolCall(toolName, input, adminId, { practitionerId, paren
             const ts = toTimestamp(f.sessionDate);
             return ts && ts >= from.getTime() && ts <= to.getTime();
           })
-          .sort((a, b) => (toTimestamp(a.sessionDate) || 0) - (toTimestamp(b.sessionDate) || 0))
-          .map(f => ({
+          .sort((a, b) => (toTimestamp(a.sessionDate) || 0) - (toTimestamp(b.sessionDate) || 0));
+
+        // Filter DC entries by date range
+        const dcEntries = allDcEntries
+          .filter(e => {
+            const ts = toTimestamp(e.sessionDate);
+            return ts && ts >= from.getTime() && ts <= to.getTime();
+          });
+
+        // Active goals for context
+        const activeGoals = goals.filter(g => g.isActive).map(g => ({
+          title: g.title, categoryId: g.categoryId,
+        }));
+
+        const isFull = summaryDetail === 'full';
+
+        if (isFull) {
+          // Full mode — raw data, more tokens, richer summary
+          const fullForms = forms.map(f => ({
             sessionDate: formatDate(f.sessionDate),
             cooperation: f.cooperation,
             sessionDuration: f.sessionDuration,
@@ -544,52 +545,94 @@ async function executeToolCall(toolName, input, adminId, { practitionerId, paren
             breakActivities: stripHtml(f.breakActivities),
             endOfSessionActivity: stripHtml(f.endOfSessionActivity),
           }));
-
-        // Filter DC entries by date range
-        const dcEntries = allDcEntries
-          .filter(e => {
-            const ts = toTimestamp(e.sessionDate);
-            return ts && ts >= from.getTime() && ts <= to.getTime();
-          })
-          .map(e => ({
+          const fullDcEntries = dcEntries.map(e => ({
             sessionDate: formatDate(e.sessionDate),
             goalLibraryId: e.goalLibraryId,
             goalTitle: e.goalTitle,
             tables: e.tables,
             status: e.status,
           }));
+          const result = {
+            kidId: resolvedKidId,
+            kidName: input.kidName || resolvedKidId,
+            period: `${input.fromDate} — ${input.toDate}`,
+            mode: 'full',
+            sessionCount: fullForms.length,
+            activeGoals,
+            sessionForms: fullForms,
+            dataCollectionEntries: fullDcEntries,
+          };
+          console.log(`[get_summary_data] FULL result: ${JSON.stringify(result).length} bytes (${forms.length} forms + ${dcEntries.length} dc entries)`);
+          return result;
+        }
 
-        // Active goals for context
-        const activeGoals = goals.filter(g => g.isActive).map(g => ({
-          id: g.id, title: g.title, categoryId: g.categoryId, libraryItemId: g.libraryItemId,
+        // Short mode (default) — pre-aggregated, fewer tokens, faster
+        const sessionSummaries = forms.map(f => ({
+          date: formatDate(f.sessionDate),
+          cooperation: f.cooperation,
+          duration: f.sessionDuration,
+          mood: stripHtml(f.mood),
+          concentration: stripHtml(f.concentrationLevel),
+          goalsWorkedOn: f.goalsWorkedOn,
         }));
 
-        return {
+        const allSuccesses = forms.map(f => stripHtml(f.successes)).filter(Boolean);
+        const allDifficulties = forms.map(f => stripHtml(f.difficulties)).filter(Boolean);
+        const allNotes = forms.map(f => stripHtml(f.notes)).filter(Boolean);
+        const allWords = forms.map(f => stripHtml(f.wordsProduced)).filter(Boolean);
+        const allReinforcers = forms.map(f => stripHtml(f.newReinforcers)).filter(Boolean);
+
+        const cooperationValues = forms.map(f => f.cooperation).filter(v => typeof v === 'number');
+        const avgCooperation = cooperationValues.length
+          ? Math.round(cooperationValues.reduce((a, b) => a + b, 0) / cooperationValues.length)
+          : null;
+
+        const goalDataMap = {};
+        for (const e of dcEntries) {
+          const key = e.goalTitle || e.goalLibraryId || 'unknown';
+          if (!goalDataMap[key]) goalDataMap[key] = { title: key, sessions: 0, totalTrials: 0, totalCorrect: 0 };
+          goalDataMap[key].sessions++;
+          if (e.tables && Array.isArray(e.tables)) {
+            for (const table of e.tables) {
+              if (table.rows && Array.isArray(table.rows)) {
+                for (const row of table.rows) {
+                  if (row.cells && Array.isArray(row.cells)) {
+                    const trials = row.cells.filter(c => c === '+' || c === '-' || c === true || c === false);
+                    goalDataMap[key].totalTrials += trials.length;
+                    goalDataMap[key].totalCorrect += trials.filter(c => c === '+' || c === true).length;
+                  }
+                }
+              }
+            }
+          }
+        }
+        const goalProgress = Object.values(goalDataMap).map(g => ({
+          title: g.title,
+          sessions: g.sessions,
+          successRate: g.totalTrials > 0 ? Math.round((g.totalCorrect / g.totalTrials) * 100) : null,
+          totalTrials: g.totalTrials,
+        }));
+
+        const result = {
           kidId: resolvedKidId,
           kidName: input.kidName || resolvedKidId,
+          period: `${input.fromDate} — ${input.toDate}`,
+          mode: 'short',
           sessionCount: forms.length,
-          sessionForms: forms,
-          dataCollectionEntries: dcEntries,
+          avgCooperation,
           activeGoals,
+          sessionSummaries,
+          highlights: {
+            successes: allSuccesses,
+            difficulties: allDifficulties,
+            notes: allNotes,
+            wordsProduced: allWords,
+            reinforcers: allReinforcers,
+          },
+          goalProgress,
         };
-      }
-
-      case 'save_summary': {
-        if (practitionerId) return { error: 'למטפלות אין הרשאה ליצור סיכומים' };
-        if (parentKidId) return { error: 'אין לך הרשאה ליצור סיכומים' };
-        if (!input.kidId) return { error: 'חובה לספק מזהה ילד' };
-        console.log(`[save_summary] Saving summary for kid=${input.kidId}, content length=${(input.content || '').length} chars`);
-        const saveStart = Date.now();
-        const summary = await therapyService.createSummary({
-          kidId: input.kidId,
-          adminId,
-          title: input.title || '',
-          content: input.content,
-          fromDate: input.fromDate,
-          toDate: input.toDate,
-        });
-        console.log(`[save_summary] Firestore write done in ${((Date.now() - saveStart) / 1000).toFixed(1)}s (summaryId=${summary.id})`);
-        return { success: true, summaryId: summary.id };
+        console.log(`[get_summary_data] SHORT result: ${JSON.stringify(result).length} bytes (was ${forms.length} forms + ${dcEntries.length} dc entries)`);
+        return result;
       }
 
       default:
@@ -615,11 +658,10 @@ const TOOL_LABELS = {
   get_board_layout: 'טוען לוח...',
   update_board_layout: 'מעדכן לוח...',
   get_summary_data: 'אוסף נתונים לסיכום...',
-  save_summary: 'שומר סיכום...',
 };
 
 async function handleChat(adminId, messages, kidId, onToolStatus, source, practitionerId, parentKidId, options = {}) {
-  const { saveSummaryOnly } = options;
+  const { summaryDetail } = options;
   const claudeMessages = [...messages];
   const toolsUsed = [];
   let boardUpdated = false;
@@ -632,18 +674,21 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
 
   const elapsed = () => `${((Date.now() - chatStart) / 1000).toFixed(1)}s`;
 
-  // When saveSummaryOnly, override system prompt and tools — AI can ONLY save_summary
-  const saveSummaryTools = CHAT_TOOLS.filter(t => t.name === 'save_summary');
-  const systemPrompt = saveSummaryOnly
-    ? `You are saving a summary document. Look at the conversation history and extract the summary that was already written. Use save_summary with that EXACT content (in markdown). Do NOT rewrite, regenerate, or fetch any data. Just save what was already composed. Always respond in Hebrew. Use kidName to identify the kid — the system will resolve the ID automatically.`
-    : buildSystemPrompt(kidId, source);
-  const tools = saveSummaryOnly ? saveSummaryTools : CHAT_TOOLS;
+  // Filter tools by role — therapists and parents get fewer tools
+  const THERAPIST_TOOLS = ['list_kids', 'get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries', 'get_learning_plan', 'get_summary_data'];
+  const PARENT_TOOLS = ['get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries'];
 
-  console.log(`[Chat ${elapsed()}] Starting chat (saveSummaryOnly=${!!saveSummaryOnly}, kidId=${kidId}, msgCount=${messages.length})`);
-  emitStatus({ type: 'thinking', label: saveSummaryOnly ? 'שומר סיכום...' : 'חושב...' });
+  let roleTools = CHAT_TOOLS;
+  if (source === 'therapist') roleTools = CHAT_TOOLS.filter(t => THERAPIST_TOOLS.includes(t.name));
+  else if (source === 'parent') roleTools = CHAT_TOOLS.filter(t => PARENT_TOOLS.includes(t.name));
 
-  // Tool execution loop (max 8 iterations, 1 for saveSummaryOnly)
-  const maxIterations = saveSummaryOnly ? 2 : 8;
+  const systemPrompt = buildSystemPrompt(kidId, source);
+  const tools = roleTools;
+
+  console.log(`[Chat ${elapsed()}] Starting chat (source=${source}, kidId=${kidId}, msgCount=${messages.length}, tools=${tools.length})`);
+  emitStatus({ type: 'thinking', label: 'חושב...' });
+
+  const maxIterations = 8;
   for (let i = 0; i < maxIterations; i++) {
     console.log(`[Chat ${elapsed()}] Claude API call #${i + 1} (${claudeMessages.length} msgs, ${tools.length} tools)`);
     const apiStart = Date.now();
@@ -674,11 +719,10 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
       emitStatus({ type: 'tool', tool: toolUse.name, label: TOOL_LABELS[toolUse.name] || toolUse.name });
 
       const toolStart = Date.now();
-      const result = await executeToolCall(toolUse.name, toolUse.input, adminId, { practitionerId, parentKidId });
+      const result = await executeToolCall(toolUse.name, toolUse.input, adminId, { practitionerId, parentKidId, summaryDetail });
       console.log(`[Chat ${elapsed()}] Tool ${toolUse.name} done in ${((Date.now() - toolStart) / 1000).toFixed(1)}s (result: ${JSON.stringify(result).length} bytes)`);
       toolsUsed.push(toolUse.name);
       if (toolUse.name === 'update_board_layout') boardUpdated = true;
-      if (toolUse.name === 'save_summary' && result.success) summaryCreated = true;
       if (toolUse.name === 'create_kid' && result.id) kidId = result.id;
 
       toolResults.push({
@@ -686,12 +730,6 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
         tool_use_id: toolUse.id,
         content: JSON.stringify(result),
       });
-    }
-
-    // Short-circuit: if saveSummaryOnly and summary was saved, return immediately
-    if (saveSummaryOnly && summaryCreated) {
-      console.log(`[Chat ${elapsed()}] saveSummaryOnly — summary saved, returning immediately`);
-      return { reply: 'הסיכום נשמר בהצלחה! 📝', boardUpdated, summaryCreated, toolsUsed };
     }
 
     claudeMessages.push({ role: 'user', content: toolResults });
