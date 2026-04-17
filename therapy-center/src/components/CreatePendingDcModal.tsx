@@ -26,7 +26,7 @@ export default function CreatePendingDcModal({
     g.isActive && g.libraryItemId && normalizeTemplate(g.dataCollectionTemplate ?? null).some(b => b.columns.length > 0)
   );
 
-  const nonParentPractitioners = practitioners.filter((p: Practitioner) => p.type !== 'הורה');
+  // All practitioners are non-parents (parents are in a separate collection)
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -102,7 +102,7 @@ export default function CreatePendingDcModal({
               }}
             >
               <option value="">ללא הקצאה (לכולם)</option>
-              {nonParentPractitioners.map(p => (
+              {practitioners.map(p => (
                 <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
               ))}
             </select>
