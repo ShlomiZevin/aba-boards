@@ -348,6 +348,13 @@ export const sessionsApi = {
   delete: (id: string) =>
     fetchApi<void>(`/sessions/${id}`, { method: 'DELETE' }),
   getAlerts: () => fetchApi<Session[]>('/sessions/alerts'),
+  getAll: (filters?: { from?: string; to?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.from) params.append('from', filters.from);
+    if (filters?.to) params.append('to', filters.to);
+    const q = params.toString();
+    return fetchApi<Session[]>(`/sessions${q ? `?${q}` : ''}`);
+  },
 };
 
 // Meeting Forms API

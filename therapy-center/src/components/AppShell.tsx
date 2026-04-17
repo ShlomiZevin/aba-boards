@@ -105,6 +105,7 @@ export default function AppShell({ children }: AppShellProps) {
 
   const navItems = [
     { path: '/', label: 'ילדים', icon: '👧' },
+    { path: '/calendar', label: 'לוח פגישות', icon: '📅' },
     { path: '/chat', label: 'צ׳אט AI', icon: '🤖' },
     { path: '/forms', label: 'טפסים', icon: '📋' },
     { path: '/practitioners', label: 'אנשי צוות', icon: '👥' },

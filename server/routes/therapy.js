@@ -477,6 +477,12 @@ router.get('/sessions/alerts', asyncHandler(async (req, res) => {
   res.json(alerts);
 }));
 
+router.get('/sessions', asyncHandler(async (req, res) => {
+  const { from, to } = req.query;
+  const sessions = await therapyService.getAllSessionsForAdmin(req.adminId, { from, to });
+  res.json(sessions);
+}));
+
 // ==================== FORMS ====================
 
 router.get('/kids/:kidId/forms', asyncHandler(async (req, res) => {

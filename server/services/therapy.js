@@ -1141,6 +1141,34 @@ async function addGoalLibraryItem(data) {
 
 // ==================== SESSIONS ====================
 
+async function getAllSessionsForAdmin(adminId, filters = {}) {
+  const db = getDb();
+  const kidsSnap = await db.collection('kids').where('adminId', '==', adminId).get();
+  const kidIds = kidsSnap.docs.map(d => d.id);
+  if (kidIds.length === 0) return [];
+
+  const allSessions = [];
+  for (let i = 0; i < kidIds.length; i += 30) {
+    const batch = kidIds.slice(i, i + 30);
+    const snap = await db.collection('sessions').where('kidId', 'in', batch).get();
+    allSessions.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
+
+  const toMs = (v) => v?.seconds ? v.seconds * 1000 : new Date(v).getTime();
+  let sessions = allSessions;
+  if (filters.from) {
+    const fromMs = new Date(filters.from).getTime();
+    sessions = sessions.filter(s => toMs(s.scheduledDate) >= fromMs);
+  }
+  if (filters.to) {
+    const toD = new Date(filters.to);
+    toD.setHours(23, 59, 59, 999);
+    const toMsV = toD.getTime();
+    sessions = sessions.filter(s => toMs(s.scheduledDate) <= toMsV);
+  }
+  return sessions;
+}
+
 async function getSessionsForKid(kidId, filters = {}) {
   const db = getDb();
   let query = db.collection('sessions').where('kidId', '==', kidId);
@@ -2108,6 +2136,7 @@ module.exports = {
   migrateGoalLibraryLinks,
   // Sessions
   getSessionsForKid,
+  getAllSessionsForAdmin,
   scheduleSession,
   scheduleRecurringSessions,
   updateSession,
