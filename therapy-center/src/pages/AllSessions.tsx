@@ -44,6 +44,8 @@ const calendarFormats = {
 interface CalendarEvent {
   id: string;
   title: string;
+  time: string;
+  desc: string;
   start: Date;
   end: Date;
   resource: Session;
@@ -102,8 +104,8 @@ export default function AllSessions() {
       const kidName = kidMap[s.kidId]?.name || s.kidId;
       const time = format(start, 'HH:mm');
       const therapistName = s.therapistId ? (therapistMap[s.therapistId]?.name || '') : '';
-      const label = s.type === 'meeting' ? `${time} ${kidName} (ישיבה)` : `${time} ${kidName}${therapistName ? ` · ${therapistName}` : ''}`;
-      return { id: s.id, title: label, start, end, resource: s };
+      const desc = s.type === 'meeting' ? `${kidName} (ישיבה)` : `${kidName}${therapistName ? ` · ${therapistName}` : ''}`;
+      return { id: s.id, title: `${time} ${desc}`, time, desc, start, end, resource: s };
     });
   }, [sessions, kidMap, therapistMap]);
 
@@ -220,8 +222,10 @@ export default function AllSessions() {
                     <div
                       className="calendar-event"
                       onClick={(e) => { e.stopPropagation(); openEdit(s); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}
                     >
-                      <span className="calendar-event-title" style={{ flex: 1 }}>{event.title}</span>
+                      <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{(event as CalendarEvent).time}</span>
+                      <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(event as CalendarEvent).desc}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); setSessionToDelete(s); }}
                         className="calendar-event-delete"
