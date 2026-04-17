@@ -290,12 +290,15 @@ export type SessionType = 'therapy' | 'meeting';
 
 export interface Session {
   id: string;
-  kidId: string;
+  kidId: string | null;
   therapistId?: string;
   scheduledDate: Date;
   type?: SessionType;
   status: SessionStatus;
   formId?: string;
+  customTitle?: string | null;
+  notes?: string | null;
+  adminId?: string | null;
   createdAt: Date;
 }
 

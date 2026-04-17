@@ -8,6 +8,7 @@ import { he } from 'date-fns/locale';
 import { kidsApi, sessionsApi, practitionersApi } from '../api/client';
 import type { Kid, Practitioner, Session, SessionType } from '../types';
 import { toDate } from '../utils/date';
+import { useAuth } from '../contexts/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -56,7 +57,10 @@ const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
 export default function AllSessions() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const myId = user?.adminId || '';
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [onlyMine, setOnlyMine] = useState(true);
 
   const { data: kidsRes } = useQuery({ queryKey: ['kids'], queryFn: () => kidsApi.getAll() });
   const { data: sessionsRes, isLoading } = useQuery({
@@ -84,8 +88,14 @@ export default function AllSessions() {
   }, [therapists]);
 
   const scheduleMutation = useMutation({
-    mutationFn: ({ kidId, data }: { kidId: string; data: { scheduledDate: string; therapistId?: string; type?: SessionType } }) =>
-      sessionsApi.schedule(kidId, data),
+    mutationFn: (data: {
+      scheduledDate: string;
+      kidId?: string;
+      customTitle?: string;
+      notes?: string;
+      therapistId?: string;
+      type?: SessionType;
+    }) => sessionsApi.create(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['all-sessions'] }),
   });
   const updateMutation = useMutation({
@@ -97,30 +107,48 @@ export default function AllSessions() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['all-sessions'] }),
   });
 
+  const visibleSessions = useMemo(() => {
+    if (!onlyMine) return sessions;
+    // "Only mine" for the admin = her own therapy sessions + all meetings (meetings belong to admin)
+    return sessions.filter(s =>
+      s.type === 'meeting' ||
+      s.therapistId === myId ||
+      s.adminId === myId
+    );
+  }, [sessions, onlyMine, myId]);
+
   const calendarEvents: CalendarEvent[] = useMemo(() => {
-    return sessions.map(s => {
+    return visibleSessions.map(s => {
       const start = toDate(s.scheduledDate);
       const end = new Date(start.getTime() + 45 * 60000);
-      const kidName = kidMap[s.kidId]?.name || s.kidId;
       const time = format(start, 'HH:mm');
       const therapistName = s.therapistId ? (therapistMap[s.therapistId]?.name || '') : '';
-      const desc = s.type === 'meeting' ? `${kidName} (ישיבה)` : `${kidName}${therapistName ? ` · ${therapistName}` : ''}`;
+      const kidName = s.kidId ? (kidMap[s.kidId]?.name || s.kidId) : '';
+      const base = s.customTitle || kidName || 'אירוע';
+      const desc = s.type === 'meeting'
+        ? `${base} (ישיבה)`
+        : `${base}${therapistName ? ` · ${therapistName}` : ''}`;
       return { id: s.id, title: `${time} ${desc}`, time, desc, start, end, resource: s };
     });
-  }, [sessions, kidMap, therapistMap]);
+  }, [visibleSessions, kidMap, therapistMap]);
 
   const [showSchedule, setShowSchedule] = useState(false);
-  const [scheduleKidId, setScheduleKidId] = useState('');
+  const [scheduleKidId, setScheduleKidId] = useState<string>(''); // '' = אחר/custom
+  const [scheduleCustomTitle, setScheduleCustomTitle] = useState('');
   const [scheduleDate, setScheduleDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [scheduleTime, setScheduleTime] = useState('10:00');
   const [scheduleTherapist, setScheduleTherapist] = useState('');
   const [scheduleType, setScheduleType] = useState<SessionType>('therapy');
+  const [scheduleNotes, setScheduleNotes] = useState('');
 
   const [editSession, setEditSession] = useState<Session | null>(null);
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
   const [editTherapist, setEditTherapist] = useState('');
   const [editType, setEditType] = useState<SessionType>('therapy');
+  const [editCustomTitle, setEditCustomTitle] = useState('');
+  const [editKidId, setEditKidId] = useState<string>('');
+  const [editNotes, setEditNotes] = useState('');
 
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
 
@@ -128,9 +156,11 @@ export default function AllSessions() {
     const d = date || new Date();
     setScheduleDate(format(d, 'yyyy-MM-dd'));
     setScheduleTime(format(d, 'HH:mm') === '00:00' ? '10:00' : format(d, 'HH:mm'));
-    setScheduleKidId(kids[0]?.id || '');
-    setScheduleTherapist('');
+    setScheduleKidId('');
+    setScheduleCustomTitle('');
+    setScheduleTherapist(onlyMine ? myId : '');
     setScheduleType('therapy');
+    setScheduleNotes('');
     setShowSchedule(true);
   }
 
@@ -141,20 +171,35 @@ export default function AllSessions() {
     setEditTime(format(d, 'HH:mm'));
     setEditTherapist(s.therapistId || '');
     setEditType(s.type || 'therapy');
+    setEditKidId(s.kidId || '');
+    setEditCustomTitle(s.customTitle || '');
+    setEditNotes(s.notes || '');
   }
 
   function submitSchedule(e: React.FormEvent) {
     e.preventDefault();
-    if (!scheduleKidId) return;
     const scheduledDate = `${scheduleDate}T${scheduleTime}:00`;
-    scheduleMutation.mutate({
-      kidId: scheduleKidId,
-      data: {
-        scheduledDate,
-        therapistId: scheduleType === 'therapy' ? (scheduleTherapist || undefined) : undefined,
-        type: scheduleType,
-      },
-    }, {
+    const payload: {
+      scheduledDate: string;
+      kidId?: string;
+      customTitle?: string;
+      notes?: string;
+      therapistId?: string;
+      type?: SessionType;
+    } = {
+      scheduledDate,
+      type: scheduleType,
+      therapistId: scheduleType === 'therapy' ? (scheduleTherapist || undefined) : undefined,
+      notes: scheduleNotes.trim() || undefined,
+    };
+    if (scheduleKidId) {
+      payload.kidId = scheduleKidId;
+    } else if (scheduleCustomTitle.trim()) {
+      payload.customTitle = scheduleCustomTitle.trim();
+    } else {
+      return; // need either kid or title
+    }
+    scheduleMutation.mutate(payload, {
       onSuccess: () => setShowSchedule(false),
     });
   }
@@ -169,7 +214,10 @@ export default function AllSessions() {
         scheduledDate: scheduledDate as unknown as Date,
         therapistId: editType === 'therapy' ? (editTherapist || undefined) : undefined,
         type: editType,
-      },
+        kidId: (editKidId || null) as unknown as string,
+        customTitle: editKidId ? null : (editCustomTitle.trim() || null),
+        notes: editNotes.trim() || null,
+      } as unknown as Partial<Session>,
     }, {
       onSuccess: () => setEditSession(null),
     });
@@ -181,9 +229,27 @@ export default function AllSessions() {
         <div className="content-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>📅 לוח פגישות</h1>
-            <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>כל הפגישות של כל הילדים</div>
+            <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
+              {onlyMine ? 'הפגישות שלי' : 'כל הפגישות של כל הילדים'}
+            </div>
           </div>
-          <button onClick={() => openSchedule()} className="btn-primary btn-small">+ פגישה חדשה</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'inline-flex', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setOnlyMine(true)}
+                className={onlyMine ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+                style={{ borderRadius: 0, borderLeft: '1px solid #e2e8f0' }}
+              >רק שלי</button>
+              <button
+                type="button"
+                onClick={() => setOnlyMine(false)}
+                className={!onlyMine ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+                style={{ borderRadius: 0 }}
+              >הכל</button>
+            </div>
+            <button onClick={() => openSchedule()} className="btn-primary btn-small">+ פגישה חדשה</button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -266,11 +332,23 @@ export default function AllSessions() {
               </div>
               <div className="form-group">
                 <label>ילד/ה</label>
-                <select value={scheduleKidId} onChange={(e) => setScheduleKidId(e.target.value)} required>
-                  <option value="">בחר ילד/ה</option>
+                <select value={scheduleKidId} onChange={(e) => setScheduleKidId(e.target.value)}>
+                  <option value="">— אחר / חיצוני —</option>
                   {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                 </select>
               </div>
+              {!scheduleKidId && (
+                <div className="form-group">
+                  <label>כותרת / שם הפגישה</label>
+                  <input
+                    type="text"
+                    value={scheduleCustomTitle}
+                    onChange={(e) => setScheduleCustomTitle(e.target.value)}
+                    placeholder="למשל: פגישת הורים, ילד חיצוני, סופרוויז׳ן"
+                    required
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label>תאריך</label>
                 <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} required />
@@ -288,9 +366,22 @@ export default function AllSessions() {
                   </select>
                 </div>
               )}
+              <div className="form-group">
+                <label>הערות (לא חובה)</label>
+                <textarea
+                  value={scheduleNotes}
+                  onChange={(e) => setScheduleNotes(e.target.value)}
+                  rows={2}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setShowSchedule(false)} className="btn-secondary">ביטול</button>
-                <button type="submit" className="btn-primary" disabled={scheduleMutation.isPending || !scheduleKidId}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={scheduleMutation.isPending || (!scheduleKidId && !scheduleCustomTitle.trim())}
+                >
                   {scheduleMutation.isPending ? 'מתזמן...' : 'תזמן'}
                 </button>
               </div>
@@ -303,16 +394,7 @@ export default function AllSessions() {
       {editSession && (
         <div className="modal-overlay" onClick={() => setEditSession(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ direction: 'rtl', minWidth: 320 }}>
-            <h3 style={{ margin: '0 0 4px', fontSize: 17 }}>עריכת פגישה</h3>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
-              {kidMap[editSession.kidId]?.name || editSession.kidId}
-              {' · '}
-              <button
-                type="button"
-                onClick={() => navigate(`/kid/${editSession.kidId}`)}
-                style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', padding: 0, fontSize: 13 }}
-              >פתח כרטיס</button>
-            </div>
+            <h3 style={{ margin: '0 0 16px', fontSize: 17 }}>עריכת פגישה</h3>
             <form onSubmit={submitEdit}>
               <div className="form-group">
                 <label>סוג פגישה</label>
@@ -321,6 +403,31 @@ export default function AllSessions() {
                   <button type="button" className={editType === 'meeting' ? 'btn-primary btn-small' : 'btn-secondary btn-small'} onClick={() => setEditType('meeting')} style={{ flex: 1, ...(editType === 'meeting' ? { backgroundColor: '#7C3AED', borderColor: '#7C3AED' } : {}) }}>ישיבה</button>
                 </div>
               </div>
+              <div className="form-group">
+                <label>ילד/ה</label>
+                <select value={editKidId} onChange={(e) => setEditKidId(e.target.value)}>
+                  <option value="">— אחר / חיצוני —</option>
+                  {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                </select>
+                {editKidId && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/kid/${editKidId}`)}
+                    style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', padding: '4px 0 0', fontSize: 12 }}
+                  >פתח כרטיס ילד/ה ←</button>
+                )}
+              </div>
+              {!editKidId && (
+                <div className="form-group">
+                  <label>כותרת / שם הפגישה</label>
+                  <input
+                    type="text"
+                    value={editCustomTitle}
+                    onChange={(e) => setEditCustomTitle(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label>תאריך</label>
                 <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} required />
@@ -338,9 +445,18 @@ export default function AllSessions() {
                   </select>
                 </div>
               )}
+              <div className="form-group">
+                <label>הערות</label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  rows={2}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setEditSession(null)} className="btn-secondary">ביטול</button>
-                <button type="submit" className="btn-primary" disabled={updateMutation.isPending}>
+                <button type="submit" className="btn-primary" disabled={updateMutation.isPending || (!editKidId && !editCustomTitle.trim())}>
                   {updateMutation.isPending ? 'שומר...' : 'שמור'}
                 </button>
               </div>
@@ -352,7 +468,7 @@ export default function AllSessions() {
       {sessionToDelete && (
         <ConfirmModal
           title="ביטול פגישה"
-          message={`האם לבטל את הפגישה של ${kidMap[sessionToDelete.kidId]?.name || ''} בתאריך ${format(toDate(sessionToDelete.scheduledDate), 'dd/MM/yyyy')}?`}
+          message={`האם לבטל את הפגישה ${sessionToDelete.customTitle || (sessionToDelete.kidId ? kidMap[sessionToDelete.kidId]?.name : '') || ''} בתאריך ${format(toDate(sessionToDelete.scheduledDate), 'dd/MM/yyyy')}?`}
           confirmText="בטל פגישה"
           onConfirm={() => {
             deleteMutation.mutate(sessionToDelete.id, {

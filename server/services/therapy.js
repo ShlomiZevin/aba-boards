@@ -1145,17 +1145,22 @@ async function getAllSessionsForAdmin(adminId, filters = {}) {
   const db = getDb();
   const kidsSnap = await db.collection('kids').where('adminId', '==', adminId).get();
   const kidIds = kidsSnap.docs.map(d => d.id);
-  if (kidIds.length === 0) return [];
 
-  const allSessions = [];
+  const byId = {};
+
+  // Sessions linked to admin's kids (covers legacy sessions without adminId field)
   for (let i = 0; i < kidIds.length; i += 30) {
     const batch = kidIds.slice(i, i + 30);
     const snap = await db.collection('sessions').where('kidId', 'in', batch).get();
-    allSessions.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    for (const d of snap.docs) byId[d.id] = { id: d.id, ...d.data() };
   }
 
+  // Sessions created by this admin (custom/external, may have no kidId)
+  const adminSnap = await db.collection('sessions').where('adminId', '==', adminId).get();
+  for (const d of adminSnap.docs) byId[d.id] = { id: d.id, ...d.data() };
+
   const toMs = (v) => v?.seconds ? v.seconds * 1000 : new Date(v).getTime();
-  let sessions = allSessions;
+  let sessions = Object.values(byId);
   if (filters.from) {
     const fromMs = new Date(filters.from).getTime();
     sessions = sessions.filter(s => toMs(s.scheduledDate) >= fromMs);
@@ -1193,7 +1198,7 @@ async function getSessionsForKid(kidId, filters = {}) {
   return sessions;
 }
 
-async function scheduleSession(kidId, data) {
+async function scheduleSession(kidId, data, adminId) {
   const db = getDb();
   const sessionId = uuidv4();
 
@@ -1204,6 +1209,30 @@ async function scheduleSession(kidId, data) {
     type: data.type || 'therapy',
     status: 'scheduled',
     formId: null,
+    customTitle: data.customTitle || null,
+    notes: data.notes || null,
+    adminId: adminId || null,
+    createdAt: new Date(),
+  };
+
+  await db.collection('sessions').doc(sessionId).set(session);
+  return { id: sessionId, ...session };
+}
+
+async function scheduleCustomSession(adminId, data) {
+  const db = getDb();
+  const sessionId = uuidv4();
+
+  const session = {
+    kidId: data.kidId || null,
+    therapistId: data.therapistId || null,
+    scheduledDate: new Date(data.scheduledDate),
+    type: data.type || 'meeting',
+    status: 'scheduled',
+    formId: null,
+    customTitle: data.customTitle || null,
+    notes: data.notes || null,
+    adminId: adminId || null,
     createdAt: new Date(),
   };
 
@@ -1249,6 +1278,9 @@ async function updateSession(id, data) {
   if (data.status !== undefined) updates.status = data.status;
   if (data.formId !== undefined) updates.formId = data.formId;
   if (data.type !== undefined) updates.type = data.type;
+  if (data.customTitle !== undefined) updates.customTitle = data.customTitle;
+  if (data.notes !== undefined) updates.notes = data.notes;
+  if (data.kidId !== undefined) updates.kidId = data.kidId;
 
   await db.collection('sessions').doc(id).update(updates);
 
@@ -2138,6 +2170,7 @@ module.exports = {
   getSessionsForKid,
   getAllSessionsForAdmin,
   scheduleSession,
+  scheduleCustomSession,
   scheduleRecurringSessions,
   updateSession,
   deleteSession,

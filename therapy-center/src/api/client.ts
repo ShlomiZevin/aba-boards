@@ -11,6 +11,7 @@ import type {
   KidGoalDataEntry,
   TableBlockData,
   Session,
+  SessionType,
   SessionForm,
   MeetingForm,
   Summary,
@@ -355,6 +356,18 @@ export const sessionsApi = {
     const q = params.toString();
     return fetchApi<Session[]>(`/sessions${q ? `?${q}` : ''}`);
   },
+  create: (data: {
+    scheduledDate: string;
+    kidId?: string;
+    customTitle?: string;
+    notes?: string;
+    therapistId?: string;
+    type?: SessionType;
+  }) =>
+    fetchApi<Session>('/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // Meeting Forms API

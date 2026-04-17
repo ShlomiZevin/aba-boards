@@ -453,7 +453,7 @@ router.get('/kids/:kidId/sessions', asyncHandler(async (req, res) => {
 }));
 
 router.post('/kids/:kidId/sessions', asyncHandler(async (req, res) => {
-  const session = await therapyService.scheduleSession(req.params.kidId, req.body);
+  const session = await therapyService.scheduleSession(req.params.kidId, req.body, req.adminId);
   res.status(201).json(session);
 }));
 
@@ -481,6 +481,11 @@ router.get('/sessions', asyncHandler(async (req, res) => {
   const { from, to } = req.query;
   const sessions = await therapyService.getAllSessionsForAdmin(req.adminId, { from, to });
   res.json(sessions);
+}));
+
+router.post('/sessions', asyncHandler(async (req, res) => {
+  const session = await therapyService.scheduleCustomSession(req.adminId, req.body);
+  res.status(201).json(session);
 }));
 
 // ==================== FORMS ====================
