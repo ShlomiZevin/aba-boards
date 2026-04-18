@@ -224,6 +224,7 @@ export default function FormsOverview() {
 
   const alertsByKid = new Map<string, number>();
   for (const alert of sessionAlerts) {
+    if (!alert.kidId) continue;
     alertsByKid.set(alert.kidId, (alertsByKid.get(alert.kidId) || 0) + 1);
   }
 
