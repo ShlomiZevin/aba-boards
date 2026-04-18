@@ -201,10 +201,10 @@ function MockupForm() {
 function MockupChat() {
   const [typingIdx, setTypingIdx] = useState(0);
   const messages = [
-    { role: 'user' as const, text: 'תכין לי טופס הערכה ליואב עם התמקדות במיומנויות קוגניטיביות' },
-    { role: 'ai' as const, text: 'הכנתי טופס הערכה עם 4 סעיפים: משחק חברתי בתורות, העתקת דגם קוביות, מיון קטגוריות, ולמידה בספרים. רוצה שאוסיף משהו?' },
-    { role: 'user' as const, text: 'תוסיף גם חלק על ויסות רגשי. מה המצב של המטרות שלו השבוע?' },
-    { role: 'ai' as const, text: 'הוספתי! לגבי המטרות: משחק בתורות ב-78% (עלייה), העתקת דגם ב-45% (יציב), מיון קטגוריות ב-92% (מצוין!)' },
+    { role: 'user' as const, text: 'תכין סיכום תקופתי מקצועי עבור תמר לחודש מאי 2026.\nלכלול: מטרות טיפול פעילות, סיכום טיפולים (שת״פ, מצב רוח, ריכוז), הצלחות, קשיים, נתונים שנאספו והמלצות להמשך.' },
+    { role: 'ai' as const, text: 'בכיף! 📄 הכנתי סיכום מקצועי: 8 טיפולים, שת״פ ממוצע 85%, 3 מטרות בהתקדמות ו-2 המלצות להמשך. לשלוח להורים?' },
+    { role: 'user' as const, text: 'כן, תשלח' },
+    { role: 'ai' as const, text: 'נשלח בהצלחה ✅ ההורים קיבלו את הסיכום במייל ובוואטסאפ' },
   ];
 
   useEffect(() => {
@@ -277,6 +277,63 @@ function AnimatedDino() {
   return (
     <div className="ln-dino-stage">
       <img src={frames[frame]} alt="דינו" className="ln-dino-img" />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hero Carousel                                                      */
+/* ------------------------------------------------------------------ */
+function HeroCarousel() {
+  const slides = [
+    { label: 'לוח טיפולים ויומן', render: () => <AppMockup /> },
+    { label: 'עוזר Doing — AI', render: () => <MockupChat /> },
+    { label: 'לוח משימות לילד', render: () => <MockupBoard /> },
+    { label: 'מטרות והתקדמות', render: () => <MockupGoals /> },
+    { label: 'טופס מעקב טיפולי', render: () => <MockupForm /> },
+    { label: 'דינו - העוזר החכם של הילדים', render: () => (
+      <div className="ln-carousel-dino-wrap">
+        <AnimatedDino />
+        <div className="ln-carousel-dino-bubble">היי! אני דינו — מעודד את הילדים ומדבר איתם!</div>
+      </div>
+    ) },
+  ];
+
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused) return;
+    const t = setTimeout(() => setIdx(i => (i + 1) % slides.length), 2500);
+    return () => clearTimeout(t);
+  }, [idx, paused, slides.length]);
+
+  return (
+    <div
+      className="ln-carousel"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="ln-carousel-stage">
+        {slides.map((s, i) => (
+          <div key={i} className={`ln-carousel-slide ${i === idx ? 'active' : ''}`}>
+            <div className="ln-carousel-slide-inner">
+              <div className="ln-carousel-label">{s.label}</div>
+              <div className="ln-carousel-content">{s.render()}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="ln-carousel-dots">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            className={`ln-carousel-dot ${i === idx ? 'active' : ''}`}
+            onClick={() => setIdx(i)}
+            aria-label={`slide ${i + 1}`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -392,7 +449,7 @@ export default function LandingNew() {
               style={{ transform: `translateY(${Math.min(scrollY * 0.08, 40)}px)` }}
             >
               <div className="ln-hero-mockup-float">
-                <AppMockup />
+                <HeroCarousel />
               </div>
             </div>
           </Reveal>
