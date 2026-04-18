@@ -196,6 +196,52 @@ function MockupForm() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  AI Chat mockup                                                     */
+/* ------------------------------------------------------------------ */
+function MockupChat() {
+  const [typingIdx, setTypingIdx] = useState(0);
+  const messages = [
+    { role: 'user' as const, text: 'תכין לי טופס הערכה ליואב עם התמקדות במיומנויות קוגניטיביות' },
+    { role: 'ai' as const, text: 'הכנתי טופס הערכה עם 4 סעיפים: משחק חברתי בתורות, העתקת דגם קוביות, מיון קטגוריות, ולמידה בספרים. רוצה שאוסיף משהו?' },
+    { role: 'user' as const, text: 'תוסיף גם חלק על ויסות רגשי. מה המצב של המטרות שלו השבוע?' },
+    { role: 'ai' as const, text: 'הוספתי! לגבי המטרות: משחק בתורות ב-78% (עלייה), העתקת דגם ב-45% (יציב), מיון קטגוריות ב-92% (מצוין!)' },
+  ];
+
+  useEffect(() => {
+    if (typingIdx < messages.length) {
+      const timer = setTimeout(() => setTypingIdx(prev => prev + 1), 1800);
+      return () => clearTimeout(timer);
+    }
+  }, [typingIdx, messages.length]);
+
+  return (
+    <div className="ln-mockup-chat">
+      <div className="ln-mockup-chat-header">
+        <div className="ln-mockup-chat-avatar">AI</div>
+        <div>
+          <div className="ln-mockup-chat-name">עוזר Doing</div>
+          <div className="ln-mockup-chat-status">● מוכן לעזור</div>
+        </div>
+      </div>
+      <div className="ln-mockup-chat-body">
+        {messages.slice(0, typingIdx).map((m, i) => (
+          <div key={i} className={`ln-chat-msg ln-chat-${m.role}`}>
+            <div className={`ln-chat-bubble ln-chat-bubble-${m.role}`}>{m.text}</div>
+          </div>
+        ))}
+        {typingIdx < messages.length && (
+          <div className="ln-chat-msg ln-chat-ai">
+            <div className="ln-chat-bubble ln-chat-bubble-ai ln-chat-typing">
+              <span className="ln-chat-dot" /><span className="ln-chat-dot" /><span className="ln-chat-dot" />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Animated Dino                                                      */
 /* ------------------------------------------------------------------ */
 const DINO_BASE = '/therapy/avatar/dinosaur';
@@ -429,22 +475,29 @@ export default function LandingNew() {
             </div>
           </Reveal>
 
-          <div className="ln-ai-grid">
-            {[
-              { title: 'יצירת טפסים', desc: 'בקשו מה-AI ליצור טופס הערכה מותאם אישית — והוא יבנה אותו תוך שניות.' },
-              { title: 'הגדרת מטרות', desc: 'תארו את האתגר — ה-AI יציע מטרות מדידות עם קריטריונים מדויקים.' },
-              { title: 'ניתוח נתונים', desc: 'שאלו שאלות על ההתקדמות של ילד וקבלו תובנות מעמיקות מבוססות נתונים.' },
-              { title: 'לוחות משימות', desc: 'בקשו לוח משימות מותאם — ה-AI ייצור אותו עם משימות מתאימות לילד.' },
-              { title: 'סיעור מוחות', desc: 'התייעצו על אסטרטגיות, רעיונות לפעילויות, ופתרונות יצירתיים.' },
-              { title: 'סיכומים חכמים', desc: 'בקשו סיכום שבועי או חודשי — ה-AI ירכז את כל הנתונים בצורה ברורה.' },
-            ].map((c, i) => (
-              <Reveal key={i} delay={i * 60}>
-                <div className="ln-ai-card">
-                  <h4 className="ln-ai-card-title">{c.title}</h4>
-                  <p className="ln-ai-card-desc">{c.desc}</p>
-                </div>
-              </Reveal>
-            ))}
+          <div className="ln-ai-split">
+            <Reveal from="right">
+              <div className="ln-ai-chat-wrap">
+                <MockupChat />
+              </div>
+            </Reveal>
+            <div className="ln-ai-grid-narrow">
+              {[
+                { title: 'יצירת טפסים', desc: 'בקשו מה-AI ליצור טופס הערכה מותאם אישית — והוא יבנה אותו תוך שניות.' },
+                { title: 'הגדרת מטרות', desc: 'תארו את האתגר — ה-AI יציע מטרות מדידות עם קריטריונים מדויקים.' },
+                { title: 'ניתוח נתונים', desc: 'שאלו שאלות על ההתקדמות של ילד וקבלו תובנות מעמיקות מבוססות נתונים.' },
+                { title: 'לוחות משימות', desc: 'בקשו לוח משימות מותאם — ה-AI ייצור אותו עם משימות מתאימות לילד.' },
+                { title: 'סיעור מוחות', desc: 'התייעצו על אסטרטגיות, רעיונות לפעילויות, ופתרונות יצירתיים.' },
+                { title: 'סיכומים חכמים', desc: 'בקשו סיכום שבועי או חודשי — ה-AI ירכז את כל הנתונים בצורה ברורה.' },
+              ].map((c, i) => (
+                <Reveal key={i} delay={i * 60} from="left">
+                  <div className="ln-ai-card">
+                    <h4 className="ln-ai-card-title">{c.title}</h4>
+                    <p className="ln-ai-card-desc">{c.desc}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
 
           <Reveal>
@@ -501,7 +554,7 @@ export default function LandingNew() {
 
           <div className="ln-benefits-grid">
             {[
-              { title: 'חסכון בזמן', desc: 'במקום שעות של ניירת — דקות. טפסים אוטומטיים, נתונים שמתעדכנים לבד, ובינה מלאכותית שעובדת בשבילכם.', stat: '70%', statLabel: 'פחות ניירת' },
+              { title: 'חסכון בזמן', desc: 'במקום שעות של ניירת — דקות. טפסים אוטומטיים, נתונים שמתעדכנים לבד, ובינה מלאכותית שעובדת בשבילכם.', stat: '100%', statLabel: 'פחות ניירת' },
               { title: 'החלטות מבוססות נתונים', desc: 'כל סשן מייצר נתונים. כל נתון הופך לגרף. כל גרף מספר סיפור. תראו את ההתקדמות האמיתית.', stat: '100%', statLabel: 'שקיפות' },
               { title: 'עבודת צוות מושלמת', desc: 'כולם רואים את אותו מידע. מטפלות יודעות מה קרה בסשן הקודם. מנהלות רואות את התמונה הגדולה.', stat: '∞', statLabel: 'סנכרון' },
               { title: 'נגיש מכל מקום', desc: 'עובד בנייד, בטאבלט ובמחשב. מטפלות ממלאות טפסים תוך כדי הסשן. הורים צופים מהבית.', stat: '24/7', statLabel: 'זמינות' },
