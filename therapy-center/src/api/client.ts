@@ -14,6 +14,7 @@ import type {
   SessionType,
   SessionForm,
   MeetingForm,
+  MeetingDraft,
   Summary,
   FormTemplate,
   Notification,
@@ -360,9 +361,11 @@ export const sessionsApi = {
     scheduledDate: string;
     kidId?: string;
     customTitle?: string;
+    title?: string;
     notes?: string;
     therapistId?: string;
     type?: SessionType;
+    until?: string;
   }) =>
     fetchApi<Session>('/sessions', {
       method: 'POST',
@@ -385,6 +388,32 @@ export const meetingFormsApi = {
       body: JSON.stringify(data),
     }),
   delete: (id: string) => fetchApi<void>(`/meeting-forms/${id}`, { method: 'DELETE' }),
+};
+
+// Meeting Drafts API
+export interface MeetingDraftKey {
+  kidId?: string;
+  sessionId?: string;
+  formId?: string;
+  sessionDate?: string;
+}
+
+export const meetingDraftsApi = {
+  get: (key: MeetingDraftKey) => {
+    const qs = new URLSearchParams();
+    if (key.kidId) qs.set('kidId', key.kidId);
+    if (key.sessionId) qs.set('sessionId', key.sessionId);
+    if (key.formId) qs.set('formId', key.formId);
+    if (key.sessionDate) qs.set('sessionDate', key.sessionDate);
+    return fetchApi<MeetingDraft | null>(`/meeting-drafts?${qs.toString()}`);
+  },
+  upsert: (key: MeetingDraftKey, content: string) =>
+    fetchApi<MeetingDraft>('/meeting-drafts', {
+      method: 'PUT',
+      body: JSON.stringify({ ...key, content }),
+    }),
+  getForKid: (kidId: string) => fetchApi<MeetingDraft[]>(`/kids/${kidId}/meeting-drafts`),
+  delete: (id: string) => fetchApi<void>(`/meeting-drafts/${id}`, { method: 'DELETE' }),
 };
 
 // Summaries API

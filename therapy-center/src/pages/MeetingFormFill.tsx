@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams, useNavigate, Link, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { kidsApi, practitionersApi, parentsApi, sessionsApi, meetingFormsApi, goalsApi } from '../api/client';
+import { format, formatDistanceToNow } from 'date-fns';
+import { he } from 'date-fns/locale';
+import { kidsApi, practitionersApi, parentsApi, sessionsApi, meetingFormsApi, goalsApi, meetingDraftsApi } from '../api/client';
+import type { MeetingDraftKey } from '../api/client';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { toDate } from '../utils/date';
 import type { Practitioner, Parent, MeetingAttendee, MeetingForm, Session, Goal, GoalSnapshot } from '../types';
@@ -38,6 +40,16 @@ export default function MeetingFormFill() {
   const [additionalGoals, setAdditionalGoals] = useState<string[]>([]);
   const [newGoalText, setNewGoalText] = useState('');
   const [initialized, setInitialized] = useState(false);
+
+  // Draft tab state
+  const [activeTab, setActiveTab] = useState<'form' | 'draft'>('form');
+  const [draftContent, setDraftContent] = useState('');
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const draftContentRef = useRef('');
+  const draftDirtyRef = useRef(false);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load existing form for edit mode
   const { data: existingFormRes } = useQuery({
@@ -133,6 +145,77 @@ export default function MeetingFormFill() {
   const parents = parentsRes?.data || [];
   const goals = (goalsRes?.data || []).filter((g: Goal) => g.isActive !== false);
 
+  // --- Draft: build lookup key and load existing draft ---
+  // Always key by sessionId when available; fall back to adhoc by date. Forms always have a
+  // sessionId once saved (auto-created on submit for ad-hoc), so edit mode reuses the same key.
+  const draftKey: MeetingDraftKey = useMemo(() => {
+    if (sessionId) return { kidId, sessionId };
+    return { kidId, sessionDate };
+  }, [sessionId, kidId, sessionDate]);
+
+  const draftKeyRef = useRef(draftKey);
+  useEffect(() => { draftKeyRef.current = draftKey; }, [draftKey]);
+
+  // In edit mode, wait for the form to load (to get sessionId) before fetching the draft.
+  const draftQueryEnabled = !!kidId && (!isEditMode || !!sessionId);
+
+  const { data: existingDraftRes } = useQuery({
+    queryKey: ['meetingDraft', draftKey],
+    queryFn: () => meetingDraftsApi.get(draftKey),
+    enabled: draftQueryEnabled,
+  });
+
+  useEffect(() => {
+    if (draftLoaded || !existingDraftRes?.success) return;
+    const d = existingDraftRes.data;
+    if (d) {
+      setDraftContent(d.content || '');
+      draftContentRef.current = d.content || '';
+      setDraftSavedAt(d.updatedAt ? toDate(d.updatedAt) : null);
+    }
+    setDraftLoaded(true);
+  }, [existingDraftRes, draftLoaded]);
+
+  const flushDraft = async () => {
+    if (!draftDirtyRef.current) return;
+    if (!kidId) return;
+    draftDirtyRef.current = false;
+    setDraftSaving(true);
+    const res = await meetingDraftsApi.upsert(draftKeyRef.current, draftContentRef.current);
+    setDraftSaving(false);
+    if (res.success) setDraftSavedAt(new Date());
+    else draftDirtyRef.current = true; // retry on next change
+  };
+
+  const handleDraftChange = (newContent: string) => {
+    setDraftContent(newContent);
+    draftContentRef.current = newContent;
+    draftDirtyRef.current = true;
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => { flushDraft(); }, 2000);
+  };
+
+  // Flush pending draft on unmount
+  useEffect(() => {
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+      if (draftDirtyRef.current) { flushDraft(); }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Warn on navigation away if unsaved draft changes pending
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (draftDirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
+
   const toggleGoal = (goalId: string) => {
     const newSet = new Set(selectedGoals);
     if (newSet.has(goalId)) {
@@ -212,6 +295,109 @@ export default function MeetingFormFill() {
       </div>
 
       <div className="content-card">
+        {/* Tab switcher */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '4px',
+            borderBottom: '2px solid #e2e8f0',
+            marginBottom: '20px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveTab('form')}
+            style={{
+              padding: '10px 20px',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'form' ? '3px solid #667eea' : '3px solid transparent',
+              marginBottom: '-2px',
+              color: activeTab === 'form' ? '#667eea' : '#4a5568',
+              fontWeight: activeTab === 'form' ? 700 : 500,
+              fontSize: '1em',
+              cursor: 'pointer',
+            }}
+          >
+            טופס סיכום
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('draft')}
+            style={{
+              padding: '10px 20px',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'draft' ? '3px solid #667eea' : '3px solid transparent',
+              marginBottom: '-2px',
+              color: activeTab === 'draft' ? '#667eea' : '#4a5568',
+              fontWeight: activeTab === 'draft' ? 700 : 500,
+              fontSize: '1em',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            טיוטה
+            {draftContent && draftContent !== '<p></p>' && (
+              <span
+                style={{
+                  fontSize: '0.7em',
+                  background: '#667eea',
+                  color: 'white',
+                  borderRadius: '10px',
+                  padding: '1px 6px',
+                }}
+              >•</span>
+            )}
+          </button>
+        </div>
+
+        {/* Draft tab */}
+        {activeTab === 'draft' && (
+          <div>
+            <div
+              style={{
+                background: '#fffbeb',
+                border: '1px solid #fbd38d',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                marginBottom: '12px',
+                fontSize: '0.9em',
+                color: '#744210',
+              }}
+            >
+              מרחב חופשי לכתיבת הערות במהלך הישיבה. נשמר אוטומטית, לא מופיע בסיכום המובנה.
+            </div>
+            <div style={{ minHeight: '400px' }}>
+              <RichTextEditor value={draftContent} onChange={handleDraftChange} />
+            </div>
+            <div
+              style={{
+                marginTop: '10px',
+                fontSize: '0.85em',
+                color: '#718096',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              {draftSaving ? (
+                <span>שומר…</span>
+              ) : draftSavedAt ? (
+                <span>נשמר {formatDistanceToNow(draftSavedAt, { locale: he, addSuffix: true })}</span>
+              ) : (
+                <span style={{ color: '#a0aec0' }}>עדיין לא נשמר</span>
+              )}
+              {draftDirtyRef.current && !draftSaving && (
+                <span style={{ color: '#dd6b20' }}>• שינויים ממתינים לשמירה</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'form' && (
         <form onSubmit={handleSubmit}>
           {/* Kid & Date */}
           <div className="form-row-2">
@@ -373,6 +559,7 @@ export default function MeetingFormFill() {
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

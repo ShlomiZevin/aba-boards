@@ -47,7 +47,7 @@ function ScheduleModal({ onClose, onSchedule, therapists }: ScheduleModalProps) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const scheduledDate = `${date}T${time}:00`;
+    const scheduledDate = new Date(`${date}T${time}:00`).toISOString();
     onSchedule({ scheduledDate, therapistId: therapistId || undefined });
     onClose();
   };

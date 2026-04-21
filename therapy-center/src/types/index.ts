@@ -286,7 +286,7 @@ export interface GoalLibraryItem {
 
 // Session types
 export type SessionStatus = 'scheduled' | 'pending_form' | 'completed' | 'missed';
-export type SessionType = 'therapy' | 'meeting';
+export type SessionType = 'therapy' | 'meeting' | 'guidance';
 
 export interface Session {
   id: string;
@@ -297,6 +297,7 @@ export interface Session {
   status: SessionStatus;
   formId?: string;
   customTitle?: string | null;
+  title?: string | null;
   notes?: string | null;
   adminId?: string | null;
   createdAt: Date;
@@ -324,6 +325,21 @@ export interface MeetingForm {
   programsOutsideRoom: string;
   learningProgramsInRoom: string;
   tasks: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Meeting draft — free-form rich-text notes taken during a meeting,
+// independent of the structured meeting form. Keyed per (adminId, formId|sessionId|adhoc).
+export interface MeetingDraft {
+  id: string;
+  adminId: string;
+  kidId: string | null;
+  sessionId: string | null;
+  formId: string | null;
+  sessionDate: Date | null;
+  key: string;
+  content: string;
   createdAt: Date;
   updatedAt: Date;
 }

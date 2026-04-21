@@ -580,6 +580,10 @@ export default function KidDetail() {
       sessionsApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
+      queryClient.invalidateQueries({ queryKey: ['forms', kidId] });
+      queryClient.invalidateQueries({ queryKey: ['form'] });
+      queryClient.invalidateQueries({ queryKey: ['meetingForms', kidId] });
+      queryClient.invalidateQueries({ queryKey: ['meetingForm'] });
       setEditingSession(null);
     },
   });
@@ -2147,7 +2151,7 @@ export default function KidDetail() {
             <AddModal title="תזמון פגישה חדשה" onClose={resetScheduleModal}>
               <form onSubmit={(e) => {
                 e.preventDefault();
-                const dateStr = `${scheduleDate}T${scheduleTime}:00`;
+                const dateStr = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
                 if (scheduleRecurring) {
                   scheduleRecurringMutation.mutate({
                     scheduledDate: dateStr,
@@ -2262,7 +2266,7 @@ export default function KidDetail() {
                 updateSessionMutation.mutate({
                   id: editingSession.id,
                   data: {
-                    scheduledDate: `${editSessionDate}T${editSessionTime}:00` as unknown as Date,
+                    scheduledDate: new Date(`${editSessionDate}T${editSessionTime}:00`).toISOString() as unknown as Date,
                     therapistId: editSessionTherapist || undefined,
                   },
                 });

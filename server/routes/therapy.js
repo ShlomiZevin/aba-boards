@@ -561,6 +561,42 @@ router.delete('/meeting-forms/:id', asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
+// ==================== MEETING DRAFTS ====================
+
+router.get('/meeting-drafts', requireAdmin, asyncHandler(async (req, res) => {
+  const { kidId, sessionId, formId, sessionDate } = req.query;
+  if (!kidId && !sessionId && !formId) {
+    return res.status(400).json({ error: 'kidId, sessionId, or formId is required' });
+  }
+  const draft = await therapyService.getMeetingDraft(req.adminId, {
+    kidId, sessionId, formId, sessionDate,
+  });
+  res.json(draft);
+}));
+
+router.put('/meeting-drafts', requireAdmin, asyncHandler(async (req, res) => {
+  const { kidId, sessionId, formId, sessionDate, content } = req.body;
+  if (!kidId && !sessionId && !formId) {
+    return res.status(400).json({ error: 'kidId, sessionId, or formId is required' });
+  }
+  const draft = await therapyService.upsertMeetingDraft(
+    req.adminId,
+    { kidId, sessionId, formId, sessionDate },
+    content || ''
+  );
+  res.json(draft);
+}));
+
+router.get('/kids/:kidId/meeting-drafts', requireAdmin, asyncHandler(async (req, res) => {
+  const drafts = await therapyService.getMeetingDraftsForKid(req.adminId, req.params.kidId);
+  res.json(drafts);
+}));
+
+router.delete('/meeting-drafts/:id', requireAdmin, asyncHandler(async (req, res) => {
+  await therapyService.deleteMeetingDraft(req.adminId, req.params.id);
+  res.status(204).send();
+}));
+
 // ==================== NOTIFICATIONS ====================
 
 router.post('/notifications', requireAdmin, asyncHandler(async (req, res) => {

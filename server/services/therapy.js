@@ -1210,6 +1210,7 @@ async function scheduleSession(kidId, data, adminId) {
     status: 'scheduled',
     formId: null,
     customTitle: data.customTitle || null,
+    title: data.title || null,
     notes: data.notes || null,
     adminId: adminId || null,
     createdAt: new Date(),
@@ -1221,21 +1222,36 @@ async function scheduleSession(kidId, data, adminId) {
 
 async function scheduleCustomSession(adminId, data) {
   const db = getDb();
-  const sessionId = uuidv4();
-
-  const session = {
+  const base = {
     kidId: data.kidId || null,
     therapistId: data.therapistId || null,
-    scheduledDate: new Date(data.scheduledDate),
     type: data.type || 'meeting',
     status: 'scheduled',
     formId: null,
     customTitle: data.customTitle || null,
+    title: data.title || null,
     notes: data.notes || null,
     adminId: adminId || null,
     createdAt: new Date(),
   };
 
+  if (data.until) {
+    const start = new Date(data.scheduledDate);
+    const end = new Date(data.until);
+    const created = [];
+    const cur = new Date(start);
+    while (cur <= end) {
+      const id = uuidv4();
+      const session = { ...base, scheduledDate: new Date(cur) };
+      await db.collection('sessions').doc(id).set(session);
+      created.push({ id, ...session });
+      cur.setDate(cur.getDate() + 7);
+    }
+    return created;
+  }
+
+  const sessionId = uuidv4();
+  const session = { ...base, scheduledDate: new Date(data.scheduledDate) };
   await db.collection('sessions').doc(sessionId).set(session);
   return { id: sessionId, ...session };
 }
@@ -1279,10 +1295,26 @@ async function updateSession(id, data) {
   if (data.formId !== undefined) updates.formId = data.formId;
   if (data.type !== undefined) updates.type = data.type;
   if (data.customTitle !== undefined) updates.customTitle = data.customTitle;
+  if (data.title !== undefined) updates.title = data.title;
   if (data.notes !== undefined) updates.notes = data.notes;
   if (data.kidId !== undefined) updates.kidId = data.kidId;
 
   await db.collection('sessions').doc(id).update(updates);
+
+  // Sync linked form's sessionDate (and practitionerId) when session changes
+  if (data.scheduledDate !== undefined || data.therapistId !== undefined) {
+    const formSnap = await db.collection('sessionForms').where('sessionId', '==', id).limit(1).get();
+    if (!formSnap.empty) {
+      const formUpdates = { updatedAt: new Date() };
+      if (data.scheduledDate !== undefined) formUpdates.sessionDate = new Date(data.scheduledDate);
+      if (data.therapistId !== undefined) formUpdates.practitionerId = data.therapistId;
+      await formSnap.docs[0].ref.update(formUpdates);
+    }
+    const meetingSnap = await db.collection('meetingForms').where('sessionId', '==', id).limit(1).get();
+    if (!meetingSnap.empty && data.scheduledDate !== undefined) {
+      await meetingSnap.docs[0].ref.update({ sessionDate: new Date(data.scheduledDate), updatedAt: new Date() });
+    }
+  }
 
   const doc = await db.collection('sessions').doc(id).get();
   return { id: doc.id, ...doc.data() };
@@ -1498,6 +1530,14 @@ async function updateForm(id, data) {
   await db.collection('sessionForms').doc(id).update(updates);
   const doc = await db.collection('sessionForms').doc(id).get();
   const form = doc.data();
+
+  // Sync linked session's scheduledDate/therapistId when form changes
+  if (form.sessionId && (data.sessionDate !== undefined || data.practitionerId !== undefined)) {
+    const sessionUpdates = {};
+    if (data.sessionDate !== undefined) sessionUpdates.scheduledDate = new Date(data.sessionDate);
+    if (data.practitionerId !== undefined) sessionUpdates.therapistId = data.practitionerId;
+    await db.collection('sessions').doc(form.sessionId).update(sessionUpdates);
+  }
 
   // Auto-create pending DC entries for any goals that don't already have one for this form
   const goalsWorkedOn = form.goalsWorkedOn || [];
@@ -1984,7 +2024,16 @@ async function updateMeetingForm(id, data) {
   }
   await db.collection('meetingForms').doc(id).update(updates);
   const doc = await db.collection('meetingForms').doc(id).get();
-  return { id: doc.id, ...doc.data() };
+  const form = doc.data();
+
+  // Sync linked session's scheduledDate when meeting form date changes
+  if (form.sessionId && data.sessionDate !== undefined) {
+    await db.collection('sessions').doc(form.sessionId).update({
+      scheduledDate: new Date(data.sessionDate),
+    });
+  }
+
+  return { id: doc.id, ...form };
 }
 
 async function deleteMeetingForm(id) {
@@ -1994,6 +2043,84 @@ async function deleteMeetingForm(id) {
     await db.collection('sessions').doc(doc.data().sessionId).update({ status: 'scheduled', formId: null });
   }
   await db.collection('meetingForms').doc(id).delete();
+}
+
+// ==================== MEETING DRAFTS ====================
+
+function buildDraftKey({ formId, sessionId, kidId, sessionDate }) {
+  if (formId) return `form:${formId}`;
+  if (sessionId) return `session:${sessionId}`;
+  const datePart = sessionDate ? new Date(sessionDate).toISOString().slice(0, 10) : 'nodate';
+  return `adhoc:${kidId}:${datePart}`;
+}
+
+async function getMeetingDraft(adminId, opts) {
+  const db = getDb();
+  const key = buildDraftKey(opts);
+  const snap = await db.collection('meetingDrafts')
+    .where('adminId', '==', adminId)
+    .where('key', '==', key)
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { id: doc.id, ...doc.data() };
+}
+
+async function upsertMeetingDraft(adminId, opts, content) {
+  const db = getDb();
+  const key = buildDraftKey(opts);
+  const snap = await db.collection('meetingDrafts')
+    .where('adminId', '==', adminId)
+    .where('key', '==', key)
+    .limit(1)
+    .get();
+  const now = new Date();
+  if (snap.empty) {
+    const id = uuidv4();
+    const draft = {
+      adminId,
+      kidId: opts.kidId || null,
+      sessionId: opts.sessionId || null,
+      formId: opts.formId || null,
+      sessionDate: opts.sessionDate ? new Date(opts.sessionDate) : null,
+      key,
+      content: content || '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.collection('meetingDrafts').doc(id).set(draft);
+    return { id, ...draft };
+  }
+  const doc = snap.docs[0];
+  const updates = { content: content || '', updatedAt: now };
+  // Back-fill formId when a draft that started session-scoped becomes tied to a saved form
+  if (opts.formId && !doc.data().formId) updates.formId = opts.formId;
+  await doc.ref.update(updates);
+  return { id: doc.id, ...doc.data(), ...updates };
+}
+
+async function getMeetingDraftsForKid(adminId, kidId) {
+  const db = getDb();
+  const snap = await db.collection('meetingDrafts')
+    .where('adminId', '==', adminId)
+    .where('kidId', '==', kidId)
+    .get();
+  const drafts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  drafts.sort((a, b) => {
+    const ta = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : new Date(a.updatedAt || 0).getTime();
+    const tb = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : new Date(b.updatedAt || 0).getTime();
+    return tb - ta;
+  });
+  return drafts;
+}
+
+async function deleteMeetingDraft(adminId, id) {
+  const db = getDb();
+  const doc = await db.collection('meetingDrafts').doc(id).get();
+  if (!doc.exists) return;
+  if (doc.data().adminId !== adminId) throw new Error('Forbidden');
+  await doc.ref.delete();
 }
 
 // ==================== NOTIFICATIONS ====================
@@ -2181,6 +2308,11 @@ module.exports = {
   submitMeetingForm,
   updateMeetingForm,
   deleteMeetingForm,
+  // Meeting Drafts
+  getMeetingDraft,
+  upsertMeetingDraft,
+  getMeetingDraftsForKid,
+  deleteMeetingDraft,
   // Forms
   getFormsForKid,
   getFormById,
