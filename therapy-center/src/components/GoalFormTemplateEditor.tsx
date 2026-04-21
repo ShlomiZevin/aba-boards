@@ -107,7 +107,7 @@ function OptionsEditor({ options, onChange }: { options: string[]; onChange: (op
 }
 
 // -------- Single column row — compact single-line layout --------
-function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isLast }: {
+function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isLast, isMobile }: {
   col: GoalColumnDef;
   onChange: (c: GoalColumnDef) => void;
   onRemove: () => void;
@@ -115,12 +115,15 @@ function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isL
   onMoveDown: () => void;
   isFirst: boolean;
   isLast: boolean;
+  isMobile?: boolean;
 }) {
   return (
     <div style={{ marginBottom: 5 }}>
       {/* Main row: order | name | type | remove */}
       <div style={{
-        display: 'flex', gap: 7, alignItems: 'center',
+        display: 'flex', gap: 7,
+        alignItems: isMobile ? 'stretch' : 'center',
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
         padding: '7px 10px',
         background: 'white',
         border: '1.5px solid #e2e8f0',
@@ -136,7 +139,7 @@ function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isL
         </div>
 
         {/* Name + description inputs */}
-        <div style={{ flex: 1, minWidth: 80, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div style={{ flex: isMobile ? '1 1 calc(100% - 30px)' : 1, minWidth: 80, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <input
             type="text"
             value={col.label}
@@ -417,7 +420,7 @@ const TABLE_TYPE_CARDS: { type: GoalTableType; label: string; desc: string }[] =
   { type: 'horizontal', label: 'אופקי', desc: 'עמודות עם שורות — לטבלאות נתונים' },
 ];
 
-function TableBlockEditor({ block, idx, total, onChange, onRemove, onMoveUp, onMoveDown }: {
+function TableBlockEditor({ block, idx, total, onChange, onRemove, onMoveUp, onMoveDown, isMobile }: {
   block: GoalTableBlock;
   idx: number;
   total: number;
@@ -425,6 +428,7 @@ function TableBlockEditor({ block, idx, total, onChange, onRemove, onMoveUp, onM
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  isMobile?: boolean;
 }) {
   function addColumn() {
     onChange({ ...block, columns: [...block.columns, { id: makeId(), label: '', type: 'text' }] });
@@ -541,6 +545,7 @@ function TableBlockEditor({ block, idx, total, onChange, onRemove, onMoveUp, onM
             onMoveDown={() => moveColumn(colIdx, 1)}
             isFirst={colIdx === 0}
             isLast={colIdx === block.columns.length - 1}
+            isMobile={isMobile}
           />
         ))}
 
@@ -1146,6 +1151,7 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose, onSave
                 onRemove={() => removeBlock(idx)}
                 onMoveUp={() => moveBlock(idx, -1)}
                 onMoveDown={() => moveBlock(idx, 1)}
+                isMobile={isMobile}
               />
             ))}
 
