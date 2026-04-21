@@ -115,6 +115,7 @@ export default function AppShell({ children }: AppShellProps) {
       { path: '/goal-library', label: 'ספריית מטרות', icon: '🎯' },
       { path: '/admin-management', label: 'מנהלי מרכזים', icon: '⚙' },
     ] : []),
+    { path: '/install-app', label: 'התקנת אפליקציה', icon: '📱' },
   ];
 
   const isActive = (path: string) => {

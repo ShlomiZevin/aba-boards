@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
-import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, endOfWeek, addDays, subMonths, addMonths, isSameDay, isSameMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { kidsApi, sessionsApi, practitionersApi } from '../api/client';
 import type { Kid, Practitioner, Session, SessionType } from '../types';
@@ -64,6 +64,320 @@ interface CalendarEvent {
 
 const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
 
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function dayKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function relativeDayLabel(d: Date) {
+  const today = startOfDay(new Date());
+  const target = startOfDay(d);
+  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const full = format(d, 'EEEE d/M', { locale: he });
+  if (diffDays === 0) return `היום · ${full}`;
+  if (diffDays === 1) return `מחר · ${full}`;
+  if (diffDays === -1) return `אתמול · ${full}`;
+  return full;
+}
+
+interface MobileAgendaListProps {
+  sessions: Session[];
+  kidMap: Record<string, Kid>;
+  therapistMap: Record<string, Practitioner>;
+  onTap: (s: Session) => void;
+  onDelete: (s: Session) => void;
+}
+
+function MobileAgendaList({ sessions, kidMap, therapistMap, onTap, onDelete }: MobileAgendaListProps) {
+  const today = startOfDay(new Date());
+
+  const groups = useMemo(() => {
+    // Partition: upcoming (today and future) vs past (before today)
+    const upcoming: Session[] = [];
+    const past: Session[] = [];
+    for (const s of sessions) {
+      const d = toDate(s.scheduledDate);
+      if (d >= today) upcoming.push(s);
+      else past.push(s);
+    }
+    upcoming.sort((a, b) => toDate(a.scheduledDate).getTime() - toDate(b.scheduledDate).getTime());
+    past.sort((a, b) => toDate(b.scheduledDate).getTime() - toDate(a.scheduledDate).getTime());
+
+    function groupByDay(list: Session[]) {
+      const byDay: Record<string, { date: Date; sessions: Session[] }> = {};
+      for (const s of list) {
+        const d = toDate(s.scheduledDate);
+        const k = dayKey(d);
+        if (!byDay[k]) byDay[k] = { date: startOfDay(d), sessions: [] };
+        byDay[k].sessions.push(s);
+      }
+      return Object.values(byDay);
+    }
+    return { upcoming: groupByDay(upcoming), past: groupByDay(past) };
+  }, [sessions, today]);
+
+  const [showPast, setShowPast] = useState(false);
+
+  if (sessions.length === 0) {
+    return (
+      <div className="as-list-view" style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+        אין פגישות להצגה
+      </div>
+    );
+  }
+
+  return (
+    <div className="as-list-view" style={{ padding: '4px 10px 100px' }}>
+      {groups.upcoming.length === 0 && (
+        <div style={{ padding: '20px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+          אין פגישות קרובות
+        </div>
+      )}
+      {groups.upcoming.map(g => (
+        <DayGroup key={`u-${dayKey(g.date)}`} date={g.date} sessions={g.sessions} kidMap={kidMap} therapistMap={therapistMap} onTap={onTap} onDelete={onDelete} />
+      ))}
+      {groups.past.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowPast(v => !v)}
+            style={{
+              display: 'block',
+              width: '100%',
+              margin: '16px 0 10px',
+              padding: '10px',
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#475569',
+              cursor: 'pointer',
+            }}
+          >
+            {showPast ? '▲ הסתר פגישות שעברו' : `▼ הצג פגישות שעברו (${groups.past.reduce((n, g) => n + g.sessions.length, 0)})`}
+          </button>
+          {showPast && groups.past.map(g => (
+            <DayGroup key={`p-${dayKey(g.date)}`} date={g.date} sessions={g.sessions} kidMap={kidMap} therapistMap={therapistMap} onTap={onTap} onDelete={onDelete} past />
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+function DayGroup({ date, sessions, kidMap, therapistMap, onTap, onDelete, past }: {
+  date: Date;
+  sessions: Session[];
+  kidMap: Record<string, Kid>;
+  therapistMap: Record<string, Practitioner>;
+  onTap: (s: Session) => void;
+  onDelete: (s: Session) => void;
+  past?: boolean;
+}) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{
+        fontSize: 13,
+        fontWeight: 700,
+        color: past ? '#94a3b8' : '#334155',
+        padding: '6px 4px',
+        borderBottom: '1px solid #e2e8f0',
+        marginBottom: 6,
+      }}>{relativeDayLabel(date)}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {sessions.map(s => {
+          const d = toDate(s.scheduledDate);
+          const time = format(d, 'HH:mm');
+          const kidName = s.kidId ? (kidMap[s.kidId]?.name || s.kidId) : (s.customTitle || '');
+          const therapistName = s.therapistId ? (therapistMap[s.therapistId]?.name || '') : '';
+          const emoji = typeEmoji(s.type);
+          const colorKey = s.kidId
+            ? (kidMap[s.kidId]?.name.trim().toLowerCase() || s.kidId)
+            : (s.customTitle?.trim().toLowerCase() || null);
+          const color = getColorForKey(colorKey);
+          return (
+            <div
+              key={s.id}
+              onClick={() => onTap(s)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                background: 'white',
+                border: '1px solid #e2e8f0',
+                borderRight: `4px solid ${color}`,
+                borderRadius: 10,
+                padding: '10px 12px',
+                cursor: 'pointer',
+                opacity: past ? 0.7 : 1,
+              }}
+            >
+              <div style={{ minWidth: 48, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{time}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {emoji} {kidName || 'אירוע'}{s.title ? ` · ${s.title}` : ''}
+                </div>
+                {therapistName && s.type !== 'meeting' && (
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {therapistName}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDelete(s); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#cbd5e1',
+                  fontSize: 18,
+                  cursor: 'pointer',
+                  padding: '4px 6px',
+                }}
+                aria-label="בטל פגישה"
+              >✕</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+interface MobileMonthCalendarProps {
+  events: CalendarEvent[];
+  date: Date;
+  onDateChange: (d: Date) => void;
+  onEventClick: (s: Session) => void;
+  onSlotClick: (d: Date) => void;
+  kidMap: Record<string, Kid>;
+  therapistMap: Record<string, Practitioner>;
+}
+
+function MobileMonthCalendar({ events, date, onDateChange, onEventClick, onSlotClick, kidMap, therapistMap }: MobileMonthCalendarProps) {
+  const today = startOfDay(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date>(today);
+
+  const days = useMemo(() => {
+    const gridStart = startOfWeek(startOfMonth(date), { weekStartsOn: 0 });
+    const gridEnd = endOfWeek(endOfMonth(date), { weekStartsOn: 0 });
+    const out: Date[] = [];
+    let d = gridStart;
+    while (d <= gridEnd) {
+      out.push(d);
+      d = addDays(d, 1);
+    }
+    return out;
+  }, [date]);
+
+  const eventsByDay = useMemo(() => {
+    const m: Record<string, CalendarEvent[]> = {};
+    for (const e of events) {
+      const k = dayKey(e.start);
+      if (!m[k]) m[k] = [];
+      m[k].push(e);
+    }
+    for (const k in m) m[k].sort((a, b) => a.start.getTime() - b.start.getTime());
+    return m;
+  }, [events]);
+
+  const selectedKey = dayKey(selectedDay);
+  const selectedEvents = eventsByDay[selectedKey] || [];
+
+  return (
+    <div className="mmc-root">
+      <div className="mmc-toolbar">
+        <button type="button" className="mmc-nav-btn" onClick={() => onDateChange(subMonths(date, 1))} aria-label="חודש קודם">‹</button>
+        <div className="mmc-title">{HE_MONTHS[date.getMonth()]} {date.getFullYear()}</div>
+        <button type="button" className="mmc-nav-btn" onClick={() => onDateChange(addMonths(date, 1))} aria-label="חודש הבא">›</button>
+      </div>
+
+      <button
+        type="button"
+        className="mmc-today-btn"
+        onClick={() => { onDateChange(today); setSelectedDay(today); }}
+      >היום</button>
+
+      <div className="mmc-weekdays">
+        {HE_DAY_SHORT.map(d => <div key={d} className="mmc-weekday">{d}</div>)}
+      </div>
+
+      <div className="mmc-grid">
+        {days.map(d => {
+          const k = dayKey(d);
+          const dayEvents = eventsByDay[k] || [];
+          const isOther = !isSameMonth(d, date);
+          const isToday = isSameDay(d, today);
+          const isSelected = isSameDay(d, selectedDay);
+          return (
+            <button
+              key={k}
+              type="button"
+              className={`mmc-day${isOther ? ' mmc-day-other' : ''}${isToday ? ' mmc-day-today' : ''}${isSelected ? ' mmc-day-selected' : ''}`}
+              onClick={() => setSelectedDay(startOfDay(d))}
+            >
+              <div className="mmc-day-num">{d.getDate()}</div>
+              <div className="mmc-day-dots">
+                {dayEvents.slice(0, 3).map((e, i) => {
+                  const s = e.resource;
+                  const colorKey = s.kidId
+                    ? (kidMap[s.kidId]?.name.trim().toLowerCase() || s.kidId)
+                    : (s.customTitle?.trim().toLowerCase() || null);
+                  return <span key={i} className="mmc-dot" style={{ background: getColorForKey(colorKey) }} />;
+                })}
+                {dayEvents.length > 3 && <span className="mmc-dot-more">+{dayEvents.length - 3}</span>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mmc-day-events">
+        <div className="mmc-day-events-title">{relativeDayLabel(selectedDay)}</div>
+        {selectedEvents.length === 0 ? (
+          <div className="mmc-empty">
+            <span>אין פגישות ביום זה</span>
+            <button type="button" onClick={() => onSlotClick(selectedDay)} className="btn-primary btn-small">+ הוסף</button>
+          </div>
+        ) : (
+          <div className="mmc-events-list">
+            {selectedEvents.map(e => {
+              const s = e.resource;
+              const kidName = s.kidId ? (kidMap[s.kidId]?.name || s.kidId) : (s.customTitle || '');
+              const therapistName = s.therapistId ? (therapistMap[s.therapistId]?.name || '') : '';
+              const emoji = typeEmoji(s.type);
+              const colorKey = s.kidId
+                ? (kidMap[s.kidId]?.name.trim().toLowerCase() || s.kidId)
+                : (s.customTitle?.trim().toLowerCase() || null);
+              const color = getColorForKey(colorKey);
+              return (
+                <div
+                  key={e.id}
+                  className="mmc-event"
+                  style={{ borderRight: `4px solid ${color}` }}
+                  onClick={() => onEventClick(s)}
+                >
+                  <div className="mmc-event-time">{e.time}</div>
+                  <div className="mmc-event-body">
+                    <div className="mmc-event-title">{emoji} {kidName || 'אירוע'}{s.title ? ` · ${s.title}` : ''}</div>
+                    {therapistName && s.type !== 'meeting' && (
+                      <div className="mmc-event-sub">{therapistName}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AllSessions() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -71,6 +385,16 @@ export default function AllSessions() {
   const myId = user?.adminId || '';
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [onlyMine, setOnlyMine] = useState(true);
+  const [mobileView, setMobileView] = useState<'list' | 'calendar'>('list');
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const showDesktopCalendar = !isMobile;
+  const showMobileCalendar = isMobile && mobileView === 'calendar';
+  const showMobileList = isMobile && mobileView === 'list';
 
   const { data: kidsRes } = useQuery({ queryKey: ['kids'], queryFn: () => kidsApi.getAll() });
   const { data: sessionsRes, isLoading } = useQuery({
@@ -298,7 +622,212 @@ export default function AllSessions() {
   }
 
   return (
-    <div style={{ padding: '24px 24px 60px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="all-sessions-page" style={{ padding: '24px 24px 60px', maxWidth: 1400, margin: '0 auto' }}>
+      <style>{`
+        .as-fab { display: none; }
+        .as-mobile-view-toggle { display: none !important; }
+        @media (max-width: 768px) {
+          .as-mobile-view-toggle { display: flex !important; }
+          .as-fab { display: flex !important; }
+          .as-header-add-btn { display: none !important; }
+
+          .all-sessions-page { padding: 8px 6px 80px !important; max-width: 100% !important; }
+          .all-sessions-page .content-card-header { padding: 12px 10px !important; flex-wrap: wrap !important; }
+          .all-sessions-page .content-card-header h1 { font-size: 17px !important; }
+          .all-sessions-page .content-card-header > div:last-child { width: 100%; justify-content: center; flex-wrap: wrap; }
+
+          /* Modals: stack grid columns + fit screen */
+          .all-sessions-page .modal {
+            width: min(560px, 94vw) !important;
+            padding: 16px !important;
+            max-height: 90vh;
+            overflow-y: auto;
+          }
+          .all-sessions-page .as-form-row {
+            grid-template-columns: 1fr !important;
+          }
+        }
+
+        /* Mobile month calendar — fits viewport, no horizontal overflow */
+        .mmc-root {
+          direction: rtl;
+          padding: 4px 0 24px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .mmc-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 4px 2px 8px;
+        }
+        .mmc-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .mmc-nav-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          background: #f1f5f9;
+          border: none;
+          color: #334155;
+          font-size: 22px;
+          line-height: 1;
+          cursor: pointer;
+          padding: 0;
+        }
+        .mmc-today-btn {
+          display: block;
+          margin: 0 auto 8px;
+          padding: 4px 14px;
+          background: transparent;
+          border: 1px solid #e2e8f0;
+          border-radius: 999px;
+          font-size: 12px;
+          color: #475569;
+          cursor: pointer;
+          font-family: inherit;
+        }
+        .mmc-weekdays {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 2px;
+          margin-bottom: 4px;
+        }
+        .mmc-weekday {
+          text-align: center;
+          font-size: 11px;
+          font-weight: 700;
+          color: #64748b;
+          padding: 4px 0;
+        }
+        .mmc-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 2px;
+        }
+        .mmc-day {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 4px 2px 5px;
+          min-height: 48px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 3px;
+          cursor: pointer;
+          font-family: inherit;
+          min-width: 0;
+          overflow: hidden;
+        }
+        .mmc-day-other {
+          background: #f8fafc;
+        }
+        .mmc-day-today {
+          background: #fff3e0;
+          border-color: #fdba74;
+        }
+        .mmc-day-selected {
+          background: #eef2ff;
+          border-color: #667eea;
+          box-shadow: 0 0 0 1px #667eea inset;
+        }
+        .mmc-day-num {
+          font-size: 13px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .mmc-day-other .mmc-day-num {
+          color: #94a3b8;
+        }
+        .mmc-day-dots {
+          display: flex;
+          gap: 2px;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: center;
+          min-height: 8px;
+          max-width: 100%;
+        }
+        .mmc-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          display: inline-block;
+          flex-shrink: 0;
+        }
+        .mmc-dot-more {
+          font-size: 9px;
+          color: #64748b;
+          font-weight: 600;
+          line-height: 1;
+        }
+        .mmc-day-events {
+          margin-top: 14px;
+          padding: 0 2px;
+        }
+        .mmc-day-events-title {
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+          padding: 8px 4px;
+          border-bottom: 1px solid #e2e8f0;
+          margin-bottom: 8px;
+        }
+        .mmc-empty {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 14px 8px;
+          color: #64748b;
+          font-size: 13px;
+        }
+        .mmc-events-list {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .mmc-event {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 10px 12px;
+          cursor: pointer;
+        }
+        .mmc-event-time {
+          min-width: 44px;
+          font-size: 14px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .mmc-event-body {
+          flex: 1;
+          min-width: 0;
+        }
+        .mmc-event-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #0f172a;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .mmc-event-sub {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 2px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      `}</style>
       <div className="content-card">
         <div className="content-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -341,14 +870,48 @@ export default function AllSessions() {
                 );
               })}
             </div>
-            <button onClick={() => openSchedule()} className="btn-primary btn-small">+ פגישה חדשה</button>
+            <button onClick={() => openSchedule()} className="btn-primary btn-small as-header-add-btn">+ פגישה חדשה</button>
           </div>
+        </div>
+
+        {/* Mobile-only view toggle */}
+        <div className="as-mobile-view-toggle" style={{
+          display: 'none',
+          padding: '8px 10px 4px',
+          gap: 6,
+          justifyContent: 'center',
+        }}>
+          {([
+            { value: 'list', label: '📋 רשימה' },
+            { value: 'calendar', label: '📅 לוח' },
+          ] as const).map(opt => {
+            const active = mobileView === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setMobileView(opt.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  background: active ? '#667eea' : '#f1f5f9',
+                  color: active ? 'white' : '#64748b',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >{opt.label}</button>
+            );
+          })}
         </div>
 
         {isLoading ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>טוען...</div>
-        ) : (
-          <div className="calendar-container" style={{ padding: 16 }}>
+        ) : (<>
+          {showDesktopCalendar && (
+          <div className="as-calendar-view calendar-container">
             <DnDCalendar
               localizer={localizer}
               formats={calendarFormats}
@@ -373,7 +936,7 @@ export default function AllSessions() {
                 });
               }}
               onSelectSlot={(slot) => openSchedule(slot.start)}
-              style={{ height: 620 }}
+              style={{ height: isMobile ? 500 : 620 }}
               components={{
                 event: ({ event }) => {
                   const s = event.resource;
@@ -409,7 +972,28 @@ export default function AllSessions() {
               messages={{ today: 'היום', previous: 'הקודם', next: 'הבא', month: 'חודש' }}
             />
           </div>
-        )}
+          )}
+          {showMobileCalendar && (
+            <MobileMonthCalendar
+              events={calendarEvents}
+              date={calendarDate}
+              onDateChange={setCalendarDate}
+              onEventClick={openEdit}
+              onSlotClick={openSchedule}
+              kidMap={kidMap}
+              therapistMap={therapistMap}
+            />
+          )}
+          {showMobileList && (
+            <MobileAgendaList
+              sessions={visibleSessions}
+              kidMap={kidMap}
+              therapistMap={therapistMap}
+              onTap={openEdit}
+              onDelete={setSessionToDelete}
+            />
+          )}
+        </>)}
       </div>
 
       {/* Schedule modal */}
@@ -422,7 +1006,7 @@ export default function AllSessions() {
                 <label>סוג פגישה</label>
                 {renderTypeToggle(scheduleType, setScheduleType)}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div className="as-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>ילד/ה</label>
                   <input
@@ -455,7 +1039,7 @@ export default function AllSessions() {
                   </select>
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div className="as-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>תאריך</label>
                   <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} required />
@@ -534,7 +1118,7 @@ export default function AllSessions() {
                 <label>סוג פגישה</label>
                 {renderTypeToggle(editType, setEditType)}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div className="as-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>ילד/ה</label>
                   <input
@@ -573,7 +1157,7 @@ export default function AllSessions() {
                   </select>
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div className="as-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>תאריך</label>
                   <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} required />
@@ -603,6 +1187,31 @@ export default function AllSessions() {
         </div>
         );
       })()}
+
+      <button
+        type="button"
+        onClick={() => openSchedule()}
+        className="as-fab"
+        aria-label="פגישה חדשה"
+        style={{
+          position: 'fixed',
+          bottom: 20,
+          insetInlineStart: 20,
+          width: 56,
+          height: 56,
+          borderRadius: '50%',
+          background: '#667eea',
+          color: 'white',
+          border: 'none',
+          fontSize: 28,
+          fontWeight: 300,
+          boxShadow: '0 4px 14px rgba(102,126,234,0.4)',
+          cursor: 'pointer',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+        }}
+      >+</button>
 
       {sessionToDelete && (
         <ConfirmModal

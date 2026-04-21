@@ -37,6 +37,7 @@ export default function TherapistShell({ children }: TherapistShellProps) {
     { path: `${prefix}/chat`, label: 'צ׳אט AI', icon: '🤖' },
     { path: `${prefix}/forms`, label: 'טפסים', icon: '📋' },
     { path: `${prefix}/notifications`, label: 'הודעות', icon: '💬' },
+    { path: `${prefix}/install-app`, label: 'התקנת אפליקציה', icon: '📱' },
   ];
 
   const isActive = (path: string) => {

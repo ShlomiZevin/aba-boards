@@ -1,4 +1,14 @@
 import { useState, useEffect } from 'react';
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isMobile;
+}
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalTemplatesApi, goalsApi } from '../api/client';
 import ConfirmModal from './ConfirmModal';
@@ -867,6 +877,7 @@ interface Props {
 
 export default function GoalFormTemplateEditor({ goal, formType, onClose, onSaveOverride, isCategoryTemplate }: Props) {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const existingTemplate = formType === 'lp' ? goal.learningPlanTemplate : goal.dataCollectionTemplate;
   const initialBlocks = normalizeTemplate(existingTemplate ?? null);
@@ -1098,11 +1109,29 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose, onSave
 
           {/* Left: editor */}
           <div style={{
-            flex: '0 0 56%',
+            flex: isMobile ? '1 1 100%' : '0 0 56%',
             overflowY: 'auto',
-            padding: '14px 12px 14px 20px',
-            borderLeft: '1px solid #f1f5f9',
+            padding: isMobile ? '12px' : '14px 12px 14px 20px',
+            borderLeft: isMobile ? 'none' : '1px solid #f1f5f9',
           }}>
+            {isMobile && (
+              <div style={{ marginBottom: 10, textAlign: 'left' }}>
+                <button
+                  type="button"
+                  onClick={() => setPreviewFullscreen(true)}
+                  disabled={!hasColumns}
+                  style={{
+                    background: hasColumns ? 'white' : '#f8fafc',
+                    border: '1.5px solid #e2e8f0', borderRadius: 7,
+                    padding: '6px 12px', cursor: hasColumns ? 'pointer' : 'not-allowed',
+                    fontSize: '0.85em', color: hasColumns ? '#475569' : '#cbd5e1', fontWeight: 500,
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <span style={{ fontSize: '1.1em' }}>⛶</span> תצוגה מקדימה
+                </button>
+              </div>
+            )}
             <div style={{ fontSize: '0.76em', color: '#94a3b8', marginBottom: 12, lineHeight: 1.6 }}>
               הגדר טבלאות עם עמודות/שדות. ניתן להוסיף מספר טבלאות — כל אחת תוצג בנפרד בטופס.
             </div>
@@ -1129,7 +1158,8 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose, onSave
             </button>
           </div>
 
-          {/* Right: live preview */}
+          {/* Right: live preview — hidden on mobile */}
+          {!isMobile && (
           <div style={{
             flex: '0 0 44%',
             overflowY: 'auto',
@@ -1156,6 +1186,7 @@ export default function GoalFormTemplateEditor({ goal, formType, onClose, onSave
             </div>
             <LivePreviewPanel blocks={blocks} title={title} />
           </div>
+          )}
         </div>
 
         {/* Footer */}

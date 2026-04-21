@@ -30,6 +30,7 @@ import LandingPage from './pages/LandingPage';
 import LandingPageV2 from './pages/LandingPageV2';
 import LandingPageV3 from './pages/LandingPageV3';
 import LandingNew from './pages/LandingNew';
+import InstallApp from './pages/InstallApp';
 import AppShell from './components/AppShell';
 import SubscriptionGate from './components/SubscriptionGate';
 import TherapistShell from './components/TherapistShell';
@@ -99,6 +100,7 @@ function TherapistRoutes() {
           <Route path="/form/:formId/view" element={<FormView />} />
           <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
           <Route path="/summary/:summaryId/view" element={<SummaryView />} />
+          <Route path="/install-app" element={<InstallApp />} />
           <Route path="*" element={<Navigate to={`/t/${practitionerId}`} replace />} />
         </Routes>
       </TherapistShell>
@@ -198,6 +200,7 @@ function App() {
             <Route path="/chat" element={<AdminLayout><ChatCenter /></AdminLayout>} />
             <Route path="/board-builder" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
             <Route path="/board-builder/:kidId" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
+            <Route path="/install-app" element={<AdminLayout><InstallApp /></AdminLayout>} />
 
             {/* Public board builder — PIN-protected, no admin auth */}
             <Route path="/build/:kidId" element={<BoardBuilder isPublic />} />
