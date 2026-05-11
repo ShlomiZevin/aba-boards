@@ -33,8 +33,14 @@ async function resolveKidId(input, adminId) {
   if (kidId) return { kidId, kidName: kidName || kidId };
   if (!kidName) return { error: 'חובה לספק שם ילד או מזהה ילד' };
   const kids = await therapyService.getAllKids(adminId);
+  // Normalize: collapse whitespace, treat dashes as spaces (Hebrew names like "רון לי" vs "רון-לי")
+  const normalize = (s) => (s || '').replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
   const name = kidName.trim();
-  const match = kids.find(k => k.name === name) || kids.find(k => k.name.includes(name) || name.includes(k.name));
+  const nameNorm = normalize(name);
+  const match =
+    kids.find(k => k.name === name) ||
+    kids.find(k => normalize(k.name) === nameNorm) ||
+    kids.find(k => normalize(k.name).includes(nameNorm) || nameNorm.includes(normalize(k.name)));
   if (!match) return { error: `לא נמצא ילד בשם "${name}"` };
   return { kidId: match.id, kidName: match.name };
 }

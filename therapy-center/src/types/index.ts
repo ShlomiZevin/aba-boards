@@ -40,6 +40,7 @@ export interface GoalColumnDef {
   description?: string;
   type: GoalColumnType;
   options?: string[];
+  multiSelect?: boolean;      // for 'options' type: allow selecting multiple values
   wide?: boolean; // kept for backward compat with old stored data, not shown in UI
   // "repeated" column: splits into N mini-cells under one header
   repeatCount?: number;       // number of occurrences (e.g. 10)

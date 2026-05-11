@@ -3,6 +3,27 @@ import { createPortal } from 'react-dom';
 import type { GoalTableBlock, GoalFormRow, GoalColumnDef, GoalColumnType } from '../types';
 import { repeatedKey, emptyRowForColumns } from '../types';
 
+// ---- Option value helpers (multi-select support) ----
+// Multi-select columns store values as pipe-separated ("opt1|opt2"); single as plain string.
+function parseOptionValue(col: GoalColumnDef, value: string): string[] {
+  if (!value) return [];
+  if (col.multiSelect) return value.split('|').filter(Boolean);
+  return [value];
+}
+function stringifyOptionValue(col: GoalColumnDef, values: string[]): string {
+  if (col.multiSelect) return values.join('|');
+  return values[0] || '';
+}
+function toggleOptionValue(col: GoalColumnDef, current: string, opt: string): string {
+  const arr = parseOptionValue(col, current);
+  if (arr.includes(opt)) {
+    return stringifyOptionValue(col, arr.filter(v => v !== opt));
+  }
+  return col.multiSelect
+    ? stringifyOptionValue(col, [...arr, opt])
+    : stringifyOptionValue(col, [opt]);
+}
+
 // ---- Custom option picker (replaces native <select> in compact mode) ----
 function CellOptionPicker({ col, value, onChange }: {
   col: GoalColumnDef; value: string; onChange: (v: string) => void;
@@ -31,6 +52,9 @@ function CellOptionPicker({ col, value, onChange }: {
     setOpen(!open);
   };
 
+  const selected = parseOptionValue(col, value);
+  const displayValue = selected.length === 0 ? '—' : selected.join(', ');
+
   return (
     <>
       <div
@@ -38,7 +62,7 @@ function CellOptionPicker({ col, value, onChange }: {
         className={`cell-option-trigger${value ? '' : ' empty'}`}
         onClick={handleOpen}
       >
-        {value || '—'}
+        {displayValue}
       </div>
       {open && createPortal(
         <div
@@ -48,17 +72,23 @@ function CellOptionPicker({ col, value, onChange }: {
         >
           <button
             type="button"
-            className={`cell-option-pill${!value ? ' selected' : ''}`}
+            className={`cell-option-pill${selected.length === 0 ? ' selected' : ''}`}
             onClick={() => { onChange(''); setOpen(false); }}
           >—</button>
-          {(col.options || []).map(opt => (
-            <button
-              key={opt}
-              type="button"
-              className={`cell-option-pill${value === opt ? ' selected' : ''}`}
-              onClick={() => { onChange(opt); setOpen(false); }}
-            >{opt}</button>
-          ))}
+          {(col.options || []).map(opt => {
+            const isSelected = selected.includes(opt);
+            return (
+              <button
+                key={opt}
+                type="button"
+                className={`cell-option-pill${isSelected ? ' selected' : ''}`}
+                onClick={() => {
+                  onChange(toggleOptionValue(col, value, opt));
+                  if (!col.multiSelect) setOpen(false);
+                }}
+              >{isSelected && col.multiSelect ? `✓ ${opt}` : opt}</button>
+            );
+          })}
         </div>,
         document.body
       )}
@@ -99,22 +129,31 @@ export function CellInput({ col, value, onChange, colKey, compact }: {
     if (compact) {
       return <CellOptionPicker col={col} value={value} onChange={onChange} />;
     }
+    const selected = parseOptionValue(col, value);
     return (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {(col.options || []).map(opt => (
-          <label key={opt} style={{
-            display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-            fontSize: '0.82em', padding: '4px 10px', borderRadius: 20,
-            background: value === opt ? '#667eea' : '#f1f5f9',
-            color: value === opt ? 'white' : '#475569',
-            border: `1.5px solid ${value === opt ? '#667eea' : '#e2e8f0'}`,
-            userSelect: 'none' as const,
-          }}>
-            <input type="radio" name={`radio-${colKey}`} checked={value === opt} onChange={() => onChange(opt)}
-              style={{ display: 'none' }} />
-            {opt}
-          </label>
-        ))}
+        {(col.options || []).map(opt => {
+          const isSelected = selected.includes(opt);
+          return (
+            <label key={opt} style={{
+              display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+              fontSize: '0.82em', padding: '4px 10px', borderRadius: 20,
+              background: isSelected ? '#667eea' : '#f1f5f9',
+              color: isSelected ? 'white' : '#475569',
+              border: `1.5px solid ${isSelected ? '#667eea' : '#e2e8f0'}`,
+              userSelect: 'none' as const,
+            }}>
+              <input
+                type={col.multiSelect ? 'checkbox' : 'radio'}
+                name={`radio-${colKey}`}
+                checked={isSelected}
+                onChange={() => onChange(toggleOptionValue(col, value, opt))}
+                style={{ display: 'none' }}
+              />
+              {isSelected && col.multiSelect ? `✓ ${opt}` : opt}
+            </label>
+          );
+        })}
       </div>
     );
   }
@@ -146,6 +185,9 @@ function CellView({ col, value }: { col: GoalColumnDef; value: string }) {
       return <span>{isNaN(d.getTime()) ? value : d.toLocaleDateString('he-IL')}</span>;
     } catch { return <span>{value}</span>; }
   }
+  if (col.type === 'options' && col.multiSelect) {
+    return <span style={{ whiteSpace: 'pre-wrap' }}>{parseOptionValue(col, value).join(', ')}</span>;
+  }
   return <span style={{ whiteSpace: 'pre-wrap' }}>{value}</span>;
 }
 
@@ -168,7 +210,7 @@ export function ReadOnlyVerticalBlock({ block, row }: { block: GoalTableBlock; r
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {Array.from({ length: col.repeatCount || 1 }).map((_, i) => {
                     const key = repeatedKey(col.id, i);
-                    const innerCol: GoalColumnDef = { id: key, label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options };
+                    const innerCol: GoalColumnDef = { id: key, label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options, multiSelect: col.multiSelect };
                     return (
                       <div key={key} style={{ border: '1px solid #e2e8f0', borderRadius: 4, padding: '1px 5px', textAlign: 'center', minWidth: 24 }}>
                         <CellView col={innerCol} value={row[key] || ''} />
@@ -205,7 +247,7 @@ export function EditableVerticalBlock({ block, row, onChange }: {
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(col.repeatCount || 1, 10)}, 1fr)`, gap: 3 }}>
                 {Array.from({ length: col.repeatCount || 1 }).map((_, i) => {
                   const key = repeatedKey(col.id, i);
-                  const innerCol: GoalColumnDef = { id: key, label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options };
+                  const innerCol: GoalColumnDef = { id: key, label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options, multiSelect: col.multiSelect };
                   return (
                     <div key={key} style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '0.65em', color: '#94a3b8' }}>{i + 1}</div>
@@ -277,7 +319,7 @@ export function ReadOnlyHorizontalBlock({ block, rows, firstColumn, rowActions }
                 {columns.flatMap(col => {
                   if (col.type === 'repeated') {
                     const count = col.repeatCount || 1;
-                    const innerCol: GoalColumnDef = { id: '', label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options };
+                    const innerCol: GoalColumnDef = { id: '', label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options, multiSelect: col.multiSelect };
                     return Array.from({ length: count }).map((_, i) => {
                       const key = repeatedKey(col.id, i);
                       return (
@@ -352,7 +394,7 @@ export function EditableHorizontalBlock({ block, rows, onChange }: {
               {columns.map(col => {
                 if (col.type === 'repeated') {
                   const count = col.repeatCount || 1;
-                  const innerCol: GoalColumnDef = { id: '', label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options };
+                  const innerCol: GoalColumnDef = { id: '', label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options, multiSelect: col.multiSelect };
                   return (
                     <div key={col.id} style={{ gridColumn: '1 / -1' }}>
                       <label style={{ display: 'block', fontSize: '0.8em', fontWeight: 600, color: '#475569', marginBottom: col.description ? 1 : 3 }}>

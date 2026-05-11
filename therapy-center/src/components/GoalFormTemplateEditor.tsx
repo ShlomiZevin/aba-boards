@@ -226,7 +226,18 @@ function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isL
           borderTop: 'none',
           borderRadius: col.type === 'repeated' ? undefined : '0 0 8px 8px',
         }}>
-          <div style={{ fontSize: '0.73em', color: '#94a3b8', marginBottom: 4 }}>אפשרויות:</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.73em', color: '#94a3b8' }}>אפשרויות:</div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: '0.73em', color: '#64748b' }}>
+              <input
+                type="checkbox"
+                checked={!!col.multiSelect}
+                onChange={e => onChange({ ...col, multiSelect: e.target.checked || undefined })}
+                style={{ width: 13, height: 13, accentColor: '#667eea', cursor: 'pointer' }}
+              />
+              רב-בחירה
+            </label>
+          </div>
           <OptionsEditor
             options={col.options || []}
             onChange={opts => onChange({ ...col, options: opts })}
@@ -274,19 +285,21 @@ function PreviewCellContent({ col, rowIdx }: { col: GoalColumnDef; rowIdx: numbe
   if (col.type === 'options') {
     const opts = col.options || [];
     if (opts.length === 0) return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>;
-    const val = opts[rowIdx % opts.length];
+    const vals = col.multiSelect && opts.length >= 2
+      ? [opts[rowIdx % opts.length], opts[(rowIdx + 1) % opts.length]]
+      : [opts[rowIdx % opts.length]];
     return (
       <span style={{
         background: '#eef2ff', color: '#4f46e5', borderRadius: 10,
         padding: '1px 8px', fontSize: '0.92em', fontWeight: 500,
       }}>
-        {val}
+        {vals.join(', ')}
       </span>
     );
   }
   if (col.type === 'repeated') {
     const count = col.repeatCount || 10;
-    const innerCol: GoalColumnDef = { id: 'preview', label: '', type: col.innerType || 'checkbox', options: col.options };
+    const innerCol: GoalColumnDef = { id: 'preview', label: '', type: col.innerType || 'checkbox', options: col.options, multiSelect: col.multiSelect };
     return (
       <div style={{ display: 'flex', gap: 2 }}>
         {Array.from({ length: Math.min(count, 6) }).map((_, i) => (
@@ -364,7 +377,7 @@ function BlockPreview({ block }: { block: GoalTableBlock }) {
               {columns.flatMap(col => {
                 if (col.type === 'repeated') {
                   const count = col.repeatCount || 10;
-                  const innerCol: GoalColumnDef = { id: 'inner', label: '', type: col.innerType || 'checkbox', options: col.options };
+                  const innerCol: GoalColumnDef = { id: 'inner', label: '', type: col.innerType || 'checkbox', options: col.options, multiSelect: col.multiSelect };
                   return Array.from({ length: count }).map((_, i) => (
                     <td key={`${col.id}__${i}`} style={{ padding: '4px 3px', border: '1px solid #f1f5f9', textAlign: 'center' }}>
                       <PreviewCellContent col={innerCol} rowIdx={ri + i} />

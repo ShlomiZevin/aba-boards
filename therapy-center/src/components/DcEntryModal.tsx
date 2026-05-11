@@ -207,7 +207,7 @@ export default function DcEntryModal({
                                 {block.columns.flatMap(col => {
                                   if (col.type === 'repeated') {
                                     const count = col.repeatCount || 1;
-                                    const innerCol: GoalColumnDef = { id: '', label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options };
+                                    const innerCol: GoalColumnDef = { id: '', label: '', type: (col.innerType || 'checkbox') as GoalColumnType, options: col.options, multiSelect: col.multiSelect };
                                     return Array.from({ length: count }).map((_, i) => {
                                       const key = repeatedKey(col.id, i);
                                       return (

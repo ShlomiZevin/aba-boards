@@ -197,7 +197,7 @@ function DayGroup({ date, sessions, kidMap, therapistMap, onTap, onDelete, past 
           const emoji = typeEmoji(s.type);
           const colorKey = s.kidId
             ? (kidMap[s.kidId]?.name.trim().toLowerCase() || s.kidId)
-            : (s.customTitle?.trim().toLowerCase() || null);
+            : (s.customTitle?.trim().toLowerCase() || s.title?.trim().toLowerCase() || null);
           const color = getColorForKey(colorKey);
           return (
             <div
@@ -326,7 +326,7 @@ function MobileMonthCalendar({ events, date, onDateChange, onEventClick, onSlotC
                   const s = e.resource;
                   const colorKey = s.kidId
                     ? (kidMap[s.kidId]?.name.trim().toLowerCase() || s.kidId)
-                    : (s.customTitle?.trim().toLowerCase() || null);
+                    : (s.customTitle?.trim().toLowerCase() || s.title?.trim().toLowerCase() || null);
                   return <span key={i} className="mmc-dot" style={{ background: getColorForKey(colorKey) }} />;
                 })}
                 {dayEvents.length > 3 && <span className="mmc-dot-more">+{dayEvents.length - 3}</span>}
@@ -352,7 +352,7 @@ function MobileMonthCalendar({ events, date, onDateChange, onEventClick, onSlotC
               const emoji = typeEmoji(s.type);
               const colorKey = s.kidId
                 ? (kidMap[s.kidId]?.name.trim().toLowerCase() || s.kidId)
-                : (s.customTitle?.trim().toLowerCase() || null);
+                : (s.customTitle?.trim().toLowerCase() || s.title?.trim().toLowerCase() || null);
               const color = getColorForKey(colorKey);
               return (
                 <div
@@ -961,7 +961,7 @@ export default function AllSessions() {
                 const s = event.resource;
                 const colorKey = s.kidId
                   ? (kidMap[s.kidId]?.name.trim().toLowerCase() || s.kidId)
-                  : (s.customTitle?.trim().toLowerCase() || null);
+                  : (s.customTitle?.trim().toLowerCase() || s.title?.trim().toLowerCase() || null);
                 return {
                   style: {
                     backgroundColor: getColorForKey(colorKey),
