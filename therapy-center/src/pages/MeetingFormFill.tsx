@@ -51,6 +51,20 @@ export default function MeetingFormFill() {
   const draftDirtyRef = useRef(false);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Form autosave state — saves whatever the admin has filled every ~2s of idle time.
+  // First autosave for a new form creates the doc (status='in_progress') and bumps URL
+  // to edit mode so a refresh keeps the work. Finalize on Submit runs side effects (DC entries,
+  // session status). Already-completed forms keep autosaving without status change.
+  const [currentFormId, setCurrentFormId] = useState<string | null>(formId || null);
+  const [formSavedAt, setFormSavedAt] = useState<Date | null>(null);
+  const [formSaving, setFormSaving] = useState(false);
+  const formAutosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const formDirtyRef = useRef(false);
+  const formInFlightRef = useRef(false);
+  const formLoadedRef = useRef(false);
+  const currentFormIdRef = useRef<string | null>(formId || null);
+  useEffect(() => { currentFormIdRef.current = currentFormId; }, [currentFormId]);
+
   // Load existing form for edit mode
   const { data: existingFormRes } = useQuery({
     queryKey: ['meetingForm', formId],
@@ -130,11 +144,13 @@ export default function MeetingFormFill() {
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (data: Partial<MeetingForm>) => meetingFormsApi.update(formId!, data),
+  const finalizeMutation = useMutation({
+    mutationFn: (data: Partial<MeetingForm>) =>
+      meetingFormsApi.finalize(currentFormIdRef.current!, data),
     onSuccess: (res) => {
       if (res.success && res.data) {
-        queryClient.invalidateQueries({ queryKey: ['meetingForm', formId] });
+        queryClient.invalidateQueries({ queryKey: ['sessions', kidId] });
+        queryClient.invalidateQueries({ queryKey: ['meetingForm', res.data.id] });
         navigate(links.meetingFormView(res.data.id));
       }
     },
@@ -204,16 +220,129 @@ export default function MeetingFormFill() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Warn on navigation away if unsaved draft changes pending
+  // Warn on navigation away if unsaved draft OR form changes are pending
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (draftDirtyRef.current) {
+      if (draftDirtyRef.current || formDirtyRef.current) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
+  }, []);
+
+  // --- Form autosave ---
+  // Build the payload from current state; called fresh each save.
+  const buildFormPayload = () => {
+    const goalsWorkedOn: GoalSnapshot[] = Array.from(selectedGoals)
+      .map((goalId) => {
+        const goal = goals.find((g: Goal) => g.id === goalId);
+        return goal ? { goalId: goal.id, goalTitle: goal.title, categoryId: goal.categoryId } : null;
+      })
+      .filter((g): g is GoalSnapshot => g !== null);
+    return {
+      sessionId,
+      kidId,
+      sessionDate: new Date(sessionDate),
+      attendees: selectedAttendees,
+      goalsWorkedOn,
+      additionalGoals,
+      generalNotes,
+      behaviorNotes,
+      adl,
+      grossMotorPrograms,
+      programsOutsideRoom,
+      learningProgramsInRoom,
+      tasks,
+    };
+  };
+
+  // Mark form as "loaded" once initial data is in place — guards against autosaving
+  // pre-populated state on mount in edit mode.
+  useEffect(() => {
+    if (isEditMode) {
+      if (initialized) formLoadedRef.current = true;
+    } else {
+      formLoadedRef.current = true;
+    }
+  }, [initialized, isEditMode]);
+
+  const flushFormAutosave = async () => {
+    if (formInFlightRef.current) return; // a save is already in flight; we'll re-trigger when it returns
+    if (!formDirtyRef.current) return;
+    if (!kidId) return;
+    formInFlightRef.current = true;
+    formDirtyRef.current = false;
+    setFormSaving(true);
+    const payload = buildFormPayload();
+    const res = await meetingFormsApi.autosave({
+      ...payload,
+      id: currentFormIdRef.current || undefined,
+    });
+    formInFlightRef.current = false;
+    setFormSaving(false);
+    if (res.success && res.data) {
+      setFormSavedAt(new Date());
+      if (!currentFormIdRef.current && res.data.id) {
+        // First autosave created a real form — capture its id and update the URL
+        // so a refresh/back-button keeps the user's work.
+        currentFormIdRef.current = res.data.id;
+        setCurrentFormId(res.data.id);
+        setInitialized(true); // prevent edit-mode init effect from re-clobbering state
+        navigate(links.meetingFormEdit(res.data.id), { replace: true });
+      }
+      // If another change came in while we were saving, schedule a follow-up
+      if (formDirtyRef.current && !formAutosaveTimerRef.current) {
+        formAutosaveTimerRef.current = setTimeout(() => {
+          formAutosaveTimerRef.current = null;
+          flushFormAutosave();
+        }, 2000);
+      }
+    } else {
+      formDirtyRef.current = true; // retry on next change
+    }
+  };
+
+  // Watch form fields → mark dirty and debounce a save.
+  useEffect(() => {
+    if (!formLoadedRef.current) return;
+    if (!kidId) return;
+    formDirtyRef.current = true;
+    if (formAutosaveTimerRef.current) clearTimeout(formAutosaveTimerRef.current);
+    formAutosaveTimerRef.current = setTimeout(() => {
+      formAutosaveTimerRef.current = null;
+      flushFormAutosave();
+    }, 2000);
+    return () => {
+      if (formAutosaveTimerRef.current) {
+        clearTimeout(formAutosaveTimerRef.current);
+        formAutosaveTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    kidId,
+    sessionDate,
+    selectedAttendees,
+    selectedGoals,
+    additionalGoals,
+    generalNotes,
+    behaviorNotes,
+    adl,
+    grossMotorPrograms,
+    programsOutsideRoom,
+    learningProgramsInRoom,
+    tasks,
+  ]);
+
+  // Flush pending form autosave on unmount
+  useEffect(() => {
+    return () => {
+      if (formAutosaveTimerRef.current) clearTimeout(formAutosaveTimerRef.current);
+      if (formDirtyRef.current) { flushFormAutosave(); }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleGoal = (goalId: string) => {
@@ -251,34 +380,22 @@ export default function MeetingFormFill() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const goalsWorkedOn: GoalSnapshot[] = Array.from(selectedGoals).map((goalId) => {
-      const goal = goals.find((g: Goal) => g.id === goalId)!;
-      return { goalId: goal.id, goalTitle: goal.title, categoryId: goal.categoryId };
-    });
+    // Cancel any pending autosave debounce — Submit supersedes it.
+    if (formAutosaveTimerRef.current) {
+      clearTimeout(formAutosaveTimerRef.current);
+      formAutosaveTimerRef.current = null;
+    }
+    formDirtyRef.current = false;
 
-    const data = {
-      sessionId,
-      kidId,
-      sessionDate: new Date(sessionDate),
-      attendees: selectedAttendees,
-      goalsWorkedOn,
-      additionalGoals,
-      generalNotes,
-      behaviorNotes,
-      adl,
-      grossMotorPrograms,
-      programsOutsideRoom,
-      learningProgramsInRoom,
-      tasks,
-    };
-    if (isEditMode) {
-      updateMutation.mutate(data);
+    const data = buildFormPayload();
+    if (currentFormIdRef.current) {
+      finalizeMutation.mutate(data);
     } else {
       submitMutation.mutate(data);
     }
   };
 
-  const isPending = submitMutation.isPending || updateMutation.isPending;
+  const isPending = submitMutation.isPending || finalizeMutation.isPending;
 
   return (
     <div className="container">
@@ -550,12 +667,28 @@ export default function MeetingFormFill() {
             </div>
           </div>
 
-          <div className="form-actions">
+          <div className="form-actions" style={{ alignItems: 'center', gap: '12px' }}>
             <Link to={kidId ? links.kidDetail(kidId) : links.home()} className="btn-secondary">
               ביטול
             </Link>
+            <span
+              style={{
+                fontSize: '0.85em',
+                color: '#718096',
+                marginInlineStart: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              {formSaving ? (
+                <span>שומר…</span>
+              ) : formSavedAt ? (
+                <span>נשמר אוטומטית {formatDistanceToNow(formSavedAt, { locale: he, addSuffix: true })}</span>
+              ) : null}
+            </span>
             <button type="submit" className="btn-primary" disabled={isPending}>
-              {isPending ? 'שומר...' : 'שמור טופס'}
+              {isPending ? 'מסיים...' : 'שמור טופס'}
             </button>
           </div>
         </form>

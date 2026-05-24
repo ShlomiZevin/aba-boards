@@ -311,6 +311,8 @@ export interface MeetingAttendee {
   type: 'parent' | 'practitioner';
 }
 
+export type MeetingFormStatus = 'in_progress' | 'completed';
+
 export interface MeetingForm {
   id: string;
   sessionId?: string;
@@ -326,6 +328,7 @@ export interface MeetingForm {
   programsOutsideRoom: string;
   learningProgramsInRoom: string;
   tasks: string;
+  status?: MeetingFormStatus;
   createdAt: Date;
   updatedAt: Date;
 }

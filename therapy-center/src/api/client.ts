@@ -382,6 +382,16 @@ export const meetingFormsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  autosave: (data: Partial<MeetingForm> & { id?: string }) =>
+    fetchApi<MeetingForm>('/meeting-forms/autosave', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  finalize: (id: string, data: Partial<MeetingForm>) =>
+    fetchApi<MeetingForm>(`/meeting-forms/${id}/finalize`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   update: (id: string, data: Partial<MeetingForm>) =>
     fetchApi<MeetingForm>(`/meeting-forms/${id}`, {
       method: 'PUT',

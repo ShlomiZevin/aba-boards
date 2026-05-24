@@ -2012,16 +2012,22 @@ async function submitMeetingForm(data) {
   return { id: formId, ...form };
 }
 
-async function updateMeetingForm(id, data) {
-  const db = getDb();
+// Build the partial-update shape used by update/autosave/finalize for meeting forms.
+function buildMeetingFormUpdates(data, now) {
   const allowed = ['attendees', 'goalsWorkedOn', 'additionalGoals', 'generalNotes', 'behaviorNotes', 'adl',
     'grossMotorPrograms', 'programsOutsideRoom', 'learningProgramsInRoom', 'tasks', 'sessionDate'];
-  const updates = { updatedAt: new Date() };
+  const updates = { updatedAt: now };
   for (const field of allowed) {
     if (data[field] !== undefined) {
       updates[field] = field === 'sessionDate' ? new Date(data[field]) : data[field];
     }
   }
+  return updates;
+}
+
+async function updateMeetingForm(id, data) {
+  const db = getDb();
+  const updates = buildMeetingFormUpdates(data, new Date());
   await db.collection('meetingForms').doc(id).update(updates);
   const doc = await db.collection('meetingForms').doc(id).get();
   const form = doc.data();
@@ -2034,6 +2040,138 @@ async function updateMeetingForm(id, data) {
   }
 
   return { id: doc.id, ...form };
+}
+
+// Autosave path — upserts a meeting form without finalizing.
+// - If `id` provided: update that doc (preserve `status` if already 'completed').
+// - Else if a meetingForm already exists for the sessionId: update that one.
+// - Else: create a new doc with status='in_progress'. Links session.formId but does NOT
+//   mark session as 'completed' and does NOT auto-create DC entries.
+async function autosaveMeetingForm(data) {
+  const db = getDb();
+  const now = new Date();
+
+  let docRef = null;
+  let existing = null;
+  if (data.id) {
+    const doc = await db.collection('meetingForms').doc(data.id).get();
+    if (doc.exists) { docRef = doc.ref; existing = doc.data(); }
+  }
+  if (!docRef && data.sessionId) {
+    const snap = await db.collection('meetingForms')
+      .where('sessionId', '==', data.sessionId)
+      .limit(1)
+      .get();
+    if (!snap.empty) { docRef = snap.docs[0].ref; existing = snap.docs[0].data(); }
+  }
+
+  if (docRef) {
+    const updates = buildMeetingFormUpdates(data, now);
+    if (existing.status !== 'completed') updates.status = 'in_progress';
+    await docRef.update(updates);
+    if (existing.sessionId && data.sessionDate !== undefined) {
+      await db.collection('sessions').doc(existing.sessionId).update({
+        scheduledDate: new Date(data.sessionDate),
+      });
+    }
+    const fresh = await docRef.get();
+    return { id: fresh.id, ...fresh.data() };
+  }
+
+  // Create new in-progress form
+  const formId = uuidv4();
+  const sessionDate = data.sessionDate ? new Date(data.sessionDate) : new Date();
+  let sessionId = data.sessionId;
+  if (!sessionId) {
+    sessionId = uuidv4();
+    await db.collection('sessions').doc(sessionId).set({
+      kidId: data.kidId,
+      therapistId: null,
+      scheduledDate: sessionDate,
+      type: 'meeting',
+      status: 'pending_form',
+      formId,
+      createdAt: now,
+    });
+  } else {
+    // Link existing session to the new form; leave session.status alone.
+    await db.collection('sessions').doc(sessionId).update({ formId });
+  }
+
+  const form = {
+    sessionId,
+    kidId: data.kidId,
+    sessionDate,
+    attendees: data.attendees || [],
+    goalsWorkedOn: data.goalsWorkedOn || [],
+    additionalGoals: data.additionalGoals || [],
+    generalNotes: data.generalNotes || '',
+    behaviorNotes: data.behaviorNotes || '',
+    adl: data.adl || '',
+    grossMotorPrograms: data.grossMotorPrograms || '',
+    programsOutsideRoom: data.programsOutsideRoom || '',
+    learningProgramsInRoom: data.learningProgramsInRoom || '',
+    tasks: data.tasks || '',
+    status: 'in_progress',
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.collection('meetingForms').doc(formId).set(form);
+  return { id: formId, ...form };
+}
+
+// Finalize path — flips an in-progress form to 'completed', marks the session done,
+// and auto-creates pending DC entries. Idempotent: re-finalizing an already-completed
+// form just updates fields without redoing side effects.
+async function finalizeMeetingForm(id, data) {
+  const db = getDb();
+  const doc = await db.collection('meetingForms').doc(id).get();
+  if (!doc.exists) throw new Error('Meeting form not found');
+  const existing = doc.data();
+  const wasNotCompleted = existing.status !== 'completed';
+
+  const updates = buildMeetingFormUpdates(data, new Date());
+  updates.status = 'completed';
+  await doc.ref.update(updates);
+
+  // Keep session.scheduledDate in sync if the date changed
+  if (existing.sessionId && data.sessionDate !== undefined) {
+    await db.collection('sessions').doc(existing.sessionId).update({
+      scheduledDate: new Date(data.sessionDate),
+    });
+  }
+
+  if (wasNotCompleted && existing.sessionId) {
+    await db.collection('sessions').doc(existing.sessionId).update({
+      status: 'completed', formId: id,
+    });
+
+    const goalsWorkedOn = data.goalsWorkedOn !== undefined ? data.goalsWorkedOn : existing.goalsWorkedOn || [];
+    if (goalsWorkedOn.length > 0) {
+      try {
+        const goals = await getGoalsForKid(existing.kidId);
+        for (const snapshot of goalsWorkedOn) {
+          const goal = goals.find(g => g.id === snapshot.goalId);
+          if (!goal || !goal.libraryItemId) continue;
+          const dcBlocks = normalizeTemplateBlocks(goal.dataCollectionTemplate);
+          if (dcBlocks.length === 0 || !dcBlocks.some(b => b.columns && b.columns.length > 0)) continue;
+          await addGoalDataEntry(existing.kidId, goal.libraryItemId, {
+            goalTitle: goal.title,
+            sessionDate: data.sessionDate || existing.sessionDate,
+            practitionerId: null,
+            tables: [],
+            status: 'pending',
+            meetingFormId: id,
+          });
+        }
+      } catch (err) {
+        console.error('[finalizeMeetingForm] Failed to auto-create pending DC entries:', err);
+      }
+    }
+  }
+
+  const fresh = await doc.ref.get();
+  return { id: fresh.id, ...fresh.data() };
 }
 
 async function deleteMeetingForm(id) {
@@ -2307,6 +2445,8 @@ module.exports = {
   getMeetingFormById,
   submitMeetingForm,
   updateMeetingForm,
+  autosaveMeetingForm,
+  finalizeMeetingForm,
   deleteMeetingForm,
   // Meeting Drafts
   getMeetingDraft,

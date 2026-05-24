@@ -551,6 +551,16 @@ router.post('/meeting-forms', asyncHandler(async (req, res) => {
   res.status(201).json(form);
 }));
 
+router.post('/meeting-forms/autosave', requireAdmin, asyncHandler(async (req, res) => {
+  const form = await therapyService.autosaveMeetingForm(req.body);
+  res.json(form);
+}));
+
+router.put('/meeting-forms/:id/finalize', requireAdmin, asyncHandler(async (req, res) => {
+  const form = await therapyService.finalizeMeetingForm(req.params.id, req.body);
+  res.json(form);
+}));
+
 router.put('/meeting-forms/:id', asyncHandler(async (req, res) => {
   const form = await therapyService.updateMeetingForm(req.params.id, req.body);
   res.json(form);
