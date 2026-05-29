@@ -33,6 +33,9 @@ export default function SuperAdminOverview() {
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showOrphans, setShowOrphans] = useState(false);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [copyHint, setCopyHint] = useState<string | null>(null);
+  const [copySeparator, setCopySeparator] = useState<', ' | '; ' | '\n'>(', ');
 
   const filteredAdmins = useMemo(() => {
     const admins: AdminOverviewEntry[] = res?.data?.admins || [];
@@ -140,6 +143,148 @@ export default function SuperAdminOverview() {
           </button>
         </div>
 
+        {/* Bulk selection bar */}
+        {(() => {
+          const selectedAdmins = filteredAdmins.filter(a => selected[a.adminId]);
+          const selectedEmails = selectedAdmins.map(a => a.email.trim()).filter(Boolean);
+          const allChecked = filteredAdmins.length > 0 && filteredAdmins.every(a => selected[a.adminId]);
+          const withoutEmail = selectedAdmins.length - selectedEmails.length;
+
+          async function handleCopy() {
+            if (selectedEmails.length === 0) return;
+            const text = selectedEmails.join(copySeparator);
+            try {
+              await navigator.clipboard.writeText(text);
+              setCopyHint(`הועתקו ${selectedEmails.length} אימיילים`);
+              setTimeout(() => setCopyHint(null), 2200);
+            } catch {
+              setCopyHint('שגיאה בהעתקה');
+              setTimeout(() => setCopyHint(null), 2200);
+            }
+          }
+
+          function handleSelectWithEmailOnly() {
+            const next: Record<string, boolean> = { ...selected };
+            filteredAdmins.forEach(a => {
+              if (a.email.trim()) next[a.adminId] = true;
+            });
+            setSelected(next);
+          }
+
+          return (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              padding: '10px 14px', marginBottom: 12,
+              background: selectedAdmins.length > 0 ? '#eff6ff' : '#f9fafb',
+              border: `1px solid ${selectedAdmins.length > 0 ? '#bfdbfe' : '#e5e7eb'}`,
+              borderRadius: 10,
+              transition: 'background 0.15s',
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  onChange={e => {
+                    const next: Record<string, boolean> = { ...selected };
+                    filteredAdmins.forEach(a => { next[a.adminId] = e.target.checked; });
+                    setSelected(next);
+                  }}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 600 }}>בחר הכל</span>
+              </label>
+
+              <button
+                onClick={handleSelectWithEmailOnly}
+                className="btn-secondary btn-small"
+                style={{ fontSize: 12 }}
+              >
+                בחר רק עם אימייל
+              </button>
+
+              <button
+                onClick={() => setSelected({})}
+                className="btn-secondary btn-small"
+                style={{ fontSize: 12 }}
+                disabled={selectedAdmins.length === 0}
+              >
+                נקה בחירה
+              </button>
+
+              <div style={{ flex: 1 }} />
+
+              {selectedAdmins.length > 0 && (
+                <>
+                  <span style={{ fontSize: 13, color: '#1e3a8a', fontWeight: 600 }}>
+                    {selectedAdmins.length} נבחרו · {selectedEmails.length} עם אימייל
+                    {withoutEmail > 0 && <span style={{ color: '#9ca3af', fontWeight: 500 }}> ({withoutEmail} ללא אימייל)</span>}
+                  </span>
+
+                  <select
+                    value={copySeparator}
+                    onChange={e => setCopySeparator(e.target.value as ', ' | '; ' | '\n')}
+                    style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 12 }}
+                    title="מפריד בין אימיילים"
+                  >
+                    <option value=", ">פסיק (Gmail)</option>
+                    <option value="; ">נקודה-פסיק (Outlook)</option>
+                    <option value={'\n'}>שורה חדשה</option>
+                  </select>
+
+                  <button
+                    onClick={handleCopy}
+                    disabled={selectedEmails.length === 0}
+                    className="btn-primary btn-small"
+                    style={{ fontSize: 13 }}
+                  >
+                    📋 העתק אימיילים
+                  </button>
+
+                  {selectedEmails.length > 0 && (
+                    <a
+                      href={`mailto:?bcc=${encodeURIComponent(selectedEmails.join(','))}`}
+                      className="btn-secondary btn-small"
+                      style={{ fontSize: 13, textDecoration: 'none' }}
+                    >
+                      ✉️ פתח במייל (BCC)
+                    </a>
+                  )}
+                </>
+              )}
+
+              {copyHint && (
+                <span style={{ fontSize: 12, color: '#15803d', fontWeight: 600 }}>✓ {copyHint}</span>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Preview of selected emails */}
+        {(() => {
+          const selectedEmails = filteredAdmins
+            .filter(a => selected[a.adminId])
+            .map(a => a.email.trim())
+            .filter(Boolean);
+          if (selectedEmails.length === 0) return null;
+          return (
+            <details style={{ marginBottom: 12, padding: '8px 12px', background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
+                תצוגה מקדימה של האימיילים שיועתקו
+              </summary>
+              <textarea
+                readOnly
+                value={selectedEmails.join(copySeparator)}
+                onClick={e => (e.target as HTMLTextAreaElement).select()}
+                style={{
+                  width: '100%', marginTop: 8, minHeight: 60, maxHeight: 200,
+                  padding: 8, fontSize: 12, fontFamily: 'monospace', direction: 'ltr',
+                  border: '1px solid #e5e7eb', borderRadius: 6, resize: 'vertical',
+                }}
+              />
+            </details>
+          );
+        })()}
+
         {isLoading ? (
           <p style={{ color: '#9ca3af', fontSize: 14 }}>טוען...</p>
         ) : filteredAdmins.length === 0 ? (
@@ -152,6 +297,8 @@ export default function SuperAdminOverview() {
                 admin={a}
                 open={!!expanded[a.adminId]}
                 onToggle={() => setExpanded(s => ({ ...s, [a.adminId]: !s[a.adminId] }))}
+                selected={!!selected[a.adminId]}
+                onSelectToggle={() => setSelected(s => ({ ...s, [a.adminId]: !s[a.adminId] }))}
               />
             ))}
           </div>
@@ -201,7 +348,13 @@ function Stat({ label, value, color }: { label: string; value: number; color: st
   );
 }
 
-function AdminCard({ admin, open, onToggle }: { admin: AdminOverviewEntry; open: boolean; onToggle: () => void }) {
+function AdminCard({ admin, open, onToggle, selected, onSelectToggle }: {
+  admin: AdminOverviewEntry;
+  open: boolean;
+  onToggle: () => void;
+  selected: boolean;
+  onSelectToggle: () => void;
+}) {
   const c = admin.counts;
   const isInactive = !admin.active;
   const isEmpty = c.kids === 0 && c.crew === 0 && c.parents === 0;
@@ -209,11 +362,13 @@ function AdminCard({ admin, open, onToggle }: { admin: AdminOverviewEntry; open:
 
   return (
     <div style={{
-      border: '1px solid #e5e7eb',
+      border: `1px solid ${selected ? '#3b82f6' : '#e5e7eb'}`,
       borderRadius: 14,
       background: isInactive ? '#fafafa' : 'white',
       opacity: isInactive ? 0.7 : 1,
       overflow: 'hidden',
+      boxShadow: selected ? '0 0 0 2px rgba(59, 130, 246, 0.15)' : 'none',
+      transition: 'box-shadow 0.15s, border-color 0.15s',
     }}>
       <div
         onClick={onToggle}
@@ -227,6 +382,19 @@ function AdminCard({ admin, open, onToggle }: { admin: AdminOverviewEntry; open:
           background: isEmpty ? '#fffbeb' : 'transparent',
         }}
       >
+        <div
+          onClick={e => { e.stopPropagation(); onSelectToggle(); }}
+          style={{ flexShrink: 0, padding: '4px 4px 0 0', cursor: 'pointer' }}
+          title={admin.email ? `בחר ${admin.name}` : 'אין אימייל למנהל זה'}
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onSelectToggle}
+            onClick={e => e.stopPropagation()}
+            style={{ width: 18, height: 18, cursor: 'pointer' }}
+          />
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{admin.name}</h3>
