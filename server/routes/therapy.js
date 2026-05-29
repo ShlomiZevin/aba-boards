@@ -744,6 +744,26 @@ router.delete('/board-requests/:id', requireSuperAdmin, asyncHandler(async (req,
   res.status(204).send();
 }));
 
+// ==================== MEETING VOTES ====================
+router.post('/meeting-vote', asyncHandler(async (req, res) => {
+  const { name, contact, dates } = req.body || {};
+  if (!name || !Array.isArray(dates) || dates.length === 0) {
+    return res.status(400).json({ error: 'name and dates are required' });
+  }
+  const vote = await therapyService.recordMeetingVote({ name, contact, dates });
+  res.status(201).json(vote);
+}));
+
+router.get('/meeting-votes', requireAdmin, asyncHandler(async (req, res) => {
+  const votes = await therapyService.getMeetingVotes();
+  res.json(votes);
+}));
+
+router.delete('/meeting-votes', requireAdmin, asyncHandler(async (req, res) => {
+  const result = await therapyService.clearMeetingVotes();
+  res.json(result);
+}));
+
 // Error handling middleware
 router.use((err, req, res, next) => {
   console.error('Therapy API Error:', err);

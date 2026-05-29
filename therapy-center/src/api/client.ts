@@ -534,6 +534,56 @@ async function fetchAdminApi<T>(endpoint: string, options?: RequestInit): Promis
   }
 }
 
+export interface AdminOverviewParent {
+  id: string;
+  kidId?: string;
+  name?: string;
+  mobile?: string;
+  email?: string;
+}
+export interface AdminOverviewKid {
+  id: string;
+  name: string;
+  age?: number | string;
+  gender?: string;
+  createdAt: string | null;
+  totalMoney: number;
+  hasBoardLayout: boolean;
+  tasksCount: number;
+  parents: AdminOverviewParent[];
+  sessionsCount: number;
+  formsCount: number;
+  meetingFormsCount: number;
+}
+export interface AdminOverviewCrew {
+  id: string;
+  name: string;
+  type?: string;
+  mobile?: string;
+  email?: string;
+  createdAt: string | null;
+}
+export interface AdminOverviewEntry {
+  adminId: string;
+  name: string;
+  key: string;
+  active: boolean;
+  createdAt: string | null;
+  createdBy: string | null;
+  mobile: string;
+  email: string;
+  subscription: { plan: string; status: string; trialEndDate: string | null; proEndDate: string | null } | null;
+  counts: { kids: number; crew: number; parents: number; sessions: number; forms: number; meetingForms: number };
+  kids: AdminOverviewKid[];
+  crew: AdminOverviewCrew[];
+  parents: AdminOverviewParent[];
+}
+export interface AdminOverviewResponse {
+  admins: AdminOverviewEntry[];
+  orphanKids: { id: string; name: string; age?: number | string; gender?: string; createdAt: string | null; totalMoney: number; hasBoardLayout: boolean }[];
+  totals: { admins: number; orphanKids: number; kidsAcrossAllAdmins: number; crewAcrossAllAdmins: number; parentsAcrossAllAdmins: number };
+}
+
 export const adminApi = {
   createKey: (data: { name: string; key: string; mobile?: string; email?: string }) =>
     fetchAdminApi<{ key: string; adminId: string; name: string }>('/create-key', {
@@ -542,6 +592,8 @@ export const adminApi = {
     }),
   listAdmins: () =>
     fetchAdminApi<{ docId: string; adminId: string; name: string; key: string; active: boolean; mobile: string; email: string; createdAt: string | null }[]>('/list'),
+  getOverview: () =>
+    fetchAdminApi<AdminOverviewResponse>('/overview'),
   deleteAdmin: (adminId: string) =>
     fetchAdminApi<void>(`/${adminId}`, { method: 'DELETE' }),
   changeKey: (newKey: string) =>

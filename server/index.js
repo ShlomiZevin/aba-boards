@@ -54,6 +54,22 @@ app.post('/api/therapy/kids/:kidId/board-chat', async (req, res) => {
   }
 });
 
+// Public meeting vote — no auth required
+const therapyService = require('./services/therapy');
+app.post('/api/therapy/meeting-vote', async (req, res) => {
+  try {
+    const { name, contact, dates } = req.body || {};
+    if (!name || !Array.isArray(dates) || dates.length === 0) {
+      return res.status(400).json({ error: 'name and dates are required' });
+    }
+    const vote = await therapyService.recordMeetingVote({ name, contact, dates });
+    res.status(201).json(vote);
+  } catch (err) {
+    console.error('Meeting vote error:', err);
+    res.status(500).json({ error: err.message || 'Vote failed' });
+  }
+});
+
 // API Routes
 app.use('/api/avatar', avatarRoutes);
 app.use('/api/admin', adminPublicRoutes);                          // public: /signup

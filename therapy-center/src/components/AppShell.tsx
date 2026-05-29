@@ -114,6 +114,7 @@ export default function AppShell({ children }: AppShellProps) {
     ...(user?.isSuperAdmin ? [
       { path: '/goal-library', label: 'ספריית מטרות', icon: '🎯' },
       { path: '/admin-management', label: 'מנהלי מרכזים', icon: '⚙' },
+      { path: '/super-admin', label: 'סקירת אדמין', icon: '🔍' },
     ] : []),
     { path: '/install-app', label: 'התקנת אפליקציה', icon: '📱' },
   ];

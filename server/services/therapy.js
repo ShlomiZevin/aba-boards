@@ -2487,8 +2487,41 @@ module.exports = {
   deleteBoardRequest,
   // Crew Hours
   getCrewHours,
+  // Meeting votes
+  recordMeetingVote,
+  getMeetingVotes,
+  clearMeetingVotes,
   // Init
   initializeSuperAdmin,
   initializeGoalCategories,
   GOAL_CATEGORIES,
 };
+
+// ==================== MEETING VOTES ====================
+async function recordMeetingVote({ name, contact, dates }) {
+  const db = getDb();
+  const id = uuidv4();
+  const doc = {
+    name: name || '',
+    contact: contact || '',
+    dates: Array.isArray(dates) ? dates : [],
+    votedAt: new Date().toISOString(),
+  };
+  await db.collection('meetingVotes').doc(id).set(doc);
+  return { id, ...doc };
+}
+
+async function getMeetingVotes() {
+  const db = getDb();
+  const snapshot = await db.collection('meetingVotes').orderBy('votedAt', 'desc').get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function clearMeetingVotes() {
+  const db = getDb();
+  const snapshot = await db.collection('meetingVotes').get();
+  const batch = db.batch();
+  snapshot.docs.forEach(doc => batch.delete(doc.ref));
+  await batch.commit();
+  return { deleted: snapshot.docs.length };
+}

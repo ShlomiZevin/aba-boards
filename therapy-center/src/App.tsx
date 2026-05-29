@@ -17,6 +17,7 @@ import Signup from './pages/Signup';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import SubscriptionCancel from './pages/SubscriptionCancel';
 import AdminManagement from './pages/AdminManagement';
+import SuperAdminOverview from './pages/SuperAdminOverview';
 import NotificationCenter from './pages/NotificationCenter';
 import GoalLibraryManager from './pages/GoalLibraryManager';
 import FormsOverview from './pages/FormsOverview';
@@ -30,6 +31,8 @@ import LandingPage from './pages/LandingPage';
 import LandingPageV2 from './pages/LandingPageV2';
 import LandingPageV3 from './pages/LandingPageV3';
 import LandingNew from './pages/LandingNew';
+import MeetingVote from './pages/MeetingVote';
+import MeetingResults from './pages/MeetingResults';
 import InstallApp from './pages/InstallApp';
 import AppShell from './components/AppShell';
 import SubscriptionGate from './components/SubscriptionGate';
@@ -174,6 +177,8 @@ function App() {
             <Route path="/welcome-v2" element={<LandingPageV2 />} />
             <Route path="/welcome-v3" element={<LandingPageV3 />} />
             <Route path="/welcome-new" element={<LandingNew />} />
+            <Route path="/meeting-vote" element={<MeetingVote />} />
+            <Route path="/meeting-results" element={<MeetingResults />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/subscription/success" element={<SubscriptionSuccess />} />
@@ -197,6 +202,7 @@ function App() {
             <Route path="/calendar" element={<AdminLayout><AllSessions /></AdminLayout>} />
             <Route path="/notifications" element={<AdminLayout><NotificationCenter /></AdminLayout>} />
             <Route path="/admin-management" element={<AdminLayout><AdminManagement /></AdminLayout>} />
+            <Route path="/super-admin" element={<AdminLayout><SuperAdminOverview /></AdminLayout>} />
             <Route path="/chat" element={<AdminLayout><ChatCenter /></AdminLayout>} />
             <Route path="/board-builder" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
             <Route path="/board-builder/:kidId" element={<AdminLayout><BoardBuilder /></AdminLayout>} />

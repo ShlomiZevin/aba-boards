@@ -177,6 +177,202 @@ router.get('/list', requireSuperAdmin, asyncHandler(async (req, res) => {
   res.json(admins);
 }));
 
+// GET /api/admin/overview — super admin only: full activity dump per admin
+router.get('/overview', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const db = getDb();
+
+  // Fetch everything in parallel
+  const [adminKeysSnap, practitionersSnap, kidsSnap, parentsSnap, sessionsSnap, formsSnap, meetingFormsSnap, subsSnap] = await Promise.all([
+    db.collection('adminKeys').get(),
+    db.collection('practitioners').get(),
+    db.collection('kids').get(),
+    db.collection('parents').get(),
+    db.collection('sessions').get(),
+    db.collection('sessionForms').get(),
+    db.collection('meetingForms').get(),
+    db.collection('subscriptions').get(),
+  ]);
+
+  const toISO = (t) => t?.toDate?.()?.toISOString() || (t instanceof Date ? t.toISOString() : null);
+
+  // Build practitioner-id → adminId map from practitioners docs (doc id may equal adminId for admins themselves)
+  const practitionersById = {};
+  practitionersSnap.docs.forEach(d => {
+    practitionersById[d.id] = { id: d.id, ...d.data() };
+  });
+
+  // Group kids by adminId
+  const kidsByAdmin = {};
+  const orphanKids = [];
+  kidsSnap.docs.forEach(d => {
+    const kid = { id: d.id, ...d.data() };
+    const key = kid.adminId || '__orphan__';
+    if (!kid.adminId) {
+      orphanKids.push({
+        id: kid.id,
+        name: kid.name,
+        age: kid.age,
+        gender: kid.gender,
+        createdAt: toISO(kid.createdAt),
+        totalMoney: kid.totalMoney || 0,
+        hasBoardLayout: !!kid.boardLayout,
+      });
+    } else {
+      if (!kidsByAdmin[key]) kidsByAdmin[key] = [];
+      kidsByAdmin[key].push(kid);
+    }
+  });
+
+  // Parents → kidId
+  const parentsByKidId = {};
+  parentsSnap.docs.forEach(d => {
+    const parent = { id: d.id, ...d.data() };
+    if (!parent.kidId) return;
+    if (!parentsByKidId[parent.kidId]) parentsByKidId[parent.kidId] = [];
+    parentsByKidId[parent.kidId].push(parent);
+  });
+
+  // Sessions → kidId
+  const sessionsByKidId = {};
+  sessionsSnap.docs.forEach(d => {
+    const s = { id: d.id, ...d.data() };
+    if (!s.kidId) return;
+    if (!sessionsByKidId[s.kidId]) sessionsByKidId[s.kidId] = [];
+    sessionsByKidId[s.kidId].push(s);
+  });
+
+  // Forms → kidId
+  const formsByKidId = {};
+  formsSnap.docs.forEach(d => {
+    const f = { id: d.id, ...d.data() };
+    if (!f.kidId) return;
+    if (!formsByKidId[f.kidId]) formsByKidId[f.kidId] = [];
+    formsByKidId[f.kidId].push(f);
+  });
+  const meetingFormsByKidId = {};
+  meetingFormsSnap.docs.forEach(d => {
+    const f = { id: d.id, ...d.data() };
+    if (!f.kidId) return;
+    if (!meetingFormsByKidId[f.kidId]) meetingFormsByKidId[f.kidId] = [];
+    meetingFormsByKidId[f.kidId].push(f);
+  });
+
+  // Subscriptions → adminId
+  const subByAdminId = {};
+  subsSnap.docs.forEach(d => {
+    const s = d.data();
+    if (s.adminId) subByAdminId[s.adminId] = s;
+  });
+
+  // Practitioners (crew) grouped by their owning admin via createdBy field
+  const practitionersByAdmin = {};
+  practitionersSnap.docs.forEach(d => {
+    const p = { id: d.id, ...d.data() };
+    // Skip the admin's own practitioner doc (doc id === adminId)
+    const ownerAdminId = p.createdBy;
+    if (!ownerAdminId) return;
+    if (p.id === ownerAdminId) return; // this is the admin themselves
+    if (!practitionersByAdmin[ownerAdminId]) practitionersByAdmin[ownerAdminId] = [];
+    practitionersByAdmin[ownerAdminId].push(p);
+  });
+
+  // Build per-admin result
+  const admins = adminKeysSnap.docs
+    .map(d => ({ docId: d.id, ...d.data() }))
+    .filter(a => !a.isSuperAdmin)
+    .map(a => {
+      const myKids = kidsByAdmin[a.adminId] || [];
+      const myKidIds = myKids.map(k => k.id);
+
+      const kidsDetail = myKids.map(k => {
+        const sessions = sessionsByKidId[k.id] || [];
+        const forms = formsByKidId[k.id] || [];
+        const meetingForms = meetingFormsByKidId[k.id] || [];
+        const parents = parentsByKidId[k.id] || [];
+        return {
+          id: k.id,
+          name: k.name,
+          age: k.age,
+          gender: k.gender,
+          createdAt: toISO(k.createdAt),
+          totalMoney: k.totalMoney || 0,
+          hasBoardLayout: !!k.boardLayout,
+          tasksCount: Array.isArray(k.tasks) ? k.tasks.length : 0,
+          parents: parents.map(p => ({ id: p.id, name: p.name, mobile: p.mobile, email: p.email })),
+          sessionsCount: sessions.length,
+          formsCount: forms.length,
+          meetingFormsCount: meetingForms.length,
+        };
+      });
+
+      const allParents = myKidIds.flatMap(kid => (parentsByKidId[kid] || []).map(p => ({ ...p, kidId: kid })));
+      const allSessions = myKidIds.reduce((sum, kid) => sum + (sessionsByKidId[kid]?.length || 0), 0);
+      const allForms = myKidIds.reduce((sum, kid) => sum + (formsByKidId[kid]?.length || 0), 0);
+      const allMeetingForms = myKidIds.reduce((sum, kid) => sum + (meetingFormsByKidId[kid]?.length || 0), 0);
+
+      const crew = practitionersByAdmin[a.adminId] || [];
+
+      // Pull contact from practitioners doc (admin's own)
+      const adminPract = practitionersById[a.adminId] || {};
+
+      const sub = subByAdminId[a.adminId];
+
+      return {
+        adminId: a.adminId,
+        name: a.name,
+        key: a.key,
+        active: a.active !== false,
+        createdAt: toISO(a.createdAt),
+        createdBy: a.createdBy || null,
+        mobile: adminPract.mobile || '',
+        email: adminPract.email || '',
+        subscription: sub ? {
+          plan: sub.plan,
+          status: sub.status,
+          trialEndDate: toISO(sub.trialEndDate),
+          proEndDate: toISO(sub.proEndDate),
+        } : null,
+        counts: {
+          kids: myKids.length,
+          crew: crew.length,
+          parents: allParents.length,
+          sessions: allSessions,
+          forms: allForms,
+          meetingForms: allMeetingForms,
+        },
+        kids: kidsDetail,
+        crew: crew.map(p => ({
+          id: p.id,
+          name: p.name,
+          type: p.type,
+          mobile: p.mobile,
+          email: p.email,
+          createdAt: toISO(p.createdAt),
+        })),
+        parents: allParents.map(p => ({ id: p.id, kidId: p.kidId, name: p.name, mobile: p.mobile, email: p.email })),
+      };
+    });
+
+  // Sort newest signups first
+  admins.sort((a, b) => {
+    const aT = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bT = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bT - aT;
+  });
+
+  res.json({
+    admins,
+    orphanKids,
+    totals: {
+      admins: admins.length,
+      orphanKids: orphanKids.length,
+      kidsAcrossAllAdmins: admins.reduce((s, a) => s + a.counts.kids, 0),
+      crewAcrossAllAdmins: admins.reduce((s, a) => s + a.counts.crew, 0),
+      parentsAcrossAllAdmins: admins.reduce((s, a) => s + a.counts.parents, 0),
+    },
+  });
+}));
+
 // POST /api/admin/create-key — super admin only
 router.post('/create-key', requireSuperAdmin, asyncHandler(async (req, res) => {
   const { name, mobile, email, key } = req.body;
