@@ -130,11 +130,12 @@ export default function MeetingResults() {
             {ranked.map(([label, count], i) => {
               const max = ranked[0][1];
               const pct = max === 0 ? 0 : Math.round((count / max) * 100);
+              const isRecording = label === 'ארצה צילום בלבד';
               return (
-                <div key={label} className={`mv-rank-row ${i === 0 ? 'top' : ''}`}>
+                <div key={label} className={`mv-rank-row ${i === 0 && !isRecording ? 'top' : ''} ${isRecording ? 'recording' : ''}`}>
                   <div className="mv-rank-header">
-                    <span className="mv-rank-label">{label}</span>
-                    <span className="mv-rank-count">{count} {count === 1 ? 'הצבעה' : 'הצבעות'}</span>
+                    <span className="mv-rank-label">{isRecording ? '📹 בקשות לצילום בלבד' : label}</span>
+                    <span className="mv-rank-count">{count} {count === 1 ? (isRecording ? 'בקשה' : 'הצבעה') : (isRecording ? 'בקשות' : 'הצבעות')}</span>
                   </div>
                   <div className="mv-rank-bar"><div className="mv-rank-bar-fill" style={{ width: `${pct}%` }} /></div>
                 </div>
@@ -163,7 +164,11 @@ export default function MeetingResults() {
                   </button>
                 </div>
                 <div className="mv-voter-dates">
-                  {v.dates.map(d => <span key={d} className="mv-voter-date">{d}</span>)}
+                  {v.dates.map(d => (
+                    <span key={d} className={`mv-voter-date ${d === 'ארצה צילום בלבד' ? 'recording' : ''}`}>
+                      {d === 'ארצה צילום בלבד' ? '📹 צילום בלבד' : d}
+                    </span>
+                  ))}
                 </div>
               </div>
             ))}

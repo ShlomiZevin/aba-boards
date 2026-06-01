@@ -12508,3 +12508,42 @@ body:has(.mv-root) { padding: 0; background: #faf9ff; }
   border-color: #fca5a5;
   color: #b91c1c;
 }
+
+.mv-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #faf9ff;
+  border: 1.5px solid #ede9fe;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+  transition: all .2s;
+}
+.mv-checkbox:hover {
+  background: #f3efff;
+  border-color: #c4b5fd;
+}
+.mv-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: #7c3aed;
+  cursor: pointer;
+  margin: 0;
+}
+.mv-rank-row.recording {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+.mv-rank-row.recording .mv-rank-label { color: #b45309; }
+.mv-rank-row.recording .mv-rank-count { color: #b45309; }
+.mv-rank-row.recording .mv-rank-bar-fill {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+.mv-voter-date.recording {
+  background: #fef3c7;
+  color: #b45309;
+}

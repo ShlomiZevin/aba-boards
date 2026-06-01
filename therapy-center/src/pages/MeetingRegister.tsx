@@ -14,6 +14,7 @@ const API_BASE = import.meta.env.DEV
 export default function MeetingRegister() {
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
+  const [recordingOnly, setRecordingOnly] = useState(false);
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
 
   const submit = async (e: React.FormEvent) => {
@@ -27,7 +28,7 @@ export default function MeetingRegister() {
         body: JSON.stringify({
           name: name.trim(),
           contact: contact.trim(),
-          dates: [MEETING_LABEL],
+          dates: [recordingOnly ? 'ארצה צילום בלבד' : MEETING_LABEL],
         }),
       });
       if (!res.ok) throw new Error('failed');
@@ -43,9 +44,17 @@ export default function MeetingRegister() {
         <div className="mv-card mv-card-success">
           <img src="/therapy/doing-logo-transparent2.png" alt="Doing" className="mv-logo" />
           <div className="mv-check">✓</div>
-          <h1 className="mv-title">נרשמת בהצלחה!</h1>
-          <p className="mv-subtitle">נתראה ביום שלישי, 2 ביוני בשעה 20:30 🤍</p>
-          <p className="mv-subtitle">קישור לזום יישלח אליך לפני המפגש.</p>
+          <h1 className="mv-title">{recordingOnly ? 'תודה!' : 'נרשמת בהצלחה!'}</h1>
+          <p className="mv-subtitle">
+            {recordingOnly
+              ? 'נשלח אליך את הקלטת המפגש מיד לאחר שהיא תהיה זמינה 🤍'
+              : 'נתראה ביום שלישי, 2 ביוני בשעה 20:30 🤍'}
+          </p>
+          <p className="mv-subtitle">
+            {recordingOnly
+              ? 'נחכה לעדכן אותך במייל.'
+              : 'קישור לזום יישלח אליך לפני המפגש.'}
+          </p>
         </div>
       </div>
     );
@@ -79,22 +88,34 @@ export default function MeetingRegister() {
           </label>
 
           <label className="mv-label">
-            <span>טלפון או מייל (לא חובה)</span>
+            <span>{recordingOnly ? 'מייל לקבלת ההקלטה' : 'טלפון או מייל (לא חובה)'}</span>
             <input
               className="mv-input"
               type="text"
               value={contact}
               onChange={e => setContact(e.target.value)}
-              placeholder="כדי שנשלח לך את קישור הזום"
+              placeholder={recordingOnly ? 'כדי שנשלח לך את ההקלטה' : 'כדי שנשלח לך את קישור הזום'}
+              required={recordingOnly}
             />
+          </label>
+
+          <label className="mv-checkbox">
+            <input
+              type="checkbox"
+              checked={recordingOnly}
+              onChange={e => setRecordingOnly(e.target.checked)}
+            />
+            <span>לא אוכל להגיע — ארצה לקבל את הצילום</span>
           </label>
 
           <button
             type="submit"
             className="mv-submit"
-            disabled={status === 'submitting' || !name.trim()}
+            disabled={status === 'submitting' || !name.trim() || (recordingOnly && !contact.trim())}
           >
-            {status === 'submitting' ? 'נרשמת...' : 'אני מצטרפ/ת'}
+            {status === 'submitting'
+              ? 'שולח...'
+              : recordingOnly ? 'שלח/י בקשה לצילום' : 'אני מצטרפ/ת'}
           </button>
 
           {status === 'error' && (
