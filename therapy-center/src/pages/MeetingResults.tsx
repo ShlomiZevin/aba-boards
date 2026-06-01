@@ -60,6 +60,22 @@ export default function MeetingResults() {
     }
   };
 
+  const handleDeleteOne = async (vote: Vote) => {
+    if (!confirm(`למחוק את ההצבעה של ${vote.name}?`)) return;
+    const adminKey = localStorage.getItem('admin_key');
+    if (!adminKey) return;
+    try {
+      const res = await fetch(`${API_BASE}/meeting-votes/${vote.id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Key': adminKey },
+      });
+      if (!res.ok) throw new Error(res.statusText);
+      setVotes(prev => prev ? prev.filter(v => v.id !== vote.id) : prev);
+    } catch (e: any) {
+      setError(e.message || 'שגיאה במחיקה');
+    }
+  };
+
   if (error) {
     return (
       <div className="mv-root" dir="rtl">
@@ -138,6 +154,13 @@ export default function MeetingResults() {
                   <span className="mv-voter-name">{v.name}</span>
                   {v.contact && <span className="mv-voter-contact">{v.contact}</span>}
                   <span className="mv-voter-time">{new Date(v.votedAt).toLocaleString('he-IL')}</span>
+                  <button
+                    className="mv-voter-delete"
+                    onClick={() => handleDeleteOne(v)}
+                    title="מחק הצבעה"
+                  >
+                    ✕
+                  </button>
                 </div>
                 <div className="mv-voter-dates">
                   {v.dates.map(d => <span key={d} className="mv-voter-date">{d}</span>)}

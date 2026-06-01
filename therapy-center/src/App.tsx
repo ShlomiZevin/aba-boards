@@ -32,8 +32,11 @@ import LandingPageV2 from './pages/LandingPageV2';
 import LandingPageV3 from './pages/LandingPageV3';
 import LandingNew from './pages/LandingNew';
 import MeetingVote from './pages/MeetingVote';
+import MeetingRegister from './pages/MeetingRegister';
 import MeetingResults from './pages/MeetingResults';
 import InstallApp from './pages/InstallApp';
+import SlidesIndex from './pages/slides/SlidesIndex';
+import SlideRoute from './pages/slides/SlideRoute';
 import AppShell from './components/AppShell';
 import SubscriptionGate from './components/SubscriptionGate';
 import TherapistShell from './components/TherapistShell';
@@ -177,7 +180,10 @@ function App() {
             <Route path="/welcome-v2" element={<LandingPageV2 />} />
             <Route path="/welcome-v3" element={<LandingPageV3 />} />
             <Route path="/welcome-new" element={<LandingNew />} />
+            <Route path="/slides" element={<SlidesIndex />} />
+            <Route path="/slides/:slideId" element={<SlideRoute />} />
             <Route path="/meeting-vote" element={<MeetingVote />} />
+            <Route path="/meeting-register" element={<MeetingRegister />} />
             <Route path="/meeting-results" element={<MeetingResults />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />

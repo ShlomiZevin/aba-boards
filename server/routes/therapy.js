@@ -764,6 +764,11 @@ router.delete('/meeting-votes', requireAdmin, asyncHandler(async (req, res) => {
   res.json(result);
 }));
 
+router.delete('/meeting-votes/:id', requireAdmin, asyncHandler(async (req, res) => {
+  const result = await therapyService.deleteMeetingVote(req.params.id);
+  res.json(result);
+}));
+
 // Error handling middleware
 router.use((err, req, res, next) => {
   console.error('Therapy API Error:', err);

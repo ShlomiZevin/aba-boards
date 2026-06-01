@@ -2491,6 +2491,7 @@ module.exports = {
   recordMeetingVote,
   getMeetingVotes,
   clearMeetingVotes,
+  deleteMeetingVote,
   // Init
   initializeSuperAdmin,
   initializeGoalCategories,
@@ -2524,4 +2525,10 @@ async function clearMeetingVotes() {
   snapshot.docs.forEach(doc => batch.delete(doc.ref));
   await batch.commit();
   return { deleted: snapshot.docs.length };
+}
+
+async function deleteMeetingVote(voteId) {
+  const db = getDb();
+  await db.collection('meetingVotes').doc(voteId).delete();
+  return { deleted: true };
 }
