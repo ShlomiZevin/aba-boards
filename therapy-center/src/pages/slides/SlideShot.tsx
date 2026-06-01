@@ -14,10 +14,9 @@ export default function SlideShot({ slideId }: Props) {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(key);
-      setSrc(stored);
+      setSrc(localStorage.getItem(key));
     } catch {
-      // localStorage may be disabled (private mode etc.)
+      // localStorage may be disabled
     }
     setError(null);
   }, [key]);
@@ -58,20 +57,23 @@ export default function SlideShot({ slideId }: Props) {
         style={{ display: 'none' }}
       />
 
-      {src ? (
-        <>
+      <div className="sl-shot-frame">
+        {src ? (
           <img src={src} alt="" className="sl-shot-img" />
-          <div className="sl-shot-actions">
-            <button type="button" onClick={() => inputRef.current?.click()} className="sl-shot-mini-btn">החלף</button>
-            <button type="button" onClick={handleRemove} className="sl-shot-mini-btn">הסר</button>
-          </div>
-        </>
-      ) : (
-        <button type="button" onClick={() => inputRef.current?.click()} className="sl-shot-empty">
-          <span className="sl-shot-empty-icon">⤴</span>
-          <span>העלה צילום מסך</span>
-          <span className="sl-shot-empty-hint">היחס המקורי יישמר</span>
-        </button>
+        ) : (
+          <button type="button" onClick={() => inputRef.current?.click()} className="sl-shot-empty">
+            <span className="sl-shot-empty-icon">⤴</span>
+            <span>העלה צילום מסך</span>
+            <span className="sl-shot-empty-hint">היחס המקורי יישמר</span>
+          </button>
+        )}
+      </div>
+
+      {src && (
+        <div className="sl-shot-actions">
+          <button type="button" onClick={() => inputRef.current?.click()} className="sl-shot-mini-btn">החלף</button>
+          <button type="button" onClick={handleRemove} className="sl-shot-mini-btn">הסר</button>
+        </div>
       )}
 
       {error && <div className="sl-shot-error">{error}</div>}

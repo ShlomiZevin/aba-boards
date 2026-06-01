@@ -1,10 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { SECTIONS, slidesInSection } from './index';
 
 const LOGO_URL = '/therapy/doing-logo-transparent2.png';
 
 export default function SlidesIndex() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.body.classList.add('sl-active');
+    return () => document.body.classList.remove('sl-active');
+  }, []);
 
   return (
     <div className="sl-root sl-index" dir="rtl">

@@ -18,6 +18,12 @@ export default function SlideLayout({ slideId, section, children, variant = 'con
   const prev = slideId > 1 ? slideId - 1 : null;
   const next = slideId < total ? slideId + 1 : null;
 
+  // Override host-page body styles (purple gradient, padding) while in slides
+  useEffect(() => {
+    document.body.classList.add('sl-active');
+    return () => document.body.classList.remove('sl-active');
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' && prev) navigate(`/slides/${prev}`);
@@ -28,24 +34,17 @@ export default function SlideLayout({ slideId, section, children, variant = 'con
     return () => window.removeEventListener('keydown', onKey);
   }, [navigate, prev, next]);
 
-  const isCover = variant === 'cover' || variant === 'closing';
-
   return (
-    <div className={`sl-root sl-${variant}`} dir="rtl">
-      {/* Tiny logo top-right (RTL = start) */}
-      <button className="sl-logo-btn" onClick={() => navigate('/slides')} aria-label="תפריט">
-        <img src={LOGO_URL} alt="Doing" />
-      </button>
+    <div className={`sl-root sl-v-${variant}`} dir="rtl">
+      <header className="sl-topbar">
+        <button className="sl-logo-btn" onClick={() => navigate('/slides')} aria-label="תפריט">
+          <img src={LOGO_URL} alt="Doing" />
+        </button>
+        {section && <span className="sl-topbar-section">{section}</span>}
+      </header>
 
-      {/* Section label (hidden on cover) */}
-      {!isCover && <div className="sl-section">{section}</div>}
+      <main className="sl-stage">{children}</main>
 
-      {/* Main content */}
-      <main className="sl-stage">
-        <div className="sl-content">{children}</div>
-      </main>
-
-      {/* Bottom: pager + arrows, all very subtle */}
       <footer className="sl-foot">
         <button
           className="sl-arrow"
