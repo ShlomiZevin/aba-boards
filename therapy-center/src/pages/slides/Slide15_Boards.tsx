@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide15_Boards() {
   return (
@@ -13,7 +14,8 @@ export default function Slide15_Boards() {
             <li><span>02</span>או שאנחנו עוזרים לכם להתחיל</li>
           </ol>
         </div>
-        <SlideShot slideId={15} />
+        {/* <SlideShot slideId={15} /> */}
+        <SlideEmbed slideId={15} defaultPath="/therapy/board-builder" />
       </div>
     </SlideLayout>
   );

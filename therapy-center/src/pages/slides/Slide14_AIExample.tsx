@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide14_AIExample() {
   return (
@@ -14,7 +15,8 @@ export default function Slide14_AIExample() {
             <li><span>03</span>סיכום מוכן — אפשר לערוך, לשמור, או לשלוח</li>
           </ol>
         </div>
-        <SlideShot slideId={14} />
+        {/* <SlideShot slideId={14} /> */}
+        <SlideEmbed slideId={14} defaultPath="/therapy/chat" />
       </div>
     </SlideLayout>
   );

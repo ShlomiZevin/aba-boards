@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide05_Parents() {
   return (
@@ -14,7 +15,8 @@ export default function Slide05_Parents() {
             <li><span>03</span>הורה רואה התקדמות וטפסים, בקריאה בלבד</li>
           </ol>
         </div>
-        <SlideShot slideId={5} />
+        {/* <SlideShot slideId={5} /> */}
+        <SlideEmbed slideId={5} defaultPath="/therapy/" />
       </div>
     </SlideLayout>
   );

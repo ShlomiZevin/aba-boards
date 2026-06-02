@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';   // ← static upload version (kept for fallback)
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide02_KidsDashboard() {
   return (
@@ -14,7 +15,8 @@ export default function Slide02_KidsDashboard() {
             <li><span>03</span>כניסה לכרטיס ילד בקליק אחד</li>
           </ol>
         </div>
-        <SlideShot slideId={2} />
+        {/* <SlideShot slideId={2} /> */}
+        <SlideEmbed slideId={2} defaultPath="/therapy/" />
       </div>
     </SlideLayout>
   );

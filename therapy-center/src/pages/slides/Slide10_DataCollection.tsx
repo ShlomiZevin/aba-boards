@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide10_DataCollection() {
   return (
@@ -14,7 +15,8 @@ export default function Slide10_DataCollection() {
             <li><span>03</span>הופך אוטומטית לגרף ולמדד התקדמות</li>
           </ol>
         </div>
-        <SlideShot slideId={10} />
+        {/* <SlideShot slideId={10} /> */}
+        <SlideEmbed slideId={10} defaultPath="/therapy/" />
       </div>
     </SlideLayout>
   );

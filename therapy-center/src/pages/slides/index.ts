@@ -16,7 +16,8 @@ import Slide13_AICapabilities from './Slide13_AICapabilities';
 import Slide14_AIExample from './Slide14_AIExample';
 import Slide15_Boards from './Slide15_Boards';
 import Slide16_Dino from './Slide16_Dino';
-import Slide17_End from './Slide17_End';
+import Slide17_Feedback from './Slide17_Feedback';
+import Slide18_End from './Slide18_End';
 
 export interface SlideMeta {
   id: number;
@@ -36,7 +37,7 @@ export const SECTIONS: SectionMeta[] = [
   { name: 'מרכז הטיפול',  range: [2, 11] },
   { name: 'עוזרת AI',      range: [12, 14] },
   { name: 'לוחות + דינו',  range: [15, 16], brief: true },
-  { name: 'סיום',           range: [17, 17] },
+  { name: 'סיום',           range: [17, 18] },
 ];
 
 export function sectionOf(id: number): string {
@@ -61,7 +62,8 @@ export const SLIDES: SlideMeta[] = [
   { id: 14, section: 'עוזרת AI',         title: 'דוגמה — סיכום בלחיצה',                Component: Slide14_AIExample },
   { id: 15, section: 'לוחות + דינו',    title: 'לוחות לילדים',                        Component: Slide15_Boards },
   { id: 16, section: 'לוחות + דינו',    title: 'דינו — חבר AI',                        Component: Slide16_Dino },
-  { id: 17, section: 'סיום',              title: 'תודה',                                Component: Slide17_End },
+  { id: 17, section: 'סיום',              title: 'שותפים בתהליך',                       Component: Slide17_Feedback },
+  { id: 18, section: 'סיום',              title: 'תודה',                                Component: Slide18_End },
 ];
 
 export function slidesInSection(sec: SectionMeta) {

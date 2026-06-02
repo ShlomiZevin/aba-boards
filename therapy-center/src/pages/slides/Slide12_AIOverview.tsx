@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide12_AIOverview() {
   return (
@@ -14,7 +15,8 @@ export default function Slide12_AIOverview() {
             <li><span>03</span>עונה בעברית טבעית — כמו עוזרת מנהלית 24/7</li>
           </ol>
         </div>
-        <SlideShot slideId={12} />
+        {/* <SlideShot slideId={12} /> */}
+        <SlideEmbed slideId={12} defaultPath="/therapy/chat" />
       </div>
     </SlideLayout>
   );

@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide13_AICapabilities() {
   return (
@@ -14,7 +15,8 @@ export default function Slide13_AICapabilities() {
             <li><span>03</span>ניתוח נתונים וייעוץ מקצועי ב-ABA</li>
           </ol>
         </div>
-        <SlideShot slideId={13} />
+        {/* <SlideShot slideId={13} /> */}
+        <SlideEmbed slideId={13} defaultPath="/therapy/chat" />
       </div>
     </SlideLayout>
   );

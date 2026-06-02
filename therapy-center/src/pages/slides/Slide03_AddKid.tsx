@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide03_AddKid() {
   return (
@@ -14,7 +15,8 @@ export default function Slide03_AddKid() {
             <li><span>03</span>כרטיס הילד נפתח אוטומטית</li>
           </ol>
         </div>
-        <SlideShot slideId={3} />
+        {/* <SlideShot slideId={3} /> */}
+        <SlideEmbed slideId={3} defaultPath="/therapy/" />
       </div>
     </SlideLayout>
   );

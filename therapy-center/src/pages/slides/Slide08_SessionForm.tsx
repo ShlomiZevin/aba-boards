@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide08_SessionForm() {
   return (
@@ -14,7 +15,8 @@ export default function Slide08_SessionForm() {
             <li><span>03</span>שמירה אוטומטית — אפשר לחזור ולערוך</li>
           </ol>
         </div>
-        <SlideShot slideId={8} />
+        {/* <SlideShot slideId={8} /> */}
+        <SlideEmbed slideId={8} defaultPath="/therapy/forms" />
       </div>
     </SlideLayout>
   );

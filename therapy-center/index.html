@@ -44,6 +44,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Heebo:wght@400;500;600;700;800&display=swap" />
+
+    <!-- Pre-paint:
+           - On /slides routes, mark <html> so the global purple body
+             gradient is suppressed with zero flash on the parent.
+           - When rendered inside an iframe (slide embeds the app), mark
+             <html> so the same purple gradient is suppressed inside the
+             embed before React even mounts. -->
+    <script>
+      (function () {
+        try {
+          var html = document.documentElement;
+          if (/\/slides(\/|$)/.test(location.pathname)) {
+            html.classList.add('sl-active');
+          }
+          if (window.self !== window.top) {
+            html.classList.add('sl-iframe-embed');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

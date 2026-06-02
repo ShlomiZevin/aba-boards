@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide07_Sessions() {
   return (
@@ -14,7 +15,8 @@ export default function Slide07_Sessions() {
             <li><span>03</span>תצוגות שבועית וחודשית, סינון לפי מטפלת או ילד</li>
           </ol>
         </div>
-        <SlideShot slideId={7} />
+        {/* <SlideShot slideId={7} /> */}
+        <SlideEmbed slideId={7} defaultPath="/therapy/calendar" />
       </div>
     </SlideLayout>
   );

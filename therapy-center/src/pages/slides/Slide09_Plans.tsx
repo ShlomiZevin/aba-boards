@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide09_Plans() {
   return (
@@ -14,7 +15,8 @@ export default function Slide09_Plans() {
             <li><span>03</span>הכל מתחבר לטופס הסשן ולגרפים</li>
           </ol>
         </div>
-        <SlideShot slideId={9} />
+        {/* <SlideShot slideId={9} /> */}
+        <SlideEmbed slideId={9} defaultPath="/therapy/" />
       </div>
     </SlideLayout>
   );

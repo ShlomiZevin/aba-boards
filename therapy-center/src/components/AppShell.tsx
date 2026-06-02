@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PayPalButtons, usePayPalScriptReducer } from '@paypal/react-paypal-js';
@@ -19,6 +19,13 @@ export default function AppShell({ children }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Compact "emoji-only" sidebar when this page is embedded in an iframe
+  // (e.g. inside the slides presentation deck)
+  const [isEmbed, setIsEmbed] = useState(false);
+  useEffect(() => {
+    try { setIsEmbed(window.self !== window.top); } catch { setIsEmbed(true); }
+  }, []);
 
   // Change key state
   const [showChangeKey, setShowChangeKey] = useState(false);
@@ -144,7 +151,7 @@ export default function AppShell({ children }: AppShellProps) {
   );
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isEmbed ? ' app-shell-compact' : ''}`}>
       {/* Sidebar - desktop only */}
       <aside className="app-sidebar">
         <div className="sidebar-brand">

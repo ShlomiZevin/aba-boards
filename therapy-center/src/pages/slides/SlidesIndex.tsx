@@ -22,7 +22,7 @@ export default function SlidesIndex() {
         <div className="sl-toc">
           <header className="sl-toc-head">
             <h1 className="sl-toc-h1">מצגת היכרות</h1>
-            <p className="sl-toc-sub">סיור במערכת — {SECTIONS.length} פרקים</p>
+            <p className="sl-toc-sub">סיור במערכת — {SECTIONS.length} פרקים · משתמש נבחר בכל שקף</p>
           </header>
 
           <nav className="sl-toc-nav">

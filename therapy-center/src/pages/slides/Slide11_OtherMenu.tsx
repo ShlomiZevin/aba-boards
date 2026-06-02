@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide11_OtherMenu() {
   return (
@@ -14,7 +15,8 @@ export default function Slide11_OtherMenu() {
             <li><span>03</span>מרכז הודעות — תקשורת פנימית עם הצוות וההורים</li>
           </ol>
         </div>
-        <SlideShot slideId={11} />
+        {/* <SlideShot slideId={11} /> */}
+        <SlideEmbed slideId={11} defaultPath="/therapy/forms" />
       </div>
     </SlideLayout>
   );

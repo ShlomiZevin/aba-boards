@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide06_Practitioners() {
   return (
@@ -14,7 +15,8 @@ export default function Slide06_Practitioners() {
             <li><span>03</span>גישה אישית — היא רואה רק את הילדים שלה</li>
           </ol>
         </div>
-        <SlideShot slideId={6} />
+        {/* <SlideShot slideId={6} /> */}
+        <SlideEmbed slideId={6} defaultPath="/therapy/practitioners" />
       </div>
     </SlideLayout>
   );

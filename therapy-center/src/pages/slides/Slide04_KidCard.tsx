@@ -1,5 +1,6 @@
 import SlideLayout from './SlideLayout';
-import SlideShot from './SlideShot';
+// import SlideShot from './SlideShot';
+import SlideEmbed from './SlideEmbed';
 
 export default function Slide04_KidCard() {
   return (
@@ -14,7 +15,8 @@ export default function Slide04_KidCard() {
             <li><span>03</span>גישה מהירה לכל פעולה — מילוי, תזמון, עריכה</li>
           </ol>
         </div>
-        <SlideShot slideId={4} />
+        {/* <SlideShot slideId={4} /> */}
+        <SlideEmbed slideId={4} defaultPath="/therapy/" />
       </div>
     </SlideLayout>
   );
