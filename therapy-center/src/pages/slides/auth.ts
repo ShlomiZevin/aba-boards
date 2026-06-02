@@ -26,9 +26,24 @@ export const SlidesAuthContext = createContext<{
   setAuth: (k: AuthKey) => void;
   embedUrl: string | null;
   setEmbedUrl: (url: string | null) => void;
+  reloadVersion: number;  // bumped to force SlideEmbed to re-read its URL
 }>({
   auth: 'michal',
   setAuth: () => {},
   embedUrl: null,
   setEmbedUrl: () => {},
+  reloadVersion: 0,
 });
+
+export const URL_PREFIX = 'doing-slide-embed-';
+
+export function getStoredUrl(slideId: number): string | null {
+  try { return localStorage.getItem(`${URL_PREFIX}${slideId}`); } catch { return null; }
+}
+
+export function saveStoredUrl(slideId: number, url: string | null) {
+  try {
+    if (url) localStorage.setItem(`${URL_PREFIX}${slideId}`, url);
+    else     localStorage.removeItem(`${URL_PREFIX}${slideId}`);
+  } catch {}
+}

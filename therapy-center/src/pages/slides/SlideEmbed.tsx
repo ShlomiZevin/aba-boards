@@ -10,18 +10,21 @@ interface Props {
 
 export default function SlideEmbed({ slideId, defaultPath = '/therapy/' }: Props) {
   const urlKey = `${URL_PREFIX}${slideId}`;
-  const { auth, setEmbedUrl } = useContext(SlidesAuthContext);
+  const { auth, setEmbedUrl, reloadVersion } = useContext(SlidesAuthContext);
   const [path, setPath] = useState<string>(defaultPath);
   const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Optional saved URL override (set externally via localStorage; no in-UI editor)
+  // Re-read URL override from localStorage. Runs on mount AND whenever the
+  // URL editor in the footer bumps `reloadVersion`.
   useEffect(() => {
     try {
       const stored = localStorage.getItem(urlKey);
-      if (stored) setPath(stored);
-    } catch {}
-  }, [urlKey]);
+      setPath(stored || defaultPath);
+    } catch {
+      setPath(defaultPath);
+    }
+  }, [urlKey, defaultPath, reloadVersion]);
 
   // Publish current URL up to the SlideLayout footer (for the open-in-new-tab link)
   useEffect(() => {

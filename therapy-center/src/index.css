@@ -12670,3 +12670,40 @@ html.sl-iframe-embed body {
   color: #7c5cfc;
   background: rgba(124, 92, 252, .04);
 }
+
+/* ─── URL editor (inline in slide footer, expands when ✎ is clicked) ─── */
+.sl-url-edit {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.sl-url-edit-input {
+  flex: 0 0 auto;
+  width: 300px;
+  border: 1px solid #c4b5fd;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  outline: none;
+  color: #0f172a;
+  background: #fff;
+}
+.sl-url-edit-input:focus { border-color: #7c5cfc; box-shadow: 0 0 0 3px rgba(124, 92, 252, .1); }
+
+.sl-mini-btn {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-family: inherit;
+  font-size: 12px; font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.sl-mini-btn:hover { color: #7c5cfc; border-color: #c4b5fd; }
+.sl-mini-btn-primary {
+  background: #7c5cfc;
+  border-color: #7c5cfc;
+  color: #fff;
+}
+.sl-mini-btn-primary:hover { background: #6a4ce0; border-color: #6a4ce0; color: #fff; }

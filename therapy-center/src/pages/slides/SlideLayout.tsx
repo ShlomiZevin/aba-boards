@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { SLIDES } from './index';
-import { AUTHS, AUTH_PREFIX, ADMIN_KEY, getStoredAuth, SlidesAuthContext, type AuthKey } from './auth';
+import { AUTHS, AUTH_PREFIX, ADMIN_KEY, getStoredAuth, getStoredUrl, saveStoredUrl, SlidesAuthContext, type AuthKey } from './auth';
 
 const LOGO_URL = '/therapy/doing-logo-transparent2.png';
 
@@ -23,11 +23,13 @@ export default function SlideLayout({ slideId, section, children, variant = 'con
   const [auth, setAuth] = useState<AuthKey>(() => getStoredAuth(slideId, 'michal'));
 
   // SlideEmbed registers its current URL here so the footer can show an
-  // "open in new tab" link for the embedded page.
+  // "open in new tab" link + URL editor for the embedded page.
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
-
-  // Reset registered embed URL when navigating between slides
-  useEffect(() => { setEmbedUrl(null); }, [slideId]);
+  // Bumped to force SlideEmbed to re-read localStorage after the URL editor saves
+  const [reloadVersion, setReloadVersion] = useState(0);
+  // URL editor open/closed state
+  const [editingUrl, setEditingUrl] = useState(false);
+  const [draftUrl, setDraftUrl] = useState('');
 
   // Re-read pref when navigating between slides
   useEffect(() => {
@@ -72,8 +74,27 @@ export default function SlideLayout({ slideId, section, children, variant = 'con
 
   const showAuthToggle = variant === 'content';
 
+  function openUrlEditor() {
+    setDraftUrl(embedUrl ?? '');
+    setEditingUrl(true);
+  }
+  function saveUrl() {
+    saveStoredUrl(slideId, draftUrl.trim() || null);
+    setEmbedUrl(draftUrl.trim() || null);
+    setReloadVersion(v => v + 1);
+    setEditingUrl(false);
+  }
+  function resetUrl() {
+    saveStoredUrl(slideId, null);  // clear override → SlideEmbed falls back to defaultPath
+    setReloadVersion(v => v + 1);
+    setEditingUrl(false);
+  }
+  function cancelEdit() {
+    setEditingUrl(false);
+  }
+
   return (
-    <SlidesAuthContext.Provider value={{ auth, setAuth: changeAuth, embedUrl, setEmbedUrl }}>
+    <SlidesAuthContext.Provider value={{ auth, setAuth: changeAuth, embedUrl, setEmbedUrl, reloadVersion }}>
       <div className={`sl-root sl-v-${variant}`} dir="rtl">
         <header className="sl-topbar">
           <button className="sl-logo-btn" onClick={() => navigate('/slides')} aria-label="תפריט">
@@ -102,33 +123,60 @@ export default function SlideLayout({ slideId, section, children, variant = 'con
             >←</button>
           </div>
           <div className="sl-foot-side sl-foot-end">
-            {showAuthToggle && embedUrl && (
-              <a
-                href={embedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="sl-external-btn"
-                title="פתח בכרטיסייה חדשה"
-              >
-                פתח בכרטיסייה ↗
-              </a>
-            )}
-            {showAuthToggle && (
-              <div className="sl-auth-toggle" role="radiogroup" aria-label="חשבון">
-                {(Object.keys(AUTHS) as AuthKey[]).map(k => (
-                  <button
-                    key={k}
-                    type="button"
-                    role="radio"
-                    aria-checked={auth === k}
-                    onClick={() => changeAuth(k)}
-                    className={`sl-auth-toggle-btn${auth === k ? ' sl-auth-toggle-on' : ''}`}
-                  >
-                    {AUTHS[k].label}
-                  </button>
-                ))}
+            {showAuthToggle && editingUrl ? (
+              <div className="sl-url-edit">
+                <input
+                  type="text"
+                  value={draftUrl}
+                  onChange={e => setDraftUrl(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') saveUrl();
+                    if (e.key === 'Escape') cancelEdit();
+                  }}
+                  className="sl-url-edit-input"
+                  placeholder="/therapy/kid/..."
+                  autoFocus
+                  dir="ltr"
+                />
+                <button type="button" onClick={saveUrl} className="sl-mini-btn sl-mini-btn-primary">שמור</button>
+                <button type="button" onClick={resetUrl} className="sl-mini-btn">אפס</button>
+                <button type="button" onClick={cancelEdit} className="sl-mini-btn">ביטול</button>
               </div>
-            )}
+            ) : showAuthToggle ? (
+              <>
+                {embedUrl && (
+                  <a
+                    href={embedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="sl-external-btn"
+                    title="פתח בכרטיסייה חדשה"
+                  >
+                    פתח ↗
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={openUrlEditor}
+                  className="sl-external-btn"
+                  title="ערוך כתובת"
+                >URL ✎</button>
+                <div className="sl-auth-toggle" role="radiogroup" aria-label="חשבון">
+                  {(Object.keys(AUTHS) as AuthKey[]).map(k => (
+                    <button
+                      key={k}
+                      type="button"
+                      role="radio"
+                      aria-checked={auth === k}
+                      onClick={() => changeAuth(k)}
+                      className={`sl-auth-toggle-btn${auth === k ? ' sl-auth-toggle-on' : ''}`}
+                    >
+                      {AUTHS[k].label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </div>
         </footer>
       </div>
