@@ -1,8 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
-import { SLIDES } from './index';
-import { AUTHS, AUTH_PREFIX, ADMIN_KEY, getStoredAuth, getStoredUrl, saveStoredUrl, SlidesAuthContext, type AuthKey } from './auth';
+import { useEffect, useMemo, useState } from 'react';
+import { getEffectiveSlides, getCustomSlides, hideSlide, removeCustomSlideById, addCustomSlide, DEFAULT_SLIDES, type ContentSlide } from './index';
+import {
+  AUTHS, AUTH_PREFIX, ADMIN_KEY,
+  getStoredAuth, getStoredContent, saveStoredContent,
+  SlidesAuthContext, type AuthKey,
+} from './auth';
 
 const LOGO_URL = '/therapy/doing-logo-transparent2.png';
 
@@ -15,29 +19,73 @@ interface Props {
 
 export default function SlideLayout({ slideId, section, children, variant = 'content' }: Props) {
   const navigate = useNavigate();
-  const total = SLIDES.length;
-  const prev = slideId > 1 ? slideId - 1 : null;
-  const next = slideId < total ? slideId + 1 : null;
+
+  // Look up current slide so we can read its defaultAuth as the fallback
+  const currentSlide = useMemo(
+    () => getEffectiveSlides().find(s => s.id === slideId),
+    [slideId],
+  );
+  const slideDefaultAuth: AuthKey =
+    (currentSlide?.variant === 'content' && currentSlide.defaultAuth) || 'michal';
 
   // Per-slide auth state (Michal | Demo). Stored in localStorage per slide.
-  const [auth, setAuth] = useState<AuthKey>(() => getStoredAuth(slideId, 'michal'));
+  const [auth, setAuth] = useState<AuthKey>(() => getStoredAuth(slideId, slideDefaultAuth));
 
-  // SlideEmbed registers its current URL here so the footer can show an
-  // "open in new tab" link + URL editor for the embedded page.
+  // SlideEmbed registers its current URL (used for "open in new tab" link)
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
-  // Bumped to force SlideEmbed to re-read localStorage after the URL editor saves
   const [reloadVersion, setReloadVersion] = useState(0);
-  // URL editor open/closed state
-  const [editingUrl, setEditingUrl] = useState(false);
-  const [draftUrl, setDraftUrl] = useState('');
+  const bumpReloadVersion = () => setReloadVersion(v => v + 1);
 
-  // Re-read pref when navigating between slides
+  // Edit mode + content/slides versions
+  const [editMode, setEditMode] = useState(false);
+  const [contentVersion, setContentVersion] = useState(0);
+  const bumpContentVersion = () => setContentVersion(v => v + 1);
+  const [slidesVersion, setSlidesVersion] = useState(0);
+  const bumpSlidesVersion = () => setSlidesVersion(v => v + 1);
+  // Force iframe remount (for content URL editor save)
+  const [forceReloadCount, setForceReloadCount] = useState(0);
+  const forceReload = () => setForceReloadCount(c => c + 1);
+
+  // Iframe-only navigation (for "back to kid screen" button — does NOT change slide)
+  const [iframeNavCount, setIframeNavCount] = useState(0);
+  const [iframeNavTarget, setIframeNavTarget] = useState<string | null>(null);
+  function navigateIframe(url: string) {
+    setIframeNavTarget(url);
+    setIframeNavCount(c => c + 1);
+  }
+
+  // Effective slides (defaults + customs - hidden) — re-computed when slidesVersion bumps
+  const effectiveSlides = useMemo(() => getEffectiveSlides(), [slidesVersion]);
+  const index = useMemo(
+    () => effectiveSlides.findIndex(s => s.id === slideId),
+    [effectiveSlides, slideId],
+  );
+  const total = effectiveSlides.length;
+  const slideNumber = index >= 0 ? index + 1 : 0;
+  const prevSlide = index > 0 ? effectiveSlides[index - 1] : null;
+  const nextSlide = index >= 0 && index < total - 1 ? effectiveSlides[index + 1] : null;
+
+  // Section override per-slide (override > prop default)
+  const sectionOverride = useMemo(() => {
+    const c = getStoredContent(slideId);
+    return c?.section;
+  }, [slideId, contentVersion]);
+  const effectiveSectionLabel = sectionOverride ?? section;
+
+  function setSectionOverride(value: string) {
+    const c = getStoredContent(slideId) ?? {};
+    const v = value.trim();
+    if (v) c.section = v; else delete c.section;
+    saveStoredContent(slideId, Object.keys(c).length ? c : null);
+    bumpContentVersion();
+  }
+
+  // Re-read auth pref when navigating between slides
   useEffect(() => {
-    setAuth(getStoredAuth(slideId, 'michal'));
-  }, [slideId]);
+    setAuth(getStoredAuth(slideId, slideDefaultAuth));
+  }, [slideId, slideDefaultAuth]);
 
-  // Keep global admin_key in sync with the current slide's auth so the iframe
-  // (which shares localStorage same-origin) loads as the right account
+  // Keep global admin_key in sync with the current slide's auth
   useEffect(() => {
     try {
       const wanted = AUTHS[auth].key;
@@ -56,127 +104,167 @@ export default function SlideLayout({ slideId, section, children, variant = 'con
     setAuth(k);
   }
 
-  // Override host-page body styles (purple gradient, padding) while in slides
+  // Override host-page body styles
   useEffect(() => {
     document.body.classList.add('sl-active');
     return () => document.body.classList.remove('sl-active');
   }, []);
 
+  // Keyboard nav — don't intercept while typing in inputs
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' && prev) navigate(`/slides/${prev}`);
-      if (e.key === 'ArrowLeft' && next) navigate(`/slides/${next}`);
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        if (e.key !== 'Escape') return;
+      }
+      if (e.key === 'ArrowRight' && prevSlide) navigate(`/slides/${prevSlide.id}`);
+      if (e.key === 'ArrowLeft' && nextSlide) navigate(`/slides/${nextSlide.id}`);
       if (e.key === 'Escape') navigate('/slides');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navigate, prev, next]);
+  }, [navigate, prevSlide, nextSlide]);
 
-  const showAuthToggle = variant === 'content';
+  const isContent = variant === 'content';
 
-  function openUrlEditor() {
-    setDraftUrl(embedUrl ?? '');
-    setEditingUrl(true);
+  // ── Add/remove slide actions ──
+  function addSlideAfter() {
+    const newId = Date.now();
+    const newSlide: ContentSlide = {
+      id: newId,
+      variant: 'content',
+      section: effectiveSectionLabel || '',
+      title: 'שקף חדש',
+      lead: '',
+      notes: [],
+      afterId: slideId,
+    };
+    addCustomSlide(newSlide);
+    bumpSlidesVersion();
+    setTimeout(() => navigate(`/slides/${newId}`), 0);
   }
-  function saveUrl() {
-    saveStoredUrl(slideId, draftUrl.trim() || null);
-    setEmbedUrl(draftUrl.trim() || null);
-    setReloadVersion(v => v + 1);
-    setEditingUrl(false);
-  }
-  function resetUrl() {
-    saveStoredUrl(slideId, null);  // clear override → SlideEmbed falls back to defaultPath
-    setReloadVersion(v => v + 1);
-    setEditingUrl(false);
-  }
-  function cancelEdit() {
-    setEditingUrl(false);
+
+  function deleteSlide() {
+    if (!confirm('למחוק את השקף?')) return;
+    const isCustom = getCustomSlides().some(s => s.id === slideId);
+    if (isCustom) {
+      removeCustomSlideById(slideId);
+    } else if (DEFAULT_SLIDES.some(s => s.id === slideId)) {
+      hideSlide(slideId);
+    }
+    bumpSlidesVersion();
+    // navigate to next (or prev) slide
+    const target = nextSlide || prevSlide;
+    setTimeout(() => navigate(target ? `/slides/${target.id}` : '/slides'), 0);
   }
 
   return (
-    <SlidesAuthContext.Provider value={{ auth, setAuth: changeAuth, embedUrl, setEmbedUrl, reloadVersion }}>
-      <div className={`sl-root sl-v-${variant}`} dir="rtl">
+    <SlidesAuthContext.Provider value={{
+      auth, setAuth: changeAuth,
+      embedUrl, setEmbedUrl, reloadVersion,
+      editMode, setEditMode,
+      contentVersion, bumpContentVersion,
+      bumpReloadVersion,
+      slidesVersion, bumpSlidesVersion,
+      forceReloadCount, forceReload,
+      iframeNavCount, iframeNavTarget, navigateIframe,
+    }}>
+      <div className={`sl-root sl-v-${variant}${editMode ? ' sl-edit-on' : ''}`} dir="rtl">
         <header className="sl-topbar">
           <button className="sl-logo-btn" onClick={() => navigate('/slides')} aria-label="תפריט">
             <img src={LOGO_URL} alt="Doing" />
           </button>
-          {section && <span className="sl-topbar-section">{section}</span>}
+          {editMode ? (
+            <input
+              key={`section-${slideId}-${contentVersion}`}
+              className="sl-topbar-section sl-edit-input sl-edit-section"
+              defaultValue={effectiveSectionLabel}
+              placeholder="קטגוריה (אופציונלי)"
+              onBlur={(e) => setSectionOverride(e.target.value)}
+              dir="rtl"
+            />
+          ) : (
+            effectiveSectionLabel && <span className="sl-topbar-section">{effectiveSectionLabel}</span>
+          )}
         </header>
 
         <main className="sl-stage">{children}</main>
 
         <footer className="sl-foot">
-          <div className="sl-foot-side sl-foot-start">{/* visual right (RTL start) */}</div>
+          <div className="sl-foot-side sl-foot-start">
+            {editMode && (
+              <>
+                <button
+                  type="button"
+                  onClick={addSlideAfter}
+                  className="sl-mini-btn"
+                  title="הוסף שקף חדש אחרי השקף הנוכחי"
+                >+ הוסף שקף</button>
+                <button
+                  type="button"
+                  onClick={deleteSlide}
+                  className="sl-mini-btn sl-mini-btn-danger"
+                  title="מחק את השקף"
+                >× מחק שקף</button>
+              </>
+            )}
+          </div>
           <div className="sl-foot-center">
             <button
               className="sl-arrow"
-              onClick={() => prev && navigate(`/slides/${prev}`)}
-              disabled={!prev}
+              onClick={() => prevSlide && navigate(`/slides/${prevSlide.id}`)}
+              disabled={!prevSlide}
               aria-label="הקודם"
             >→</button>
-            <span className="sl-pager">{String(slideId).padStart(2, '0')} <em>/</em> {String(total).padStart(2, '0')}</span>
+            <span className="sl-pager" dir="ltr">{String(slideNumber).padStart(2, '0')} <em>/</em> {String(total).padStart(2, '0')}</span>
             <button
               className="sl-arrow"
-              onClick={() => next && navigate(`/slides/${next}`)}
-              disabled={!next}
+              onClick={() => nextSlide && navigate(`/slides/${nextSlide.id}`)}
+              disabled={!nextSlide}
               aria-label="הבא"
             >←</button>
           </div>
           <div className="sl-foot-side sl-foot-end">
-            {showAuthToggle && editingUrl ? (
-              <div className="sl-url-edit">
-                <input
-                  type="text"
-                  value={draftUrl}
-                  onChange={e => setDraftUrl(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') saveUrl();
-                    if (e.key === 'Escape') cancelEdit();
-                  }}
-                  className="sl-url-edit-input"
-                  placeholder="/therapy/kid/..."
-                  autoFocus
-                  dir="ltr"
-                />
-                <button type="button" onClick={saveUrl} className="sl-mini-btn sl-mini-btn-primary">שמור</button>
-                <button type="button" onClick={resetUrl} className="sl-mini-btn">אפס</button>
-                <button type="button" onClick={cancelEdit} className="sl-mini-btn">ביטול</button>
-              </div>
-            ) : showAuthToggle ? (
-              <>
-                {embedUrl && (
-                  <a
-                    href={embedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="sl-external-btn"
-                    title="פתח בכרטיסייה חדשה"
+            {embedUrl && (
+              <button
+                type="button"
+                onClick={() => navigateIframe('/therapy/kid/%D7%94%D7%A8%D7%90%D7%9C')}
+                className="sl-external-btn"
+                title="טען את כרטיס הילד הראל ב-iframe (ללא שינוי שקף)"
+              >↩ למסך הילד</button>
+            )}
+
+            {embedUrl && (
+              <a
+                href={embedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sl-external-btn"
+                title="פתח בכרטיסייה חדשה"
+              >פתח ↗</a>
+            )}
+            <button
+              type="button"
+              onClick={() => setEditMode(!editMode)}
+              className={`sl-external-btn${editMode ? ' sl-external-btn-active' : ''}`}
+              title={editMode ? 'סיים עריכה' : 'ערוך תוכן השקף'}
+            >{editMode ? '✓ סיים עריכה' : '✎ ערוך תוכן'}</button>
+            {isContent && (
+              <div className="sl-auth-toggle" role="radiogroup" aria-label="חשבון">
+                {(Object.keys(AUTHS) as AuthKey[]).map(k => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="radio"
+                    aria-checked={auth === k}
+                    onClick={() => changeAuth(k)}
+                    className={`sl-auth-toggle-btn${auth === k ? ' sl-auth-toggle-on' : ''}`}
                   >
-                    פתח ↗
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={openUrlEditor}
-                  className="sl-external-btn"
-                  title="ערוך כתובת"
-                >URL ✎</button>
-                <div className="sl-auth-toggle" role="radiogroup" aria-label="חשבון">
-                  {(Object.keys(AUTHS) as AuthKey[]).map(k => (
-                    <button
-                      key={k}
-                      type="button"
-                      role="radio"
-                      aria-checked={auth === k}
-                      onClick={() => changeAuth(k)}
-                      className={`sl-auth-toggle-btn${auth === k ? ' sl-auth-toggle-on' : ''}`}
-                    >
-                      {AUTHS[k].label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : null}
+                    {AUTHS[k].label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </footer>
       </div>
