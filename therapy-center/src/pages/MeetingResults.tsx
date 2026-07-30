@@ -144,6 +144,39 @@ export default function MeetingResults() {
           </div>
         )}
 
+        {/* Recording requesters — easy contact list */}
+        {(() => {
+          const RECORDING_LABEL = 'ארצה צילום בלבד';
+          const recordingRequesters = votes.filter(v => v.dates.includes(RECORDING_LABEL));
+          if (recordingRequesters.length === 0) return null;
+          const copyAll = () => {
+            const lines = recordingRequesters.map(v => `${v.name}${v.contact ? ` — ${v.contact}` : ''}`);
+            navigator.clipboard.writeText(lines.join('\n'));
+          };
+          const copyContactsOnly = () => {
+            const contacts = recordingRequesters.map(v => v.contact).filter(Boolean);
+            navigator.clipboard.writeText(contacts.join('\n'));
+          };
+          return (
+            <>
+              <h2 className="mv-section-title">📹 בקשות לקבלת הצילום ({recordingRequesters.length})</h2>
+              <div className="mv-toolbar">
+                <button className="mv-toolbar-btn" onClick={copyAll}>📋 העתק שמות + פרטי קשר</button>
+                <button className="mv-toolbar-btn" onClick={copyContactsOnly}>📋 העתק רק מיילים/טלפונים</button>
+              </div>
+              <div className="mv-recording-list">
+                {recordingRequesters.map(v => (
+                  <div key={v.id} className="mv-recording-row">
+                    <span className="mv-recording-name">{v.name}</span>
+                    <span className="mv-recording-contact">{v.contact || <em style={{ color: '#9ca3af' }}>לא השאיר פרטים</em>}</span>
+                    <span className="mv-recording-time">{new Date(v.votedAt).toLocaleString('he-IL')}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
+
         <h2 className="mv-section-title">פירוט המצביעים</h2>
         {votes.length === 0 ? (
           <p className="mv-empty">—</p>

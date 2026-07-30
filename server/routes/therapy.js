@@ -70,6 +70,26 @@ router.post('/chat', asyncHandler(async (req, res) => {
   }
 }));
 
+// ==================== AI IMAGE GENERATION (Leonardo) ====================
+
+const { generateImages } = require('../services/leonardo');
+
+// Image generation is restricted to the super admin (מיכל) only
+router.post('/generate-image', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { prompt, model } = req.body || {};
+  if (!prompt || !prompt.trim()) {
+    return res.status(400).json({ error: 'חובה לספק תיאור לתמונה' });
+  }
+
+  try {
+    const result = await generateImages({ prompt, model });
+    res.json(result);
+  } catch (err) {
+    console.error('Image generation error:', err);
+    res.status(500).json({ error: err.message || 'יצירת התמונה נכשלה' });
+  }
+}));
+
 // ==================== KIDS ====================
 
 router.get('/kids/all-grouped', requireSuperAdmin, asyncHandler(async (req, res) => {

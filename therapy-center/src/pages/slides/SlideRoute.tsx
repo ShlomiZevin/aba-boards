@@ -22,16 +22,16 @@ export default function SlideRoute() {
   if (!slide) return <Navigate to="/slides" replace />;
 
   // Outer just sets up SlideLayout; inner components read context from inside it.
-  if (slide.variant === 'cover' || slide.variant === 'closing') {
+  if (slide.variant === 'content') {
     return (
-      <SlideLayout slideId={slide.id} section={slide.section} variant={slide.variant}>
-        <CoverBody data={slide} />
+      <SlideLayout slideId={slide.id} section={slide.section}>
+        <ContentBody data={slide} />
       </SlideLayout>
     );
   }
   return (
-    <SlideLayout slideId={slide.id} section={slide.section}>
-      <ContentBody data={slide} />
+    <SlideLayout slideId={slide.id} section={slide.section} variant={slide.variant}>
+      <CoverBody data={slide} />
     </SlideLayout>
   );
 }

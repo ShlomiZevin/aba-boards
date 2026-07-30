@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { kidsApi, chatApi, summariesApi, practitionersApi } from '../api/client';
+import { kidsApi, chatApi, summariesApi, practitionersApi, imagesApi, IMAGE_MODELS } from '../api/client';
+import type { ImageModel } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
+import { useAuth } from '../contexts/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import type { Kid } from '../types';
 
@@ -18,10 +20,16 @@ interface ChatMessage {
   boardUpdated?: boolean;
   summaryCreated?: boolean;
   summaryMeta?: { kidId: string; kidName: string; fromDate: string; toDate: string };
+  images?: string[];
+  imageCost?: number;
+  imageCostCurrency?: string;
+  imageModelLabel?: string;
 }
 
 export default function ChatCenter() {
   const { isParentView, parentKidId, isTherapistView, practitionerId } = useTherapist();
+  const { user } = useAuth();
+  const canGenerateImages = !!user?.isSuperAdmin;
 
   const welcomeMessage = isParentView
     ? 'שלום! אני העוזרת של Doing. אפשר לשאול אותי שאלות על ההתקדמות של הילד/ה, להבין את המטרות, או לקבל טיפים. איך אפשר לעזור?'
@@ -109,6 +117,60 @@ export default function ChatCenter() {
   const [summaryWeeks, setSummaryWeeks] = useState('2');
   const [summaryDetail, setSummaryDetail] = useState<'short' | 'full'>('short');
   const pendingSummaryMeta = useRef<{ kidId: string; kidName: string; fromDate: string; toDate: string } | null>(null);
+
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [imageModel, setImageModel] = useState<ImageModel>('nano-banana-2');
+
+  const generateImage = async () => {
+    const prompt = imagePrompt.trim();
+    if (!prompt || isSending) return;
+
+    setShowImageModal(false);
+    setImagePrompt('');
+
+    const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: `🎨 ${prompt}` };
+    const loadingMsg: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: '',
+      isLoading: true,
+      statusLabel: 'יוצר 2 תמונות... (עשוי לקחת עד דקה)',
+    };
+    setMessages(prev => [...prev, userMsg, loadingMsg]);
+    setIsSending(true);
+
+    try {
+      const result = await imagesApi.generate(prompt, imageModel);
+      if (result.success && result.data) {
+        const { images, cost, costCurrency, modelLabel } = result.data;
+        setMessages(prev => prev.filter(m => !m.isLoading).concat({
+          id: (Date.now() + 2).toString(),
+          role: 'assistant',
+          content: '',
+          images,
+          imageCost: cost,
+          imageCostCurrency: costCurrency,
+          imageModelLabel: modelLabel,
+        }));
+      } else {
+        setMessages(prev => prev.filter(m => !m.isLoading).concat({
+          id: (Date.now() + 2).toString(),
+          role: 'assistant',
+          content: result.error || 'שגיאה ביצירת התמונה. נסו שוב.',
+        }));
+      }
+    } catch {
+      setMessages(prev => prev.filter(m => !m.isLoading).concat({
+        id: (Date.now() + 2).toString(),
+        role: 'assistant',
+        content: 'שגיאה ביצירת התמונה. נסו שוב.',
+      }));
+    }
+
+    setIsSending(false);
+    inputRef.current?.focus();
+  };
 
   const requestSummary = () => {
     const kid = kids.find(k => k.id === summaryKidId);
@@ -209,9 +271,30 @@ export default function ChatCenter() {
               </div>
             ) : (
               <>
-                <div className="chat-center-msg-text">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                </div>
+                {msg.content && (
+                  <div className="chat-center-msg-text">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  </div>
+                )}
+                {msg.images && msg.images.length > 0 && (
+                  <div className="chat-image-result">
+                    <div className="chat-image-grid">
+                      {msg.images.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="chat-image-item">
+                          <img src={url} alt={`תמונה ${i + 1}`} loading="lazy" />
+                        </a>
+                      ))}
+                    </div>
+                    <div className="chat-image-meta">
+                      {msg.imageModelLabel && <span className="chat-image-model">{msg.imageModelLabel}</span>}
+                      {typeof msg.imageCost === 'number' && (
+                        <span className="chat-image-cost">
+                          💰 עלות: ${msg.imageCost.toFixed(4)} ({msg.images.length} תמונות)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {msg.boardUpdated && (
                   <div className="chat-center-board-badge">✅ הלוח עודכן</div>
                 )}
@@ -261,6 +344,16 @@ export default function ChatCenter() {
             title="בקש סיכום תקופתי"
           >
             📊
+          </button>
+        )}
+        {canGenerateImages && (
+          <button
+            className="chat-summary-btn"
+            onClick={() => setShowImageModal(true)}
+            disabled={isSending}
+            title="צור תמונה מטקסט"
+          >
+            🎨
           </button>
         )}
       </div>
@@ -331,6 +424,57 @@ export default function ChatCenter() {
               <button
                 style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid #ccc', background: 'white', cursor: 'pointer', fontSize: '0.95rem' }}
                 onClick={() => setShowSummaryModal(false)}
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showImageModal && (
+        <div className="modal-overlay" onClick={() => !isSending && setShowImageModal(false)}>
+          <div className="summary-request-modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px', color: '#2d3748' }}>🎨 יצירת תמונה מטקסט</h3>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: '0.9rem' }}>תיאור התמונה</label>
+              <textarea
+                className="chat-image-prompt"
+                value={imagePrompt}
+                onChange={e => setImagePrompt(e.target.value)}
+                placeholder="לדוגמה: דינוזאור חמוד ומחייך בסגנון איור שטוח לילדים"
+                rows={3}
+                autoFocus
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: '0.9rem' }}>מודל</label>
+              <select
+                className="chat-kid-select"
+                style={{ width: '100%' }}
+                value={imageModel}
+                onChange={e => setImageModel(e.target.value as ImageModel)}
+              >
+                {IMAGE_MODELS.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 16, fontSize: '0.8rem', color: '#64748b' }}>
+              יווצרו 2 תמונות בגודל 9:16 (לאורך). העלות תוצג לאחר היצירה.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-start' }}>
+              <button
+                className="chat-center-send-btn"
+                style={{ width: 'auto', padding: '8px 20px', borderRadius: 8, fontSize: '0.95rem' }}
+                onClick={generateImage}
+                disabled={!imagePrompt.trim() || isSending}
+              >
+                צור 2 תמונות
+              </button>
+              <button
+                style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid #ccc', background: 'white', cursor: 'pointer', fontSize: '0.95rem' }}
+                onClick={() => setShowImageModal(false)}
+                disabled={isSending}
               >
                 ביטול
               </button>

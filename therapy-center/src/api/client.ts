@@ -742,3 +742,30 @@ export const chatApi = {
     return result;
   },
 };
+
+// AI Image generation (Leonardo) — text-to-image, 9:16 tall, 2 images per request
+export type ImageModel = 'gpt-image-2' | 'nano-banana-2' | 'nano-banana-pro';
+
+export interface GenerateImageResponse {
+  images: string[];
+  cost: number;
+  costCurrency: string;
+  model: ImageModel;
+  modelLabel: string;
+  width: number;
+  height: number;
+}
+
+export const IMAGE_MODELS: { value: ImageModel; label: string }[] = [
+  { value: 'nano-banana-2', label: 'Nano Banana 2' },
+  { value: 'nano-banana-pro', label: 'Nano Banana Pro' },
+  { value: 'gpt-image-2', label: 'GPT Image 2' },
+];
+
+export const imagesApi = {
+  generate: (prompt: string, model: ImageModel) =>
+    fetchApi<GenerateImageResponse>('/generate-image', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, model }),
+    }),
+};
