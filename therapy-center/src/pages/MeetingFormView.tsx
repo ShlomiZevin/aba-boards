@@ -143,6 +143,29 @@ export default function MeetingFormView() {
       </div>
 
       <div className="content-card">
+        {/* Visibility banner — admin only */}
+        {!isTherapistView && !isParentView && (() => {
+          const vp = form.visibility?.parents !== false;
+          const vt = form.visibility?.therapists !== false;
+          const all = vp && vt;
+          const label = all
+            ? 'גלוי לכולם (הורים ומטפלים)'
+            : !vp && !vt
+            ? 'מוסתר — רק מנהל/ת המרכז'
+            : `גלוי ל${vp ? 'הורים' : 'מטפלים'} בלבד`;
+          return (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              background: all ? '#f0fdf4' : '#fffbeb',
+              border: `1px solid ${all ? '#bbf7d0' : '#fde68a'}`,
+              color: all ? '#166534' : '#92400e',
+              borderRadius: '8px', padding: '8px 12px', marginBottom: '16px', fontSize: '0.85em', fontWeight: 600,
+            }}>
+              {all ? '👁️' : '🔒'} נראות: {label}
+            </div>
+          );
+        })()}
+
         {/* Stats bar */}
         <div className="form-view-stats" style={{ gridTemplateColumns: 'auto auto' }}>
           <div className="stat">

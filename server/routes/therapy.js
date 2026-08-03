@@ -460,6 +460,36 @@ router.post('/kids/:kidId/goal-forms/:goalLibraryId/upload', requireAdmin, uploa
   res.json(result);
 }));
 
+// ==================== MEETING VISIBILITY HELPERS ====================
+// A meeting (type פגישה) can be restricted by the center admin to parents and/or
+// therapists. Absent visibility = visible to all (backward compatible). Admins always
+// see everything; therapists/parents only see meetings flagged for their role.
+
+function meetingVisibleTo(visibility, authType) {
+  if (authType !== 'therapist' && authType !== 'parent') return true; // admin / other
+  if (!visibility) return true; // default: visible to all
+  return authType === 'parent' ? visibility.parents !== false : visibility.therapists !== false;
+}
+
+// Drop meeting-type sessions that the requesting role isn't allowed to see.
+async function filterSessionsByMeetingVisibility(sessions, kidId, authType) {
+  if (authType !== 'therapist' && authType !== 'parent') return sessions;
+  if (!sessions.some(s => s.type === 'meeting')) return sessions;
+
+  const forms = await therapyService.getMeetingFormsForKid(kidId);
+  const visBySessionId = {};
+  const visByFormId = {};
+  for (const f of forms) {
+    if (f.sessionId) visBySessionId[f.sessionId] = f.visibility;
+    visByFormId[f.id] = f.visibility;
+  }
+  return sessions.filter(s => {
+    if (s.type !== 'meeting') return true;
+    const vis = visBySessionId[s.id] ?? (s.formId ? visByFormId[s.formId] : undefined);
+    return meetingVisibleTo(vis, authType);
+  });
+}
+
 // ==================== SESSIONS ====================
 
 router.get('/kids/:kidId/sessions', asyncHandler(async (req, res) => {
@@ -468,7 +498,8 @@ router.get('/kids/:kidId/sessions', asyncHandler(async (req, res) => {
     to: req.query.to,
     status: req.query.status,
   };
-  const sessions = await therapyService.getSessionsForKid(req.params.kidId, filters);
+  let sessions = await therapyService.getSessionsForKid(req.params.kidId, filters);
+  sessions = await filterSessionsByMeetingVisibility(sessions, req.params.kidId, req.authType);
   res.json(sessions);
 }));
 
@@ -556,13 +587,17 @@ router.post('/forms/create-link', asyncHandler(async (req, res) => {
 // ==================== MEETING FORMS ====================
 
 router.get('/kids/:kidId/meeting-forms', asyncHandler(async (req, res) => {
-  const forms = await therapyService.getMeetingFormsForKid(req.params.kidId);
+  let forms = await therapyService.getMeetingFormsForKid(req.params.kidId);
+  forms = forms.filter(f => meetingVisibleTo(f.visibility, req.authType));
   res.json(forms);
 }));
 
 router.get('/meeting-forms/:id', asyncHandler(async (req, res) => {
   const form = await therapyService.getMeetingFormById(req.params.id);
   if (!form) return res.status(404).json({ error: 'Meeting form not found' });
+  if (!meetingVisibleTo(form.visibility, req.authType)) {
+    return res.status(403).json({ error: 'אין הרשאה לצפות בישיבה זו' });
+  }
   res.json(form);
 }));
 

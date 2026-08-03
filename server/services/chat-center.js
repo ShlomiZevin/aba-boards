@@ -445,7 +445,24 @@ async function executeToolCall(toolName, input, adminId, { practitionerId, paren
         if (input.status) filters.status = input.status;
         if (input.fromDate) filters.fromDate = input.fromDate;
         if (input.toDate) filters.toDate = input.toDate;
-        const sessions = await therapyService.getSessionsForKid(input.kidId, filters);
+        let sessions = await therapyService.getSessionsForKid(input.kidId, filters);
+        // Respect meeting visibility for therapist/parent chat (admins see all).
+        const chatRole = parentKidId ? 'parent' : (practitionerId ? 'therapist' : 'admin');
+        if (chatRole !== 'admin' && sessions.some(s => s.type === 'meeting')) {
+          const forms = await therapyService.getMeetingFormsForKid(input.kidId);
+          const visBySessionId = {};
+          const visByFormId = {};
+          for (const f of forms) {
+            if (f.sessionId) visBySessionId[f.sessionId] = f.visibility;
+            visByFormId[f.id] = f.visibility;
+          }
+          sessions = sessions.filter(s => {
+            if (s.type !== 'meeting') return true;
+            const vis = visBySessionId[s.id] ?? (s.formId ? visByFormId[s.formId] : undefined);
+            if (!vis) return true; // default: visible to all
+            return chatRole === 'parent' ? vis.parents !== false : vis.therapists !== false;
+          });
+        }
         return sessions.map(s => ({
           id: s.id, scheduledDate: formatDate(s.scheduledDate), type: s.type,
           status: s.status, therapistId: s.therapistId,

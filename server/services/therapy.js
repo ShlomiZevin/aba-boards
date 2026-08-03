@@ -1965,6 +1965,7 @@ async function submitMeetingForm(data) {
     sessionId,
     kidId: data.kidId,
     sessionDate,
+    visibility: normalizeMeetingVisibility(data.visibility),
     attendees: data.attendees || [],
     goalsWorkedOn: data.goalsWorkedOn || [],
     additionalGoals: data.additionalGoals || [],
@@ -2012,6 +2013,14 @@ async function submitMeetingForm(data) {
   return { id: formId, ...form };
 }
 
+// Normalize a meeting visibility object. Absent/partial → visible to all.
+function normalizeMeetingVisibility(vis) {
+  return {
+    parents: vis?.parents !== false,
+    therapists: vis?.therapists !== false,
+  };
+}
+
 // Build the partial-update shape used by update/autosave/finalize for meeting forms.
 function buildMeetingFormUpdates(data, now) {
   const allowed = ['attendees', 'goalsWorkedOn', 'additionalGoals', 'generalNotes', 'behaviorNotes', 'adl',
@@ -2021,6 +2030,9 @@ function buildMeetingFormUpdates(data, now) {
     if (data[field] !== undefined) {
       updates[field] = field === 'sessionDate' ? new Date(data[field]) : data[field];
     }
+  }
+  if (data.visibility !== undefined) {
+    updates.visibility = normalizeMeetingVisibility(data.visibility);
   }
   return updates;
 }
@@ -2102,6 +2114,7 @@ async function autosaveMeetingForm(data) {
     sessionId,
     kidId: data.kidId,
     sessionDate,
+    visibility: normalizeMeetingVisibility(data.visibility),
     attendees: data.attendees || [],
     goalsWorkedOn: data.goalsWorkedOn || [],
     additionalGoals: data.additionalGoals || [],

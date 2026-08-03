@@ -7177,6 +7177,117 @@ input.bb-kid-name::placeholder {
   direction: rtl;
 }
 
+/* Meeting visibility picker (MeetingFormFill) */
+.visibility-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  background: linear-gradient(180deg, #fafbff 0%, #f6f8fc 100%);
+}
+.visibility-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.visibility-card-icon {
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+.visibility-card-title {
+  font-weight: 700;
+  color: #2d3748;
+  font-size: 0.98rem;
+}
+.visibility-card-sub {
+  font-size: 0.82rem;
+  color: #718096;
+  margin-top: 2px;
+}
+.visibility-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.visibility-option {
+  position: relative;
+  flex: 1 1 140px;
+  min-width: 130px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.visibility-option:hover { border-color: #cbd5e1; }
+.visibility-option:active { transform: scale(0.98); }
+.visibility-option-emoji { font-size: 1.25rem; line-height: 1; }
+.visibility-option-label { line-height: 1; }
+
+.visibility-option.parents.selected {
+  border-color: #48bb78;
+  background: #f0fdf4;
+  color: #166534;
+  box-shadow: 0 2px 8px rgba(72, 187, 120, 0.18);
+}
+.visibility-option.therapists.selected {
+  border-color: #667eea;
+  background: #eef1ff;
+  color: #3730a3;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.18);
+}
+
+/* Check badge (top-start corner, RTL-aware) */
+.visibility-check {
+  position: absolute;
+  top: -8px;
+  inset-inline-start: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  transform: scale(0);
+  transition: transform 0.15s ease;
+}
+.visibility-option.selected .visibility-check { transform: scale(1); }
+.visibility-option.parents.selected .visibility-check { background: #48bb78; }
+.visibility-option.therapists.selected .visibility-check { background: #667eea; }
+
+.visibility-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.visibility-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.visibility-status.all { background: #f0fdf4; color: #166534; }
+.visibility-status.all .visibility-status-dot { background: #22c55e; }
+.visibility-status.partial { background: #fffbeb; color: #92400e; }
+.visibility-status.partial .visibility-status-dot { background: #f59e0b; }
+.visibility-status.hidden { background: #fef2f2; color: #991b1b; }
+.visibility-status.hidden .visibility-status-dot { background: #ef4444; }
+
 /* AI image generation (Leonardo) */
 .chat-image-prompt {
   width: 100%;

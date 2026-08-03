@@ -36,6 +36,9 @@ export default function MeetingFormFill() {
   const [programsOutsideRoom, setProgramsOutsideRoom] = useState('');
   const [learningProgramsInRoom, setLearningProgramsInRoom] = useState('');
   const [tasks, setTasks] = useState('');
+  // Visibility of this meeting (type פגישה). Default: visible to everyone.
+  const [visibleToParents, setVisibleToParents] = useState(true);
+  const [visibleToTherapists, setVisibleToTherapists] = useState(true);
   const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
   const [additionalGoals, setAdditionalGoals] = useState<string[]>([]);
   const [newGoalText, setNewGoalText] = useState('');
@@ -94,6 +97,8 @@ export default function MeetingFormFill() {
     setProgramsOutsideRoom(form.programsOutsideRoom || '');
     setLearningProgramsInRoom(form.learningProgramsInRoom || '');
     setTasks(form.tasks || '');
+    setVisibleToParents(form.visibility?.parents !== false);
+    setVisibleToTherapists(form.visibility?.therapists !== false);
     setSelectedGoals(new Set((form.goalsWorkedOn || []).map((g: GoalSnapshot) => g.goalId)));
     setAdditionalGoals(form.additionalGoals || []);
     setInitialized(true);
@@ -245,6 +250,7 @@ export default function MeetingFormFill() {
       sessionId,
       kidId,
       sessionDate: new Date(sessionDate),
+      visibility: { parents: visibleToParents, therapists: visibleToTherapists },
       attendees: selectedAttendees,
       goalsWorkedOn,
       additionalGoals,
@@ -334,6 +340,8 @@ export default function MeetingFormFill() {
     programsOutsideRoom,
     learningProgramsInRoom,
     tasks,
+    visibleToParents,
+    visibleToTherapists,
   ]);
 
   // Flush pending form autosave on unmount
@@ -537,6 +545,56 @@ export default function MeetingFormFill() {
                 disabled={!!sessionId}
                 style={sessionId ? { backgroundColor: '#f1f5f9' } : undefined}
               />
+            </div>
+          </div>
+
+          {/* Visibility — who can see this meeting */}
+          <div className="form-group">
+            <div className="visibility-card">
+              <div className="visibility-card-head">
+                <span className="visibility-card-icon" aria-hidden>👁️</span>
+                <div>
+                  <div className="visibility-card-title">מי יכול לראות את הישיבה</div>
+                  <div className="visibility-card-sub">בחרו למי יוצג סיכום הישיבה. כברירת מחדל — גלוי לכולם.</div>
+                </div>
+              </div>
+
+              <div className="visibility-options">
+                <button
+                  type="button"
+                  className={`visibility-option parents ${visibleToParents ? 'selected' : ''}`}
+                  onClick={() => setVisibleToParents(v => !v)}
+                  aria-pressed={visibleToParents}
+                >
+                  <span className="visibility-check" aria-hidden>{visibleToParents ? '✓' : ''}</span>
+                  <span className="visibility-option-emoji" aria-hidden>👨‍👩‍👧</span>
+                  <span className="visibility-option-label">הורים</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`visibility-option therapists ${visibleToTherapists ? 'selected' : ''}`}
+                  onClick={() => setVisibleToTherapists(v => !v)}
+                  aria-pressed={visibleToTherapists}
+                >
+                  <span className="visibility-check" aria-hidden>{visibleToTherapists ? '✓' : ''}</span>
+                  <span className="visibility-option-emoji" aria-hidden>🧩</span>
+                  <span className="visibility-option-label">מטפלים</span>
+                </button>
+              </div>
+
+              <div className={`visibility-status ${
+                visibleToParents && visibleToTherapists ? 'all' : (!visibleToParents && !visibleToTherapists ? 'hidden' : 'partial')
+              }`}>
+                <span className="visibility-status-dot" aria-hidden />
+                <span>
+                  {visibleToParents && visibleToTherapists
+                    ? 'גלוי לכולם — הורים ומטפלים יראו את הישיבה.'
+                    : !visibleToParents && !visibleToTherapists
+                    ? 'מוסתר — רק מנהל/ת המרכז יראה את הישיבה.'
+                    : `גלוי ל${visibleToParents ? 'הורים' : 'מטפלים'} בלבד.`}
+                </span>
+              </div>
             </div>
           </div>
 

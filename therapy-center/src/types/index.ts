@@ -313,11 +313,19 @@ export interface MeetingAttendee {
 
 export type MeetingFormStatus = 'in_progress' | 'completed';
 
+// Who can see a meeting (type פגישה). Set by the center admin. Default: everyone.
+// Absent/undefined is treated as visible to all (backward compatible).
+export interface MeetingVisibility {
+  parents: boolean;
+  therapists: boolean;
+}
+
 export interface MeetingForm {
   id: string;
   sessionId?: string;
   kidId: string;
   sessionDate: Date;
+  visibility?: MeetingVisibility;
   attendees: MeetingAttendee[];
   goalsWorkedOn: GoalSnapshot[];
   additionalGoals: string[];
