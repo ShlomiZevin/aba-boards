@@ -55,6 +55,7 @@ import ImageCropModal from '../components/ImageCropModal';
 import GoalProgressChart from '../components/GoalProgressChart';
 import GoalPlansTab from '../components/GoalPlansTab';
 import LearningPlansTab from '../components/LearningPlansTab';
+import GameLauncher from '../components/GameLauncher';
 import DcEntryModal from '../components/DcEntryModal';
 import CreatePendingDcModal from '../components/CreatePendingDcModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -899,24 +900,15 @@ export default function KidDetail() {
           ) : (
             <div />
           )}
-          <div className="kid-header-toolbar">
-            {!isSimplifiedView && (
-              <>
-                <a href={`/board.html?kid=${kidId}`} className="kid-toolbar-btn" title="לוח">📱<span className="toolbar-label">לוח</span></a>
-                <a href={`/board.html?kid=${kidId}&mode=edit`} className="kid-toolbar-btn" title="ערוך לוח">🎨<span className="toolbar-label">ערוך לוח</span></a>
-                <a href={`/stats.html?kid=${kidId}`} className="kid-toolbar-btn" title="סטטיסטיקה">📊<span className="toolbar-label">סטטיסטיקה</span></a>
-              </>
-            )}
-            {isAdmin && (
-              <button
-                onClick={() => setShowDeleteKid(true)}
-                className="kid-toolbar-btn delete"
-                title="מחק ילד"
-              >
-                🗑
-              </button>
-            )}
-          </div>
+          {isAdmin && (
+            <button
+              onClick={() => setShowDeleteKid(true)}
+              className="kid-toolbar-btn delete"
+              title="מחק ילד"
+            >
+              🗑
+            </button>
+          )}
         </div>
         <div className="kid-header-profile">
           <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -1000,6 +992,18 @@ export default function KidDetail() {
             )}
           </div>
         </div>
+        {/* Action row — mobile. Kept off the back-arrow line, which was
+            getting far too crowded. Desktop uses .kid-action-links below. */}
+        <div className="kid-header-toolbar">
+          {!isSimplifiedView && (
+            <>
+              <a href={`/board.html?kid=${kidId}`} className="kid-toolbar-btn" title="לוח">📱<span className="toolbar-label">לוח</span></a>
+              <a href={`/board.html?kid=${kidId}&mode=edit`} className="kid-toolbar-btn" title="ערוך לוח">🎨<span className="toolbar-label">ערוך לוח</span></a>
+              <a href={`/stats.html?kid=${kidId}`} className="kid-toolbar-btn" title="סטטיסטיקה">📊<span className="toolbar-label">סטטיסטיקה</span></a>
+            </>
+          )}
+          {kid && <GameLauncher kid={kid} variant="toolbar" />}
+        </div>
         {/* Kid Action Links - desktop only (on mobile they're in the toolbar) */}
         <div className="kid-action-links">
           {!isSimplifiedView && (
@@ -1024,6 +1028,8 @@ export default function KidDetail() {
               />
             </>
           )}
+          {/* Games are for everyone — therapists and parents play them too */}
+          {kid && <GameLauncher kid={kid} />}
         </div>
       </div>
 

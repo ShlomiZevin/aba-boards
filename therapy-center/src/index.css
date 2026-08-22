@@ -13077,3 +13077,103 @@ html.sl-iframe-embed body {
   }
   .mv-recording-time { font-size: 11px; }
 }
+
+/* ==================== Games launcher ==================== */
+/* Rendered into <body> and positioned from the button's rect, so it can't be
+   clipped by the toolbar or run off the edge of a phone screen. */
+.game-launch-btn {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
+}
+
+.game-menu {
+  position: fixed;
+  z-index: 2200;
+  width: 250px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  direction: rtl;
+}
+
+.game-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: right;
+}
+.game-menu-item:hover { background: #F2F6F9; }
+.game-menu-icon { font-size: 1.6em; line-height: 1; flex: 0 0 auto; }
+.game-menu-text { flex: 1 1 auto; min-width: 0; }
+.game-menu-name { display: block; font-weight: 700; }
+.game-menu-sub { display: block; font-size: 0.78em; color: #6B7A88; }
+
+/* Phone: a bottom sheet instead of a dropdown */
+.game-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  background: rgba(20, 32, 44, 0.4);
+  display: flex;
+  align-items: flex-end;
+}
+.game-menu-sheet {
+  position: static;
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  padding: 8px 10px calc(14px + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.22);
+  animation: gameSheetUp 0.2s ease-out;
+}
+@keyframes gameSheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.game-menu-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: #D7DEE4;
+  margin: 4px auto 10px;
+}
+.game-menu-sheet .game-menu-item { padding: 14px 12px; }
+
+/* ==================== Kid header action row ==================== */
+/* The action buttons used to share the back-arrow line, which overflowed on a
+   phone. They now sit on their own row under the profile; desktop keeps using
+   .kid-action-links and hides this one. */
+.kid-header-card .kid-header-toolbar { display: none; }
+
+.kid-header-top {
+  min-height: 34px;
+}
+
+@media (max-width: 768px) {
+  .kid-header-card .kid-header-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eef2f6;
+  }
+  .kid-header-card .kid-header-toolbar .kid-toolbar-btn {
+    width: auto;
+    height: 32px;
+    padding: 0 12px;
+    gap: 5px;
+  }
+}

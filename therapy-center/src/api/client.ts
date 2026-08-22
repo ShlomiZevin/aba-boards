@@ -23,6 +23,8 @@ import type {
   GroupedKidsResponse,
   CategoryLpTemplate,
   GoalTableBlock,
+  KidGameState,
+  GamePlayState,
 } from '../types';
 
 // Auto-detect: dev uses Vite proxy, production uses Cloud Run
@@ -96,6 +98,23 @@ export const kidsApi = {
   getAllGrouped: () => fetchApi<GroupedKidsResponse>('/kids/all-grouped'),
   detach: (kidId: string) => fetchApi<void>(`/kids/${kidId}/detach`, { method: 'POST' }),
   attach: (kidId: string) => fetchApi<void>(`/kids/${kidId}/attach`, { method: 'POST' }),
+};
+
+// Mini-Games API
+// Game *config* is part of the kid document, so it saves through kidsApi.update.
+// Only play state (written by the games themselves) lives here.
+export const gamesApi = {
+  getState: (kidId: string) =>
+    fetchApi<KidGameState>(`/kids/${kidId}/game-state`),
+  saveState: (kidId: string, gameId: string, state: GamePlayState) =>
+    fetchApi<KidGameState>(`/kids/${kidId}/game-state/${gameId}`, {
+      method: 'PUT',
+      body: JSON.stringify(state),
+    }),
+  resetState: (kidId: string, gameId: string) =>
+    fetchApi<KidGameState>(`/kids/${kidId}/game-state/${gameId}/reset`, {
+      method: 'POST',
+    }),
 };
 
 // Practitioners API

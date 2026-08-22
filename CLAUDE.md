@@ -155,6 +155,81 @@ const avatarUrl = kid.imageName
 
 ---
 
+## Per-Kid Mini-Games
+
+Standalone reward games for a kid, living inside the therapy centre. **They are
+independent of the board** — they never read or write `tasks`, `completedTasks`,
+`totalMoney` or `dailyReward`. A game is its own reward loop: the adult in the
+room gives a piece when the child succeeds at something real.
+
+```
+therapy-center/src/
+├── games/
+│   ├── registry.ts          # the one list of games + their settings schema
+│   ├── LegoTower.tsx        # a game
+│   ├── lego-tower.css
+│   ├── GameSettingsSheet.tsx # settings form, built from any game's schema
+│   └── useGameSound.ts      # shared synthesised sounds
+├── pages/GamePage.tsx       # /kid/:kidId/game/:gameId — loads, saves, renders
+└── components/GameLauncher.tsx  # hover menu in the kid's top panel
+```
+
+**Adding a game is two steps:**
+1. Write the component (props: `GameComponentProps`) and add it to
+   `GAME_COMPONENTS` in `GamePage.tsx`.
+2. Add an entry to `GAMES` in `registry.ts`, with its `settings` schema.
+
+The launcher menu, the settings form and the route all build themselves from
+that entry.
+
+### Where things live
+
+| What | Where |
+|------|-------|
+| Which games a kid has + their settings | `kids/{kidId}.games = [{ id, enabled, config }]` |
+| Play state | `kidGames/{kidId} = { [gameId]: {...} }` |
+
+Play state sits in its own collection so gameplay never touches the kid
+document's board fields. All access is server-side (Admin SDK), so no
+`firestore.rules` entry is needed.
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/therapy/kids/:kidId/game-state` | current play state |
+| `PUT /api/therapy/kids/:kidId/game-state/:gameId` | save play state (sanitised server-side) |
+| `POST /api/therapy/kids/:kidId/game-state/:gameId/reset` | clear the round, keep the tally |
+
+Config saves through the ordinary `PUT /kids/:kidId` (`games` is on the
+`updateKid` allowlist).
+
+Each game has **its own page and URL**, so it can be opened full-screen,
+bookmarked or sent to a parent — and it works in all three views
+(`/kid/:kidId/game/:gameId`, `/t/:practitionerId/kid/...`, `/p/:kidId/game/...`).
+Settings live on the game page behind a gear; parents get a playable game with
+settings locked (`canEdit={!isParentView}`).
+
+### lego-tower
+
+The adult taps **+ הוסף חתיכה** when the child succeeds; the child drags the
+brick onto the tower. Bricks go on **strictly bottom to top** — only the next
+one is draggable, so there is always exactly one right move. Empty storeys are
+drawn as brick-shaped outlines, studs and all. Finishing raises a roof, a flag
+and the prize.
+
+Bricks are plain 4-stud CSS bricks — no windows or doors, matching the printed
+poster. Studs are drawn *inside* the element box (so a brick never overflows its
+slot or gets clipped mid-drag) and are hidden once the next storey covers them,
+the way a real stack looks. All sizing derives from the measured viewport, so
+the tower fits any phone without scrolling.
+
+The game renders through a **portal into `<body>`** and sets `body.lego-open`:
+the app's page padding and any transformed ancestor in the shell would otherwise
+shrink or offset a `position: fixed` full-screen game.
+
+Config: `title`, `goal` (3–12), `prize`, `scene` (`plain` | `city`), `sound`.
+
+---
+
 ## Running Locally
 
 ```bash

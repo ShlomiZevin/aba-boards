@@ -1918,6 +1918,8 @@ async function updateKid(id, data) {
     // Board settings
     'dailyReward', 'coinStyle', 'coinImageName', 'colorSchema',
     'showDino', 'soundsEnabled', 'builderPin',
+    // Mini-games: [{ id, enabled, config }] — see src/games/registry.ts
+    'games',
   ];
   for (const field of allowedFields) {
     if (data[field] !== undefined) updates[field] = data[field];
@@ -2381,7 +2383,66 @@ async function dismissNotificationByAdmin(notificationId, adminId) {
   await db.collection('notifications').doc(notificationId).update({ dismissedByAdmin: true });
 }
 
+// ==================== MINI-GAMES ====================
+// Play state lives in its own `kidGames` collection so gameplay never touches
+// the kid document, and never mixes with board tasks, coins or progress.
+
+async function getKidGameState(kidId) {
+  const db = getDb();
+  const doc = await db.collection('kidGames').doc(kidId).get();
+  return doc.exists ? doc.data() : {};
+}
+
+const GAME_ID_RE = /^[a-z0-9-]{1,40}$/;
+const MAX_PIECES = 50;
+
+/** Every field is rebuilt from scratch rather than trusting the request. */
+function sanitizeGameState(body) {
+  const ints = (value) =>
+    Array.isArray(value)
+      ? value.filter((n) => Number.isInteger(n) && n >= 1 && n <= MAX_PIECES).slice(0, MAX_PIECES)
+      : [];
+  const towers = Number(body && body.towersBuilt);
+  return {
+    placed: ints(body && body.placed),
+    tray: ints(body && body.tray),
+    towersBuilt: Number.isFinite(towers) ? Math.max(0, Math.min(100000, Math.floor(towers))) : 0,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+async function saveKidGameState(kidId, gameId, body) {
+  if (!GAME_ID_RE.test(gameId)) throw new Error('Invalid game id');
+  const db = getDb();
+  const state = sanitizeGameState(body);
+  await db.collection('kidGames').doc(kidId).set({ [gameId]: state }, { merge: true });
+  return { [gameId]: state };
+}
+
+async function resetKidGameState(kidId, gameId) {
+  const db = getDb();
+  const ref = db.collection('kidGames').doc(kidId);
+  const doc = await ref.get();
+  if (!doc.exists) return {};
+
+  const data = doc.data() || {};
+  const previous = data[gameId] || {};
+  // Keep the lifetime tally — only the tower in progress is cleared.
+  data[gameId] = {
+    placed: [],
+    tray: [],
+    towersBuilt: previous.towersBuilt || 0,
+    updatedAt: new Date().toISOString(),
+  };
+  await ref.set(data, { merge: true });
+  return data;
+}
+
 module.exports = {
+  // Mini-games
+  getKidGameState,
+  saveKidGameState,
+  resetKidGameState,
   // Kids
   getAllKids,
   getKidById,

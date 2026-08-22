@@ -135,6 +135,25 @@ router.post('/kids/:kidId/attach', requireSuperAdmin, asyncHandler(async (req, r
   res.json({ success: true });
 }));
 
+// Mini-games (therapy-center/src/games). Config lives on the kid document
+// and is saved through PUT /kids/:kidId; only play state is served here.
+router.get('/kids/:kidId/game-state', asyncHandler(async (req, res) => {
+  const state = await therapyService.getKidGameState(req.params.kidId);
+  res.json(state);
+}));
+
+router.put('/kids/:kidId/game-state/:gameId', asyncHandler(async (req, res) => {
+  const state = await therapyService.saveKidGameState(
+    req.params.kidId, req.params.gameId, req.body
+  );
+  res.json(state);
+}));
+
+router.post('/kids/:kidId/game-state/:gameId/reset', asyncHandler(async (req, res) => {
+  const state = await therapyService.resetKidGameState(req.params.kidId, req.params.gameId);
+  res.json(state);
+}));
+
 // Form Template
 router.get('/kids/:kidId/form-template', asyncHandler(async (req, res) => {
   const template = await therapyService.getFormTemplate(req.params.kidId);

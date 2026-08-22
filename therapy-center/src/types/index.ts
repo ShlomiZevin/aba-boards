@@ -495,7 +495,71 @@ export interface Kid {
   kidDescription?: string;
   behaviorGoals?: string;
   personalInfo?: string;
+  // Mini-games assigned to this kid (see src/games/registry.ts)
+  games?: KidGameEntry[];
 }
+
+// ==================== MINI-GAMES ====================
+// Standalone games launched from a kid's page. They are independent of the
+// board's tasks/coins: a game is its own reward loop, run by the adult in the
+// room. Definitions live in src/games/registry.ts.
+
+export type GameConfigValue = string | number | boolean;
+export type GameConfigValues = Record<string, GameConfigValue>;
+
+/** What a kid has been assigned, stored on `kids/{kidId}.games`. */
+export interface KidGameEntry {
+  id: string;
+  enabled: boolean;
+  config: GameConfigValues;
+}
+
+export interface GameSettingOption {
+  value: string;
+  label: string;
+}
+
+/** One configurable option, rendered generically into a settings form. */
+export interface GameSetting {
+  key: string;
+  type: 'text' | 'number' | 'select' | 'checkbox';
+  label: string;
+  default: GameConfigValue;
+  help?: string;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  options?: GameSettingOption[];
+}
+
+export interface GameDefinition {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  settings: GameSetting[];
+}
+
+/** The contract every game component implements. */
+export interface GameComponentProps {
+  config: GameConfigValues;
+  state: GamePlayState;
+  /** False in parent view — the game is playable but settings are locked. */
+  canEdit: boolean;
+  onSaveState: (state: GamePlayState) => void;
+  onSaveConfig: (config: GameConfigValues) => void;
+  onExit: () => void;
+}
+
+/** Play state, written by the game itself into `kidGames/{kidId}`. */
+export interface GamePlayState {
+  placed?: number[];
+  tray?: number[];
+  towersBuilt?: number;
+  updatedAt?: string;
+}
+
+export type KidGameState = Record<string, GamePlayState>;
 
 // Super admin kid management
 export interface KidWithAdmin extends Kid {

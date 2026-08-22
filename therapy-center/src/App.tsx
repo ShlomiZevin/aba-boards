@@ -6,6 +6,7 @@ import TherapistContext from './contexts/TherapistContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Dashboard from './pages/Dashboard';
 import KidDetail from './pages/KidDetail';
+import GamePage from './pages/GamePage';
 import GoalsPage from './pages/GoalsPage';
 import FormFill from './pages/FormFill';
 import FormView from './pages/FormView';
@@ -102,6 +103,7 @@ function TherapistRoutes() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/kid/:kidId" element={<KidDetail />} />
           <Route path="/kid/:kidId/goals" element={<GoalsPage />} />
+          <Route path="/kid/:kidId/game/:gameId" element={<GamePage />} />
           <Route path="/forms" element={<FormsOverview />} />
           <Route path="/notifications" element={<TherapistNotifications />} />
           <Route path="/chat" element={<ChatCenter />} />
@@ -135,6 +137,7 @@ function ParentRoutes() {
     <TherapistContext.Provider value={{ isTherapistView: false, isParentView: true, practitionerId: null, parentKidId: kidId || null }}>
       <Routes>
         <Route path="/" element={<KidDetail />} />
+        <Route path="/game/:gameId" element={<GamePage />} />
         <Route path="/chat" element={<ChatCenter />} />
         <Route path="/form/:formId/view" element={<FormView />} />
         <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
@@ -201,6 +204,7 @@ function App() {
             <Route path="/" element={<AdminLayout><Dashboard /></AdminLayout>} />
             <Route path="/kid/:kidId" element={<AdminLayout><KidDetail /></AdminLayout>} />
             <Route path="/kid/:kidId/goals" element={<AdminLayout><GoalsPage /></AdminLayout>} />
+            <Route path="/kid/:kidId/game/:gameId" element={<GamePage />} />
             <Route path="/forms" element={<AdminLayout><FormsOverview /></AdminLayout>} />
             <Route path="/goal-library" element={<AdminLayout><GoalLibraryManager /></AdminLayout>} />
             <Route path="/form/new" element={<AdminLayout><FormFill /></AdminLayout>} />
