@@ -39,7 +39,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * @returns {Promise<{ images: string[], cost: number, costCurrency: string,
  *                     model: string, modelLabel: string, width: number, height: number }>}
  */
-async function generateImages({ prompt, model, quantity } = {}) {
+async function generateImages({ prompt, model, quantity, width, height, referenceImageIds, referenceStrength } = {}) {
   if (!prompt || !prompt.trim()) throw new Error('חובה לספק תיאור לתמונה');
 
   const chosen = MODELS[model] || MODELS[DEFAULT_MODEL];
@@ -51,12 +51,23 @@ async function generateImages({ prompt, model, quantity } = {}) {
     parameters: {
       prompt: prompt.trim(),
       quantity: count,
-      width: chosen.width,
-      height: chosen.height,
+      width: width || chosen.width,
+      height: height || chosen.height,
       prompt_enhance: 'OFF',
     },
     public: false,
   };
+
+  // Optional reference images (e.g. brand logo) to guide the generation.
+  // Shape per Leonardo v2: guidances.image_reference[].image = { id, type }.
+  if (referenceImageIds && referenceImageIds.length) {
+    body.parameters.guidances = {
+      image_reference: referenceImageIds.map((id) => ({
+        image: { id, type: 'UPLOADED' },
+        strength: referenceStrength || 'MID',
+      })),
+    };
+  }
 
   const postRes = await fetch(`${API_BASE}/v2/generations`, {
     method: 'POST',
@@ -89,6 +100,37 @@ async function generateImages({ prompt, model, quantity } = {}) {
   };
 }
 
+/**
+ * Upload a local image to Leonardo so it can be used as a reference/guidance
+ * image (e.g. the brand logo). Returns the init-image id.
+ * @param {Buffer} buffer - raw image bytes
+ * @param {string} extension - 'png' | 'jpg' | 'jpeg' | 'webp'
+ * @returns {Promise<string>} init image id
+ */
+async function uploadReferenceImage(buffer, extension = 'png') {
+  const initRes = await fetch(`${API_BASE}/v1/init-image`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ extension }),
+  });
+  const initJson = await initRes.json().catch(() => null);
+  const upload = initJson?.uploadInitImage;
+  if (!upload?.id || !upload?.url || !upload?.fields) {
+    throw new Error(extractError(initJson) || 'Leonardo init-image failed');
+  }
+
+  // Leonardo returns presigned S3 POST fields; send them before the file.
+  const fields = typeof upload.fields === 'string' ? JSON.parse(upload.fields) : upload.fields;
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  form.append('file', new Blob([buffer]), `upload.${extension}`);
+
+  const s3Res = await fetch(upload.url, { method: 'POST', body: form });
+  if (!s3Res.ok) throw new Error(`Reference image upload failed (HTTP ${s3Res.status})`);
+
+  return upload.id;
+}
+
 async function pollGeneration(generationId, { attempts = 40, intervalMs = 2000 } = {}) {
   for (let i = 0; i < attempts; i++) {
     await sleep(intervalMs);
@@ -118,4 +160,4 @@ function extractError(json) {
   return json.error || json.message || null;
 }
 
-module.exports = { generateImages, MODELS, IMAGES_PER_REQUEST };
+module.exports = { generateImages, uploadReferenceImage, MODELS, IMAGES_PER_REQUEST };

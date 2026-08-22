@@ -118,6 +118,7 @@ export default function AppShell({ children }: AppShellProps) {
     { path: '/practitioners', label: 'אנשי צוות', icon: '👥' },
     { path: '/crew-hours', label: 'שעות צוות', icon: '🕐' },
     { path: '/notifications', label: 'מרכז הודעות', icon: '💬' },
+    { path: '/knowledge', label: 'מרכז הידע', icon: '📚' },
     ...(user?.isSuperAdmin ? [
       { path: '/goal-library', label: 'ספריית מטרות', icon: '🎯' },
       { path: '/admin-management', label: 'מנהלי מרכזים', icon: '⚙' },

@@ -37,6 +37,10 @@ import MeetingResults from './pages/MeetingResults';
 import InstallApp from './pages/InstallApp';
 import SlidesIndex from './pages/slides/SlidesIndex';
 import SlideRoute from './pages/slides/SlideRoute';
+import ParentSlides from './pages/parent-slides/ParentSlides';
+import KnowledgeCenter from './pages/knowledge/KnowledgeCenter';
+import AutismDSM5 from './pages/knowledge/AutismDSM5';
+import KnowledgeStub from './pages/knowledge/KnowledgeStub';
 import AppShell from './components/AppShell';
 import SubscriptionGate from './components/SubscriptionGate';
 import TherapistShell from './components/TherapistShell';
@@ -182,6 +186,9 @@ function App() {
             <Route path="/welcome-new" element={<LandingNew />} />
             <Route path="/slides" element={<SlidesIndex />} />
             <Route path="/slides/:slideId" element={<SlideRoute />} />
+            <Route path="/parent-guide" element={<ParentSlides backTo="/knowledge" backLabel="מרכז הידע" />} />
+            <Route path="/autism-dsm5" element={<AutismDSM5 />} />
+            <Route path="/knowledge/topic/:id" element={<KnowledgeStub />} />
             <Route path="/meeting-vote" element={<MeetingVote />} />
             <Route path="/meeting-register" element={<MeetingRegister />} />
             <Route path="/meeting-results" element={<MeetingResults />} />
@@ -210,6 +217,7 @@ function App() {
             <Route path="/admin-management" element={<AdminLayout><AdminManagement /></AdminLayout>} />
             <Route path="/super-admin" element={<AdminLayout><SuperAdminOverview /></AdminLayout>} />
             <Route path="/chat" element={<AdminLayout><ChatCenter /></AdminLayout>} />
+            <Route path="/knowledge" element={<AdminLayout><KnowledgeCenter /></AdminLayout>} />
             <Route path="/board-builder" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
             <Route path="/board-builder/:kidId" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
             <Route path="/install-app" element={<AdminLayout><InstallApp /></AdminLayout>} />
