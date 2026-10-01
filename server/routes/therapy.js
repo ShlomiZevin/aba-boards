@@ -154,6 +154,63 @@ router.post('/kids/:kidId/game-state/:gameId/reset', asyncHandler(async (req, re
   res.json(state);
 }));
 
+// Daily agenda (סדר יום) — its own page, independent of the board.
+// Parents edit it too: planning tomorrow together is the whole point.
+const agendaHandler = (fn) => async (req, res) => {
+  try {
+    await assertAgendaAccess(req);
+    await fn(req, res);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('Agenda error:', err);
+    res.status(status).json({ error: err.message || 'Request failed' });
+  }
+};
+
+async function assertAgendaAccess(req) {
+  const { kidId } = req.params;
+  const deny = () => {
+    const err = new Error('אין הרשאה לסדר היום של ילד זה');
+    err.status = 403;
+    throw err;
+  };
+  if (req.authType === 'parent') {
+    if (req.kidViewId !== kidId) deny();
+    return;
+  }
+  if (req.authType === 'therapist') {
+    const myKids = await therapyService.getKidsForPractitioner(req.practitionerId);
+    if (!myKids.some((k) => k.id === kidId)) deny();
+    return;
+  }
+  const kid = await therapyService.getKidById(kidId);
+  if (!kid) {
+    const err = new Error('Kid not found');
+    err.status = 404;
+    throw err;
+  }
+  if (!req.isSuperAdmin && kid.adminId && kid.adminId !== req.adminId) deny();
+}
+
+router.get('/kids/:kidId/agenda', agendaHandler(async (req, res) => {
+  const { from, to } = req.query;
+  res.json(await therapyService.getKidAgenda(req.params.kidId, String(from), String(to)));
+}));
+
+router.put('/kids/:kidId/agenda/routine', agendaHandler(async (req, res) => {
+  res.json(await therapyService.saveKidAgendaRoutine(req.params.kidId, req.body && req.body.routine));
+}));
+
+router.put('/kids/:kidId/agenda/days/:date', agendaHandler(async (req, res) => {
+  const items = req.body ? req.body.items : null;
+  res.json(await therapyService.saveKidAgendaDay(req.params.kidId, req.params.date, items || null));
+}));
+
+router.put('/kids/:kidId/agenda/days/:date/done', agendaHandler(async (req, res) => {
+  const { itemId, done } = req.body || {};
+  res.json(await therapyService.setKidAgendaItemDone(req.params.kidId, req.params.date, itemId, !!done));
+}));
+
 // Form Template
 router.get('/kids/:kidId/form-template', asyncHandler(async (req, res) => {
   const template = await therapyService.getFormTemplate(req.params.kidId);
@@ -246,6 +303,87 @@ router.put('/parents/:id', asyncHandler(async (req, res) => {
 router.delete('/parents/:id', asyncHandler(async (req, res) => {
   await therapyService.deleteParent(req.params.id);
   res.status(204).send();
+}));
+
+// ==================== TREATMENT AGREEMENT ====================
+// One agreement per kid. Both the centre admin and each parent sign it.
+// Signing is deliberately one-way: a signature can be re-drawn by the signer
+// who made it, but there is no route that removes one.
+
+// The app has no global error middleware, so these routes translate the
+// service's `err.status` into a JSON response themselves.
+const agreementHandler = (fn) => async (req, res) => {
+  try {
+    await fn(req, res);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status === 500) console.error('Agreement error:', err);
+    res.status(status).json({ error: err.message || 'Request failed' });
+  }
+};
+
+/** Parents reach the app through /p/:kidId — lock them to that kid. */
+function assertKidAccess(req) {
+  if (req.authType === 'parent' && req.kidViewId !== req.params.kidId) {
+    const err = new Error('אין הרשאה להסכם של ילד אחר');
+    err.status = 403;
+    throw err;
+  }
+}
+
+router.get('/kids/:kidId/agreement', agreementHandler(async (req, res) => {
+  assertKidAccess(req);
+  const agreement = await therapyService.getAgreement(req.params.kidId);
+  // Parents should not see a draft the admin is still writing.
+  if (agreement && req.authType === 'parent' && agreement.status !== 'active') {
+    return res.json(null);
+  }
+  res.json(agreement);
+}));
+
+router.put('/kids/:kidId/agreement', requireAdmin, agreementHandler(async (req, res) => {
+  const agreement = await therapyService.saveAgreement(req.params.kidId, req.body, req.adminId);
+  res.json(agreement);
+}));
+
+router.delete('/kids/:kidId/agreement', requireAdmin, agreementHandler(async (req, res) => {
+  await therapyService.deleteAgreement(req.params.kidId);
+  res.status(204).send();
+}));
+
+router.post('/kids/:kidId/agreement/sign', agreementHandler(async (req, res) => {
+  assertKidAccess(req);
+  const { kidId } = req.params;
+  const { signatureImage, parentId } = req.body || {};
+
+  let signer;
+  if (req.authType === 'admin') {
+    // The role is filled in by the service from the agreement itself.
+    signer = { type: 'admin', id: req.adminId, name: req.adminName || '' };
+  } else if (req.authType === 'parent') {
+    if (!parentId) {
+      const err = new Error('יש לבחור מי מההורים חותם');
+      err.status = 400;
+      throw err;
+    }
+    // The parent must be one of this kid's registered parents — that is what
+    // ties a signature slot to a real person in the centre's records.
+    const parents = await therapyService.getParentsForKid(kidId);
+    const parent = parents.find(p => p.id === parentId);
+    if (!parent) {
+      const err = new Error('ההורה לא רשום אצל הילד');
+      err.status = 403;
+      throw err;
+    }
+    signer = { type: 'parent', id: parent.id, name: parent.name, role: 'הורה' };
+  } else {
+    const err = new Error('רק הורה או מנהלת המרכז יכולים לחתום');
+    err.status = 403;
+    throw err;
+  }
+
+  const agreement = await therapyService.signAgreement(kidId, signer, signatureImage);
+  res.json(agreement);
 }));
 
 // ==================== GOALS ====================

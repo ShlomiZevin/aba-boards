@@ -7,7 +7,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Dashboard from './pages/Dashboard';
 import KidDetail from './pages/KidDetail';
 import GamePage from './pages/GamePage';
+import AgendaPage from './pages/AgendaPage';
 import GoalsPage from './pages/GoalsPage';
+import AgreementPage from './pages/AgreementPage';
 import FormFill from './pages/FormFill';
 import FormView from './pages/FormView';
 import MeetingFormFill from './pages/MeetingFormFill';
@@ -98,8 +100,10 @@ function TherapistRoutes() {
 
   return (
     <TherapistContext.Provider value={{ isTherapistView: true, isParentView: false, practitionerId: practitionerId || null }}>
-      <TherapistShell>
-        <Routes>
+      <Routes>
+        {/* The agenda has its own full-page look, so it sits outside the shell */}
+        <Route path="/kid/:kidId/agenda" element={<AgendaPage />} />
+        <Route path="*" element={<TherapistShell><Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/kid/:kidId" element={<KidDetail />} />
           <Route path="/kid/:kidId/goals" element={<GoalsPage />} />
@@ -114,8 +118,8 @@ function TherapistRoutes() {
           <Route path="/summary/:summaryId/view" element={<SummaryView />} />
           <Route path="/install-app" element={<InstallApp />} />
           <Route path="*" element={<Navigate to={`/t/${practitionerId}`} replace />} />
-        </Routes>
-      </TherapistShell>
+        </Routes></TherapistShell>} />
+      </Routes>
     </TherapistContext.Provider>
   );
 }
@@ -138,6 +142,8 @@ function ParentRoutes() {
       <Routes>
         <Route path="/" element={<KidDetail />} />
         <Route path="/game/:gameId" element={<GamePage />} />
+        <Route path="/agenda" element={<AgendaPage />} />
+        <Route path="/agreement" element={<AgreementPage />} />
         <Route path="/chat" element={<ChatCenter />} />
         <Route path="/form/:formId/view" element={<FormView />} />
         <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
@@ -204,7 +210,9 @@ function App() {
             <Route path="/" element={<AdminLayout><Dashboard /></AdminLayout>} />
             <Route path="/kid/:kidId" element={<AdminLayout><KidDetail /></AdminLayout>} />
             <Route path="/kid/:kidId/goals" element={<AdminLayout><GoalsPage /></AdminLayout>} />
+            <Route path="/kid/:kidId/agreement" element={<AdminLayout><AgreementPage /></AdminLayout>} />
             <Route path="/kid/:kidId/game/:gameId" element={<GamePage />} />
+            <Route path="/kid/:kidId/agenda" element={<AuthGuard><AgendaPage /></AuthGuard>} />
             <Route path="/forms" element={<AdminLayout><FormsOverview /></AdminLayout>} />
             <Route path="/goal-library" element={<AdminLayout><GoalLibraryManager /></AdminLayout>} />
             <Route path="/form/new" element={<AdminLayout><FormFill /></AdminLayout>} />

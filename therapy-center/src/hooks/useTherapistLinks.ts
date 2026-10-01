@@ -15,6 +15,8 @@ export function useTherapistLinks() {
     home: () => isParentView ? `/p/${urlKidId}` : `${prefix}/`,
     kidDetail: (kidId: string) => isParentView ? `/p/${kidId}` : `${prefix}/kid/${kidId}`,
     kidGoals: (kidId: string) => `${prefix}/kid/${kidId}/goals`,
+    kidAgenda: (kidId: string) => isParentView ? `/p/${kidId}/agenda` : `${prefix}/kid/${kidId}/agenda`,
+    kidAgreement: (kidId: string) => isParentView ? `/p/${kidId}/agreement` : `${prefix}/kid/${kidId}/agreement`,
     formNew: (params: { kidId: string; sessionId?: string; date?: string }) => {
       const searchParams = new URLSearchParams();
       searchParams.set('kidId', params.kidId);

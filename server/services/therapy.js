@@ -1,4 +1,5 @@
 const { getDb } = require('./firebase');
+const admin = require('firebase-admin');
 const { v4: uuidv4 } = require('uuid');
 
 // Goal categories constant
@@ -403,6 +404,154 @@ async function updateParent(id, data) {
 async function deleteParent(id) {
   const db = getDb();
   await db.collection('parents').doc(id).delete();
+}
+
+// ==================== TREATMENT AGREEMENT ====================
+// One signable agreement per kid, stored in `agreements/{kidId}`.
+//
+// Rules the API enforces (the UI mirrors them, but this is the real gate):
+//   * The text is frozen the moment the first party signs. Nobody can change
+//     what was already agreed to.
+//   * A signature can be re-drawn by its own signer, but never removed — the
+//     point of the document is that signing is not reversible.
+//   * A parent may only ever write into their own signature slot.
+
+const AGREEMENT_NOTICE_WEEKS = 2;
+
+// How the centre's signer is described on the document. Editable per agreement —
+// a centre may be run by a behaviour analyst, a parent guide, or both.
+const DEFAULT_ADMIN_ROLE = 'מדריכת הורים ומנתחת התנהגות';
+
+/** Signature slot key — one slot per signer, so signing twice replaces. */
+function signatureKey(signerType, signerId) {
+  return `${signerType}:${signerId}`;
+}
+
+function hasAnySignature(agreement) {
+  return !!agreement && Object.keys(agreement.signatures || {}).length > 0;
+}
+
+async function getAgreement(kidId) {
+  const db = getDb();
+  const doc = await db.collection('agreements').doc(kidId).get();
+  if (!doc.exists) return null;
+  return { id: doc.id, ...doc.data() };
+}
+
+/**
+ * Create the agreement, or edit it while it is still unsigned.
+ * Once signed, the text is immutable — callers get a 409 from the route.
+ */
+async function saveAgreement(kidId, data, adminId) {
+  const db = getDb();
+  const ref = db.collection('agreements').doc(kidId);
+  const existing = await ref.get();
+  const now = new Date();
+
+  if (existing.exists && hasAnySignature(existing.data())) {
+    const err = new Error('ההסכם כבר נחתם ולא ניתן לשנות את תוכנו');
+    err.status = 409;
+    throw err;
+  }
+
+  const payload = {
+    kidId,
+    adminId,
+    title: data.title || 'הסכם התקשרות לטיפול ABA',
+    content: data.content || '',
+    noticeWeeks: Number(data.noticeWeeks) > 0 ? Number(data.noticeWeeks) : AGREEMENT_NOTICE_WEEKS,
+    adminRole: (data.adminRole || '').trim() || DEFAULT_ADMIN_ROLE,
+    startDate: data.startDate || null,
+    status: data.status === 'active' ? 'active' : 'draft',
+    updatedAt: now,
+    createdAt: existing.exists ? existing.data().createdAt : now,
+    signatures: existing.exists ? (existing.data().signatures || {}) : {},
+  };
+
+  await ref.set(payload, { merge: false });
+  return { id: kidId, ...payload };
+}
+
+/**
+ * Add or replace one signer's signature.
+ * `signer` is resolved from the request's auth, never from the body, so a
+ * parent link cannot be used to sign on the centre's behalf.
+ */
+async function signAgreement(kidId, signer, signatureImage) {
+  const db = getDb();
+  const ref = db.collection('agreements').doc(kidId);
+  const doc = await ref.get();
+
+  if (!doc.exists) {
+    const err = new Error('לא נמצא הסכם לחתימה');
+    err.status = 404;
+    throw err;
+  }
+
+  const agreement = doc.data();
+  if (agreement.status !== 'active') {
+    const err = new Error('ההסכם עדיין לא נשלח לחתימה');
+    err.status = 409;
+    throw err;
+  }
+
+  if (typeof signatureImage !== 'string' || !signatureImage.startsWith('data:image/png;base64,')) {
+    const err = new Error('חתימה לא תקינה');
+    err.status = 400;
+    throw err;
+  }
+  // A drawn signature is a few KB. Anything larger is not a signature.
+  if (signatureImage.length > 400_000) {
+    const err = new Error('החתימה גדולה מדי');
+    err.status = 400;
+    throw err;
+  }
+
+  // The centre's signer is described by whatever the agreement says, so the
+  // stored signature matches the document the parties actually read.
+  const role = signer.type === 'admin'
+    ? (agreement.adminRole || DEFAULT_ADMIN_ROLE)
+    : signer.role;
+
+  const key = signatureKey(signer.type, signer.id);
+  const previous = (agreement.signatures || {})[key];
+  const now = new Date();
+
+  const entry = {
+    signerType: signer.type,
+    signerId: signer.id,
+    signerName: signer.name || '',
+    signerRole: role || '',
+    signatureImage,
+    // First signing time is kept even when the signature is re-drawn, so the
+    // record still shows when this party committed.
+    signedAt: previous ? previous.signedAt : now,
+    updatedAt: now,
+    revision: previous ? (previous.revision || 1) + 1 : 1,
+  };
+
+  await ref.set({
+    signatures: { ...(agreement.signatures || {}), [key]: entry },
+    updatedAt: now,
+  }, { merge: true });
+
+  const updated = await ref.get();
+  return { id: kidId, ...updated.data() };
+}
+
+/** Admin may discard an agreement only while nothing has been signed. */
+async function deleteAgreement(kidId) {
+  const db = getDb();
+  const ref = db.collection('agreements').doc(kidId);
+  const doc = await ref.get();
+  if (!doc.exists) return;
+
+  if (hasAnySignature(doc.data())) {
+    const err = new Error('לא ניתן למחוק הסכם חתום');
+    err.status = 409;
+    throw err;
+  }
+  await ref.delete();
 }
 
 // ==================== GOALS ====================
@@ -2438,7 +2587,140 @@ async function resetKidGameState(kidId, gameId) {
   return data;
 }
 
+// ==================== DAILY AGENDA (סדר יום) ====================
+// A day plan per kid: what happens in the morning, afternoon and evening.
+// Independent of the board — no coins, no rewards, no board fields touched.
+//
+//   kidAgendas/{kidId}                 { routine: { '0'..'6': DayPlan } }
+//   kidAgendas/{kidId}/days/{date}     { items: DayPlan | null, done: string[] }
+//
+// A date without saved `items` follows the routine for its weekday, so a
+// family sets up the usual week once and only adjusts the days that differ.
+
+const AGENDA_PERIODS = ['morning', 'noon', 'evening'];
+const AGENDA_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const AGENDA_MAX_ITEMS = 15;
+const AGENDA_MAX_RANGE_DAYS = 42;
+
+function cleanAgendaText(value, max) {
+  return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+/** Rebuilds a day plan from scratch rather than trusting the request. */
+function sanitizeDayPlan(plan) {
+  const out = {};
+  for (const period of AGENDA_PERIODS) {
+    const list = plan && Array.isArray(plan[period]) ? plan[period] : [];
+    out[period] = list
+      .map((item) => ({
+        id: cleanAgendaText(item && item.id, 40).replace(/[^a-zA-Z0-9_-]/g, ''),
+        title: cleanAgendaText(item && item.title, 60),
+        icon: cleanAgendaText(item && item.icon, 16),
+        time: /^\d{2}:\d{2}$/.test(item && item.time) ? item.time : '',
+      }))
+      .filter((item) => item.id && item.title)
+      .slice(0, AGENDA_MAX_ITEMS);
+  }
+  return out;
+}
+
+function assertAgendaDate(date) {
+  if (!AGENDA_DATE_RE.test(date) || Number.isNaN(Date.parse(date))) {
+    const err = new Error('Invalid date');
+    err.status = 400;
+    throw err;
+  }
+}
+
+async function getKidAgenda(kidId, from, to) {
+  assertAgendaDate(from);
+  assertAgendaDate(to);
+  const span = (Date.parse(to) - Date.parse(from)) / 86400000;
+  if (span < 0 || span > AGENDA_MAX_RANGE_DAYS) {
+    const err = new Error('Invalid date range');
+    err.status = 400;
+    throw err;
+  }
+
+  const db = getDb();
+  const ref = db.collection('kidAgendas').doc(kidId);
+  const [doc, daysSnap] = await Promise.all([
+    ref.get(),
+    ref.collection('days')
+      .where(admin.firestore.FieldPath.documentId(), '>=', from)
+      .where(admin.firestore.FieldPath.documentId(), '<=', to)
+      .get(),
+  ]);
+
+  const routine = {};
+  const stored = (doc.exists && doc.data().routine) || {};
+  for (let d = 0; d < 7; d++) routine[d] = sanitizeDayPlan(stored[d]);
+
+  const days = {};
+  daysSnap.forEach((dayDoc) => {
+    const data = dayDoc.data() || {};
+    days[dayDoc.id] = {
+      items: data.items ? sanitizeDayPlan(data.items) : null,
+      done: Array.isArray(data.done) ? data.done : [],
+    };
+  });
+
+  return { routine, days };
+}
+
+async function saveKidAgendaRoutine(kidId, routineBody) {
+  const routine = {};
+  for (let d = 0; d < 7; d++) routine[d] = sanitizeDayPlan(routineBody && routineBody[d]);
+  const db = getDb();
+  await db.collection('kidAgendas').doc(kidId).set(
+    { routine, updatedAt: new Date().toISOString() },
+    { merge: true }
+  );
+  return routine;
+}
+
+/** `items: null` drops the day's own plan so it follows the routine again. */
+async function saveKidAgendaDay(kidId, date, items) {
+  assertAgendaDate(date);
+  const db = getDb();
+  const ref = db.collection('kidAgendas').doc(kidId).collection('days').doc(date);
+  const clean = items ? sanitizeDayPlan(items) : null;
+  await ref.set({ items: clean, updatedAt: new Date().toISOString() }, { merge: true });
+  const doc = await ref.get();
+  const data = doc.data() || {};
+  return { items: clean, done: Array.isArray(data.done) ? data.done : [] };
+}
+
+/** Atomic, so a child ticking on a tablet never races a parent on a phone. */
+async function setKidAgendaItemDone(kidId, date, itemId, done) {
+  assertAgendaDate(date);
+  const id = cleanAgendaText(itemId, 40).replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!id) {
+    const err = new Error('Invalid item id');
+    err.status = 400;
+    throw err;
+  }
+  const db = getDb();
+  const ref = db.collection('kidAgendas').doc(kidId).collection('days').doc(date);
+  const { FieldValue } = admin.firestore;
+  await ref.set(
+    { done: done ? FieldValue.arrayUnion(id) : FieldValue.arrayRemove(id), updatedAt: new Date().toISOString() },
+    { merge: true }
+  );
+  const doc = await ref.get();
+  const data = doc.data() || {};
+  return {
+    items: data.items ? sanitizeDayPlan(data.items) : null,
+    done: Array.isArray(data.done) ? data.done : [],
+  };
+}
+
 module.exports = {
+  // Daily agenda
+  getKidAgenda,
+  saveKidAgendaRoutine,
+  saveKidAgendaDay,
+  setKidAgendaItemDone,
   // Mini-games
   getKidGameState,
   saveKidGameState,
@@ -2468,6 +2750,11 @@ module.exports = {
   addParentToKid,
   updateParent,
   deleteParent,
+  // Treatment agreement
+  getAgreement,
+  saveAgreement,
+  signAgreement,
+  deleteAgreement,
   // Goals
   getGoalsForKid,
   addGoalToKid,

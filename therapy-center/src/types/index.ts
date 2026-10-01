@@ -31,6 +31,57 @@ export interface Parent {
   createdAt: Date;
 }
 
+// ==================== TREATMENT AGREEMENT ====================
+// A single signable agreement per kid, signed by the centre admin and by each
+// registered parent. Signing is one-way: a signer may re-draw their own
+// signature, but no one can take a signature off the document.
+
+export type AgreementStatus = 'draft' | 'active';
+
+/** Default description of the centre's signer; the admin can change it. */
+export const DEFAULT_ADMIN_ROLE = 'מדריכת הורים ומנתחת התנהגות';
+
+export interface AgreementSignature {
+  signerType: 'admin' | 'parent';
+  signerId: string;
+  signerName: string;
+  signerRole?: string;
+  /** PNG data URL drawn on the signature pad. */
+  signatureImage: string;
+  /** When this party first signed — kept even if they re-draw. */
+  signedAt: Date;
+  updatedAt: Date;
+  /** 1 on first signing, incremented each time the signature is re-drawn. */
+  revision: number;
+}
+
+export interface Agreement {
+  id: string;
+  kidId: string;
+  adminId: string;
+  title: string;
+  content: string;
+  /** Notice period, in weeks, for either party to end the treatment. */
+  noticeWeeks: number;
+  /** How the centre's signer is described, e.g. "מדריכת הורים ומנתחת התנהגות". */
+  adminRole: string;
+  startDate: string | null;
+  status: AgreementStatus;
+  /** Keyed `admin:<adminId>` / `parent:<parentId>` — one slot per signer. */
+  signatures: Record<string, AgreementSignature>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** The slot a given signer writes into. */
+export function signatureSlotKey(signerType: 'admin' | 'parent', signerId: string): string {
+  return `${signerType}:${signerId}`;
+}
+
+export function agreementIsSigned(agreement: Agreement | null | undefined): boolean {
+  return !!agreement && Object.keys(agreement.signatures || {}).length > 0;
+}
+
 // Goal form template types (for תוכנית למידה and איסוף נתונים)
 export type GoalColumnType = 'text' | 'date' | 'options' | 'checkbox' | 'repeated';
 
@@ -560,6 +611,35 @@ export interface GamePlayState {
 }
 
 export type KidGameState = Record<string, GamePlayState>;
+
+// ==================== DAILY AGENDA (סדר יום) ====================
+
+export type AgendaPeriod = 'morning' | 'noon' | 'evening';
+
+export interface AgendaItem {
+  id: string;
+  title: string;
+  /** An emoji. */
+  icon: string;
+  /** Optional "HH:MM". */
+  time?: string;
+}
+
+export type AgendaDayPlan = Record<AgendaPeriod, AgendaItem[]>;
+
+export interface AgendaDay {
+  /** null → the day follows the weekly routine. */
+  items: AgendaDayPlan | null;
+  /** Ids of items ticked off that day. */
+  done: string[];
+}
+
+export interface KidAgenda {
+  /** Keyed by weekday, 0 = Sunday. */
+  routine: Record<number, AgendaDayPlan>;
+  /** Keyed by "YYYY-MM-DD"; only dates with something saved. */
+  days: Record<string, AgendaDay>;
+}
 
 // Super admin kid management
 export interface KidWithAdmin extends Kid {

@@ -54,6 +54,7 @@ import FormTemplateEditor from '../components/FormTemplateEditor';
 import ImageCropModal from '../components/ImageCropModal';
 import GoalProgressChart from '../components/GoalProgressChart';
 import GoalPlansTab from '../components/GoalPlansTab';
+import { agreementApi } from '../api/client';
 import LearningPlansTab from '../components/LearningPlansTab';
 import GameLauncher from '../components/GameLauncher';
 import DcEntryModal from '../components/DcEntryModal';
@@ -435,6 +436,14 @@ export default function KidDetail() {
     enabled: !!kidId,
   });
 
+  // Treatment agreement — surfaced as a card, and as a banner for parents who
+  // still owe a signature.
+  const { data: agreementRes } = useQuery({
+    queryKey: ['agreement', kidId],
+    queryFn: () => agreementApi.getForKid(kidId!),
+    enabled: !!kidId,
+  });
+
   const { data: practitionersRes } = useQuery({
     queryKey: ['practitioners', kidId],
     queryFn: () => practitionersApi.getForKid(kidId!),
@@ -775,6 +784,12 @@ export default function KidDetail() {
   const goals = goalsRes?.data || [];
   const sessions = sessionsRes?.data || [];
 
+  // Agreement status, for the card and the parent banner.
+  const agreement = agreementRes?.data ?? null;
+  const agreementSignatureCount = agreement ? Object.keys(agreement.signatures || {}).length : 0;
+  const agreementSlotCount = 1 + parents.length;
+  const agreementFullySigned = !!agreement && agreementSignatureCount >= agreementSlotCount;
+
   const therapists = practitioners;
   const activeGoals = goals.filter((g: Goal) => g.isActive);
   // Pending = no form, and (admin sees all, therapist only sees their own therapy sessions, parent sees none)
@@ -1002,6 +1017,7 @@ export default function KidDetail() {
               <a href={`/stats.html?kid=${kidId}`} className="kid-toolbar-btn" title="סטטיסטיקה">📊<span className="toolbar-label">סטטיסטיקה</span></a>
             </>
           )}
+          <Link to={links.kidAgenda(kidId!)} className="kid-toolbar-btn" title="סדר יום">📅<span className="toolbar-label">סדר יום</span></Link>
           {kid && <GameLauncher kid={kid} variant="toolbar" />}
         </div>
         {/* Kid Action Links - desktop only (on mobile they're in the toolbar) */}
@@ -1028,10 +1044,30 @@ export default function KidDetail() {
               />
             </>
           )}
-          {/* Games are for everyone — therapists and parents play them too */}
+          {/* The agenda and games are for everyone — parents plan the day too */}
+          <Link
+            to={links.kidAgenda(kidId!)}
+            className="kid-action-link"
+            style={{ '--action-color': '#3b8fd4' } as React.CSSProperties}
+          >
+            <span className="action-icon">📅</span>
+            <span>סדר יום</span>
+          </Link>
           {kid && <GameLauncher kid={kid} />}
         </div>
       </div>
+
+      {/* Treatment agreement banner — parents see it wherever they are in the
+          page, since signing is the one thing they may have come here to do. */}
+      {isParentView && agreement && agreement.status === 'active' && !agreementFullySigned && (
+        <Link to={`/p/${kidId}/agreement`} className="agreement-banner">
+          <span className="agreement-banner-icon">✍️</span>
+          <span>
+            <strong>הסכם הטיפול ממתין לחתימתכם</strong>
+            <span className="agreement-banner-sub">לחצו כאן לעיון ולחתימה</span>
+          </span>
+        </Link>
+      )}
 
       {/* Pill Tab Bar */}
       {(() => {
@@ -1216,6 +1252,55 @@ export default function KidDetail() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Treatment Agreement */}
+        <div className="dashboard-card">
+          <div className="dashboard-card-header">
+            <h3>הסכם טיפול</h3>
+            <Link to={links.kidAgreement(kidId!)} className="manage-link">
+              {isParentView ? 'צפה →' : 'ניהול →'}
+            </Link>
+          </div>
+
+          {!agreement ? (
+            <div className="agreement-card-body">
+              <p className="empty-text">
+                {isAdmin ? 'טרם נוצר הסכם התקשרות.' : 'אין כרגע הסכם לחתימה.'}
+              </p>
+              {isAdmin && (
+                <Link to={links.kidAgreement(kidId!)} className="btn-primary btn-small">
+                  + צור הסכם
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="agreement-card-body">
+              <div className="agreement-card-status">
+                {agreement.status === 'draft' ? (
+                  <span className="agreement-badge draft">טיוטה</span>
+                ) : agreementFullySigned ? (
+                  <span className="agreement-badge locked">נחתם על ידי כל הצדדים</span>
+                ) : (
+                  <span className="agreement-badge active">ממתין לחתימות</span>
+                )}
+              </div>
+              <div className="agreement-card-count">
+                {agreementSignatureCount} מתוך {agreementSlotCount} חתימות
+              </div>
+              <div className="agreement-progress">
+                <div
+                  className="agreement-progress-fill"
+                  style={{ width: `${Math.round((agreementSignatureCount / agreementSlotCount) * 100)}%` }}
+                />
+              </div>
+              {agreement.status === 'active' && !agreementFullySigned && (
+                <Link to={links.kidAgreement(kidId!)} className="btn-primary btn-small">
+                  {isParentView ? 'עיון וחתימה' : 'מעבר להסכם'}
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Goals Section */}

@@ -2,6 +2,8 @@ import type {
   Kid,
   Practitioner,
   Parent,
+  Agreement,
+  AgreementStatus,
   Goal,
   GoalLibraryItem,
   GoalFormTemplate,
@@ -25,6 +27,9 @@ import type {
   GoalTableBlock,
   KidGameState,
   GamePlayState,
+  KidAgenda,
+  AgendaDay,
+  AgendaDayPlan,
 } from '../types';
 
 // Auto-detect: dev uses Vite proxy, production uses Cloud Run
@@ -117,6 +122,28 @@ export const gamesApi = {
     }),
 };
 
+// Daily agenda (סדר יום)
+export const agendaApi = {
+  get: (kidId: string, from: string, to: string) =>
+    fetchApi<KidAgenda>(`/kids/${kidId}/agenda?from=${from}&to=${to}`),
+  saveRoutine: (kidId: string, routine: Record<number, AgendaDayPlan>) =>
+    fetchApi<Record<number, AgendaDayPlan>>(`/kids/${kidId}/agenda/routine`, {
+      method: 'PUT',
+      body: JSON.stringify({ routine }),
+    }),
+  /** `items: null` returns the day to the weekly routine. */
+  saveDay: (kidId: string, date: string, items: AgendaDayPlan | null) =>
+    fetchApi<AgendaDay>(`/kids/${kidId}/agenda/days/${date}`, {
+      method: 'PUT',
+      body: JSON.stringify({ items }),
+    }),
+  setDone: (kidId: string, date: string, itemId: string, done: boolean) =>
+    fetchApi<AgendaDay>(`/kids/${kidId}/agenda/days/${date}/done`, {
+      method: 'PUT',
+      body: JSON.stringify({ itemId, done }),
+    }),
+};
+
 // Practitioners API
 export const practitionersApi = {
   getForKid: (kidId: string) =>
@@ -166,6 +193,25 @@ export const parentsApi = {
       body: JSON.stringify(data),
     }),
   delete: (id: string) => fetchApi<void>(`/parents/${id}`, { method: 'DELETE' }),
+};
+
+// Treatment Agreement API
+// The signer is resolved server-side from the auth headers; a parent only
+// passes which of the kid's registered parents they are.
+export const agreementApi = {
+  getForKid: (kidId: string) => fetchApi<Agreement | null>(`/kids/${kidId}/agreement`),
+  save: (kidId: string, data: { title?: string; content: string; noticeWeeks?: number; adminRole?: string; startDate?: string | null; status?: AgreementStatus }) =>
+    fetchApi<Agreement>(`/kids/${kidId}/agreement`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  sign: (kidId: string, data: { signatureImage: string; parentId?: string }) =>
+    fetchApi<Agreement>(`/kids/${kidId}/agreement/sign`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  delete: (kidId: string) =>
+    fetchApi<void>(`/kids/${kidId}/agreement`, { method: 'DELETE' }),
 };
 
 // Goals API

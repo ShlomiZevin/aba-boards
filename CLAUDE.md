@@ -230,6 +230,117 @@ Config: `title`, `goal` (3–12), `prize`, `scene` (`plain` | `city`), `sound`.
 
 ---
 
+## Daily Agenda (סדר יום)
+
+A per-kid day plan — what happens in the morning (בוקר), afternoon (צהריים)
+and evening (ערב). Built for a family to sit down, usually the evening before,
+and lay out tomorrow together. **Independent of the board**: ticking an item
+off is only a convenience for following the day — no coins, no rewards, no
+board fields are touched.
+
+```
+server/
+├── services/therapy.js    # getKidAgenda / saveKidAgendaRoutine / saveKidAgendaDay / setKidAgendaItemDone
+└── routes/therapy.js      # /kids/:kidId/agenda/*
+
+therapy-center/src/
+├── pages/AgendaPage.tsx                      # the page (week grid ≥900px, one day on phones)
+├── components/agenda/AgendaItemSheet.tsx     # add / edit one activity
+├── components/agenda/agenda.css              # its own look, all classes `ag-`
+└── utils/agenda.ts                           # periods, date helpers, suggestions, starter routine
+```
+
+**Routine vs. days.** The weekly routine (שגרה קבועה) is the usual week. A date
+with no saved plan simply shows its weekday's routine; editing a date saves a
+plan for that date only (a purple dot marks it). A day can go back to the
+routine, copy the previous day, or become the routine for its weekday.
+
+| Where | What |
+|-------|------|
+| `kidAgendas/{kidId}` | `{ routine: { '0'..'6': { morning, noon, evening } } }` (0 = Sunday) |
+| `kidAgendas/{kidId}/days/{YYYY-MM-DD}` | `{ items: DayPlan \| null, done: string[] }` — `items: null` → follows routine |
+
+Items are `{ id, title, icon (emoji), time? }`, sanitised server-side (max 15
+per period). `done` holds item ids and is updated with `arrayUnion` /
+`arrayRemove`, so a child ticking on a tablet never races a parent on a phone.
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/therapy/kids/:kidId/agenda?from=&to=` | routine + saved days in range (≤ 42 days) |
+| `PUT /api/therapy/kids/:kidId/agenda/routine` | replace the routine |
+| `PUT /api/therapy/kids/:kidId/agenda/days/:date` | save a day's plan (`items: null` → back to routine) |
+| `PUT /api/therapy/kids/:kidId/agenda/days/:date/done` | `{ itemId, done }` |
+
+**Everyone edits** — admin, therapist and parent. Parents are locked to their
+own kid, therapists to kids they're linked to, admins to their own kids.
+
+**Routes:** `/kid/:kidId/agenda`, `/t/:practitionerId/kid/:kidId/agenda`,
+`/p/:kidId/agenda`. The page renders outside `AppShell` / `TherapistShell` and
+sets `body.agenda-open` to drop the app's body padding and gradient. Entry point:
+a "📅 סדר יום" button in the kid's top panel, shown in all three views.
+
+---
+
+## Treatment Agreement (הסכם טיפול)
+
+A single signable agreement per kid, signed by the centre admin and by each
+registered parent. It exists so that ending a treatment is a pre-agreed,
+orderly event: either side may terminate on **two weeks' written notice**.
+
+```
+server/
+├── services/therapy.js    # getAgreement / saveAgreement / signAgreement / deleteAgreement
+└── routes/therapy.js      # /kids/:kidId/agreement  (+ /sign)
+
+therapy-center/src/
+├── pages/AgreementPage.tsx        # the whole feature's UI (admin + parent)
+├── components/SignaturePad.tsx    # pointer-event canvas, PNG data URL out
+└── utils/agreementTemplate.ts     # default Hebrew text + placeholder filling
+```
+
+**Two rules the server enforces** (the UI only mirrors them):
+
+1. **The text freezes on first signature.** `saveAgreement` returns 409 once any
+   signature exists — nobody can change what was already agreed to.
+2. **Signatures are never removed.** A signer may re-draw their own signature
+   (`revision` increments, the original `signedAt` is kept), but no route
+   deletes one. An unsigned agreement may be deleted; a signed one may not.
+
+| Where | What |
+|-------|------|
+| `agreements/{kidId}` | the document, plus `signatures` keyed `admin:<adminId>` / `parent:<parentId>` |
+
+| Route | Auth | Purpose |
+|-------|------|---------|
+| `GET /api/therapy/kids/:kidId/agreement` | admin / parent | fetch; parents get `null` for a draft |
+| `PUT /api/therapy/kids/:kidId/agreement` | admin | create or edit while unsigned |
+| `POST /api/therapy/kids/:kidId/agreement/sign` | admin / parent | add or replace own signature |
+| `DELETE /api/therapy/kids/:kidId/agreement` | admin | only while unsigned |
+
+**Status flow:** `draft` (admin still writing, parents see nothing) →
+`active` (open for signing) → signed (text locked).
+
+**Who signs what.** The signer is resolved from the auth headers, never from
+the request body, so a parent link cannot sign on the centre's behalf. The
+admin signs the `admin:` slot. A parent picks which of the kid's registered
+parents they are (auto-selected when only one is on record) and the server
+checks that `parentId` is actually one of that kid's parents. Note this inherits
+the app's existing trust model: `/p/:kidId` is itself the credential, so anyone
+holding the family's link can sign as any parent on that kid.
+
+**Routes:** admin `/kid/:kidId/agreement`, parents `/p/:kidId/agreement`.
+Entry points are a card in the kid's סקירה tab and, for parents with a
+signature outstanding, a banner at the top of the kid page.
+
+**The default text** is generated by `buildDefaultAgreement()` from the details
+the centre already holds (child, parents, centre name and contact), so in the
+common case the admin types nothing. It is a general-purpose Israeli service
+agreement — a sensible default, not legal advice. Placeholders are
+`{{CENTER}}`, `{{CONTACT_CLAUSE}}`, `{{PARENTS}}`, `{{CHILD}}`,
+`{{START_DATE}}`, `{{NOTICE_WEEKS}}`.
+
+---
+
 ## Running Locally
 
 ```bash
