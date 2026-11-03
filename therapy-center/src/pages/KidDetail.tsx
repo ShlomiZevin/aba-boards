@@ -384,6 +384,7 @@ export default function KidDetail() {
   // State
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [showAddPractitioner, setShowAddPractitioner] = useState(false);
+  const [practitionerSearch, setPractitionerSearch] = useState('');
   const [showNewPractitionerForm, setShowNewPractitionerForm] = useState(false);
   const [showAddParent, setShowAddParent] = useState(false);
   const [showScheduleSession, setShowScheduleSession] = useState(false);
@@ -438,10 +439,11 @@ export default function KidDetail() {
 
   // Treatment agreement — surfaced as a card, and as a banner for parents who
   // still owe a signature.
+  // Therapists are not party to the agreement, so they never fetch it.
   const { data: agreementRes } = useQuery({
     queryKey: ['agreement', kidId],
     queryFn: () => agreementApi.getForKid(kidId!),
-    enabled: !!kidId,
+    enabled: !!kidId && !isTherapistView,
   });
 
   const { data: practitionersRes } = useQuery({
@@ -1018,6 +1020,7 @@ export default function KidDetail() {
             </>
           )}
           <Link to={links.kidAgenda(kidId!)} className="kid-toolbar-btn" title="סדר יום">📅<span className="toolbar-label">סדר יום</span></Link>
+          <Link to={links.kidDailyReports(kidId!)} className="kid-toolbar-btn" title="דיווח יומי">📋<span className="toolbar-label">דיווח יומי</span></Link>
           {kid && <GameLauncher kid={kid} variant="toolbar" />}
         </div>
         {/* Kid Action Links - desktop only (on mobile they're in the toolbar) */}
@@ -1052,6 +1055,14 @@ export default function KidDetail() {
           >
             <span className="action-icon">📅</span>
             <span>סדר יום</span>
+          </Link>
+          <Link
+            to={links.kidDailyReports(kidId!)}
+            className="kid-action-link"
+            style={{ '--action-color': '#df6f35' } as React.CSSProperties}
+          >
+            <span className="action-icon">📋</span>
+            <span>דיווח יומי</span>
           </Link>
           {kid && <GameLauncher kid={kid} />}
         </div>
@@ -1254,7 +1265,8 @@ export default function KidDetail() {
           </div>
         </div>
 
-        {/* Treatment Agreement */}
+        {/* Treatment Agreement — between the analyst and the parents only. */}
+        {!isTherapistView && (
         <div className="dashboard-card">
           <div className="dashboard-card-header">
             <h3>הסכם טיפול</h3>
@@ -1302,6 +1314,7 @@ export default function KidDetail() {
             </div>
           )}
         </div>
+        )}
 
         {/* Goals Section */}
         <div className="dashboard-card goals-card">
@@ -2085,14 +2098,33 @@ export default function KidDetail() {
           {showAddPractitioner && (() => {
             const linkedIds = new Set(practitioners.map((p: Practitioner) => p.id));
             const available = (myTherapistsRes?.data || []).filter((p: Practitioner) => !linkedIds.has(p.id));
+            const query = practitionerSearch.trim().toLowerCase();
+            const shown = query
+              ? available.filter((p: Practitioner) =>
+                  [p.name, p.type, p.mobile, p.email].some((v) => (v || '').toLowerCase().includes(query)))
+              : available;
+            const closeAdd = () => { setShowAddPractitioner(false); setShowNewPractitionerForm(false); setPractitionerSearch(''); resetForm(); };
             return (
-              <AddModal title="הוספת איש צוות" onClose={() => { setShowAddPractitioner(false); setShowNewPractitionerForm(false); resetForm(); }}>
-                {/* Pick existing */}
+              <AddModal title="הוספת איש צוות" onClose={closeAdd}>
+                {/* Pick existing — search on top, the list scrolls, "add new" stays in view */}
                 {!showNewPractitionerForm && available.length > 0 && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '0.9em', color: '#64748b', marginBottom: '8px' }}>בחר מאיש צוות קיים:</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {available.map((p: Practitioner) => (
+                  <div className="team-picker">
+                    {available.length > 6 && (
+                      <input
+                        type="search"
+                        className="team-picker-search"
+                        placeholder="חיפוש לפי שם…"
+                        value={practitionerSearch}
+                        onChange={(e) => setPractitionerSearch(e.target.value)}
+                        autoFocus
+                      />
+                    )}
+                    <div className="team-picker-count">
+                      {query ? `${shown.length} מתוך ${available.length}` : `בחרו מאנשי הצוות הקיימים (${available.length})`}
+                    </div>
+                    <div className="team-picker-list">
+                      {shown.length === 0 && <div className="team-picker-empty">לא נמצא איש צוות בשם הזה</div>}
+                      {shown.map((p: Practitioner) => (
                         <button
                           key={p.id}
                           type="button"
@@ -2112,20 +2144,21 @@ export default function KidDetail() {
                         </button>
                       ))}
                     </div>
-                    <div style={{ textAlign: 'center', margin: '12px 0', color: '#a0aec0', fontSize: '0.85em' }}>— או —</div>
                   </div>
                 )}
 
                 {/* Create new */}
                 {(!showNewPractitionerForm && available.length > 0) ? (
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ width: '100%' }}
-                    onClick={() => setShowNewPractitionerForm(true)}
-                  >
-                    + הוסף חדש
-                  </button>
+                  <div className="team-picker-footer">
+                    <button type="button" className="btn-secondary" onClick={closeAdd}>סגירה</button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => { setNewName(practitionerSearch.trim()); setShowNewPractitionerForm(true); }}
+                    >
+                      + איש צוות חדש
+                    </button>
+                  </div>
                 ) : (
                   <form onSubmit={(e) => {
                     e.preventDefault();
@@ -2163,7 +2196,7 @@ export default function KidDetail() {
                       <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} dir="ltr" />
                     </div>
                     <div className="modal-actions">
-                      <button type="button" onClick={() => { setShowAddPractitioner(false); setShowNewPractitionerForm(false); resetForm(); }} className="btn-secondary">
+                      <button type="button" onClick={closeAdd} className="btn-secondary">
                         ביטול
                       </button>
                       <button type="submit" className="btn-primary" disabled={addPractitionerMutation.isPending}>
@@ -2706,20 +2739,24 @@ export default function KidDetail() {
       {/* Mobile bottom tab bar */}
       <div className="kid-bottom-bar">
         {([
-          { key: 'sessions' as const, label: 'טיפולים' },
-          { key: 'progress' as const, label: 'התקדמות' },
-          { key: 'overview' as const, label: 'סקירה' },
-          { key: 'notifications' as const, label: 'הודעות' },
-          { key: 'plans' as const, label: 'א. נתונים' },
-          ...(!isParentView ? [{ key: 'learning-plans' as const, label: 'ת. למידה' }] : []),
-          ...((isParentView || isAdmin || isTherapistView) ? [{ key: 'crew-hours' as const, label: 'שעות' }] : []),
+          { key: 'sessions' as const, label: 'טיפולים', icon: '📅', full: 'טיפולים' },
+          { key: 'progress' as const, label: 'התקדמות', icon: '📈', full: 'התקדמות' },
+          { key: 'overview' as const, label: 'סקירה', icon: '🏠', full: 'סקירה' },
+          { key: 'notifications' as const, label: 'הודעות', icon: '💬', full: 'הודעות' },
+          { key: 'plans' as const, label: 'נתונים', icon: '📝', full: 'איסוף נתונים' },
+          ...(!isParentView ? [{ key: 'learning-plans' as const, label: 'למידה', icon: '📚', full: 'תוכניות למידה' }] : []),
+          ...((isParentView || isAdmin || isTherapistView) ? [{ key: 'crew-hours' as const, label: 'שעות', icon: '⏱️', full: 'שעות צוות' }] : []),
         ] as const).map(tab => (
           <button
             key={tab.key}
             className={`kid-bottom-tab${kidTab === tab.key ? ' active' : ''}`}
             onClick={() => setKidTab(tab.key)}
+            title={tab.full}
+            aria-label={tab.full}
+            aria-current={kidTab === tab.key ? 'page' : undefined}
           >
-            {tab.label}
+            <span className="kid-bottom-tab-icon" aria-hidden>{tab.icon}</span>
+            <span className="kid-bottom-tab-label">{tab.label}</span>
           </button>
         ))}
       </div>

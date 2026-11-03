@@ -21,6 +21,132 @@ function formatDate(val) {
   return new Date(ts).toISOString().split('T')[0]; // "2026-03-09"
 }
 
+// ---- day-level dates: the centre is in Israel, the server runs in UTC ----
+
+/** Today's date in Israel as "YYYY-MM-DD" — a UTC "today" is wrong every evening. */
+function israelToday() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date());
+}
+
+function addDaysKey(key, n) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/** "YYYY-MM-DD" that is a real calendar date, else null (the model sometimes invents dates). */
+function validDateKey(v) {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const [y, m, d] = v.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10) === v ? v : null;
+}
+
+const HE_WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+function weekdayOf(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+/** Drop empty values so the model reads only what was actually filled in. */
+function compact(value) {
+  if (Array.isArray(value)) {
+    const arr = value.map(compact).filter((v) => v !== undefined);
+    return arr.length ? arr : undefined;
+  }
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      const c = compact(v);
+      if (c !== undefined) out[k] = c;
+    }
+    return Object.keys(out).length ? out : undefined;
+  }
+  if (value === '' || value === null || value === undefined) return undefined;
+  return value;
+}
+
+// ---- daily report (דיווח יומי): the paper day form, rendered for the model ----
+
+const REPORT_MOODS = { good: 'טוב', ok: 'בסדר', hard: 'קשה' };
+const MOTIVATION_COMPONENTS = {
+  1: 'התארגנות + תחילת עבודה',
+  2: 'שיתוף פעולה / שמיעת הוראות',
+  3: 'איפוק',
+  4: 'חברתי',
+  5: 'אקסטרה',
+};
+
+/** The paper's cell: "+" did it right away, "-" didn't (plus the help given), "ר". */
+function reportMark(v) {
+  if (!v || typeof v !== 'object') return undefined;
+  const m = v.m === 'r' ? 'ר' : v.m;
+  const note = (v.note || '').trim();
+  if (!m && !note) return undefined;
+  return note ? `${m || ''}${m ? ' ' : ''}(${note})` : m;
+}
+
+function formatLesson(l, i) {
+  const ind = l.independent || {};
+  const fr = l.frontal || {};
+  const aide = l.aide || {};
+  return compact({
+    number: i + 1,
+    title: l.title,
+    mood: REPORT_MOODS[l.mood],
+    cooperationPercent: typeof l.cooperationPct === 'number' ? l.cooperationPct : undefined,
+    summary: l.summary,
+    settlingInAndStartingWork: reportMark(l.start),
+    independentWork: {
+      pace: reportMark(ind.pace), quality: reportMark(ind.quality), duration: ind.duration,
+      generalInstructions: reportMark(ind.general), individualInstructions: reportMark(ind.specific),
+    },
+    frontalWork: {
+      attention: reportMark(fr.attention), duration: fr.duration,
+      generalInstructions: reportMark(fr.general), individualInstructions: reportMark(fr.specific),
+    },
+    workWithAide: {
+      cooperation: reportMark(aide.cooperation), duration: aide.duration, instructions: reportMark(aide.instructions),
+    },
+    hardAcademicContent: l.academic,
+    attention: reportMark(l.attention),
+    compliance: reportMark(l.compliance),
+    notes: l.notes,
+    motivationPlan: {
+      reinforcedFor: (l.motivation?.got || []).map((n) => MOTIVATION_COMPONENTS[n]).filter(Boolean),
+      notes: l.motivation?.notes,
+    },
+  });
+}
+
+function formatBreak(b) {
+  return compact({
+    time: b.time,
+    duration: b.duration,
+    type: b.type === 'food' ? 'הפסקת אוכל' : b.type === 'free' ? 'הפסקה חופשית' : b.type ? 'אחר' : undefined,
+    name: b.name,
+    whatHeAte: b.foodWhat,
+    ateIndependently: b.foodIndependent,
+    activities: [...(b.activities || []), b.activityNote].filter(Boolean),
+    socialEngagement: b.social,
+    treatForPositiveSocialBehavior: reportMark(b.treat),
+    nonSocialBehaviorCount: typeof b.nonSocialCount === 'number' ? b.nonSocialCount : undefined,
+    unexpectedBehavior: typeof b.unexpected === 'boolean' ? (b.unexpected ? 'כן' : 'לא') : undefined,
+    supportOrInterventionNeeded: typeof b.support === 'boolean' ? (b.support ? `כן${b.supportNote ? ` (${b.supportNote})` : ''}` : 'לא') : undefined,
+    notes: b.notes,
+  });
+}
+
+function formatAbc(e) {
+  return compact({
+    time: e.time,
+    location: e.location,
+    during: e.context,
+    A_antecedent: { what: [...(e.antecedents || []), e.a].filter(Boolean), withWhom: e.withWhom },
+    B_behavior: { what: [...(e.behaviors || []), e.b].filter(Boolean), intensity: e.intensity, duration: e.duration, towardWhom: e.toward },
+    C_consequence: { what: [...(e.consequences || []), e.c].filter(Boolean), byWhom: e.byWhom },
+    notes: e.notes,
+  });
+}
+
 // Resolve kidId from name or ID — shared by all tools that accept kidName
 // Detects if a Hebrew name was incorrectly passed as kidId and treats it as kidName
 async function resolveKidId(input, adminId) {
@@ -123,6 +249,31 @@ const CHAT_TOOLS = [
         fromDate: { type: 'string', description: 'ISO date filter' },
         toDate: { type: 'string', description: 'ISO date filter' },
         status: { type: 'string', description: 'Filter: scheduled, completed, missed, pending_form' },
+      },
+    },
+  },
+  {
+    name: 'get_daily_reports',
+    description: 'Get the school / day reports (דיווח יומי) for a kid — the digital version of the paper day form, filled by the school aide or therapist. Per date: who reported; LESSONS (name, mood, cooperation %, one-line summary, settling-in + starting work, independent work, frontal work, work with the aide — each marked "+" = did it right away, "-" = did not (with the help that was given), or "ר"; attention, compliance, hard academic content, notes, which motivation-plan components were reinforced); BREAKS (time, type, what he ate and whether independently, activities, social engagement, treat for positive social behaviour, count of non-social behaviours, unexpected behaviour, support needed, notes); ABC EVENTS (time, place, A antecedent + with whom, B behaviour + intensity + duration + toward whom, C consequence + by whom). Also returns totals for the period. Default: the last 14 days. Accepts kid name or ID.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ...KID_ID_PROPS,
+        fromDate: { type: 'string', description: 'YYYY-MM-DD — reports from this date (default: 14 days ago)' },
+        toDate: { type: 'string', description: 'YYYY-MM-DD — reports up to this date (default: today)' },
+        limit: { type: 'number', description: 'Max reports to return in full, newest first (default 7, max 30). Totals always cover the whole period.' },
+      },
+    },
+  },
+  {
+    name: 'get_daily_agenda',
+    description: "Get the kid's day plan / daily schedule (סדר יום): what is planned for the morning (בוקר), afternoon (צהריים) and evening (ערב) of each date, set by the family and the centre. A date without its own plan follows the weekly routine (שגרה קבועה); items ticked off as done are marked ✓. Default: today and the next 6 days (max 42 days). Accepts kid name or ID.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        ...KID_ID_PROPS,
+        fromDate: { type: 'string', description: 'YYYY-MM-DD (default: today)' },
+        toDate: { type: 'string', description: 'YYYY-MM-DD (default: fromDate + 6 days)' },
       },
     },
   },
@@ -309,6 +460,8 @@ IMPORTANT RULES:
 - For school tasks use activeDays [0,1,2,3,4] (Sun-Thu in Israel), daily tasks use [0,1,2,3,4,5,6].
 - If the user mentions a kid by name (not ID): for summaries use get_summary_data (it resolves names internally), for everything else use list_kids to find their ID first.
 - SUMMARY WORKFLOW: When asked to prepare a periodic summary (סיכום תקופתי), call EXACTLY ONE tool: get_summary_data(kidName, fromDate, toDate). Do NOT call any other tools in the same turn — no list_kids, no get_session_forms, no get_data_entries, no get_goals, no get_sessions. get_summary_data resolves the kid name, fetches all data, and returns the kidId.
+- SCHOOL DAY: for how the kid's day at school went — lessons, breaks, cooperation during lessons, behaviour incidents / ABC events at school — use get_daily_reports. Interpret its marks the way the paper form does: "+" did it right away, "-" did not (the note says what help was given). When asked about behaviour patterns, look at the ABC events' antecedents and consequences, not only the behaviours.
+- DAY PLAN: for what is planned for the kid's day or week (סדר יום) — morning, afternoon, evening — use get_daily_agenda. "Tomorrow", "this week" etc. are relative to today's date below.
 - When writing a summary, return ONLY the summary document itself in markdown. Do NOT add introductions like "הנה הסיכום", do NOT add closing remarks like "האם תרצי לשמור?", and do NOT add meta-commentary about how many sessions were used. Just the clean summary content — it will be saved as-is.
 ${kidId ? `- The user has pre-selected kid ID: "${kidId}". Use this kidId unless they mention a different kid.` : ''}
 
@@ -322,7 +475,7 @@ BOARD LAYOUT ITEM TYPES:
 7. Calm-down: { "id": N, "type": "task", "taskType": "calm-down", "taskData": { "id": T, "icon": "emoji", "title": "...", "type": "calm-down", "activityType": "paint|breathing|bubbles|scooter|xylophone", "activeDays": [0,1,2,3,4,5,6] } }
 8. Goal/Reward: { "id": N, "type": "goal", "icon": "emoji", "title": "...", "pointsRequired": number }
 
-Today's date: ${new Date().toISOString().split('T')[0]}`;
+Today's date: ${israelToday()} (${HE_WEEKDAYS[weekdayOf(israelToday())]}, Israel time)`;
 }
 
 async function executeToolCall(toolName, input, adminId, { practitionerId, parentKidId, summaryDetail } = {}) {
@@ -467,6 +620,71 @@ async function executeToolCall(toolName, input, adminId, { practitionerId, paren
           id: s.id, scheduledDate: formatDate(s.scheduledDate), type: s.type,
           status: s.status, therapistId: s.therapistId,
         }));
+      }
+
+      case 'get_daily_reports': {
+        if (!input.kidId) return { error: 'חובה לספק שם ילד או מזהה ילד' };
+        const toDate = validDateKey(input.toDate) || israelToday();
+        const fromDate = validDateKey(input.fromDate) || addDaysKey(toDate, -13);
+        if (fromDate > toDate) return { error: 'טווח תאריכים לא תקין' };
+        const reports = await therapyService.getDailyReportsInRange(input.kidId, fromDate, toDate);
+        const limit = Math.min(Math.max(Number(input.limit) || 7, 1), 30);
+
+        // Totals over the whole period, so a long range still gives the full picture
+        const lessons = reports.flatMap((r) => r.lessons || []);
+        const coop = lessons.map((l) => l.cooperationPct).filter((v) => typeof v === 'number');
+        const moods = { טוב: 0, בסדר: 0, קשה: 0 };
+        lessons.forEach((l) => { if (REPORT_MOODS[l.mood]) moods[REPORT_MOODS[l.mood]]++; });
+        const behaviors = {};
+        reports.flatMap((r) => r.abc || []).forEach((e) => {
+          (e.behaviors || []).forEach((b) => { behaviors[b] = (behaviors[b] || 0) + 1; });
+        });
+
+        return {
+          period: `${fromDate} — ${toDate}`,
+          reportCount: reports.length,
+          totals: compact({
+            lessons: lessons.length,
+            avgLessonCooperationPercent: coop.length ? Math.round(coop.reduce((a, b) => a + b, 0) / coop.length) : undefined,
+            lessonMoods: moods,
+            breaks: reports.reduce((n, r) => n + (r.breaks || []).length, 0),
+            abcEvents: reports.reduce((n, r) => n + (r.abc || []).length, 0),
+            abcBehaviorCounts: behaviors,
+          }) || { lessons: 0 },
+          reports: reports.slice(0, limit).map((r) => compact({
+            date: r.date,
+            weekday: HE_WEEKDAYS[weekdayOf(r.date)],
+            reporter: r.reporter,
+            lessons: (r.lessons || []).map(formatLesson),
+            breaks: (r.breaks || []).map(formatBreak),
+            abcEvents: (r.abc || []).map(formatAbc),
+          })),
+          ...(reports.length > limit ? { note: `Showing the ${limit} newest of ${reports.length} reports; totals cover all of them.` } : {}),
+        };
+      }
+
+      case 'get_daily_agenda': {
+        if (!input.kidId) return { error: 'חובה לספק שם ילד או מזהה ילד' };
+        const fromDate = validDateKey(input.fromDate) || israelToday();
+        let toDate = validDateKey(input.toDate) || addDaysKey(fromDate, 6);
+        if (toDate < fromDate) return { error: 'טווח תאריכים לא תקין' };
+        if (toDate > addDaysKey(fromDate, 41)) toDate = addDaysKey(fromDate, 41);
+        const agenda = await therapyService.getKidAgenda(input.kidId, fromDate, toDate);
+        const periods = [['morning', 'בוקר'], ['noon', 'צהריים'], ['evening', 'ערב']];
+        const days = [];
+        for (let key = fromDate; key <= toDate; key = addDaysKey(key, 1)) {
+          const weekday = weekdayOf(key);
+          const own = agenda.days[key];
+          const plan = (own && own.items) || agenda.routine[weekday] || {};
+          const done = new Set((own && own.done) || []);
+          const day = { date: key, weekday: HE_WEEKDAYS[weekday], source: own && own.items ? 'תוכנית ליום הזה' : 'לפי השגרה הקבועה' };
+          for (const [p, label] of periods) {
+            day[label] = (plan[p] || []).map((it) => `${it.icon || ''} ${it.title}${it.time ? ` (${it.time})` : ''}${done.has(it.id) ? ' ✓' : ''}`.trim());
+          }
+          days.push(day);
+        }
+        const empty = days.every((d) => periods.every(([, label]) => !d[label].length));
+        return empty ? { period: `${fromDate} — ${toDate}`, note: 'לא הוגדר סדר יום לתקופה הזו' } : { period: `${fromDate} — ${toDate}`, days };
       }
 
       case 'get_practitioners': {
@@ -674,6 +892,8 @@ const TOOL_LABELS = {
   get_session_forms: 'טוען טופסי טיפולים...',
   get_meeting_forms: 'טוען טופסי ישיבות...',
   get_sessions: 'טוען טיפולים...',
+  get_daily_reports: 'טוען דיווחים יומיים...',
+  get_daily_agenda: 'טוען סדר יום...',
   get_practitioners: 'טוען מטפלים...',
   get_parents: 'טוען פרטי הורים...',
   get_data_entries: 'טוען נתוני איסוף...',
@@ -698,8 +918,8 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
   const elapsed = () => `${((Date.now() - chatStart) / 1000).toFixed(1)}s`;
 
   // Filter tools by role — therapists and parents get fewer tools
-  const THERAPIST_TOOLS = ['list_kids', 'get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries', 'get_learning_plan', 'get_summary_data'];
-  const PARENT_TOOLS = ['get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries'];
+  const THERAPIST_TOOLS = ['list_kids', 'get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries', 'get_learning_plan', 'get_summary_data', 'get_daily_reports', 'get_daily_agenda'];
+  const PARENT_TOOLS = ['get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries', 'get_daily_reports', 'get_daily_agenda'];
 
   let roleTools = CHAT_TOOLS;
   if (source === 'therapist') roleTools = CHAT_TOOLS.filter(t => THERAPIST_TOOLS.includes(t.name));
@@ -763,4 +983,4 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
   return { reply: 'לא הצלחתי לעבד את הבקשה. נסו שוב.', boardUpdated, summaryCreated, toolsUsed };
 }
 
-module.exports = { handleChat };
+module.exports = { handleChat, executeToolCall, buildSystemPrompt }; // the last two are exported for tests

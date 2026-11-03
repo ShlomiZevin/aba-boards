@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import KidDetail from './pages/KidDetail';
 import GamePage from './pages/GamePage';
 import AgendaPage from './pages/AgendaPage';
+import DailyReportsPage from './pages/DailyReportsPage';
 import GoalsPage from './pages/GoalsPage';
 import AgreementPage from './pages/AgreementPage';
 import FormFill from './pages/FormFill';
@@ -21,6 +22,7 @@ import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import SubscriptionCancel from './pages/SubscriptionCancel';
 import AdminManagement from './pages/AdminManagement';
 import SuperAdminOverview from './pages/SuperAdminOverview';
+import BuildModels from './pages/BuildModels';
 import NotificationCenter from './pages/NotificationCenter';
 import GoalLibraryManager from './pages/GoalLibraryManager';
 import FormsOverview from './pages/FormsOverview';
@@ -103,6 +105,7 @@ function TherapistRoutes() {
       <Routes>
         {/* The agenda has its own full-page look, so it sits outside the shell */}
         <Route path="/kid/:kidId/agenda" element={<AgendaPage />} />
+        <Route path="/kid/:kidId/daily-reports/*" element={<DailyReportsPage />} />
         <Route path="*" element={<TherapistShell><Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/kid/:kidId" element={<KidDetail />} />
@@ -143,6 +146,7 @@ function ParentRoutes() {
         <Route path="/" element={<KidDetail />} />
         <Route path="/game/:gameId" element={<GamePage />} />
         <Route path="/agenda" element={<AgendaPage />} />
+        <Route path="/daily-reports/*" element={<DailyReportsPage />} />
         <Route path="/agreement" element={<AgreementPage />} />
         <Route path="/chat" element={<ChatCenter />} />
         <Route path="/form/:formId/view" element={<FormView />} />
@@ -213,6 +217,7 @@ function App() {
             <Route path="/kid/:kidId/agreement" element={<AdminLayout><AgreementPage /></AdminLayout>} />
             <Route path="/kid/:kidId/game/:gameId" element={<GamePage />} />
             <Route path="/kid/:kidId/agenda" element={<AuthGuard><AgendaPage /></AuthGuard>} />
+            <Route path="/kid/:kidId/daily-reports/*" element={<AuthGuard><DailyReportsPage /></AuthGuard>} />
             <Route path="/forms" element={<AdminLayout><FormsOverview /></AdminLayout>} />
             <Route path="/goal-library" element={<AdminLayout><GoalLibraryManager /></AdminLayout>} />
             <Route path="/form/new" element={<AdminLayout><FormFill /></AdminLayout>} />
@@ -228,6 +233,7 @@ function App() {
             <Route path="/notifications" element={<AdminLayout><NotificationCenter /></AdminLayout>} />
             <Route path="/admin-management" element={<AdminLayout><AdminManagement /></AdminLayout>} />
             <Route path="/super-admin" element={<AdminLayout><SuperAdminOverview /></AdminLayout>} />
+            <Route path="/models" element={<AdminLayout><BuildModels /></AdminLayout>} />
             <Route path="/chat" element={<AdminLayout><ChatCenter /></AdminLayout>} />
             <Route path="/knowledge" element={<AdminLayout><KnowledgeCenter /></AdminLayout>} />
             <Route path="/board-builder" element={<AdminLayout><BoardBuilder /></AdminLayout>} />

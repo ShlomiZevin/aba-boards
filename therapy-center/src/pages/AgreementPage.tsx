@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agreementApi, kidsApi, parentsApi, notificationsApi } from '../api/client';
@@ -18,11 +18,15 @@ import type { Agreement, AgreementSignature, Parent } from '../types';
 // (/p/:kidId/agreement). What differs is who may edit the text and which
 // signature slot the viewer can write into.
 //
+// A parent who isn't on record yet (reached through a shared WhatsApp link)
+// signs as NEW_PARENT: the name they type registers them as the kid's parent.
+//
 // Two rules hold everywhere, and the server enforces both:
 //   * once any party has signed, the text can no longer be changed;
 //   * a signature can be re-drawn by the person who made it, but never removed.
 
 const DEFAULT_NOTICE_WEEKS = 2;
+const NEW_PARENT = '__new';
 
 function formatDateTime(value: unknown): string {
   const d = toDate(value);
@@ -112,6 +116,7 @@ export default function AgreementPage() {
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [confirmedName, setConfirmedName] = useState('');
   const [showDelete, setShowDelete] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Which parent the viewer says they are. With a single parent on record we
@@ -149,16 +154,21 @@ export default function AgreementPage() {
   const saveMutation = useMutation({
     mutationFn: (data: { content: string; title: string; noticeWeeks: number; adminRole: string; startDate: string | null; status: 'draft' | 'active' }) =>
       agreementApi.save(kidId!, data),
-    onSuccess: (res) => {
+    onSuccess: (res, vars) => {
       if (!res.success) { setError(res.error || 'השמירה נכשלה'); return; }
       setError(null);
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ['agreement', kidId] });
+      // Just sent for signing → offer to email the parents their link
+      if (vars.status === 'active' && agreement?.status !== 'active' && parents.length > 0) {
+        emailMutation.reset();
+        setShowEmail(true);
+      }
     },
   });
 
   const signMutation = useMutation({
-    mutationFn: (data: { signatureImage: string; parentId?: string }) => agreementApi.sign(kidId!, data),
+    mutationFn: (data: { signatureImage: string; parentId?: string; newParentName?: string }) => agreementApi.sign(kidId!, data),
     onSuccess: (res) => {
       if (!res.success) { setError(res.error || 'החתימה נכשלה'); return; }
       setError(null);
@@ -166,6 +176,8 @@ export default function AgreementPage() {
       setSignatureImage(null);
       setConfirmedName('');
       queryClient.invalidateQueries({ queryKey: ['agreement', kidId] });
+      // A newly registered parent appears in the list
+      queryClient.invalidateQueries({ queryKey: ['parents', kidId] });
     },
   });
 
@@ -178,6 +190,13 @@ export default function AgreementPage() {
     },
   });
 
+  const emailMutation = useMutation({
+    mutationFn: () => agreementApi.emailParents(kidId!),
+    onSuccess: (res) => {
+      if (res.success && res.data) queryClient.setQueryData(['agreement', kidId], { success: true, data: res.data.agreement });
+    },
+  });
+
   const notifyMutation = useMutation({
     mutationFn: () => notificationsApi.send({
       kidId: kidId!,
@@ -186,18 +205,29 @@ export default function AgreementPage() {
     }),
   });
 
-  const defaultText = useMemo(() => buildDefaultAgreement({
-    childName: kid?.name || '',
-    parentNames: parents.map(p => p.name),
-    centerName: authUser?.name || '',
-    centerContact: [authUser?.mobile, authUser?.email].filter(Boolean).join(' · ') || undefined,
-    startDate: null,
-    noticeWeeks: DEFAULT_NOTICE_WEEKS,
-  }), [kid?.name, parents, authUser?.name, authUser?.mobile, authUser?.email]);
+  // Builds the default wording from what is already on record. Depends on the
+  // date and role being edited, since both appear in the text.
+  const buildText = useCallback((startDate: string, analystRole: string, noticeWeeks: number) =>
+    buildDefaultAgreement({
+      childName: kid?.name || '',
+      parentNames: parents.map(p => p.name),
+      analystName: authUser?.name || '',
+      analystRole: analystRole || DEFAULT_ADMIN_ROLE,
+      analystContact: [authUser?.mobile, authUser?.email].filter(Boolean).join(' · ') || undefined,
+      startDate: startDate || null,
+      noticeWeeks,
+    }), [kid?.name, parents, authUser?.name, authUser?.mobile, authUser?.email]);
+
+  // The last text we generated. Used to tell an untouched default apart from
+  // wording the analyst has edited by hand.
+  const lastGenerated = useRef('');
 
   function startEditing() {
+    const text = agreement?.content
+      || buildText('', DEFAULT_ADMIN_ROLE, agreement?.noticeWeeks || DEFAULT_NOTICE_WEEKS);
+    lastGenerated.current = agreement?.content ? '' : text;
     setDraftTitle(agreement?.title || 'הסכם התקשרות לטיפול ABA');
-    setDraftContent(agreement?.content || defaultText);
+    setDraftContent(text);
     setDraftNotice(agreement?.noticeWeeks || DEFAULT_NOTICE_WEEKS);
     setDraftStart(agreement?.startDate || '');
     setDraftAdminRole(agreement?.adminRole || DEFAULT_ADMIN_ROLE);
@@ -205,16 +235,38 @@ export default function AgreementPage() {
     setError(null);
   }
 
+  // Changing the date, the role or the notice period rewrites the text — but
+  // only while it is still the untouched default, so hand edits survive.
+  useEffect(() => {
+    if (!isEditing) return;
+    if (!lastGenerated.current || draftContent !== lastGenerated.current) return;
+    const next = buildText(draftStart, draftAdminRole, draftNotice);
+    if (next === draftContent) return;
+    lastGenerated.current = next;
+    setDraftContent(next);
+  }, [isEditing, draftStart, draftAdminRole, draftNotice, draftContent, buildText]);
+
   function submitSignature() {
     if (!signatureImage || !signingFor) return;
+    setError(null);
+    const isNewParent = signingFor.type === 'parent' && signingFor.id === NEW_PARENT;
     signMutation.mutate({
       signatureImage,
-      parentId: signingFor.type === 'parent' ? signingFor.id : undefined,
+      parentId: signingFor.type === 'parent' && !isNewParent ? signingFor.id : undefined,
+      newParentName: isNewParent ? confirmedName.trim() : undefined,
     });
   }
 
+  const parentLink = `${window.location.origin}/therapy/p/${encodeURIComponent(kidId || '')}/agreement`;
+
+  /** Opens WhatsApp (app on a phone, web on a computer) with the link ready to send. */
+  function shareOnWhatsApp() {
+    const text = `שלום, מצורף הסכם הטיפול של ${kid?.name || 'ילדכם'} לעיון ולחתימה:\n${parentLink}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  }
+
   function copyParentLink() {
-    const url = `${window.location.origin}/therapy/p/${kidId}/agreement`;
+    const url = parentLink;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -268,7 +320,7 @@ export default function AgreementPage() {
           ) : (
             <>
               <h3>אין הסכם לחתימה</h3>
-              <p>כרגע לא ממתין הסכם לחתימתכם. אם קיבלתם בקשה לחתום, פנו למרכז הטיפולי.</p>
+              <p>כרגע לא ממתין הסכם לחתימתכם. אם קיבלתם בקשה לחתום, פנו למנתח/ת ההתנהגות.</p>
             </>
           )}
         </div>
@@ -300,13 +352,13 @@ export default function AgreementPage() {
           </div>
 
           <div className="form-group">
-            <label>תפקיד החותמ/ת מטעם המרכז</label>
+            <label>התפקיד שיוצג לצד חתימתך</label>
             <input
               value={draftAdminRole}
               onChange={(e) => setDraftAdminRole(e.target.value)}
               placeholder={DEFAULT_ADMIN_ROLE}
             />
-            <div className="form-hint">מוצג לצד החתימה של המרכז בתחתית ההסכם.</div>
+            <div className="form-hint">מוצג לצד חתימתך בתחתית ההסכם, וגם בפתיחת ההסכם.</div>
           </div>
 
           <div className="form-group">
@@ -321,14 +373,11 @@ export default function AgreementPage() {
               type="button"
               className="btn-secondary btn-small"
               style={{ marginTop: 8 }}
-              onClick={() => setDraftContent(buildDefaultAgreement({
-                childName: kid?.name || '',
-                parentNames: parents.map(p => p.name),
-                centerName: authUser?.name || '',
-                centerContact: [authUser?.mobile, authUser?.email].filter(Boolean).join(' · ') || undefined,
-                startDate: draftStart || null,
-                noticeWeeks: draftNotice,
-              }))}
+              onClick={() => {
+                const next = buildText(draftStart, draftAdminRole, draftNotice);
+                lastGenerated.current = next;
+                setDraftContent(next);
+              }}
             >
               אפס לנוסח ברירת המחדל
             </button>
@@ -389,6 +438,14 @@ export default function AgreementPage() {
               )}
               {agreement.status === 'active' && parents.length > 0 && (
                 <button
+                  onClick={() => { emailMutation.reset(); setShowEmail(true); }}
+                  className="btn-primary btn-small"
+                >
+                  📧 שליחה במייל להורים
+                </button>
+              )}
+              {agreement.status === 'active' && parents.length > 0 && (
+                <button
                   onClick={() => notifyMutation.mutate()}
                   className="btn-secondary btn-small"
                   disabled={notifyMutation.isPending}
@@ -396,9 +453,16 @@ export default function AgreementPage() {
                   {notifyMutation.isSuccess ? 'נשלחה תזכורת ✓' : 'שלח תזכורת להורים'}
                 </button>
               )}
-              <button onClick={copyParentLink} className="btn-secondary btn-small">
-                {copied ? 'הקישור הועתק!' : 'העתק קישור חתימה להורים'}
-              </button>
+              {agreement.status === 'active' && (
+                <>
+                  <button onClick={copyParentLink} className="btn-secondary btn-small">
+                    {copied ? 'הקישור הועתק ✓' : '🔗 העתקת קישור לחתימה'}
+                  </button>
+                  <button onClick={shareOnWhatsApp} className="btn-secondary btn-small btn-whatsapp">
+                    שליחה בוואטסאפ
+                  </button>
+                </>
+              )}
               <button onClick={() => window.print()} className="btn-secondary btn-small">הדפסה</button>
               {!isSigned && (
                 <button onClick={() => setShowDelete(true)} className="btn-danger btn-small">מחק</button>
@@ -428,7 +492,7 @@ export default function AgreementPage() {
             ) : (
               <>
                 {/* A parent must say which parent they are before signing. */}
-                {isParentView && parents.length > 1 && (
+                {isParentView && parents.length > 0 && (
                   <div className="form-group agreement-whoami">
                     <label>מי חותם/ת כרגע?</label>
                     <select value={activeParentId} onChange={(e) => setActiveParentId(e.target.value)}>
@@ -436,6 +500,7 @@ export default function AgreementPage() {
                       {parents.map(p => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
+                      <option value={NEW_PARENT}>השם שלי לא ברשימה</option>
                     </select>
                   </div>
                 )}
@@ -457,13 +522,29 @@ export default function AgreementPage() {
                     }}
                   />
 
-                  {parents.length === 0 ? (
+                  {parents.length === 0 && !isParentView && (
                     <div className="signature-slot">
                       <p className="empty-text">
-                        לא רשומים הורים אצל הילד. יש להוסיף הורים בעמוד הילד כדי שיוכלו לחתום.
+                        לא רשומים הורים אצל הילד. ההורים יכולים לחתום דרך הקישור — השם שיקלידו בחתימה יירשם אצל הילד.
                       </p>
                     </div>
-                  ) : parents.map((p) => {
+                  )}
+
+                  {/* A parent not on record: signing with their name registers them */}
+                  {isParentView && (parents.length === 0 || activeParentId === NEW_PARENT) && (
+                    <SignatureSlot
+                      label={parents.length === 0 ? 'הורה' : 'הורה נוסף'}
+                      role="הורה / אפוטרופוס"
+                      canSign
+                      onSign={() => {
+                        setSignatureImage(null);
+                        setConfirmedName('');
+                        setSigningFor({ type: 'parent', id: NEW_PARENT, name: '' });
+                      }}
+                    />
+                  )}
+
+                  {parents.map((p) => {
                     const sig = signatures[signatureSlotKey('parent', p.id)];
                     // A parent may only write into the slot they identified as.
                     const isMe = isParentView && activeParentId === p.id;
@@ -484,7 +565,7 @@ export default function AgreementPage() {
                   })}
                 </div>
 
-                {isParentView && parents.length > 1 && !activeParentId && (
+                {isParentView && parents.length > 0 && !activeParentId && (
                   <p className="empty-text" style={{ marginTop: 12 }}>
                     בחרו את שמכם מהרשימה למעלה כדי לחתום.
                   </p>
@@ -497,12 +578,12 @@ export default function AgreementPage() {
 
       {/* ---------- Signing modal ---------- */}
       {signingFor && (
-        <div className="modal-overlay" onClick={() => setSigningFor(null)}>
+        <div className="modal-overlay">
           <div className="modal modal-wide" onClick={(e) => e.stopPropagation()} style={{ direction: 'rtl' }}>
             <h3>{mySignature ? 'עדכון חתימה' : 'חתימה על ההסכם'}</h3>
 
             <p className="signing-intro">
-              {signingFor.name} — בחתימה זו אני מאשר/ת כי קראתי את ההסכם, הבנתי את תוכנו
+              {signingFor.name || confirmedName.trim() || 'הורה'} — בחתימה זו אני מאשר/ת כי קראתי את ההסכם, הבנתי את תוכנו
               ואני מסכים/ה לו, לרבות האפשרות לסיים את ההתקשרות בהודעה מוקדמת של{' '}
               {agreement?.noticeWeeks || DEFAULT_NOTICE_WEEKS} שבועות.
             </p>
@@ -519,7 +600,7 @@ export default function AgreementPage() {
               <input
                 value={confirmedName}
                 onChange={(e) => setConfirmedName(e.target.value)}
-                placeholder={signingFor.name}
+                placeholder="הקלידו כאן: שם פרטי ושם משפחה"
               />
             </div>
 
@@ -528,10 +609,23 @@ export default function AgreementPage() {
               <SignaturePad onChange={setSignatureImage} initialImage={null} />
             </div>
 
-            {signMutation.isError && <div className="agreement-error">החתימה נכשלה, נסו שוב</div>}
+            {(signMutation.isError || error) && (
+              <div className="agreement-error">{error || 'החתימה נכשלה, נסו שוב'}</div>
+            )}
+
+            {/* The button stays disabled until both are done — say which one is missing */}
+            {(() => {
+              const missing = [
+                ...(confirmedName.trim().length < 2 ? ['להקליד את השם המלא בתיבה למעלה'] : []),
+                ...(!signatureImage ? ['לחתום במשבצת'] : []),
+              ];
+              return missing.length > 0 && !signMutation.isPending ? (
+                <div className="signing-missing">כדי לאשר את החתימה צריך {missing.join(' וגם ')}.</div>
+              ) : null;
+            })()}
 
             <div className="modal-actions">
-              <button onClick={() => setSigningFor(null)} className="btn-secondary">ביטול</button>
+              <button onClick={() => { setSigningFor(null); setError(null); }} className="btn-secondary">ביטול</button>
               <button
                 onClick={submitSignature}
                 className="btn-primary"
@@ -547,6 +641,88 @@ export default function AgreementPage() {
           </div>
         </div>
       )}
+
+      {/* ---------- Email the parents ---------- */}
+      {showEmail && agreement && (() => {
+        const results = emailMutation.data?.data?.results;
+        const sentAt = agreement.parentEmails || {};
+        const rows = parents.map((p) => {
+          const signed = !!signatures[signatureSlotKey('parent', p.id)];
+          const email = (p.email || '').trim();
+          const result = results?.find((r) => r.parentId === p.id);
+          return { p, signed, email, result, willSend: !signed && !!email };
+        });
+        const sendCount = rows.filter((r) => r.willSend).length;
+        const anyMissingEmail = rows.some((r) => !r.signed && !r.email);
+        return (
+          <div className="modal-overlay" onClick={() => setShowEmail(false)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ direction: 'rtl' }}>
+              <h3>שליחת ההסכם להורים במייל</h3>
+              <p className="email-intro">
+                כל הורה מקבל מייל עם קישור אישי לעיון בהסכם ולחתימה עליו מהטלפון.
+              </p>
+
+              <div className="email-parent-list">
+                {rows.map(({ p, signed, email, result }) => (
+                  <div key={p.id} className="email-parent-row">
+                    <div className="email-parent-who">
+                      <div className="email-parent-name">{p.name}</div>
+                      <div className="email-parent-addr" dir="ltr">{email || 'אין כתובת מייל'}</div>
+                    </div>
+                    <span className={`email-parent-status ${
+                      result ? result.status : signed ? 'signed' : !email ? 'no-email' : 'ready'
+                    }`}>
+                      {result
+                        ? ({ sent: 'נשלח ✓', failed: 'השליחה נכשלה', 'no-email': 'אין מייל', signed: 'כבר חתם/ה' } as const)[result.status]
+                        : signed
+                          ? 'כבר חתם/ה'
+                          : !email
+                            ? 'לא יישלח'
+                            : sentAt[p.id]
+                              ? `נשלח ב־${formatDateTime(sentAt[p.id])}`
+                              : 'יישלח'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {anyMissingEmail && !results && (
+                <p className="email-hint">
+                  להורה בלי מייל אפשר להוסיף כתובת בעמוד הילד (סקירה ← הורים), או לשלוח את הקישור בוואטסאפ.
+                </p>
+              )}
+              <div className="email-share-row">
+                <span>או שלחו קישור בעצמכם:</span>
+                <button type="button" onClick={copyParentLink} className="btn-secondary btn-small">
+                  {copied ? 'הועתק ✓' : '🔗 העתקה'}
+                </button>
+                <button type="button" onClick={shareOnWhatsApp} className="btn-secondary btn-small btn-whatsapp">
+                  וואטסאפ
+                </button>
+              </div>
+
+              {emailMutation.data && !emailMutation.data.success && (
+                <div className="agreement-error">{emailMutation.data.error || 'השליחה נכשלה'}</div>
+              )}
+
+              <div className="modal-actions">
+                <button onClick={() => setShowEmail(false)} className="btn-secondary">
+                  {results ? 'סגירה' : 'ביטול'}
+                </button>
+                {!results && (
+                  <button
+                    onClick={() => emailMutation.mutate()}
+                    className="btn-primary"
+                    disabled={sendCount === 0 || emailMutation.isPending}
+                  >
+                    {emailMutation.isPending ? 'שולח…' : sendCount === 0 ? 'אין למי לשלוח' : `שליחה (${sendCount})`}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showDelete && (
         <ConfirmModal

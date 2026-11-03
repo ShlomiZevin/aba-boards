@@ -281,11 +281,93 @@ a "📅 סדר יום" button in the kid's top panel, shown in all three views.
 
 ---
 
+## Daily Report (דיווח יומי)
+
+The school/therapy day report that replaces the centre's paper form. One
+document per kid per date, holding lists of lessons, breaks and ABC events.
+
+```
+server/services/therapy.js     # listDailyReports / getDailyReport / saveDailyReportMeta / save|deleteDailyReportItem
+server/routes/therapy.js       # /kids/:kidId/daily-reports/*
+
+therapy-center/src/
+├── pages/DailyReportsPage.tsx              # history → one day → one item (its own nested routes)
+├── components/daily-report/forms.tsx       # LessonForm / BreakForm / AbcForm
+├── components/daily-report/controls.tsx    # MarkField (+/−/ר), Chips, PercentSlider, YesNo…
+├── components/daily-report/daily-report.css  # classes prefixed `dr-`
+└── utils/dailyReport.ts                    # option lists and labels, worded like the paper
+```
+
+| Where | What |
+|-------|------|
+| `kidDailyReports/{kidId}/reports/{YYYY-MM-DD}` | `{ date, reporter, lessons[], breaks[], abc[] }` |
+
+**Item shapes belong to the UI** (`LessonReport`, `BreakReport`, `AbcReport` in
+`types/index.ts`). The server does not know the fields — it only enforces a
+bounded, plain-data shape (`sanitizeReportValue`), so adding a field (as with
+`cooperationPct`, the 0–100 slider beside the lesson smiley) needs no server change.
+
+**Keep every field the paper has.** The form may add to the paper, never drop
+from it; `MarkField` is the paper's cell ("+" did it right away, "−" didn't and
+what help was given, "ר").
+
+**Access:** admins and therapists write; parents read their own kid's reports
+(`reportHandler(..., { write: true })` rejects parent writes). Routes:
+`/kid/:kidId/daily-reports`, `/t/:practitionerId/kid/:kidId/daily-reports`,
+`/p/:kidId/daily-reports`, each with `/:date` and `/:date/:kind/:itemId`.
+
+**AI chat:** `get_daily_reports` (in `server/services/chat-center.js`) reads a
+date range of reports for the chat, rendering the paper marks in words and
+adding period totals (average lesson cooperation, moods, ABC behaviour counts).
+Its sibling `get_daily_agenda` reads the day plan (סדר יום). Both are
+read-only and open to admins, linked therapists and the kid's own parents,
+under the chat's usual per-role kid scoping.
+
+---
+
+## Email Notifications
+
+`server/services/email.js` sends mail through Google SMTP as `SMTP_USER`, using a
+Google **app password** in `SMTP_PASS`. Without both it logs and skips.
+
+Today it has one use: when a session form is submitted (`POST /forms`), the
+centre's manager gets a mail with the kid, the therapist, the date and links to
+the form and the kid page. It goes by **whose form it is, not who is logged
+in** — the manager often files a form on a therapist's behalf. Only a form
+recorded as the manager's own (`practitionerId === kid.adminId`) is skipped.
+Every skip logs its reason as `[email] … skipped: …`.
+
+Its second use: **a new daily report.** A report fills in through the day, so
+the manager is mailed **once per kid per day**, when that day's report is first
+created (by a meta or item save), with a link to the live report. The
+"already sent" mark is `notifiedAt` on the report document, claimed in a
+transaction (`claimDailyReportNotification`) so concurrent saves can't both
+send; if the send fails the claim is released and the next save retries.
+
+- **No clinical content in the mail** — names, date and links only; the form
+  stays behind login.
+- **Never blocks the form.** The send is awaited (Cloud Run may freeze a
+  fire-and-forget send once the response is out) but capped at 8s, and every
+  failure is logged and swallowed.
+- **Recipient:** `FORM_NOTIFY_TO`, and only for kids of `michal-super-admin` —
+  other centres get no mail (`formNotifyRecipient`).
+- `deploy.sh` passes env vars with `--set-env-vars`, which *replaces* the whole
+  set: a new variable must be added to that line or it never reaches Cloud Run.
+
+---
+
 ## Treatment Agreement (הסכם טיפול)
 
-A single signable agreement per kid, signed by the centre admin and by each
-registered parent. It exists so that ending a treatment is a pre-agreed,
+A single signable agreement per kid, signed by the behaviour analyst and by
+each registered parent. It exists so that ending a treatment is a pre-agreed,
 orderly event: either side may terminate on **two weeks' written notice**.
+
+**There is no "centre".** The professional party is one behaviour analyst
+(מנתח/ת התנהגות) — a person, not an organisation, with no staff. The
+therapists (מטפלות) around a child belong to the child's environment, not to
+the analyst, so the document never presents them as her team or makes her
+answerable for them. Keep that framing in any future edit to the wording:
+nothing in the agreement should say המרכז or הצוות.
 
 ```
 server/
@@ -305,6 +387,9 @@ therapy-center/src/
 2. **Signatures are never removed.** A signer may re-draw their own signature
    (`revision` increments, the original `signedAt` is kept), but no route
    deletes one. An unsigned agreement may be deleted; a signed one may not.
+3. **Therapists are not party to it.** `assertAgreementAccess` rejects
+   `authType === 'therapist'` on both read and sign, and the kid page hides the
+   card and skips the query in therapist view. Only parents and the analyst.
 
 | Where | What |
 |-------|------|
@@ -312,10 +397,11 @@ therapy-center/src/
 
 | Route | Auth | Purpose |
 |-------|------|---------|
-| `GET /api/therapy/kids/:kidId/agreement` | admin / parent | fetch; parents get `null` for a draft |
+| `GET /api/therapy/kids/:kidId/agreement` | admin / parent (**not therapist**) | fetch; parents get `null` for a draft |
 | `PUT /api/therapy/kids/:kidId/agreement` | admin | create or edit while unsigned |
 | `POST /api/therapy/kids/:kidId/agreement/sign` | admin / parent | add or replace own signature |
 | `DELETE /api/therapy/kids/:kidId/agreement` | admin | only while unsigned |
+| `POST /api/therapy/kids/:kidId/agreement/email-parents` | admin (own centre) | email each unsigned parent with an email their `/p/:kidId/agreement` link |
 
 **Status flow:** `draft` (admin still writing, parents see nothing) →
 `active` (open for signing) → signed (text locked).
@@ -332,12 +418,88 @@ holding the family's link can sign as any parent on that kid.
 Entry points are a card in the kid's סקירה tab and, for parents with a
 signature outstanding, a banner at the top of the kid page.
 
-**The default text** is generated by `buildDefaultAgreement()` from the details
-the centre already holds (child, parents, centre name and contact), so in the
-common case the admin types nothing. It is a general-purpose Israeli service
-agreement — a sensible default, not legal advice. Placeholders are
-`{{CENTER}}`, `{{CONTACT_CLAUSE}}`, `{{PARENTS}}`, `{{CHILD}}`,
-`{{START_DATE}}`, `{{NOTICE_WEEKS}}`.
+**Getting it to the parents.** Once the agreement is sent for signing, the
+admin can email the parents (each unsigned parent with an email on record gets
+their family link; replies go to the admin's own email; send times are kept in
+`parentEmails`), copy the link, or share it on WhatsApp. The link needs no
+login — `/p/:kidId` is the credential.
+
+**A parent not on record** (reached through a shared link) signs as "השם שלי לא
+ברשימה": the full name they type registers them as the kid's parent
+(`newParentName` on `/sign`; capped at 4 parents per kid, same name reuses the
+same parent).
+
+**Mail on signing.** When a parent signs, the centre's manager is mailed with a
+link to the agreement (Michal's centre only — see Email Notifications).
+
+**The name box must start empty.** The signing modal's confirm button needs a
+typed name; a placeholder showing the signer's own name looked already filled
+and left signers stuck, so the placeholder is neutral and a hint says what is
+missing.
+
+**The default text** is generated by `buildDefaultAgreement()` from details
+already on record (child, parents, analyst name and contact), so in the common
+case nothing is typed. It is a general-purpose Israeli service agreement — a
+sensible default, not legal advice. Placeholders: `{{ANALYST}}`,
+`{{ANALYST_ROLE}}`, `{{CONTACT_CLAUSE}}`, `{{PARENTS}}`, `{{CHILD}}`,
+`{{START_VERB}}`, `{{START_DATE}}`, `{{NOTICE_WEEKS}}`.
+
+`{{START_VERB}}` resolves to החל ביום for a start date already past and
+יחל ביום for one still ahead — these agreements are often signed after the
+work began. `{{ANALYST_ROLE}}` comes from the agreement's `adminRole` field,
+which the analyst edits in the form (default
+מדריכת הורים ומנתחת התנהגות) and which the signing route copies onto
+the signature, so the stored record matches the document that was read.
+
+While the wording is still the untouched default, changing the date, role or
+notice period regenerates it; once edited by hand it is never overwritten.
+
+The Hebrew prose is drafted with `gpt-5.6-sol` rather than written directly —
+see the `hebrew-copy-via-gpt` memory.
+
+---
+
+## AI Chat History
+
+Every chat turn is saved server-side in `chatConversations/{id}` (`server/services/chat-history.js`),
+so nothing depends on the browser. The UI is a drawer in `ChatCenter.tsx` (`components/ChatHistoryPanel.tsx`).
+
+- **Owner comes from the auth headers**: admin → `adminId`, therapist → `practitionerId`, parent → `kidId`
+  (both parents share the family link, so they share one history).
+- **Everyone sees only their own** conversations — including other centre admins. The **super admin
+  (Michal)** can also list (`?scope=all`) and read everyone's, filtered by role; she cannot post into
+  or continue someone else's conversation (403). Therapists and parents see a one-line notice that
+  chats are kept 14 days and are visible to the system manager.
+- **Retention: 14 days from the last message.** `expiresAt` is pushed forward on every turn; a Firestore
+  TTL policy on `chatConversations.expiresAt` deletes them (it can lag ~24h, so reads also filter
+  expired docs). Re-create with
+  `gcloud firestore fields ttls update expiresAt --collection-group=chatConversations --enable-ttl --project=aba-ai-d74f5`.
+- Messages are embedded in the document; the oldest are trimmed past ~900KB. Image generations
+  (super admin) are saved too.
+
+| Route | Purpose |
+|-------|---------|
+| `POST /api/therapy/chat` | now takes `conversationId`; `done` event / JSON returns `conversationId` |
+| `GET /api/therapy/chat/conversations[?scope=all]` | list (summaries, no messages) |
+| `GET /api/therapy/chat/conversations/:id` | one conversation with messages (`isMine` false = read-only) |
+| `DELETE /api/therapy/chat/conversations/:id` | owner or super admin |
+
+---
+
+## Build Models (מודלים לבנייה) — super admin only
+
+Step-by-step Lego / magnet build guides, produced by a separate Claude session ("ABBA") in
+`../reports/nevo-models/` (`<id>/index.html` self-contained 3D guide, `<id>/thumb.png`,
+`concepts/`, `models-manifest.json`; `_src/` is build source and is never served). **Don't edit the
+model pages** — they are regenerated from `_src`.
+
+- Page: `/models` (`pages/BuildModels.tsx`), sidebar entry inside the `isSuperAdmin` block. Grid from the
+  manifest, opens a model full-screen in a new tab (made for the child's tablet), "mark as built" with
+  date + note in `modelBuilds/{modelId}` (`GET/PUT/DELETE /api/therapy/model-builds[/:id]`, `requireSuperAdmin`).
+- `MODELS_BASE` in `api/client.ts`: dev → `/api/nevo-models` (Express serves the folder live, blocks
+  `_src`); prod → `/build-models-n7q4` on Firebase Hosting, copied by `deploy.js` on every deploy.
+  **New models reach production only with a hosting deploy.** The URLs are public but unlisted.
+- Each model's 🏠 link goes to `../index.html`, which redirects to `/therapy/models`.
 
 ---
 

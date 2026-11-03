@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { kidsApi, chatApi, summariesApi, practitionersApi, imagesApi, IMAGE_MODELS } from '../api/client';
+import { kidsApi, chatApi, chatHistoryApi, summariesApi, practitionersApi, imagesApi, IMAGE_MODELS } from '../api/client';
 import type { ImageModel } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 import { useAuth } from '../contexts/AuthContext';
-import ConfirmModal from '../components/ConfirmModal';
+import ChatHistoryPanel from '../components/ChatHistoryPanel';
 import type { Kid } from '../types';
 
 interface ChatMessage {
@@ -30,6 +30,8 @@ export default function ChatCenter() {
   const { isParentView, parentKidId, isTherapistView, practitionerId } = useTherapist();
   const { user } = useAuth();
   const canGenerateImages = !!user?.isSuperAdmin;
+  // Therapist/parent links override a stored admin key in API calls, so only the admin view acts as super admin
+  const isSuperAdminView = !!user?.isSuperAdmin && !isTherapistView && !isParentView;
 
   const welcomeMessage = isParentView
     ? 'שלום! אני העוזרת של Doing. אפשר לשאול אותי שאלות על ההתקדמות של הילד/ה, להבין את המטרות, או לקבל טיפים. איך אפשר לעזור?'
@@ -41,6 +43,11 @@ export default function ChatCenter() {
   const [input, setInput] = useState('');
   const [selectedKidId, setSelectedKidId] = useState<string | null>(parentKidId || null);
   const [isSending, setIsSending] = useState(false);
+  // History: the conversation being continued, or (super admin) someone else's being viewed read-only
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [viewingOwner, setViewingOwner] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -60,7 +67,7 @@ export default function ChatCenter() {
 
   const sendMessage = async (extraBody?: Record<string, unknown>, overrideText?: string) => {
     const text = (overrideText || input).trim();
-    if (!text || isSending || requiresKidSelection) return;
+    if (!text || isSending || requiresKidSelection || viewingOwner) return;
 
     setInput('');
     const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: text };
@@ -83,7 +90,9 @@ export default function ChatCenter() {
             prev.map(m => m.isLoading ? { ...m, statusLabel: event.label } : m)
           );
         }
-      }, extraBody);
+      }, { ...extraBody, conversationId });
+      if (result.conversationId) setConversationId(result.conversationId);
+      queryClient.invalidateQueries({ queryKey: ['chat-history'] });
 
       const meta = pendingSummaryMeta.current;
       pendingSummaryMeta.current = null;
@@ -97,12 +106,13 @@ export default function ChatCenter() {
         ...(meta && result.toolsUsed?.includes('get_summary_data') ? { summaryMeta: meta } : {}),
       };
       setMessages(prev => prev.filter(m => !m.isLoading).concat(aiMsg));
-    } catch {
+    } catch (err) {
+      const msg = (err as Error)?.message || '';
       setMessages(prev =>
         prev.filter(m => !m.isLoading).concat({
           id: (Date.now() + 2).toString(),
           role: 'assistant',
-          content: 'שגיאה בתקשורת עם השרת. נסו שוב.',
+          content: /^HTTP|fetch|network/i.test(msg) || !msg ? 'שגיאה בתקשורת עם השרת. נסו שוב.' : msg,
         })
       );
     }
@@ -111,7 +121,6 @@ export default function ChatCenter() {
     inputRef.current?.focus();
   };
 
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [summaryKidId, setSummaryKidId] = useState('');
   const [summaryWeeks, setSummaryWeeks] = useState('2');
@@ -141,9 +150,11 @@ export default function ChatCenter() {
     setIsSending(true);
 
     try {
-      const result = await imagesApi.generate(prompt, imageModel);
+      const result = await imagesApi.generate(prompt, imageModel, { conversationId, kidId: selectedKidId });
       if (result.success && result.data) {
         const { images, cost, costCurrency, modelLabel } = result.data;
+        if (result.data.conversationId) setConversationId(result.data.conversationId);
+        queryClient.invalidateQueries({ queryKey: ['chat-history'] });
         setMessages(prev => prev.filter(m => !m.isLoading).concat({
           id: (Date.now() + 2).toString(),
           role: 'assistant',
@@ -220,15 +231,37 @@ export default function ChatCenter() {
     setIsSending(false);
   };
 
-  const clearChat = () => {
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: 'שלום! איך אפשר לעזור?',
-      },
-    ]);
-    setShowClearConfirm(false);
+  const startNewChat = () => {
+    setMessages([{ id: 'welcome', role: 'assistant', content: 'שלום! איך אפשר לעזור?' }]);
+    setConversationId(null);
+    setViewingOwner(null);
+    setShowHistory(false);
+    inputRef.current?.focus();
+  };
+
+  const openConversation = async (id: string) => {
+    setShowHistory(false);
+    const res = await chatHistoryApi.get(id);
+    if (!res.success || !res.data) return;
+    const conv = res.data;
+    setMessages(conv.messages.map((m, i) => ({
+      id: `${conv.id}-${i}`,
+      role: m.role,
+      content: m.content,
+      toolsUsed: m.toolsUsed,
+      boardUpdated: m.boardUpdated,
+      summaryCreated: m.summaryCreated,
+      images: m.images,
+      imageModelLabel: m.imageModelLabel,
+    })));
+    if (conv.isMine) {
+      setConversationId(conv.id);
+      setViewingOwner(null);
+      if (!isParentView) setSelectedKidId(conv.kidId);
+    } else {
+      setConversationId(null);
+      setViewingOwner(`${conv.ownerRole} · ${conv.ownerName}`);
+    }
   };
 
   return (
@@ -244,6 +277,7 @@ export default function ChatCenter() {
               className="chat-kid-select"
               value={selectedKidId || ''}
               onChange={e => setSelectedKidId(e.target.value || null)}
+              disabled={!!viewingOwner}
             >
               {isTherapistView
                 ? <option value="">בחרו ילד/ה</option>
@@ -254,9 +288,17 @@ export default function ChatCenter() {
               ))}
             </select>
           )}
-          <button className="chat-clear-btn" onClick={() => setShowClearConfirm(true)} title="ניקוי שיחה">🗑</button>
+          <button className="chat-clear-btn" onClick={() => setShowHistory(true)} title="היסטוריית שיחות">🕘</button>
+          <button className="chat-clear-btn" onClick={startNewChat} title="שיחה חדשה">＋</button>
         </div>
       </div>
+
+      {viewingOwner && (
+        <div className="chat-viewing-banner">
+          <span>👁 צפייה בשיחה של {viewingOwner} — קריאה בלבד</span>
+          <button onClick={startNewChat}>חזרה לשיחה חדשה</button>
+        </div>
+      )}
 
       <div className="chat-center-messages">
         {messages.map(msg => (
@@ -317,6 +359,9 @@ export default function ChatCenter() {
         <div ref={messagesEndRef} />
       </div>
 
+      {!isSuperAdminView && (
+        <div className="chat-privacy-note">השיחות נשמרות ל-14 יום וגלויות גם למנהלת המערכת</div>
+      )}
       <div className="chat-center-input-area">
         <input
           ref={inputRef}
@@ -326,13 +371,13 @@ export default function ChatCenter() {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
           placeholder={requiresKidSelection ? "יש לבחור ילד/ה לפני שליחת הודעה" : isParentView ? "שאלו שאלה על הילד/ה, על ההתקדמות, או בקשו טיפים..." : "שאלו שאלה, בקשו לבנות לוח, או בקשו סיכום..."}
-          disabled={isSending || requiresKidSelection}
+          disabled={isSending || requiresKidSelection || !!viewingOwner}
           autoFocus
         />
         <button
           className="chat-center-send-btn"
           onClick={() => sendMessage()}
-          disabled={isSending || !input.trim() || requiresKidSelection}
+          disabled={isSending || !input.trim() || requiresKidSelection || !!viewingOwner}
         >
           ➤
         </button>
@@ -357,13 +402,14 @@ export default function ChatCenter() {
           </button>
         )}
       </div>
-      {showClearConfirm && (
-        <ConfirmModal
-          title="ניקוי שיחה"
-          message="לנקות את כל השיחה?"
-          confirmText="נקה"
-          onConfirm={clearChat}
-          onCancel={() => setShowClearConfirm(false)}
+      {showHistory && (
+        <ChatHistoryPanel
+          isSuperAdmin={isSuperAdminView}
+          activeId={conversationId}
+          onOpen={openConversation}
+          onNew={startNewChat}
+          onDeleted={id => { if (id === conversationId) startNewChat(); }}
+          onClose={() => setShowHistory(false)}
         />
       )}
       {showSummaryModal && (

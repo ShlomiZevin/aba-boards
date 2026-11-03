@@ -431,6 +431,16 @@ function hasAnySignature(agreement) {
   return !!agreement && Object.keys(agreement.signatures || {}).length > 0;
 }
 
+/** Note when each parent was emailed the agreement (shown on the admin's page). */
+async function markAgreementEmailed(kidId, parentIds) {
+  if (!parentIds.length) return;
+  const now = new Date().toISOString();
+  const parentEmails = {};
+  parentIds.forEach((id) => { parentEmails[id] = now; });
+  // merge: true merges into the existing map, keeping earlier sends
+  await getDb().collection('agreements').doc(kidId).set({ parentEmails }, { merge: true });
+}
+
 async function getAgreement(kidId) {
   const db = getDb();
   const doc = await db.collection('agreements').doc(kidId).get();
@@ -2715,7 +2725,201 @@ async function setKidAgendaItemDone(kidId, date, itemId, done) {
   };
 }
 
+// ==================== DAILY REPORT (דיווח יומי) ====================
+// The school/therapy day report that replaces the paper form: per date, a
+// list of lessons, breaks and ABC events.
+//
+//   kidDailyReports/{kidId}/reports/{YYYY-MM-DD}
+//     { date, reporter, lessons: [], breaks: [], abc: [], createdAt, updatedAt }
+//
+// One document per day keeps a report a single read and a single write. The
+// item shapes are owned by the UI (therapy-center/src/utils/dailyReport.ts);
+// the server only enforces a safe, bounded shape.
+
+const DR_SECTIONS = ['lessons', 'breaks', 'abc'];
+const DR_MAX_ITEMS = 30;
+const DR_KEY_RE = /^[a-zA-Z][a-zA-Z0-9]{0,30}$/;
+
+/** Plain data only: short strings, numbers, booleans, small arrays and objects. */
+function sanitizeReportValue(value, depth) {
+  if (typeof value === 'string') return value.slice(0, 2000);
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'boolean') return value;
+  if (Array.isArray(value)) {
+    return value.slice(0, 20).map((v) => sanitizeReportValue(v, depth + 1)).filter((v) => v !== null && v !== undefined);
+  }
+  if (value && typeof value === 'object' && depth < 3) {
+    const out = {};
+    for (const [k, v] of Object.entries(value).slice(0, 60)) {
+      if (!DR_KEY_RE.test(k)) continue;
+      const clean = sanitizeReportValue(v, depth + 1);
+      if (clean !== null && clean !== undefined) out[k] = clean;
+    }
+    return out;
+  }
+  return null;
+}
+
+function sanitizeReportItem(body) {
+  const item = sanitizeReportValue(body || {}, 0) || {};
+  // Reject rather than clean: a silently altered id would save under a different item
+  item.id = typeof (body && body.id) === 'string' ? body.id : '';
+  if (!/^[a-zA-Z0-9_-]{1,40}$/.test(item.id)) {
+    const err = new Error('Invalid item id');
+    err.status = 400;
+    throw err;
+  }
+  return item;
+}
+
+function assertSection(section) {
+  if (!DR_SECTIONS.includes(section)) {
+    const err = new Error('Invalid section');
+    err.status = 400;
+    throw err;
+  }
+}
+
+function dailyReportRef(kidId, date) {
+  assertAgendaDate(date);
+  return getDb().collection('kidDailyReports').doc(kidId).collection('reports').doc(date);
+}
+
+function shapeReport(date, data) {
+  return {
+    date,
+    reporter: data.reporter || '',
+    lessons: Array.isArray(data.lessons) ? data.lessons : [],
+    breaks: Array.isArray(data.breaks) ? data.breaks : [],
+    abc: Array.isArray(data.abc) ? data.abc : [],
+    createdAt: data.createdAt || null,
+    updatedAt: data.updatedAt || null,
+  };
+}
+
+/** History list: newest first, counts only — never ships every lesson. */
+async function listDailyReports(kidId) {
+  const snap = await getDb().collection('kidDailyReports').doc(kidId).collection('reports').get();
+  return snap.docs
+    .map((doc) => {
+      const d = doc.data() || {};
+      return {
+        date: doc.id,
+        reporter: d.reporter || '',
+        lessons: Array.isArray(d.lessons) ? d.lessons.length : 0,
+        breaks: Array.isArray(d.breaks) ? d.breaks.length : 0,
+        abc: Array.isArray(d.abc) ? d.abc.length : 0,
+        updatedAt: d.updatedAt || null,
+      };
+    })
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+/** Full reports between two dates (inclusive), newest first — for the AI chat. */
+async function getDailyReportsInRange(kidId, from, to) {
+  assertAgendaDate(from);
+  assertAgendaDate(to);
+  const snap = await getDb().collection('kidDailyReports').doc(kidId).collection('reports')
+    .where(admin.firestore.FieldPath.documentId(), '>=', from)
+    .where(admin.firestore.FieldPath.documentId(), '<=', to)
+    .get();
+  return snap.docs
+    .map((doc) => shapeReport(doc.id, doc.data() || {}))
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+async function getDailyReport(kidId, date) {
+  const doc = await dailyReportRef(kidId, date).get();
+  return doc.exists ? shapeReport(date, doc.data() || {}) : null;
+}
+
+/** Creates the day's report if needed and updates its header fields. */
+async function saveDailyReportMeta(kidId, date, body) {
+  const ref = dailyReportRef(kidId, date);
+  const now = new Date().toISOString();
+  const doc = await ref.get();
+  const reporter = cleanAgendaText(body && body.reporter, 80);
+  if (doc.exists) {
+    await ref.set({ reporter, updatedAt: now }, { merge: true });
+  } else {
+    await ref.set({ date, reporter, lessons: [], breaks: [], abc: [], createdAt: now, updatedAt: now });
+  }
+  return shapeReport(date, (await ref.get()).data() || {});
+}
+
+/** Insert or replace one item; a transaction so two staff can't clobber each other. */
+async function saveDailyReportItem(kidId, date, section, body) {
+  assertSection(section);
+  const item = sanitizeReportItem(body);
+  const ref = dailyReportRef(kidId, date);
+  const now = new Date().toISOString();
+  return getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const data = doc.exists ? doc.data() || {} : { date, reporter: '', lessons: [], breaks: [], abc: [], createdAt: now };
+    const list = Array.isArray(data[section]) ? [...data[section]] : [];
+    const at = list.findIndex((i) => i && i.id === item.id);
+    if (at >= 0) list[at] = item;
+    else if (list.length >= DR_MAX_ITEMS) {
+      const err = new Error('Too many items');
+      err.status = 400;
+      throw err;
+    } else list.push(item);
+    const next = { ...data, [section]: list, updatedAt: now };
+    tx.set(ref, next);
+    return shapeReport(date, next);
+  });
+}
+
+async function deleteDailyReportItem(kidId, date, section, itemId) {
+  assertSection(section);
+  const ref = dailyReportRef(kidId, date);
+  return getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists) return null;
+    const data = doc.data() || {};
+    const list = (Array.isArray(data[section]) ? data[section] : []).filter((i) => i && i.id !== itemId);
+    const next = { ...data, [section]: list, updatedAt: new Date().toISOString() };
+    tx.set(ref, next);
+    return shapeReport(date, next);
+  });
+}
+
+/**
+ * Claim the "new report" mail for this day: returns the report the first time
+ * only, and marks it so — a transaction, so two staff saving at once can't both send.
+ */
+async function claimDailyReportNotification(kidId, date) {
+  const ref = dailyReportRef(kidId, date);
+  return getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists) return null;
+    const data = doc.data() || {};
+    if (data.notifiedAt) return null;
+    tx.set(ref, { ...data, notifiedAt: new Date().toISOString() });
+    return shapeReport(date, data);
+  });
+}
+
+/** Undo a claim whose mail didn't go out, so the next save of the day retries. */
+async function releaseDailyReportNotification(kidId, date) {
+  await dailyReportRef(kidId, date).set({ notifiedAt: null }, { merge: true });
+}
+
+async function deleteDailyReport(kidId, date) {
+  await dailyReportRef(kidId, date).delete();
+}
+
 module.exports = {
+  // Daily report
+  listDailyReports,
+  getDailyReport,
+  getDailyReportsInRange,
+  saveDailyReportMeta,
+  saveDailyReportItem,
+  deleteDailyReportItem,
+  claimDailyReportNotification,
+  releaseDailyReportNotification,
+  deleteDailyReport,
   // Daily agenda
   getKidAgenda,
   saveKidAgendaRoutine,
@@ -2752,6 +2956,7 @@ module.exports = {
   deleteParent,
   // Treatment agreement
   getAgreement,
+  markAgreementEmailed,
   saveAgreement,
   signAgreement,
   deleteAgreement,

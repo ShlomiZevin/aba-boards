@@ -69,6 +69,8 @@ export interface Agreement {
   status: AgreementStatus;
   /** Keyed `admin:<adminId>` / `parent:<parentId>` — one slot per signer. */
   signatures: Record<string, AgreementSignature>;
+  /** When each parent was last emailed the agreement, keyed by parent id (ISO). */
+  parentEmails?: Record<string, string>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -611,6 +613,99 @@ export interface GamePlayState {
 }
 
 export type KidGameState = Record<string, GamePlayState>;
+
+// ==================== DAILY REPORT (דיווח יומי) ====================
+// Mirrors the paper daily form. Field meanings live in utils/dailyReport.ts.
+
+/** Paper marks: "+" did it right away, "-" didn't (note the help given), "r" = ר. */
+export type ReportMark = '+' | '-' | 'r' | '';
+
+export interface MarkValue {
+  m?: ReportMark;
+  /** What help was given / which instructions — free text. */
+  note?: string;
+}
+
+export interface LessonReport {
+  id: string;
+  title: string;
+  mood?: 'good' | 'ok' | 'hard' | '';
+  /** Cooperation during the lesson, 0–100. The precise measure beside the smiley. */
+  cooperationPct?: number;
+  summary?: string;
+  /** התארגנות לשיעור + תחילת עבודה */
+  start?: MarkValue;
+  independent?: { pace?: MarkValue; quality?: MarkValue; duration?: string; general?: MarkValue; specific?: MarkValue };
+  frontal?: { attention?: MarkValue; duration?: string; general?: MarkValue; specific?: MarkValue };
+  aide?: { cooperation?: MarkValue; duration?: string; instructions?: MarkValue };
+  academic?: string;
+  attention?: MarkValue;
+  compliance?: MarkValue;
+  notes?: string;
+  /** Which motivation-plan components (1–5) earned reinforcement. */
+  motivation?: { got?: number[]; notes?: string };
+}
+
+export interface BreakReport {
+  id: string;
+  time?: string;
+  duration?: string;
+  type?: string;
+  name?: string;
+  foodWhat?: string;
+  foodIndependent?: string;
+  activities?: string[];
+  activityNote?: string;
+  social?: string;
+  /** צ'ופר על התנהגות חברתית חיובית */
+  treat?: MarkValue;
+  /** התנהגות לא חברתית — how many times */
+  nonSocialCount?: number;
+  unexpected?: boolean;
+  support?: boolean;
+  supportNote?: string;
+  notes?: string;
+}
+
+export interface AbcReport {
+  id: string;
+  time?: string;
+  location?: string;
+  context?: string;
+  antecedents?: string[];
+  a?: string;
+  withWhom?: string;
+  behaviors?: string[];
+  b?: string;
+  intensity?: string;
+  duration?: string;
+  toward?: string;
+  consequences?: string[];
+  c?: string;
+  byWhom?: string;
+  notes?: string;
+}
+
+export interface DailyReport {
+  date: string;
+  reporter: string;
+  lessons: LessonReport[];
+  breaks: BreakReport[];
+  abc: AbcReport[];
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface DailyReportSummary {
+  date: string;
+  reporter: string;
+  lessons: number;
+  breaks: number;
+  abc: number;
+  updatedAt: string | null;
+}
+
+export type ReportSection = 'lessons' | 'breaks' | 'abc';
 
 // ==================== DAILY AGENDA (סדר יום) ====================
 

@@ -121,6 +121,7 @@ export default function AppShell({ children }: AppShellProps) {
     { path: '/knowledge', label: 'מרכז הידע', icon: '📚' },
     ...(user?.isSuperAdmin ? [
       { path: '/goal-library', label: 'ספריית מטרות', icon: '🎯' },
+      { path: '/models', label: 'מודלים לבנייה', icon: '🧱' },
       { path: '/admin-management', label: 'מנהלי מרכזים', icon: '⚙' },
       { path: '/super-admin', label: 'סקירת אדמין', icon: '🔍' },
     ] : []),

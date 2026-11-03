@@ -18,6 +18,10 @@ const ROOT_DIR = __dirname;
 const THERAPY_DIR = path.join(ROOT_DIR, 'therapy-center');
 const THERAPY_DIST = path.join(THERAPY_DIR, 'dist');
 const PUBLIC_THERAPY = path.join(ROOT_DIR, 'public', 'therapy');
+// Build-model guides from the ABBA session — must match MODELS_BASE in therapy-center/src/api/client.ts
+const MODELS_SRC = path.join(ROOT_DIR, '..', 'reports', 'nevo-models');
+const PUBLIC_MODELS = path.join(ROOT_DIR, 'public', 'build-models-n7q4');
+const MODELS_SKIP = new Set(['_src', 'prompts', 'index.html']);
 
 function run(cmd, cwd = ROOT_DIR) {
   console.log(`\n> ${cmd}`);
@@ -64,6 +68,20 @@ console.log('\n[2/3] Copying to public/therapy...');
 cleanDir(PUBLIC_THERAPY);
 copyDir(THERAPY_DIST, PUBLIC_THERAPY);
 console.log('Copied successfully!');
+
+// Step 2b: Copy build models (sources excluded; the folder index redirects to the Models tab)
+if (fs.existsSync(MODELS_SRC)) {
+  console.log('\n[2b] Copying build models...');
+  cleanDir(PUBLIC_MODELS);
+  for (const entry of fs.readdirSync(MODELS_SRC, { withFileTypes: true })) {
+    if (MODELS_SKIP.has(entry.name) || entry.name.startsWith('.')) continue;
+    const src = path.join(MODELS_SRC, entry.name);
+    const dest = path.join(PUBLIC_MODELS, entry.name);
+    if (entry.isDirectory()) copyDir(src, dest); else fs.copyFileSync(src, dest);
+  }
+  fs.writeFileSync(path.join(PUBLIC_MODELS, 'index.html'),
+    '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/therapy/models"><script>location.replace("/therapy/models")</script>');
+}
 
 // Step 3: Deploy to Firebase
 console.log('\n[3/3] Deploying to Firebase...');

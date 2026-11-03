@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const therapyService = require('../services/therapy');
+const emailService = require('../services/email');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -14,9 +15,40 @@ const asyncHandler = (fn) => (req, res, next) => {
 // ==================== AI CHAT ====================
 
 const { handleChat } = require('../services/chat-center');
+const chatHistory = require('../services/chat-history');
+
+// Saves the turn to history; never fails the chat itself.
+async function saveChatTurn(req, conversationId, kidId, messages, result) {
+  try {
+    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    const turn = [];
+    if (lastUser) turn.push({ role: 'user', content: lastUser.content });
+    turn.push({ role: 'assistant', content: result.reply || '', toolsUsed: result.toolsUsed, boardUpdated: result.boardUpdated, summaryCreated: result.summaryCreated });
+    return await chatHistory.appendTurn(req, conversationId, kidId, turn);
+  } catch (err) {
+    console.error('[chat-history] save failed:', err.message);
+    return conversationId || null;
+  }
+}
+
+router.get('/chat/conversations', asyncHandler(async (req, res) => {
+  res.json(await chatHistory.listConversations(req, { scope: req.query.scope }));
+}));
+
+router.get('/chat/conversations/:id', asyncHandler(async (req, res) => {
+  const conv = await chatHistory.getConversation(req, req.params.id);
+  if (!conv) return res.status(404).json({ error: 'השיחה לא נמצאה' });
+  res.json(conv);
+}));
+
+router.delete('/chat/conversations/:id', asyncHandler(async (req, res) => {
+  const ok = await chatHistory.deleteConversation(req, req.params.id);
+  if (!ok) return res.status(404).json({ error: 'השיחה לא נמצאה' });
+  res.json({ success: true });
+}));
 
 router.post('/chat', asyncHandler(async (req, res) => {
-  const { messages, kidId, stream, summaryDetail } = req.body;
+  const { messages, kidId, stream, summaryDetail, conversationId } = req.body;
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required' });
   }
@@ -44,6 +76,12 @@ router.post('/chat', asyncHandler(async (req, res) => {
     }
   }
 
+  try {
+    await chatHistory.assertWritable(req, conversationId);
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+
   if (stream) {
     // SSE streaming mode — send tool status updates in real time
     res.writeHead(200, {
@@ -58,7 +96,8 @@ router.post('/chat', asyncHandler(async (req, res) => {
 
     try {
       const result = await handleChat(req.adminId, messages, effectiveKidId, onToolStatus, source, practitionerId, parentKidId, { summaryDetail });
-      res.write(`data: ${JSON.stringify({ type: 'done', ...result })}\n\n`);
+      const savedId = await saveChatTurn(req, conversationId, effectiveKidId, messages, result);
+      res.write(`data: ${JSON.stringify({ type: 'done', ...result, conversationId: savedId })}\n\n`);
     } catch (err) {
       res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
     }
@@ -66,7 +105,8 @@ router.post('/chat', asyncHandler(async (req, res) => {
   } else {
     // Regular JSON response (backwards compatible)
     const result = await handleChat(req.adminId, messages, effectiveKidId, null, source, practitionerId, parentKidId, { summaryDetail });
-    res.json(result);
+    const savedId = await saveChatTurn(req, conversationId, effectiveKidId, messages, result);
+    res.json({ ...result, conversationId: savedId });
   }
 }));
 
@@ -76,18 +116,56 @@ const { generateImages } = require('../services/leonardo');
 
 // Image generation is restricted to the super admin (מיכל) only
 router.post('/generate-image', requireSuperAdmin, asyncHandler(async (req, res) => {
-  const { prompt, model } = req.body || {};
+  const { prompt, model, conversationId, kidId } = req.body || {};
   if (!prompt || !prompt.trim()) {
     return res.status(400).json({ error: 'חובה לספק תיאור לתמונה' });
   }
 
   try {
     const result = await generateImages({ prompt, model });
-    res.json(result);
+    let savedId = conversationId || null;
+    try {
+      await chatHistory.assertWritable(req, conversationId);
+      savedId = await chatHistory.appendTurn(req, conversationId, kidId, [
+        { role: 'user', content: `🎨 ${prompt}` },
+        { role: 'assistant', content: '', images: result.images, imageModelLabel: result.modelLabel },
+      ]);
+    } catch (err) {
+      console.error('[chat-history] image save failed:', err.message);
+    }
+    res.json({ ...result, conversationId: savedId });
   } catch (err) {
     console.error('Image generation error:', err);
     res.status(500).json({ error: err.message || 'יצירת התמונה נכשלה' });
   }
+}));
+
+// ==================== BUILD MODELS (Lego / magnets) — super admin only ====================
+
+const { getDb } = require('../services/firebase');
+
+router.get('/model-builds', requireSuperAdmin, asyncHandler(async (_req, res) => {
+  const snap = await getDb().collection('modelBuilds').get();
+  const builds = {};
+  snap.forEach(d => { builds[d.id] = d.data(); });
+  res.json(builds);
+}));
+
+router.put('/model-builds/:modelId', requireSuperAdmin, asyncHandler(async (req, res) => {
+  const { builtAt, note } = req.body || {};
+  const data = {
+    builtAt: builtAt || new Date().toISOString().slice(0, 10),
+    note: String(note || '').slice(0, 2000),
+    by: req.adminName || req.adminId,
+    updatedAt: new Date().toISOString(),
+  };
+  await getDb().collection('modelBuilds').doc(req.params.modelId).set(data);
+  res.json(data);
+}));
+
+router.delete('/model-builds/:modelId', requireSuperAdmin, asyncHandler(async (req, res) => {
+  await getDb().collection('modelBuilds').doc(req.params.modelId).delete();
+  res.json({ success: true });
 }));
 
 // ==================== KIDS ====================
@@ -170,7 +248,7 @@ const agendaHandler = (fn) => async (req, res) => {
 async function assertAgendaAccess(req) {
   const { kidId } = req.params;
   const deny = () => {
-    const err = new Error('אין הרשאה לסדר היום של ילד זה');
+    const err = new Error('אין הרשאה לילד זה');
     err.status = 403;
     throw err;
   };
@@ -210,6 +288,71 @@ router.put('/kids/:kidId/agenda/days/:date/done', agendaHandler(async (req, res)
   const { itemId, done } = req.body || {};
   res.json(await therapyService.setKidAgendaItemDone(req.params.kidId, req.params.date, itemId, !!done));
 }));
+
+// Daily report (דיווח יומי). Staff write; parents may read their own kid's.
+const reportHandler = (fn, { write = false } = {}) => agendaHandler(async (req, res) => {
+  if (write && req.authType === 'parent') {
+    return res.status(403).json({ error: 'צפייה בלבד' });
+  }
+  await fn(req, res);
+});
+
+router.get('/kids/:kidId/daily-reports', reportHandler(async (req, res) => {
+  res.json(await therapyService.listDailyReports(req.params.kidId));
+}));
+
+router.get('/kids/:kidId/daily-reports/:date', reportHandler(async (req, res) => {
+  res.json(await therapyService.getDailyReport(req.params.kidId, req.params.date));
+}));
+
+/**
+ * Mail the centre's manager once per kid per day, when that day's report is
+ * first created. Best-effort, like the form mail: never fails the save.
+ */
+async function notifyDailyReportOpened(kidId, date) {
+  try {
+    const kid = await therapyService.getKidById(kidId);
+    if (!kid) return;
+    const to = emailService.formNotifyRecipient(kid.adminId);
+    if (!to) {
+      console.log('[email] daily report notification skipped: no recipient for centre', kid.adminId || '(none)');
+      return;
+    }
+    const report = await therapyService.claimDailyReportNotification(kidId, date);
+    if (!report) return; // already sent for this day
+    const sent = await emailService.sendMail({
+      to,
+      ...emailService.buildDailyReportNotification({ kidId, kidName: kid.name, reporter: report.reporter, date }),
+    });
+    if (!sent) await therapyService.releaseDailyReportNotification(kidId, date);
+  } catch (err) {
+    console.error('[email] daily report notification failed:', err.message);
+  }
+}
+
+router.put('/kids/:kidId/daily-reports/:date', reportHandler(async (req, res) => {
+  const report = await therapyService.saveDailyReportMeta(req.params.kidId, req.params.date, req.body);
+  await notifyDailyReportOpened(req.params.kidId, req.params.date);
+  res.json(report);
+}, { write: true }));
+
+router.delete('/kids/:kidId/daily-reports/:date', reportHandler(async (req, res) => {
+  await therapyService.deleteDailyReport(req.params.kidId, req.params.date);
+  res.json({ deleted: true }); // a body, not 204: the client always parses JSON
+}, { write: true }));
+
+router.put('/kids/:kidId/daily-reports/:date/:section/:itemId', reportHandler(async (req, res) => {
+  const body = { ...(req.body || {}), id: req.params.itemId };
+  const report = await therapyService.saveDailyReportItem(req.params.kidId, req.params.date, req.params.section, body);
+  await notifyDailyReportOpened(req.params.kidId, req.params.date);
+  res.json(report);
+}, { write: true }));
+
+router.delete('/kids/:kidId/daily-reports/:date/:section/:itemId', reportHandler(async (req, res) => {
+  res.json(await therapyService.deleteDailyReportItem(
+    req.params.kidId, req.params.date, req.params.section, req.params.itemId
+  ));
+}, { write: true }));
 
 // Form Template
 router.get('/kids/:kidId/form-template', asyncHandler(async (req, res) => {
@@ -322,8 +465,18 @@ const agreementHandler = (fn) => async (req, res) => {
   }
 };
 
-/** Parents reach the app through /p/:kidId — lock them to that kid. */
-function assertKidAccess(req) {
+/**
+ * The agreement is between the behaviour analyst and the parents, and nobody
+ * else. Therapists around the child are not party to it and must not see it,
+ * even though they can see the rest of the kid's record.
+ */
+function assertAgreementAccess(req) {
+  if (req.authType === 'therapist') {
+    const err = new Error('ההסכם חסוי וזמין להורים ולמנתח/ת ההתנהגות בלבד');
+    err.status = 403;
+    throw err;
+  }
+  // Parents reach the app through /p/:kidId — lock them to that kid.
   if (req.authType === 'parent' && req.kidViewId !== req.params.kidId) {
     const err = new Error('אין הרשאה להסכם של ילד אחר');
     err.status = 403;
@@ -332,7 +485,7 @@ function assertKidAccess(req) {
 }
 
 router.get('/kids/:kidId/agreement', agreementHandler(async (req, res) => {
-  assertKidAccess(req);
+  assertAgreementAccess(req);
   const agreement = await therapyService.getAgreement(req.params.kidId);
   // Parents should not see a draft the admin is still writing.
   if (agreement && req.authType === 'parent' && agreement.status !== 'active') {
@@ -348,43 +501,115 @@ router.put('/kids/:kidId/agreement', requireAdmin, agreementHandler(async (req, 
 
 router.delete('/kids/:kidId/agreement', requireAdmin, agreementHandler(async (req, res) => {
   await therapyService.deleteAgreement(req.params.kidId);
-  res.status(204).send();
+  res.json({ deleted: true }); // a body, not 204: the client always parses JSON
+}));
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Email the agreement to the kid's parents: each one with an email on record
+ * who hasn't signed yet gets their family's link to read and sign. Admin only,
+ * and only for an agreement already sent for signing.
+ */
+router.post('/kids/:kidId/agreement/email-parents', requireAdmin, agreementHandler(async (req, res) => {
+  const { kidId } = req.params;
+  const fail = (status, message) => { const err = new Error(message); err.status = status; throw err; };
+
+  const kid = await therapyService.getKidById(kidId);
+  if (!kid) fail(404, 'הילד לא נמצא');
+  if (!req.isSuperAdmin && kid.adminId && kid.adminId !== req.adminId) fail(403, 'אין הרשאה לילד זה');
+  const agreement = await therapyService.getAgreement(kidId);
+  if (!agreement) fail(404, 'לא נמצא הסכם');
+  if (agreement.status !== 'active') fail(409, 'יש לשלוח את ההסכם לחתימה לפני השליחה במייל');
+  if (!emailService.isConfigured()) fail(503, 'שליחת מיילים אינה מוגדרת בשרת');
+
+  const parents = await therapyService.getParentsForKid(kidId);
+  const only = Array.isArray(req.body && req.body.parentIds) ? new Set(req.body.parentIds) : null;
+  // Replies go to the manager, not to the sending mailbox
+  const manager = await therapyService.getPractitionerById(req.adminId).catch(() => null);
+  const replyTo = manager && EMAIL_RE.test(manager.email || '') ? manager.email : undefined;
+  const senderName = req.adminName || (manager && manager.name) || '';
+
+  const results = [];
+  const sentIds = [];
+  for (const p of parents) {
+    if (only && !only.has(p.id)) continue;
+    const base = { parentId: p.id, name: p.name || '' };
+    if ((agreement.signatures || {})[`parent:${p.id}`]) { results.push({ ...base, status: 'signed' }); continue; }
+    const email = (p.email || '').trim();
+    if (!EMAIL_RE.test(email)) { results.push({ ...base, status: 'no-email' }); continue; }
+    const mail = emailService.buildAgreementInvite({ kidId, kidName: kid.name, parentName: p.name, senderName });
+    const ok = await emailService.sendMail({ to: email, subject: mail.subject, text: mail.text, html: mail.html, replyTo });
+    results.push({ ...base, status: ok ? 'sent' : 'failed' });
+    if (ok) sentIds.push(p.id);
+  }
+  await therapyService.markAgreementEmailed(kidId, sentIds);
+  res.json({ results, agreement: await therapyService.getAgreement(kidId) });
 }));
 
 router.post('/kids/:kidId/agreement/sign', agreementHandler(async (req, res) => {
-  assertKidAccess(req);
+  assertAgreementAccess(req);
   const { kidId } = req.params;
-  const { signatureImage, parentId } = req.body || {};
+  const { signatureImage, parentId, newParentName } = req.body || {};
 
   let signer;
   if (req.authType === 'admin') {
     // The role is filled in by the service from the agreement itself.
     signer = { type: 'admin', id: req.adminId, name: req.adminName || '' };
   } else if (req.authType === 'parent') {
-    if (!parentId) {
-      const err = new Error('יש לבחור מי מההורים חותם');
-      err.status = 400;
-      throw err;
-    }
+    const fail = (status, message) => { const err = new Error(message); err.status = status; throw err; };
     // The parent must be one of this kid's registered parents — that is what
     // ties a signature slot to a real person in the centre's records.
     const parents = await therapyService.getParentsForKid(kidId);
-    const parent = parents.find(p => p.id === parentId);
-    if (!parent) {
-      const err = new Error('ההורה לא רשום אצל הילד');
-      err.status = 403;
-      throw err;
+    let parent;
+    if (parentId) {
+      parent = parents.find(p => p.id === parentId);
+      if (!parent) fail(403, 'ההורה לא רשום אצל הילד');
+    } else if (typeof newParentName === 'string') {
+      // A parent reached through a shared link who isn't on record yet: they
+      // become a registered parent by signing with their full name. Capped, so
+      // a forwarded link can't be used to pile up parents.
+      const name = newParentName.trim().replace(/\s+/g, ' ').slice(0, 60);
+      if (name.length < 2) fail(400, 'יש להקליד שם מלא');
+      if (parents.length >= 4) fail(400, 'לא ניתן להוסיף הורים נוספים — פנו למרכז');
+      const existing = parents.find(p => (p.name || '').trim() === name);
+      parent = existing || await therapyService.addParentToKid(kidId, { name });
+    } else {
+      fail(400, 'יש לבחור מי מההורים חותם');
     }
     signer = { type: 'parent', id: parent.id, name: parent.name, role: 'הורה' };
   } else {
-    const err = new Error('רק הורה או מנהלת המרכז יכולים לחתום');
+    const err = new Error('רק הורה או מנתח/ת ההתנהגות יכולים לחתום');
     err.status = 403;
     throw err;
   }
 
   const agreement = await therapyService.signAgreement(kidId, signer, signatureImage);
+  if (signer.type === 'parent') await notifyAgreementSigned(kidId, signer.name, agreement);
   res.json(agreement);
 }));
+
+/** Mail the centre's manager when a parent signs. Best-effort: never fails the signature. */
+async function notifyAgreementSigned(kidId, signerName, agreement) {
+  try {
+    const kid = await therapyService.getKidById(kidId);
+    if (!kid) return;
+    const to = emailService.formNotifyRecipient(kid.adminId);
+    if (!to) {
+      console.log('[email] agreement-signed notification skipped: no recipient for centre', kid.adminId || '(none)');
+      return;
+    }
+    const parents = await therapyService.getParentsForKid(kidId);
+    const signed = Object.keys((agreement && agreement.signatures) || {});
+    const fullySigned = signed.length >= 1 + parents.length;
+    await emailService.sendMail({
+      to,
+      ...emailService.buildAgreementSignedNotification({ kidId, kidName: kid.name, signerName, fullySigned }),
+    });
+  } catch (err) {
+    console.error('[email] agreement-signed notification failed:', err.message);
+  }
+}
 
 // ==================== GOALS ====================
 
@@ -720,8 +945,47 @@ router.get('/sessions/:sessionId/form', asyncHandler(async (req, res) => {
   res.json(form);
 }));
 
+/**
+ * Mail the centre's manager that a session form was filed. Best-effort: any
+ * failure is logged and swallowed, so it can never cost a therapist their form.
+ */
+async function notifyFormSubmitted(form) {
+  try {
+    const kid = await therapyService.getKidById(form.kidId);
+    if (!kid) return;
+    // Go by whose form it is, not who is logged in: the manager often files a
+    // form on a therapist's behalf, and that is still news. Only a form recorded
+    // as the manager's own session is skipped.
+    if (form.practitionerId && form.practitionerId === kid.adminId) {
+      console.log('[email] form notification skipped: own form of the manager');
+      return;
+    }
+    const to = emailService.formNotifyRecipient(kid.adminId);
+    if (!to) {
+      console.log('[email] form notification skipped: no recipient for centre', kid.adminId || '(none)');
+      return;
+    }
+    const practitioner = form.practitionerId
+      ? await therapyService.getPractitionerById(form.practitionerId)
+      : null;
+    await emailService.sendMail({
+      to,
+      ...emailService.buildFormNotification({
+        kidId: form.kidId,
+        kidName: kid.name,
+        practitionerName: practitioner && practitioner.name,
+        sessionDate: form.sessionDate,
+        formId: form.id,
+      }),
+    });
+  } catch (err) {
+    console.error('[email] form notification failed:', err.message);
+  }
+}
+
 router.post('/forms', asyncHandler(async (req, res) => {
   const form = await therapyService.submitForm(req.body);
+  await notifyFormSubmitted(form);
   res.status(201).json(form);
 }));
 

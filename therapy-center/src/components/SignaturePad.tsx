@@ -63,9 +63,18 @@ export default function SignaturePad({ onChange, initialImage, disabled }: Signa
     };
   };
 
+  // Export at the logical size, not the screen's pixel density: a sharp phone
+  // screen would otherwise produce an image several times larger for no gain.
   const emit = () => {
     const canvas = canvasRef.current;
-    if (canvas) onChange(canvas.toDataURL('image/png'));
+    if (!canvas) return;
+    const out = document.createElement('canvas');
+    out.width = LOGICAL_WIDTH;
+    out.height = LOGICAL_HEIGHT;
+    const ctx = out.getContext('2d');
+    if (!ctx) { onChange(canvas.toDataURL('image/png')); return; }
+    ctx.drawImage(canvas, 0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    onChange(out.toDataURL('image/png'));
   };
 
   const handleDown = (e: React.PointerEvent<HTMLCanvasElement>) => {

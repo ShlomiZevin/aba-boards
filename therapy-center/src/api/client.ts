@@ -30,6 +30,9 @@ import type {
   KidAgenda,
   AgendaDay,
   AgendaDayPlan,
+  DailyReport,
+  DailyReportSummary,
+  ReportSection,
 } from '../types';
 
 // Auto-detect: dev uses Vite proxy, production uses Cloud Run
@@ -144,6 +147,28 @@ export const agendaApi = {
     }),
 };
 
+// Daily report (דיווח יומי)
+export const dailyReportsApi = {
+  list: (kidId: string) => fetchApi<DailyReportSummary[]>(`/kids/${kidId}/daily-reports`),
+  get: (kidId: string, date: string) => fetchApi<DailyReport | null>(`/kids/${kidId}/daily-reports/${date}`),
+  saveMeta: (kidId: string, date: string, reporter: string) =>
+    fetchApi<DailyReport>(`/kids/${kidId}/daily-reports/${date}`, {
+      method: 'PUT',
+      body: JSON.stringify({ reporter }),
+    }),
+  remove: (kidId: string, date: string) =>
+    fetchApi<{ deleted: boolean }>(`/kids/${kidId}/daily-reports/${date}`, { method: 'DELETE' }),
+  saveItem: (kidId: string, date: string, section: ReportSection, item: { id: string }) =>
+    fetchApi<DailyReport>(`/kids/${kidId}/daily-reports/${date}/${section}/${item.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(item),
+    }),
+  removeItem: (kidId: string, date: string, section: ReportSection, itemId: string) =>
+    fetchApi<DailyReport | null>(`/kids/${kidId}/daily-reports/${date}/${section}/${itemId}`, {
+      method: 'DELETE',
+    }),
+};
+
 // Practitioners API
 export const practitionersApi = {
   getForKid: (kidId: string) =>
@@ -205,13 +230,23 @@ export const agreementApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  sign: (kidId: string, data: { signatureImage: string; parentId?: string }) =>
+  /** `newParentName` — a parent from a shared link who isn't on record yet signs and is registered. */
+  sign: (kidId: string, data: { signatureImage: string; parentId?: string; newParentName?: string }) =>
     fetchApi<Agreement>(`/kids/${kidId}/agreement/sign`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   delete: (kidId: string) =>
-    fetchApi<void>(`/kids/${kidId}/agreement`, { method: 'DELETE' }),
+    fetchApi<{ deleted: boolean }>(`/kids/${kidId}/agreement`, { method: 'DELETE' }),
+  /** Email each unsigned parent (with an email on record) their link to sign. */
+  emailParents: (kidId: string, parentIds?: string[]) =>
+    fetchApi<{
+      results: { parentId: string; name: string; status: 'sent' | 'failed' | 'no-email' | 'signed' }[];
+      agreement: Agreement;
+    }>(`/kids/${kidId}/agreement/email-parents`, {
+      method: 'POST',
+      body: JSON.stringify(parentIds ? { parentIds } : {}),
+    }),
 };
 
 // Goals API
@@ -732,6 +767,7 @@ export interface ChatResponse {
   boardUpdated?: boolean;
   summaryCreated?: boolean;
   toolsUsed?: string[];
+  conversationId?: string | null;
 }
 
 export interface ChatStatusEvent {
@@ -743,7 +779,47 @@ export interface ChatStatusEvent {
   summaryCreated?: boolean;
   toolsUsed?: string[];
   error?: string;
+  conversationId?: string | null;
 }
+
+export interface ChatHistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  at?: string;
+  toolsUsed?: string[];
+  boardUpdated?: boolean;
+  summaryCreated?: boolean;
+  images?: string[];
+  imageModelLabel?: string;
+}
+
+export interface ChatConversationSummary {
+  id: string;
+  title: string;
+  ownerType: 'admin' | 'therapist' | 'parent';
+  ownerName: string;
+  ownerRole: string;
+  kidId: string | null;
+  kidName: string | null;
+  messageCount: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+  expiresAt: string | null;
+  isMine: boolean;
+}
+
+export interface ChatConversation extends ChatConversationSummary {
+  messages: ChatHistoryMessage[];
+}
+
+// Chat history — 14 days from the last message. Own conversations only, except
+// the super admin, who may list (scope 'all') and read everyone's.
+export const chatHistoryApi = {
+  list: (scope: 'mine' | 'all' = 'mine') =>
+    fetchApi<ChatConversationSummary[]>(`/chat/conversations${scope === 'all' ? '?scope=all' : ''}`),
+  get: (id: string) => fetchApi<ChatConversation>(`/chat/conversations/${encodeURIComponent(id)}`),
+  remove: (id: string) => fetchApi<{ success: boolean }>(`/chat/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+};
 
 export const chatApi = {
   send: (messages: { role: string; content: string }[], kidId?: string | null) =>
@@ -765,7 +841,9 @@ export const chatApi = {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      let msg = `HTTP ${response.status}`;
+      try { msg = (await response.json()).error || msg; } catch { /* not JSON */ }
+      throw new Error(msg);
     }
 
     const reader = response.body!.getReader();
@@ -792,6 +870,7 @@ export const chatApi = {
               boardUpdated: event.boardUpdated,
               summaryCreated: event.summaryCreated,
               toolsUsed: event.toolsUsed,
+              conversationId: event.conversationId,
             };
           }
           if (event.type === 'error') {
@@ -808,6 +887,46 @@ export const chatApi = {
   },
 };
 
+// Build models (Lego / magnet guides from reports/nevo-models) — super admin only.
+// Dev: served live by Express; prod: copied into Firebase Hosting by deploy.js.
+export const MODELS_BASE = import.meta.env.DEV ? '/api/nevo-models' : '/build-models-n7q4';
+
+export interface BuildModel {
+  id: string;
+  title: string;
+  type: 'lego' | 'magnet';
+  kid: string;
+  pieces: number;
+  steps: number;
+  minutes: number;
+  difficulty: string;
+  thumb: string;
+  concept: string;
+  path: string;
+  createdAt: string;
+}
+
+export interface ModelBuild {
+  builtAt: string;
+  note: string;
+  by?: string;
+  updatedAt?: string;
+}
+
+export const modelsApi = {
+  getManifest: async (): Promise<BuildModel[]> => {
+    const res = await fetch(`${MODELS_BASE}/models-manifest.json`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.models || [];
+  },
+  getBuilds: () => fetchApi<Record<string, ModelBuild>>('/model-builds'),
+  markBuilt: (modelId: string, body: { builtAt: string; note: string }) =>
+    fetchApi<ModelBuild>(`/model-builds/${encodeURIComponent(modelId)}`, { method: 'PUT', body: JSON.stringify(body) }),
+  unmarkBuilt: (modelId: string) =>
+    fetchApi<{ success: boolean }>(`/model-builds/${encodeURIComponent(modelId)}`, { method: 'DELETE' }),
+};
+
 // AI Image generation (Leonardo) — text-to-image, 9:16 tall, 2 images per request
 export type ImageModel = 'gpt-image-2' | 'nano-banana-2' | 'nano-banana-pro';
 
@@ -819,6 +938,7 @@ export interface GenerateImageResponse {
   modelLabel: string;
   width: number;
   height: number;
+  conversationId?: string | null;
 }
 
 export const IMAGE_MODELS: { value: ImageModel; label: string }[] = [
@@ -828,9 +948,9 @@ export const IMAGE_MODELS: { value: ImageModel; label: string }[] = [
 ];
 
 export const imagesApi = {
-  generate: (prompt: string, model: ImageModel) =>
+  generate: (prompt: string, model: ImageModel, history?: { conversationId?: string | null; kidId?: string | null }) =>
     fetchApi<GenerateImageResponse>('/generate-image', {
       method: 'POST',
-      body: JSON.stringify({ prompt, model }),
+      body: JSON.stringify({ prompt, model, ...history }),
     }),
 };
