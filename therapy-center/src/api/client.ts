@@ -906,13 +906,6 @@ export interface BuildModel {
   createdAt: string;
 }
 
-export interface ModelBuild {
-  builtAt: string;
-  note: string;
-  by?: string;
-  updatedAt?: string;
-}
-
 export const modelsApi = {
   getManifest: async (): Promise<BuildModel[]> => {
     const res = await fetch(`${MODELS_BASE}/models-manifest.json`, { cache: 'no-store' });
@@ -920,11 +913,6 @@ export const modelsApi = {
     const data = await res.json();
     return Array.isArray(data) ? data : data.models || [];
   },
-  getBuilds: () => fetchApi<Record<string, ModelBuild>>('/model-builds'),
-  markBuilt: (modelId: string, body: { builtAt: string; note: string }) =>
-    fetchApi<ModelBuild>(`/model-builds/${encodeURIComponent(modelId)}`, { method: 'PUT', body: JSON.stringify(body) }),
-  unmarkBuilt: (modelId: string) =>
-    fetchApi<{ success: boolean }>(`/model-builds/${encodeURIComponent(modelId)}`, { method: 'DELETE' }),
 };
 
 // AI Image generation (Leonardo) — text-to-image, 9:16 tall, 2 images per request

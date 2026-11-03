@@ -494,8 +494,7 @@ Step-by-step Lego / magnet build guides, produced by a separate Claude session (
 model pages** — they are regenerated from `_src`.
 
 - Page: `/models` (`pages/BuildModels.tsx`), sidebar entry inside the `isSuperAdmin` block. Grid from the
-  manifest, opens a model full-screen in a new tab (made for the child's tablet), "mark as built" with
-  date + note in `modelBuilds/{modelId}` (`GET/PUT/DELETE /api/therapy/model-builds[/:id]`, `requireSuperAdmin`).
+  manifest (filter Lego / magnets), opens a model full-screen in a new tab (made for the child's tablet).
 - `MODELS_BASE` in `api/client.ts`: dev → `/api/nevo-models` (Express serves the folder live, blocks
   `_src`); prod → `/build-models-n7q4` on Firebase Hosting, copied by `deploy.js` on every deploy.
   **New models reach production only with a hosting deploy.** The URLs are public but unlisted.

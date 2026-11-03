@@ -140,34 +140,6 @@ router.post('/generate-image', requireSuperAdmin, asyncHandler(async (req, res) 
   }
 }));
 
-// ==================== BUILD MODELS (Lego / magnets) — super admin only ====================
-
-const { getDb } = require('../services/firebase');
-
-router.get('/model-builds', requireSuperAdmin, asyncHandler(async (_req, res) => {
-  const snap = await getDb().collection('modelBuilds').get();
-  const builds = {};
-  snap.forEach(d => { builds[d.id] = d.data(); });
-  res.json(builds);
-}));
-
-router.put('/model-builds/:modelId', requireSuperAdmin, asyncHandler(async (req, res) => {
-  const { builtAt, note } = req.body || {};
-  const data = {
-    builtAt: builtAt || new Date().toISOString().slice(0, 10),
-    note: String(note || '').slice(0, 2000),
-    by: req.adminName || req.adminId,
-    updatedAt: new Date().toISOString(),
-  };
-  await getDb().collection('modelBuilds').doc(req.params.modelId).set(data);
-  res.json(data);
-}));
-
-router.delete('/model-builds/:modelId', requireSuperAdmin, asyncHandler(async (req, res) => {
-  await getDb().collection('modelBuilds').doc(req.params.modelId).delete();
-  res.json({ success: true });
-}));
-
 // ==================== KIDS ====================
 
 router.get('/kids/all-grouped', requireSuperAdmin, asyncHandler(async (req, res) => {
