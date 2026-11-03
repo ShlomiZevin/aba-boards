@@ -105,5 +105,17 @@ service cloud.firestore {
     match /formTokens/{tokenId} {
       allow read, write: if true;
     }
+
+    // Design-concept review comments (startdoing.co.il/design-concepts-r8m2). Add-only.
+    match /designComments/{commentId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['concept', 'screen', 'name', 'text', 'createdAt'])
+        && request.resource.data.concept in ['c1', 'c2', 'c3', 'c4', 'general']
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000
+        && request.resource.data.screen is string && request.resource.data.screen.size() <= 40
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
   }
 }

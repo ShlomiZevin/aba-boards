@@ -1,0 +1,2168 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta property="og:title" content="Doing — כיווני עיצוב">
+<meta property="og:description" content="ארבעה כיוונים לעיצוב החדש של מרכז הטיפול">
+<meta property="og:image" content="https://startdoing.co.il/design-concepts-r8m2/img/c1-flare.jpg">
+<link rel="icon" href="img/logo.png">
+<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Doing — כיווני עיצוב</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Noto+Sans+Hebrew:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&family=Assistant:wght@400;500;600;700;800&family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600;700&family=Rubik:wght@400;500;600;700;800&family=Secular+One&family=Heebo:wght@400;500;600;700;800&family=Playpen+Sans+Hebrew:wght@400;500;600&display=swap">
+<style>
+/* Layout: a quiet lavender gallery wall. Overview strip, shared system, then four concept "rooms", each = thesis + swatches + coded phones + model renders. */
+:root{
+  --bg:#F6F3FB; --surface:#FFFFFF; --ink:#211A33; --muted:#6C6482; --line:#E4DEEF;
+  --accent:#6E4FE0; --accent-soft:#EEE8FF; --phone-ring:#1B1626;
+  --f-display:'Frank Ruhl Libre', 'David Libre', Georgia, serif;
+  --f-body:'Noto Sans Hebrew', 'Heebo', 'Segoe UI', Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15111F; --surface:#1F1A2C; --ink:#F1EDF8; --muted:#A79FBD; --line:#332C45;
+  --accent:#B39DFF; --accent-soft:#2B2340; --phone-ring:#000; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15111F; --surface:#1F1A2C; --ink:#F1EDF8; --muted:#A79FBD; --line:#332C45;
+  --accent:#B39DFF; --accent-soft:#2B2340; --phone-ring:#000; color-scheme:dark}
+
+html{direction:rtl}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.wrap{max-width:1240px;margin:0 auto;padding-block:28px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+p{margin:0}
+.eyebrow{font-size:13px;letter-spacing:.06em;color:var(--muted);font-weight:600}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:8px}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:18px;padding-top:12px}
+.hero .logo{height:64px;width:auto;align-self:flex-start;background:#fff;border-radius:18px;padding:10px 16px}
+.hero h1{font-size:clamp(34px,6vw,64px);font-weight:900;letter-spacing:-.01em}
+.hero p.lead{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:62ch}
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.facts span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14px}
+
+/* overview */
+.overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.ov{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:10px 10px 16px;transition:transform .2s}
+.ov:hover{transform:translateY(-3px)}
+.ov img{border-radius:14px;aspect-ratio:3/2;object-fit:cover;width:100%}
+.ov b{font-family:var(--f-display);font-size:22px;padding-inline:6px}
+.ov small{color:var(--muted);font-size:14px;padding-inline:6px;line-height:1.45}
+.ov .num{font-size:12px;color:var(--accent);font-weight:700;padding-inline:6px;letter-spacing:.05em}
+
+/* sticky concept nav */
+.cnav{position:sticky;top:env(safe-area-inset-top, 0px);z-index:20;display:flex;gap:6px;overflow-x:auto;padding:10px 0;background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top, 0px);z-index:30;background:var(--bg)}
+.cnav a{flex:none;text-decoration:none;color:var(--ink);font-weight:600;font-size:14px;padding:8px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.cnav a:hover{border-color:var(--accent);color:var(--accent)}
+
+/* system section */
+.system{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:40px;align-items:start}
+.system h2{font-size:clamp(28px,4vw,40px)}
+.system .intro{display:flex;flex-direction:column;gap:12px}
+.system .intro p{color:var(--muted)}
+.rules{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.rules li{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.rules b{font-size:16px}
+.rules span{color:var(--muted);font-size:14.5px;line-height:1.5}
+
+/* nav diagram */
+.navmap{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.navcol{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.navcol h3{font-size:20px}
+.navcol p{font-size:14px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font-size:13.5px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--ink)}
+.chips span.k{background:var(--accent);color:var(--surface);font-weight:600}
+
+/* concept rooms */
+.concept{display:flex;flex-direction:column;gap:28px;scroll-margin-top:70px}
+.chead{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:32px;align-items:end}
+.chead .t{display:flex;flex-direction:column;gap:10px}
+.chead h2{font-size:clamp(36px,6vw,60px);font-weight:900}
+.chead h2 em{font-style:normal;font-family:var(--f-body);font-weight:500;font-size:.4em;color:var(--muted);margin-inline-start:10px;letter-spacing:.02em}
+.chead .thesis{font-size:18px;max-width:58ch}
+.spec{display:flex;flex-direction:column;gap:14px}
+.sw{display:flex;gap:6px;flex-wrap:wrap}
+.sw i{display:flex;flex-direction:column;justify-content:flex-end;width:62px;height:62px;border-radius:14px;font-style:normal;font-size:10.5px;padding:6px;direction:ltr;font-family:ui-monospace,Consolas,monospace;border:1px solid rgba(0,0,0,.06)}
+.type{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.type .big{font-size:30px;line-height:1.2}
+.type small{color:var(--muted);font-size:13px}
+.sig{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sig li{border-top:2px solid var(--accent);padding-top:10px;font-size:15px;line-height:1.5}
+.sig li b{display:block;margin-bottom:2px}
+.label{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.label h3{font-size:22px}
+.label span{color:var(--muted);font-size:14px}
+
+/* phones */
+.rail{overflow-x:auto;padding:8px 4px 20px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.phones{display:flex;gap:28px;width:max-content;margin-inline:auto}
+.phone{margin:0;display:flex;flex-direction:column;align-items:center;gap:12px;scroll-snap-align:center}
+.phone .screen{width:360px;height:760px;border-radius:44px;overflow:hidden;position:relative;display:flex;flex-direction:column;
+  box-shadow:0 0 0 10px var(--phone-ring),0 0 0 11px #3a3348,0 30px 60px -20px rgba(40,20,80,.35);margin:11px;isolation:isolate;text-align:right}
+.phone figcaption{font-size:14px;color:var(--muted);font-weight:600}
+.pending{width:100%;padding:40px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:22px}
+
+/* renders */
+.renders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.render{margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+.render button{all:unset;cursor:zoom-in;display:block;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+.render button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.render img{display:block;width:100%;height:auto}
+.render figcaption{font-size:13.5px;color:var(--muted)}
+.render figcaption b{color:var(--ink);font-weight:600}
+.render.wide{grid-column:1/-1}
+
+/* pages table */
+.pages h2{font-size:clamp(28px,4vw,40px)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:18px;background:var(--surface);margin-top:18px}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:14.5px}
+th,td{text-align:right;padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.03em;background:var(--accent-soft)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;white-space:nowrap}
+
+.pick{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:clamp(20px,4vw,40px);display:flex;flex-direction:column;gap:14px}
+.pick h2{font-size:clamp(28px,4vw,40px)}
+.pick p{max-width:70ch}
+.pick ol{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:6px;max-width:70ch}
+
+/* lightbox */
+dialog.lb{border:0;padding:0;background:transparent;max-width:96vw;max-height:94vh}
+dialog.lb::backdrop{background:rgba(12,8,20,.86)}
+dialog.lb img{display:block;max-width:96vw;max-height:90vh;border-radius:14px}
+dialog.lb button{position:absolute;top:10px;left:10px;width:44px;height:44px;border-radius:50%;border:0;background:#fff;color:#211A33;font-size:22px;cursor:pointer}
+
+@media (max-width:980px){
+  .overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .system,.chead{grid-template-columns:minmax(0,1fr)}
+  .navmap{grid-template-columns:minmax(0,1fr)}
+  .sig{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:640px){
+  .wrap{gap:56px}
+  .rules{grid-template-columns:minmax(0,1fr)}
+  .renders{grid-template-columns:minmax(0,1fr)}
+  .overview{gap:10px}
+  .ov b{font-size:18px}
+  .phones{gap:18px}
+}
+@media (max-width:420px){ .phone .screen{zoom:.86} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <img class="logo" src="img/logo.png" alt="Doing — Being. Doing. Playing.">
+  <span class="eyebrow">מרכז הטיפול · שפה עיצובית חדשה · נובמבר 2026</span>
+  <h1>ארבעה כיוונים לאפליקציה של מיכל</h1>
+  <p class="lead">הפונקציונליות נשארת כמו שהיא. משתנה המראה, ההיררכיה והניווט, כמערכת אחת לכל המסכים. מתחילים מהמובייל, כי שם עובדים בשטח. הלוגו, השם והסגול נשארים בכל הכיוונים.</p>
+  <div class="facts"><span>מובייל קודם</span><span>עברית, מימין לשמאל</span><span>4 מסכים מקודדים לכל כיוון</span><span>הדמיות: gpt-image-2.5 Flare + Sunburst</span></div>
+</header>
+
+<nav class="overview" aria-label="הכיוונים">
+  <a class="ov" href="#c1"><img src="img/c1-flare.jpg" alt=""><span class="num">כיוון 1</span><b>חדר משחקים</b><small>שמח ועגול, כל ילד וכל פעולה בצבע מהלוגו</small></a>
+  <a class="ov" href="#c2"><img src="img/c2-flare.jpg" alt=""><span class="num">כיוון 2</span><b>לילך שקט</b><small>כלי מקצועי ורגוע, הטיפוגרפיה עושה את העבודה</small></a>
+  <a class="ov" href="#c3"><img src="img/c3-flare.jpg" alt=""><span class="num">כיוון 3</span><b>שקיעה סגולה</b><small>גרדיאנטים רכים וזכוכית, חוויה עוטפת</small></a>
+  <a class="ov" href="#c4"><img src="img/c4-flare.jpg" alt=""><span class="num">כיוון 4</span><b>מחברת שטח</b><small>נייר, מרקר ומדבקות, פעולה אחת גדולה בכל מסך</small></a>
+</nav>
+
+<section class="system" aria-labelledby="sys-h">
+  <div class="intro">
+    <span class="eyebrow">משותף לכל הכיוונים</span>
+    <h2 id="sys-h">מה משתנה בכל מקרה</h2>
+    <p>ארבעת הכיוונים נבדלים באופי. השלד שמתחת זהה, והוא בעצמו שדרוג גדול לעבודה מהשטח.</p>
+  </div>
+  <ul class="rules">
+    <li><b>ניווט תחתון במקום המבורגר</b><span>חמישה יעדים ביד אחת: היום, ילדים, פעולה מהירה, יומן, עוד. כל השאר נמצא ב"עוד".</span></li>
+    <li><b>מסך "היום" כבית</b><span>הטיפולים של היום לפי שעה, מה קורה עכשיו ומה מחכה לטופס. רשימת הילדים עוברת לטאב משלה.</span></li>
+    <li><b>כפתור + אחד לכל הפעולות</b><span>מלא טופס, תזמן פגישה, דיווח יומי, הודעה. בלחיצה אחת מכל מסך.</span></li>
+    <li><b>אייקונים במקום אימוג׳י</b><span>סט אייקונים אחד בקו אחיד. נראה מקצועי ונראה אותו דבר בכל טלפון.</span></li>
+    <li><b>צבעי תחומים מהלוגו</b><span>שפה ותקשורת, מוטוריקה, משחק וחברה, ADL. כל תחום מקבל גוון פסטל מהלוגו, באופן עקבי בכל גרף ותגית.</span></li>
+    <li><b>מערכת טוקנים אחת</b><span>צבע, גופן, רדיוס וריווח כמשתני CSS. מחליפים את 13,700 שורות ה־CSS בבסיס אחד שקל לשנות.</span></li>
+  </ul>
+  <div class="navmap">
+    <div class="navcol"><h3>ניווט ראשי · מובייל</h3><p>סרגל תחתון קבוע. ה־+ במרכז פותח גיליון פעולות.</p><div class="chips"><span class="k">היום</span><span class="k">ילדים</span><span class="k">+</span><span class="k">יומן</span><span class="k">עוד</span></div></div>
+    <div class="navcol"><h3>תחת "עוד"</h3><p>יעדים שנכנסים אליהם פחות מהשטח.</p><div class="chips"><span>טפסים</span><span>מרכז הודעות</span><span>צ׳אט AI</span><span>אנשי צוות</span><span>שעות צוות</span><span>מרכז הידע</span><span>התקנת אפליקציה</span><span>מנוי והגדרות</span></div></div>
+    <div class="navcol"><h3>כרטיס ילד</h3><p>טאבים עליונים נגללים, אותו סדר כמו היום. הורים רואים רק את מה שמותר להם.</p><div class="chips"><span class="k">סקירה</span><span>טיפולים</span><span>התקדמות</span><span>הודעות</span><span>איסוף נתונים</span><span>תוכניות למידה</span><span>שעות צוות</span></div></div>
+  </div>
+</section>
+
+<nav class="cnav" aria-label="קפיצה לכיוון">
+  <a href="#c1">1 · חדר משחקים</a><a href="#c2">2 · לילך שקט</a><a href="#c3">3 · שקיעה סגולה</a><a href="#c4">4 · מחברת שטח</a><a href="#pages">כל המסכים</a><a href="#pick">ההמלצה</a>
+</nav>
+
+
+<section class="concept" id="c1" aria-labelledby="c1-h">
+  <div class="chead">
+    <div class="t">
+      <span class="eyebrow">כיוון 1</span>
+      <h2 id="c1-h">חדר משחקים<em>Playroom Pastel</em></h2>
+      <p class="thesis">האפליקציה נראית כמו הלוגו: אותיות עגולות, צבעי פסטל ושמחה. כל ילד וכל פעולה מקבלים צבע קבוע מהלוגו, אז בשטח מזהים לפי צבע עוד לפני שקוראים.</p>
+    </div>
+    <div class="spec">
+      <div class="sw" aria-label="פלטה"><i style="background:#FBF8FF;color:#2E2547">#FBF8FF</i><i style="background:#8B6CF0;color:#fff">#8B6CF0</i><i style="background:#2E2547;color:#fff">#2E2547</i><i style="background:#9CC5EC;color:#2E2547">#9CC5EC</i><i style="background:#9EDBAE;color:#2E2547">#9EDBAE</i><i style="background:#F8DC86;color:#2E2547">#F8DC86</i><i style="background:#F5B3CC;color:#2E2547">#F5B3CC</i><i style="background:#F7A68F;color:#2E2547">#F7A68F</i></div>
+      <div class="type"><span class="big" style="font-family:'Fredoka', 'Assistant', sans-serif">נגה התקדמה היום 85%</span><small>Fredoka לכותרות · Assistant לטקסט</small></div>
+    </div>
+  </div>
+  <ul class="sig"><li><b>אריחים צבעוניים</b>פעולות מהירות, ילדים ותחומים, כל אחד בגוון מהלוגו.</li><li><b>+ צף במרכז</b>כפתור סגול גדול בסרגל התחתון. טופס, פגישה ודיווח בלחיצה.</li><li><b>הטיפולים כקרוסלה</b>כרטיסים עבים שגוללים לצד. מה שקורה עכשיו מסומן בתג.</li></ul>
+  <div class="label"><h3>ארבעה מסכים, מקודדים</h3><span>עברית אמיתית בגופנים אמיתיים. בטלפון גוללים לצד.</span></div>
+  <div class="rail"><style>
+.c1 .app{position:absolute;inset:0;background:#FBF8FF;color:#2E2547;font-family:'Assistant','Heebo',sans-serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column;overflow:hidden}
+.c1 .app *{box-sizing:border-box}
+.c1 .defs{position:absolute;width:0;height:0;overflow:hidden}
+.c1 svg.i{width:22px;height:22px;flex:none;display:block}
+.c1 .num{font-variant-numeric:tabular-nums}
+.c1 .fr{font-family:'Fredoka','Rubik',sans-serif;font-weight:600}
+/* status bar */
+.c1 .sb{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-family:'Assistant',sans-serif;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;color:#2E2547}
+.c1 .sb .r{display:flex;gap:6px;align-items:center}
+.c1 .sb .sig{display:flex;gap:2px;align-items:flex-end;height:11px}
+.c1 .sb .sig i{display:block;width:3px;background:#2E2547;border-radius:1px}
+.c1 .sb .bat{width:24px;height:12px;border:1.5px solid #2E2547;border-radius:4px;padding:1.5px;position:relative}
+.c1 .sb .bat::after{content:"";position:absolute;right:-4px;top:3px;width:2px;height:4px;border-radius:0 1px 1px 0;background:#2E2547}
+.c1 .sb .bat b{display:block;height:100%;width:78%;background:#2E2547;border-radius:1.5px}
+.c1 .body{flex:1;padding:4px 20px 0;display:flex;flex-direction:column;min-height:0}
+.c1 .body>*{flex-shrink:0}
+/* generic */
+.c1 .card{background:#fff;border-radius:24px;box-shadow:0 8px 24px rgba(139,108,240,.10),0 1px 2px rgba(139,108,240,.08)}
+.c1 .sec{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 10px}
+.c1 .sec h3{margin:0;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:18px;display:flex;align-items:center;gap:8px}
+.c1 .sec h3 svg{color:#8B6CF0}
+.c1 .sec a{font-size:14px;font-weight:700;color:#6F4FE0;text-decoration:none}
+.c1 .iconbtn{width:44px;height:44px;border-radius:16px;background:#fff;display:grid;place-items:center;color:#2E2547;box-shadow:0 4px 14px rgba(139,108,240,.12);position:relative;flex:none}
+.c1 .iconbtn .dot{position:absolute;top:10px;left:11px;width:9px;height:9px;border-radius:50%;background:#F7A68F;border:2px solid #fff}
+.c1 .av{border-radius:50%;display:grid;place-items:center;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;flex:none}
+.c1 .sky{--t:#E3F0FB;--m:#9CC5EC;--d:#2F6CA8}
+.c1 .mint{--t:#E4F6E9;--m:#9EDBAE;--d:#2C7D47}
+.c1 .butter{--t:#FFF5D6;--m:#F8DC86;--d:#8F6A00}
+.c1 .pink{--t:#FDE7F0;--m:#F5B3CC;--d:#B83C71}
+.c1 .coral{--t:#FFE7E0;--m:#F7A68F;--d:#B44D33}
+.c1 .lav{--t:#EFEAFE;--m:#C3B3F8;--d:#6F4FE0}
+.c1 .av{background:var(--m);color:var(--d)}
+.c1 .tag{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:11px;background:var(--t);color:var(--d);font-size:12px;font-weight:700;white-space:nowrap}
+.c1 .tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--m)}
+/* nav */
+.c1 .nav{position:absolute;left:0;right:0;bottom:0;height:88px;background:#fff;border-radius:28px 28px 0 0;box-shadow:0 -8px 28px rgba(111,79,224,.10);display:grid;grid-template-columns:repeat(5,1fr);padding:8px 6px 0;z-index:5}
+.c1 .tab{display:flex;flex-direction:column;align-items:center;gap:3px;color:#9A92B4;font-size:12px;font-weight:700;height:52px;justify-content:center}
+.c1 .tab .ic{width:48px;height:30px;border-radius:15px;display:grid;place-items:center}
+.c1 .tab.on{color:#6F4FE0}
+.c1 .tab.on .ic{background:#EFEAFE}
+.c1 .fabcell{position:relative}
+.c1 .fab{position:absolute;top:-34px;left:50%;margin-left:-37px;width:74px;height:74px;border-radius:50%;background:linear-gradient(160deg,#A890F8,#7B5BEB);border:6px solid #FBF8FF;color:#fff;display:grid;place-items:center;box-shadow:0 12px 22px rgba(111,79,224,.38)}
+.c1 .fab svg{width:30px;height:30px}
+.c1 .home-ind{position:absolute;bottom:8px;left:50%;margin-left:-67px;width:134px;height:5px;border-radius:3px;background:#2E2547;z-index:9}
+/* ===== home ===== */
+.c1 .top{display:flex;align-items:center;justify-content:space-between;height:52px}
+.c1 .top img{height:30px;width:auto;display:block}
+.c1 .top .l{display:flex;gap:10px;align-items:center}
+.c1 .hello{margin:10px 2px 0}
+.c1 .hello h1{margin:0;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:27px;line-height:1.15;letter-spacing:-.2px}
+.c1 .hello p{margin:3px 0 0;color:#7A7196;font-size:15px;font-weight:600}
+.c1 .attn{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.c1 .att{background:var(--t);border-radius:22px;padding:12px 10px;display:flex;align-items:center;gap:9px;min-height:68px}
+.c1 .att .bub{width:38px;height:38px;border-radius:15px;background:#fff;color:var(--d);display:grid;place-items:center;flex:none}
+.c1 .att b{display:block;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:22px;line-height:1;color:var(--d)}
+.c1 .att span{display:block;font-size:12.5px;white-space:nowrap;font-weight:700;color:#2E2547;margin-top:3px;line-height:1.15}
+.c1 .rail{display:flex;gap:12px;margin:0 -20px;padding:2px 20px 10px;overflow:hidden}
+.c1 .ses{flex:none;width:136px;height:162px;border-radius:24px;background:var(--t);padding:13px 13px 12px;display:flex;flex-direction:column;position:relative}
+.c1 .ses .h{display:flex;justify-content:space-between;align-items:flex-start}
+.c1 .ses .t{font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:22px;line-height:1;color:var(--d);font-variant-numeric:tabular-nums}
+.c1 .ses .av{width:34px;height:34px;font-size:16px;background:#fff}
+.c1 .ses .n{margin-top:auto;font-weight:800;font-size:18px;line-height:1.1}
+.c1 .ses .s{font-size:13px;color:#5E557C;font-weight:600;margin-top:2px}
+.c1 .pill{margin-top:9px;align-self:flex-start;height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;background:rgba(255,255,255,.75);color:#5E557C}
+.c1 .pill.wait{background:#fff;color:#B44D33}
+.c1 .pill.wait::before{content:"";width:7px;height:7px;border-radius:50%;background:#F7A68F}
+.c1 .pill.live{background:#6F4FE0;color:#fff}
+.c1 .pill.live::before{content:"";width:7px;height:7px;border-radius:50%;background:#9EDBAE;box-shadow:0 0 0 3px rgba(158,219,174,.35)}
+.c1 .ses.now{box-shadow:0 0 0 3px #fff,0 0 0 5px #8B6CF0,0 12px 24px rgba(111,79,224,.18)}
+.c1 .kids{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.c1 .kid{background:var(--t);border-radius:22px;padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.c1 .kid .av{width:48px;height:48px;font-size:22px;background:var(--m)}
+.c1 .kid b{margin-top:7px;font-size:15px;font-weight:800;line-height:1}
+.c1 .kid>span:last-child{font-size:12px;color:#7A7196;font-weight:600;margin-top:3px}
+/* ===== kid hub ===== */
+.c1 .bar{display:flex;align-items:center;justify-content:space-between;height:50px}
+.c1 .bar .ttl{font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:17px}
+.c1 .hero{display:flex;align-items:center;gap:14px;margin-top:6px}
+.c1 .hero .av{width:72px;height:72px;font-size:32px;box-shadow:0 0 0 5px #fff,0 10px 22px rgba(184,60,113,.18)}
+.c1 .hero h1{margin:0;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:30px;line-height:1}
+.c1 .hero .meta{display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap}
+.c1 .chip{height:26px;padding:0 10px;border-radius:13px;background:#fff;font-size:13px;font-weight:700;color:#5E557C;display:inline-flex;align-items:center;gap:5px;box-shadow:0 2px 8px rgba(139,108,240,.10);white-space:nowrap}
+.c1 .tabs{display:flex;gap:8px;margin:16px -20px 0;padding:0 20px 4px;overflow:hidden}
+.c1 .tabs span{flex:none;height:40px;padding:0 16px;border-radius:20px;background:#fff;font-size:14px;font-weight:700;color:#7A7196;display:flex;align-items:center;box-shadow:0 2px 8px rgba(139,108,240,.08)}
+.c1 .tabs span.on{background:#8B6CF0;color:#fff;box-shadow:0 6px 14px rgba(139,108,240,.32)}
+.c1 .banner{margin-top:12px;background:#FFE7E0;border-radius:18px;height:46px;padding:0 12px;display:flex;align-items:center;gap:9px;color:#B44D33;font-size:13.5px;font-weight:700}
+.c1 .banner .grow{flex:1;color:#2E2547;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c1 .next{margin-top:10px;background:#E3F0FB;border-radius:22px;padding:11px 14px;display:flex;align-items:center;gap:12px}
+.c1 .next .bub{width:42px;height:42px;border-radius:15px;background:#fff;color:#2F6CA8;display:grid;place-items:center;flex:none}
+.c1 .next small{display:block;font-size:12px;font-weight:700;color:#2F6CA8}
+.c1 .next b{display:block;font-size:16px;font-weight:800;margin-top:1px}
+.c1 .next .go{margin-right:auto;color:#2F6CA8}
+.c1 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.c1 .stat{background:#fff;border-radius:20px;padding:10px 10px 10px;box-shadow:0 6px 18px rgba(139,108,240,.09)}
+.c1 .stat b{display:block;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:24px;line-height:1;color:var(--d);font-variant-numeric:tabular-nums}
+.c1 .stat span{display:block;font-size:12px;font-weight:700;color:#7A7196;margin-top:4px;line-height:1.15}
+.c1 .stat i{display:block;height:6px;border-radius:3px;background:var(--t);margin-top:7px;overflow:hidden}
+.c1 .stat i::after{content:"";display:block;height:100%;width:var(--w);background:var(--m);border-radius:3px}
+.c1 .qa{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.c1 .q{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.c1 .q .tile{width:56px;height:56px;border-radius:20px;background:var(--t);color:var(--d);display:grid;place-items:center;box-shadow:inset 0 -3px 0 rgba(0,0,0,.04)}
+.c1 .q .tile svg{width:26px;height:26px}
+.c1 .q>span:last-child{font-size:12px;font-weight:700;line-height:1.15}
+.c1 .team{display:flex;gap:10px;margin:0 -20px;padding:0 20px;overflow:hidden}
+.c1 .mem{flex:none;background:#fff;border-radius:20px;padding:9px 12px 9px 14px;display:flex;align-items:center;gap:9px;box-shadow:0 6px 18px rgba(139,108,240,.09)}
+.c1 .mem .av{width:36px;height:36px;font-size:16px}
+.c1 .mem b{display:block;font-size:14px;font-weight:800;line-height:1.1}
+.c1 .mem div span{display:block;font-size:12px;color:#7A7196;font-weight:600}
+/* ===== form ===== */
+.c1 .fhead{display:flex;align-items:center;gap:12px;height:54px}
+.c1 .fhead h1{margin:0;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:21px;line-height:1.1}
+.c1 .fhead .m{display:flex;gap:6px;margin-top:5px}
+.c1 .fhead .chip{height:22px;font-size:12px;padding:0 8px;box-shadow:none;background:#EFEAFE;color:#6F4FE0}
+.c1 .fcard{background:#fff;border-radius:24px;box-shadow:0 8px 24px rgba(139,108,240,.10);padding:12px 16px;margin-top:8px}
+.c1 .flabel{font-size:14px;font-weight:800;display:flex;align-items:center;gap:7px}
+.c1 .flabel svg{width:20px;height:20px;color:#8B6CF0}
+.c1 .coop .row{display:flex;justify-content:space-between;align-items:center}
+.c1 .coop .big{font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:32px;line-height:1;color:#6F4FE0;font-variant-numeric:tabular-nums}
+.c1 .slider{position:relative;height:44px;margin-top:6px}
+.c1 .slider .trk{position:absolute;left:0;right:0;top:12px;height:20px;border-radius:10px;background:#EFEAFE}
+.c1 .slider .fill{position:absolute;right:0;top:12px;height:20px;width:83.3%;border-radius:10px;background:linear-gradient(270deg,#B9A6FA,#8B6CF0)}
+.c1 .slider .thumb{position:absolute;left:16.7%;top:2px;margin-left:-20px;width:40px;height:40px;border-radius:50%;background:#fff;border:7px solid #8B6CF0;box-shadow:0 6px 14px rgba(111,79,224,.35)}
+.c1 .slider .tk{position:absolute;top:18px;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.7)}
+.c1 .scale{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#9A92B4;font-variant-numeric:tabular-nums;margin-top:1px}
+.c1 .dur{display:flex;align-items:center;justify-content:space-between;border-top:1.5px dashed #ECE6FA;margin-top:8px;padding-top:8px}
+.c1 .step{display:flex;align-items:center;gap:6px}
+.c1 .step .b{width:44px;height:44px;border-radius:16px;background:#EFEAFE;color:#6F4FE0;display:grid;place-items:center}
+.c1 .step .v{min-width:72px;text-align:center;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+.c1 .moods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.c1 .mood{height:58px;border-radius:18px;background:#F6F3FD;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:700;color:#5E557C;border:2px solid transparent}
+.c1 .mood svg{width:24px;height:24px}
+.c1 .mood.on{background:#FFF5D6;border-color:#F8DC86;color:#2E2547;box-shadow:0 6px 14px rgba(248,220,134,.45)}
+.c1 .goal{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1.5px dashed #ECE6FA}
+.c1 .goal:first-of-type{border-top:0}
+.c1 .goal .g{flex:1;min-width:0}
+.c1 .goal .g b{display:block;font-size:14px;font-weight:800;line-height:1.2;margin-bottom:4px}
+.c1 .tally{display:flex;gap:5px;flex:none}
+.c1 .tally span{width:44px;height:46px;border-radius:15px;background:var(--t);color:var(--d);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-variant-numeric:tabular-nums}
+.c1 .tally span i{font-style:normal;font-size:12px;font-weight:800;opacity:.75}
+.c1 .tally span em{font-style:normal;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:18px;margin-top:2px}
+.c1 .txt{margin-top:6px;background:#F6F3FD;border-radius:16px;padding:12px 14px;font-size:15px;min-height:70px;color:#2E2547}
+.c1 .sticky{position:absolute;left:0;right:0;bottom:0;padding:18px 20px 24px;background:linear-gradient(to bottom,rgba(251,248,255,0),#FBF8FF 30%);display:flex;gap:10px;z-index:5}
+.c1 .btn{height:54px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:17px}
+.c1 .btn.p{flex:1;background:linear-gradient(160deg,#A08AF7,#7B5BEB);color:#fff;box-shadow:0 12px 22px rgba(111,79,224,.35)}
+.c1 .btn.s{width:104px;background:#fff;color:#6F4FE0;font-size:15px;box-shadow:0 4px 14px rgba(139,108,240,.14)}
+/* ===== progress ===== */
+.c1 .chartcard{padding:14px 14px 10px;margin-top:12px}
+.c1 .chartcard .hd{display:flex;justify-content:space-between;align-items:flex-start}
+.c1 .chartcard h4{margin:0;font-size:14px;font-weight:800}
+.c1 .chartcard .big{font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:30px;color:#6F4FE0;line-height:1;margin-top:4px;font-variant-numeric:tabular-nums}
+.c1 .delta{height:26px;padding:0 9px;border-radius:13px;background:#E4F6E9;color:#2C7D47;font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.c1 .chart{display:block;width:100%;height:auto;margin-top:6px}
+.c1 .axis{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#9A92B4;padding:0 4px 0 30px}
+.c1 .gl{display:flex;flex-direction:column;gap:9px}
+.c1 .gi{background:var(--t);border-radius:22px;padding:12px 14px}
+.c1 .gi .r{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.c1 .gi b{font-size:15px;font-weight:800;line-height:1.2}
+.c1 .gi .pc{font-family:'Fredoka','Rubik',sans-serif;font-weight:600;font-size:20px;color:var(--d);font-variant-numeric:tabular-nums}
+.c1 .gi .tg{font-size:12px;font-weight:700;color:var(--d);margin-top:1px}
+.c1 .gi .bar2{height:12px;border-radius:6px;background:#fff;margin-top:8px;overflow:hidden}
+.c1 .gi .bar2 i{display:block;height:100%;border-radius:6px;background:var(--m);width:var(--w)}
+.c1 .scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(46,37,71,0) 30%,rgba(46,37,71,.42) 70%);z-index:4}
+.c1 .qadd{position:absolute;bottom:128px;left:0;right:0;display:flex;justify-content:center;gap:12px;z-index:6}
+.c1 .qadd .o{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-size:13px;font-weight:800}
+.c1 .qadd .o:nth-child(2){transform:translateY(-22px)}
+.c1 .qadd .o .tile{width:60px;height:60px;border-radius:22px;background:#fff;color:var(--d);display:grid;place-items:center;box-shadow:0 10px 22px rgba(46,37,71,.22)}
+.c1 .qadd .o .tile svg{width:28px;height:28px}
+.c1 .qadd .o>span:last-child{background:rgba(46,37,71,.55);padding:2px 10px;border-radius:10px}
+.c1 .fab.open svg{transform:rotate(45deg)}
+.c1 .fab.open{background:#2E2547;box-shadow:0 12px 22px rgba(46,37,71,.35)}
+</style>
+<div class="c1 phones">
+
+<!-- ================= 1. HOME ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+<svg class="defs" aria-hidden="true">
+<defs>
+<symbol id="c1-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z" fill="currentColor" fill-opacity=".2"/></g></symbol>
+<symbol id="c1-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="4" fill="currentColor" fill-opacity=".2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g></symbol>
+<symbol id="c1-chat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4c4.7 0 8.5 3.1 8.5 7s-3.8 7-8.5 7c-1 0-2-.1-2.9-.4L5 19.5l1-3.6C4.5 14.6 3.5 12.9 3.5 11 3.5 7.1 7.3 4 12 4z" fill="currentColor" fill-opacity=".2"/></g></symbol>
+<symbol id="c1-more" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="5.5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18.5" cy="12" r="2"/></g></symbol>
+<symbol id="c1-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+<symbol id="c1-minus" viewBox="0 0 24 24"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+<symbol id="c1-doc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" fill="currentColor" fill-opacity=".2"/><path d="M14 3v5h5M9 13h6M9 17h4"/></g></symbol>
+<symbol id="c1-bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z" fill="currentColor" fill-opacity=".2"/><path d="M10 21h4"/></g></symbol>
+<symbol id="c1-chev" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="c1-back" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="c1-x" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+<symbol id="c1-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5" fill="currentColor" fill-opacity=".2"/><path d="M12 7.5V12l3 2"/></g></symbol>
+<symbol id="c1-star" viewBox="0 0 24 24"><path d="M12 3.5l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.4l-5.1 2.8L8 13.5l-4.3-4 5.8-.7z" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+<symbol id="c1-list" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="17" rx="4" fill="currentColor" fill-opacity=".2"/><path d="M8 9h1M12 9h4M8 13h1M12 13h4M8 17h1M12 17h2"/></g></symbol>
+<symbol id="c1-bars" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="currentColor" fill-opacity=".2"/><path d="M8.5 16v-3M12 16V8M15.5 16v-5"/></g></symbol>
+<symbol id="c1-spark" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M10 4l1.8 4.7L16.5 10.5l-4.7 1.8L10 17l-1.8-4.7L3.5 10.5l4.7-1.8z" fill="currentColor" fill-opacity=".2"/><path d="M18 14v6M15 17h6"/></g></symbol>
+<symbol id="c1-pen" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5l1-4.5L16 4.5l3.5 3.5L9 18.5z" fill="currentColor" fill-opacity=".2"/><path d="M13.5 7l3.5 3.5"/></g></symbol>
+<symbol id="c1-users" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5" fill="currentColor" fill-opacity=".2"/><path d="M3 19.5a6 6 0 0 1 12 0z" fill="currentColor" fill-opacity=".2"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a4.5 4.5 0 0 1 4.5 5"/></g></symbol>
+<symbol id="c1-target" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5" fill="currentColor" fill-opacity=".2"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></g></symbol>
+<symbol id="c1-heart" viewBox="0 0 24 24"><path d="M12 19.5s-7.5-4.4-7.5-9.7A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6c0 5.3-7.5 9.7-7.5 9.7z" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+<symbol id="c1-trend" viewBox="0 0 24 24"><path d="M4 16l5-5 4 3 7-7M15 7h5v5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="c1-save" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" fill="currentColor" fill-opacity=".25"/><path d="M8 4v4.5h7V4M8 20v-5.5h8V20"/></g></symbol>
+</defs>
+</svg>
+<div class="sb" dir="ltr"><span>9:41</span><span class="r"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span class="bat"><b></b></span></span></div>
+<div class="body">
+  <div class="top">
+    <img src="img/logo.png" alt="Doing">
+    <div class="l">
+      <div class="iconbtn"><svg class="i"><use href="#c1-bell"/></svg><span class="dot"></span></div>
+      <div class="av lav" style="width:44px;height:44px;font-size:19px">מ</div>
+    </div>
+  </div>
+  <div class="hello"><h1>בוקר טוב, מיכל</h1><p>יום שלישי, 3 בנובמבר</p></div>
+  <div class="attn">
+    <div class="att butter"><div class="bub"><svg class="i"><use href="#c1-doc"/></svg></div><div><b class="num">2</b><span>טפסים ממתינים</span></div></div>
+    <div class="att pink"><div class="bub"><svg class="i"><use href="#c1-chat"/></svg></div><div><b class="num">3</b><span>הודעות חדשות</span></div></div>
+  </div>
+  <div class="sec"><h3><svg class="i"><use href="#c1-cal"/></svg>הטיפולים של היום</h3><a>4 טיפולים</a></div>
+  <div class="rail">
+    <div class="ses pink"><div class="h"><span class="t">08:30</span><span class="av">נ</span></div><div class="n">נגה</div><div class="s">שירה · טיפול</div><span class="pill wait">ממתין לטופס</span></div>
+    <div class="ses sky now"><div class="h"><span class="t">11:00</span><span class="av">ל</span></div><div class="n">ליאם</div><div class="s">דנה · טיפול</div><span class="pill live">עכשיו</span></div>
+    <div class="ses butter"><div class="h"><span class="t">14:00</span><span class="av">ע</span></div><div class="n">עומר</div><div class="s">מיכל · הדרכת הורים</div><span class="pill">מתוכנן</span></div>
+    <div class="ses mint"><div class="h"><span class="t">16:30</span><span class="av">ת</span></div><div class="n">תמר</div><div class="s">שירה · טיפול</div><span class="pill">מתוכנן</span></div>
+  </div>
+  <div class="sec" style="margin-top:8px"><h3><svg class="i"><use href="#c1-users"/></svg>הילדים</h3><a>הכל</a></div>
+  <div class="kids">
+    <div class="kid pink"><span class="av">נ</span><b>נגה</b><span>בת 6</span></div>
+    <div class="kid sky"><span class="av">ל</span><b>ליאם</b><span>בן 5</span></div>
+    <div class="kid butter"><span class="av">ע</span><b>עומר</b><span>בן 7</span></div>
+    <div class="kid mint"><span class="av">ת</span><b>תמר</b><span>בת 4</span></div>
+  </div>
+</div>
+<nav class="nav">
+  <div class="tab on"><span class="ic"><svg class="i"><use href="#c1-home"/></svg></span>ראשי</div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-cal"/></svg></span>יומן</div>
+  <div class="fabcell"><div class="fab"><svg><use href="#c1-plus"/></svg></div></div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-chat"/></svg></span>הודעות</div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-more"/></svg></span>עוד</div>
+</nav>
+<div class="home-ind"></div>
+</div></div><figcaption>היום · מסך הבית</figcaption></figure>
+
+<!-- ================= 2. KID HUB ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+<div class="sb" dir="ltr"><span>9:41</span><span class="r"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span class="bat"><b></b></span></span></div>
+<div class="body">
+  <div class="bar">
+    <div class="iconbtn"><svg class="i"><use href="#c1-back"/></svg></div>
+    <span class="ttl">כרטיס ילד</span>
+    <div class="iconbtn"><svg class="i"><use href="#c1-more"/></svg></div>
+  </div>
+  <div class="hero">
+    <span class="av pink">נ</span>
+    <div><h1>נגה</h1><div class="meta"><span class="chip">בת 6</span><span class="chip"><svg class="i" style="width:15px;height:15px;color:#8B6CF0"><use href="#c1-target"/></svg>4 מטרות פעילות</span></div></div>
+  </div>
+  <div class="tabs"><span class="on">סקירה</span><span>טיפולים</span><span>התקדמות</span><span>הודעות</span><span>איסוף נתונים</span></div>
+  <div class="banner"><svg class="i" style="width:20px;height:20px"><use href="#c1-pen"/></svg><span class="grow">הסכם הטיפול ממתין לחתימת ההורים</span><svg class="i" style="width:18px;height:18px"><use href="#c1-chev"/></svg></div>
+  <div class="next"><div class="bub"><svg class="i"><use href="#c1-cal"/></svg></div><div><small>הפגישה הבאה</small><b class="num">יום רביעי · 08:30 · שירה</b></div><svg class="i go" style="width:20px;height:20px"><use href="#c1-chev"/></svg></div>
+  <div class="stats">
+    <div class="stat lav"><b>85%</b><span>שיתוף פעולה</span><i style="--w:85%"></i></div>
+    <div class="stat mint"><b>12</b><span>טיפולים החודש</span><i style="--w:60%"></i></div>
+    <div class="stat butter"><b>4</b><span>מטרות פעילות</span><i style="--w:40%"></i></div>
+  </div>
+  <div class="sec" style="margin:16px 2px 10px"><h3>פעולות מהירות</h3></div>
+  <div class="qa">
+    <div class="q lav"><span class="tile"><svg class="i"><use href="#c1-doc"/></svg></span><span>מלא טופס</span></div>
+    <div class="q sky"><span class="tile"><svg class="i"><use href="#c1-list"/></svg></span><span>סדר יום</span></div>
+    <div class="q mint"><span class="tile"><svg class="i"><use href="#c1-bars"/></svg></span><span>דיווח יומי</span></div>
+    <div class="q butter"><span class="tile"><svg class="i"><use href="#c1-spark"/></svg></span><span>צ׳אט AI</span></div>
+    <div class="q pink"><span class="tile"><svg class="i"><use href="#c1-pen"/></svg></span><span>הסכם טיפול</span></div>
+  </div>
+  <div class="sec" style="margin:16px 2px 10px"><h3>הצוות</h3><a>4 אנשי קשר</a></div>
+  <div class="team">
+    <div class="mem"><span class="av lav">ש</span><div><b>שירה</b><span>מטפלת</span></div></div>
+    <div class="mem"><span class="av sky">ד</span><div><b>דנה</b><span>מטפלת</span></div></div>
+    <div class="mem"><span class="av mint">ר</span><div><b>רותם</b><span>מדריכת הורים</span></div></div>
+    <div class="mem"><span class="av coral">ה</span><div><b>הורים</b><span>אבא ואמא של נגה</span></div></div>
+  </div>
+</div>
+<nav class="nav">
+  <div class="tab on"><span class="ic"><svg class="i"><use href="#c1-home"/></svg></span>ראשי</div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-cal"/></svg></span>יומן</div>
+  <div class="fabcell"><div class="fab"><svg><use href="#c1-plus"/></svg></div></div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-chat"/></svg></span>הודעות</div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-more"/></svg></span>עוד</div>
+</nav>
+<div class="home-ind"></div>
+</div></div><figcaption>נגה · כרטיס ילד</figcaption></figure>
+
+<!-- ================= 3. SESSION FORM ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+<div class="sb" dir="ltr"><span>9:41</span><span class="r"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span class="bat"><b></b></span></span></div>
+<div class="body">
+  <div class="fhead">
+    <div class="iconbtn"><svg class="i"><use href="#c1-x"/></svg></div>
+    <div><h1>טופס טיפול · נגה</h1><div class="m"><span class="chip num">3.11.2026</span><span class="chip">שירה</span></div></div>
+    <span class="av pink" style="width:40px;height:40px;font-size:18px;margin-right:auto">נ</span>
+  </div>
+  <div class="fcard coop">
+    <div class="row"><span class="flabel"><svg class="i"><use href="#c1-heart"/></svg>שיתוף פעולה</span><span class="big">85%</span></div>
+    <div class="slider"><span class="trk"></span><span class="fill"></span><span class="tk" style="left:50%"></span><span class="tk" style="left:28%"></span><span class="thumb"></span></div>
+    <div class="scale"><span>10%</span><span>100%</span></div>
+    <div class="dur">
+    <span class="flabel"><svg class="i"><use href="#c1-clock"/></svg>משך הטיפול</span>
+    <div class="step"><span class="b"><svg class="i"><use href="#c1-plus"/></svg></span><span class="v">90 דק׳</span><span class="b"><svg class="i"><use href="#c1-minus"/></svg></span></div>
+    </div>
+  </div>
+  <div class="fcard" style="padding:12px 14px 14px">
+    <span class="flabel">מצב רוח</span>
+    <div class="moods">
+      <div class="mood on"><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#F8DC86"/><circle cx="10" cy="12" r="1.6" fill="#2E2547"/><circle cx="18" cy="12" r="1.6" fill="#2E2547"/><path d="M9 16.5a5.5 5.5 0 0 0 10 0" fill="none" stroke="#2E2547" stroke-width="2" stroke-linecap="round"/></svg>שמחה</div>
+      <div class="mood"><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#9EDBAE"/><path d="M8 12.5q2 1.6 4 0M16 12.5q2 1.6 4 0" fill="none" stroke="#2E2547" stroke-width="1.8" stroke-linecap="round"/><path d="M10.5 18h7" fill="none" stroke="#2E2547" stroke-width="2" stroke-linecap="round"/></svg>רגועה</div>
+      <div class="mood"><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#C3B3F8"/><path d="M8 12.5h4M16 12.5h4" fill="none" stroke="#2E2547" stroke-width="1.8" stroke-linecap="round"/><circle cx="14" cy="18.5" r="2" fill="none" stroke="#2E2547" stroke-width="1.8"/></svg>עייפה</div>
+      <div class="mood"><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#F7A68F"/><path d="M8 10l3.5 1.5M20 10l-3.5 1.5" fill="none" stroke="#2E2547" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 19.5a5 5 0 0 1 9 0" fill="none" stroke="#2E2547" stroke-width="2" stroke-linecap="round"/></svg>מתוסכלת</div>
+    </div>
+  </div>
+  <div class="fcard" style="padding:12px 14px 4px">
+    <span class="flabel"><svg class="i"><use href="#c1-target"/></svg>מטרות שעבדנו עליהן</span>
+    <div class="goal"><div class="g"><b>קשר עין בפנייה בשם</b><span class="tag sky">שפה ותקשורת</span></div><div class="tally"><span class="mint"><i>+</i><em>8</em></span><span class="coral"><i>−</i><em>2</em></span><span class="butter"><i>r</i><em>1</em></span></div></div>
+    <div class="goal"><div class="g"><b>הרכבת פאזל 12 חלקים</b><span class="tag mint">מוטוריקה עדינה</span></div><div class="tally"><span class="mint"><i>+</i><em>4</em></span><span class="coral"><i>−</i><em>3</em></span><span class="butter"><i>r</i><em>2</em></span></div></div>
+    <div class="goal"><div class="g"><b>משחק תורות עם חבר</b><span class="tag butter">משחק וחברה</span></div><div class="tally"><span class="mint"><i>+</i><em>3</em></span><span class="coral"><i>−</i><em>4</em></span><span class="butter"><i>r</i><em>3</em></span></div></div>
+  </div>
+  <div class="fcard" style="padding:12px 14px">
+    <span class="flabel"><svg class="i"><use href="#c1-star"/></svg>הצלחות</span>
+    <div class="txt">השלימה פאזל לבד בפעם הראשונה</div>
+  </div>
+</div>
+<div class="sticky"><div class="btn p"><svg class="i"><use href="#c1-save"/></svg>שמירת הטופס</div><div class="btn s">טיוטה</div></div>
+<div class="home-ind"></div>
+</div></div><figcaption>טופס טיפול</figcaption></figure>
+
+<!-- ================= 4. PROGRESS ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+<div class="sb" dir="ltr"><span>9:41</span><span class="r"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span class="bat"><b></b></span></span></div>
+<div class="body">
+  <div class="bar">
+    <div class="iconbtn"><svg class="i"><use href="#c1-back"/></svg></div>
+    <span class="ttl" style="display:flex;align-items:center;gap:8px"><span class="av pink" style="width:30px;height:30px;font-size:14px">נ</span>נגה</span>
+    <div class="iconbtn"><svg class="i"><use href="#c1-more"/></svg></div>
+  </div>
+  <div class="tabs" style="margin-top:8px"><span>סקירה</span><span>טיפולים</span><span class="on">התקדמות</span><span>הודעות</span><span>איסוף נתונים</span></div>
+  <div class="card chartcard">
+    <div class="hd">
+      <div><h4>שיתוף פעולה · 8 טיפולים אחרונים</h4><div class="big">85%</div></div>
+      <span class="delta"><svg class="i" style="width:14px;height:14px"><use href="#c1-trend"/></svg>+25%</span>
+    </div>
+    <svg class="chart" viewBox="0 0 296 132" style="direction:ltr">
+      <defs><linearGradient id="c1-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8B6CF0" stop-opacity=".28"/><stop offset="1" stop-color="#8B6CF0" stop-opacity="0"/></linearGradient></defs>
+      <g font-family="Assistant,sans-serif" font-size="11" font-weight="700" fill="#9A92B4">
+        <text x="0" y="14">100</text><text x="6" y="69">75</text><text x="6" y="124">50</text>
+      </g>
+      <g stroke="#EFEAFE" stroke-width="1.5" stroke-dasharray="3 5"><path d="M28 10H292M28 65H292M28 120H292"/></g>
+      <path d="M36 98L71.1 87L106.3 102.4L141.4 71.6L176.6 65L211.7 76L246.9 49.6L282 43V120H36z" fill="url(#c1-area)"/>
+      <path d="M36 98L71.1 87L106.3 102.4L141.4 71.6L176.6 65L211.7 76L246.9 49.6L282 43" fill="none" stroke="#8B6CF0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <g fill="#fff" stroke="#8B6CF0" stroke-width="2.5"><circle cx="36" cy="98" r="4"/><circle cx="71.1" cy="87" r="4"/><circle cx="106.3" cy="102.4" r="4"/><circle cx="141.4" cy="71.6" r="4"/><circle cx="176.6" cy="65" r="4"/><circle cx="211.7" cy="76" r="4"/><circle cx="246.9" cy="49.6" r="4"/></g>
+      <circle cx="282" cy="43" r="8" fill="#8B6CF0" stroke="#fff" stroke-width="3"/>
+      <rect x="236" y="12" width="44" height="22" rx="11" fill="#6F4FE0"/>
+      <text x="258" y="27.5" text-anchor="middle" font-family="Fredoka,Rubik,sans-serif" font-weight="600" font-size="13" fill="#fff">85%</text>
+    </svg>
+    <div class="axis"><span>לפני חודשיים</span><span>היום</span></div>
+  </div>
+  <div class="sec" style="margin:16px 2px 10px"><h3><svg class="i"><use href="#c1-target"/></svg>מטרות פעילות</h3><a>4</a></div>
+  <div class="gl">
+    <div class="gi sky"><div class="r"><b>קשר עין בפנייה בשם</b><span class="pc">78%</span></div><div class="tg">שפה ותקשורת</div><div class="bar2"><i style="--w:78%"></i></div></div>
+    <div class="gi mint"><div class="r"><b>הרכבת פאזל 12 חלקים</b><span class="pc">55%</span></div><div class="tg">מוטוריקה עדינה</div><div class="bar2"><i style="--w:55%"></i></div></div>
+    <div class="gi butter"><div class="r"><b>משחק תורות עם חבר</b><span class="pc">40%</span></div><div class="tg">משחק וחברה</div><div class="bar2"><i style="--w:40%"></i></div></div>
+    <div class="gi pink"><div class="r"><b>לבישת מעיל באופן עצמאי</b><span class="pc">62%</span></div><div class="tg">ADL</div><div class="bar2"><i style="--w:62%"></i></div></div>
+  </div>
+</div>
+<div class="scrim"></div>
+<div class="qadd">
+  <div class="o lav"><span class="tile"><svg class="i"><use href="#c1-doc"/></svg></span><span>טופס</span></div>
+  <div class="o sky"><span class="tile"><svg class="i"><use href="#c1-cal"/></svg></span><span>פגישה</span></div>
+  <div class="o mint"><span class="tile"><svg class="i"><use href="#c1-bars"/></svg></span><span>דיווח</span></div>
+</div>
+<nav class="nav">
+  <div class="tab on"><span class="ic"><svg class="i"><use href="#c1-home"/></svg></span>ראשי</div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-cal"/></svg></span>יומן</div>
+  <div class="fabcell"><div class="fab open"><svg><use href="#c1-plus"/></svg></div></div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-chat"/></svg></span>הודעות</div>
+  <div class="tab"><span class="ic"><svg class="i"><use href="#c1-more"/></svg></span>עוד</div>
+</nav>
+<div class="home-ind"></div>
+</div></div><figcaption>התקדמות</figcaption></figure>
+
+</div>
+</div>
+  <div class="label"><h3>הדמיות</h3><span>נוצרו עם gpt-image-2.5. לוחצים להגדלה. ייתכנו שגיאות כתיב קטנות בתמונות.</span></div>
+  <div class="renders">
+    <figure class="render"><button type="button"><img src="img/c1-flare.jpg" alt="חדר משחקים: בית, כרטיס ילד וטופס טיפול" loading="lazy"></button><figcaption><b>Flare</b> · בית, כרטיס ילד, טופס טיפול</figcaption></figure>
+    <figure class="render"><button type="button"><img src="img/c1-sun.jpg" alt="חדר משחקים: התקדמות, יומן ומסך נוסף" loading="lazy"></button><figcaption><b>Sunburst</b> · התקדמות, יומן ומסך נוסף</figcaption></figure>
+    <figure class="render wide"><button type="button"><img src="img/c1-desk.jpg" alt="חדר משחקים: גרסת מחשב" loading="lazy"></button><figcaption><b>Sunburst</b> · גרסת מחשב עם ניווט צד, אותה מערכת</figcaption></figure>
+  </div>
+  <div class="cmts" data-concept="c1" hidden></div>
+</section>
+<section class="concept" id="c2" aria-labelledby="c2-h">
+  <div class="chead">
+    <div class="t">
+      <span class="eyebrow">כיוון 2</span>
+      <h2 id="c2-h">לילך שקט<em>Quiet Lilac</em></h2>
+      <p class="thesis">כלי עבודה רגוע ומדויק, ברוח האפליקציות הטובות של אפל. הרבה אוויר, רשימות במקום כרטיסים, מספרים גדולים. הסגול מופיע רק איפה שלוחצים, והפסטלים רק כנקודות תחום.</p>
+    </div>
+    <div class="spec">
+      <div class="sw" aria-label="פלטה"><i style="background:#F7F5FA;color:#24173D">#F7F5FA</i><i style="background:#7A5AF8;color:#fff">#7A5AF8</i><i style="background:#24173D;color:#fff">#24173D</i><i style="background:#EFEAFF;color:#24173D">#EFEAFF</i><i style="background:#E7E2F0;color:#24173D">#E7E2F0</i><i style="background:#6E6585;color:#fff">#6E6585</i></div>
+      <div class="type"><span class="big" style="font-family:'IBM Plex Sans Hebrew', sans-serif">12 טיפולים החודש</span><small>IBM Plex Sans Hebrew בכל המשקלים</small></div>
+    </div>
+  </div>
+  <ul class="sig"><li><b>ציר זמן ביום</b>עמודת שעות ונקודה חיה ל"עכשיו". רואים את כל היום במבט.</li><li><b>שלושה מספרים בכרטיס</b>שיתוף פעולה, טיפולים החודש, טפסים פתוחים. בגודל שקוראים מרחוק.</li><li><b>טופס כמו הגדרות</b>קבוצות מסודרות, בורר אחוזים בקפיצות של 10, מונים קטנים.</li></ul>
+  <div class="label"><h3>ארבעה מסכים, מקודדים</h3><span>עברית אמיתית בגופנים אמיתיים. בטלפון גוללים לצד.</span></div>
+  <div class="rail"><style>
+.c2 .app{position:absolute;inset:0;background:#F7F5FA;font-family:'IBM Plex Sans Hebrew','Heebo','Assistant',sans-serif;color:#24173D;overflow:hidden;font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased}
+.c2 .app *{box-sizing:border-box}
+.c2 .num,.c2 .t,.c2 .tab-n{font-variant-numeric:tabular-nums}
+.c2 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none;display:block}
+.c2 svg.s{width:18px;height:18px}
+.c2 svg.xs{width:16px;height:16px}
+/* status bar */
+.c2 .sb{position:absolute;top:0;left:0;right:0;height:44px;display:flex;align-items:center;justify-content:space-between;padding:4px 26px 0 32px;direction:ltr;z-index:5}
+.c2 .sb .clock{font-size:15px;font-weight:600;letter-spacing:-.2px;font-variant-numeric:tabular-nums}
+.c2 .sb .sys{display:flex;align-items:center;gap:5px}
+.c2 .sb .sys svg{display:block;fill:#24173D}
+.c2 .island{position:absolute;top:11px;left:50%;width:104px;height:30px;margin-left:-52px;background:#0B0712;border-radius:20px;z-index:6}
+/* layout */
+.c2 .content{position:absolute;top:44px;left:0;right:0;bottom:0;padding:0 16px;overflow:hidden}
+.c2 .group{background:#fff;border-radius:14px;box-shadow:0 0 0 .5px #E7E2F0,0 1px 2px rgba(36,23,61,.03)}
+.c2 .sec{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 8px;margin-top:22px}
+.c2 .sec h3{margin:0;font-size:13px;font-weight:600;color:#6E6585;letter-spacing:.1px}
+.c2 .sec a{font-size:13px;color:#7A5AF8;font-weight:500;text-decoration:none}
+.c2 .muted{color:#6E6585}
+.c2 .chev{color:#C3BCD2}
+/* top bar */
+.c2 .bar{height:44px;display:flex;align-items:center;justify-content:space-between;margin:0 -4px}
+.c2 .bar .back{display:flex;align-items:center;gap:2px;color:#7A5AF8;font-size:16px;min-height:44px;min-width:44px}
+.c2 .bar .btn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#24173D}
+.c2 .bar .mid{font-size:16px;font-weight:600;text-align:center}
+/* avatars */
+.c2 .av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
+.c2 .av.pink{background:#FCE6EF;color:#B5487A}
+.c2 .av.mint{background:#DFF4EA;color:#2B8660}
+.c2 .av.amber{background:#FFF0D4;color:#A3670F}
+.c2 .av.blue{background:#E3ECFF;color:#3B63BE}
+.c2 .av.lilac{background:#EFEAFF;color:#6440E8}
+.c2 .av.gray{background:#F1EEF5;color:#6E6585}
+/* dots & chips */
+.c2 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.c2 .d-lang{background:#8CB2FF}.c2 .d-fine{background:#6FCFA6}.c2 .d-play{background:#FFC46B}.c2 .d-adl{background:#F59BBE}.c2 .d-gross{background:#B59CFF}.c2 .d-cog{background:#6CCFDB}
+.c2 .chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:7px;font-size:12px;font-weight:500;white-space:nowrap;flex:none}
+.c2 .chip.amber{background:#FFF3DC;color:#93600F}
+.c2 .chip.violet{background:#EFEAFF;color:#6440E8}
+.c2 .chip.green{background:#E4F6EC;color:#2B8660}
+.c2 .chip.plain{color:#A39BB5;padding:0}
+/* bottom tab bar */
+.c2 .tabbar{position:absolute;left:0;right:0;bottom:0;height:84px;background:#fff;border-top:.5px solid #E7E2F0;display:flex;padding:6px 10px 0;z-index:4}
+.c2 .tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C94AE;font-size:11px;font-weight:500;text-decoration:none;height:50px;justify-content:center}
+.c2 .tabbar a.on{color:#7A5AF8}
+.c2 .tabbar .ic{position:relative}
+.c2 .tabbar .badge{position:absolute;top:-4px;left:-8px;min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:#7A5AF8;color:#fff;font-size:10.5px;font-weight:600;line-height:17px;text-align:center;box-shadow:0 0 0 2px #fff;font-style:normal;font-variant-numeric:tabular-nums}
+.c2 .hi{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#24173D;z-index:7}
+
+/* ---------- 1. home ---------- */
+.c2 .home-top{height:48px;display:flex;align-items:center;justify-content:space-between}
+.c2 .home-top img{height:28px;width:auto;display:block}
+.c2 .home-top .acts{display:flex;align-items:center;gap:4px}
+.c2 .home-top .bell{width:40px;height:40px;display:flex;align-items:center;justify-content:center;position:relative}
+.c2 .home-top .bell i{position:absolute;top:9px;right:10px;width:7px;height:7px;border-radius:50%;background:#7A5AF8;box-shadow:0 0 0 1.5px #F7F5FA}
+.c2 .h1{font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.15;margin:6px 0 2px}
+.c2 .date{font-size:15px;color:#6E6585}
+.c2 .tl{position:relative;padding:4px 0}
+.c2 .tl:before{content:"";position:absolute;top:26px;bottom:30px;right:72px;width:1.5px;background:#E7E2F0}
+.c2 .tl-row{position:relative;display:flex;align-items:flex-start;padding:12px 14px 12px 14px;min-height:58px}
+.c2 .tl-row+.tl-row:after{content:"";position:absolute;top:0;right:84px;left:0;height:.5px;background:#E7E2F0}
+.c2 .tl-row .t{width:48px;font-size:13.5px;font-weight:500;color:#6E6585;padding-top:1px;flex:none}
+.c2 .tl-row .rail{width:20px;flex:none;display:flex;justify-content:center;padding-top:6px;position:relative;z-index:1}
+.c2 .tl-row .rail i{width:9px;height:9px;border-radius:50%;background:#fff;border:1.5px solid #C9C1D8}
+.c2 .tl-row.past .rail i{background:#A39BB5;border-color:#A39BB5}
+.c2 .tl-row.live .rail{padding-top:5px}
+.c2 .tl-row.live .rail i{width:11px;height:11px;background:#7A5AF8;border:0;box-shadow:0 0 0 4px #EFEAFF,0 0 0 5px rgba(122,90,248,.18)}
+.c2 .tl-row.live .t{color:#7A5AF8;font-weight:600}
+.c2 .tl-main{flex:1;min-width:0;padding:0 10px 0 8px}
+.c2 .tl-main .nm{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c2 .tl-main .nm span{color:#6E6585;font-weight:400}
+.c2 .tl-main .sub{font-size:13px;color:#6E6585;margin-top:1px}
+.c2 .tl-row .chip{margin-top:-1px}
+.c2 .live-dot{width:6px;height:6px;border-radius:50%;background:#7A5AF8;box-shadow:0 0 0 3px rgba(122,90,248,.2)}
+.c2 .prog{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#6E6585}
+.c2 .prog .trk{flex:1;height:3px;border-radius:2px;background:#EFEAFF;position:relative;overflow:hidden}
+.c2 .prog .trk b{position:absolute;top:0;bottom:0;right:0;width:40%;background:#7A5AF8;border-radius:2px}
+.c2 .lrow{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;position:relative}
+.c2 .lrow+.lrow:after{content:"";position:absolute;top:0;right:56px;left:0;height:.5px;background:#E7E2F0}
+.c2 .ibox{width:30px;height:30px;border-radius:8px;background:#EFEAFF;color:#7A5AF8;display:flex;align-items:center;justify-content:center;flex:none}
+.c2 .lrow .tx{flex:1;font-size:15px;min-width:0}
+.c2 .lrow .tx b{font-weight:700;font-variant-numeric:tabular-nums;margin-left:3px}
+.c2 .kids{display:flex;padding:14px 6px 12px}
+.c2 .kids .k{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.c2 .kids .av{width:44px;height:44px;font-size:17px}
+.c2 .kids .kn{font-size:13.5px;font-weight:600;line-height:1.1}
+.c2 .kids .ka{font-size:12px;color:#6E6585;line-height:1.1}
+
+/* ---------- 2. kid hub ---------- */
+.c2 .kid-h{display:flex;align-items:center;gap:14px;margin:6px 0 18px}
+.c2 .kid-h .av{width:60px;height:60px;font-size:24px}
+.c2 .kid-h .nm{font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.1}
+.c2 .kid-h .meta{font-size:14px;color:#6E6585;margin-top:2px}
+.c2 .kpis{display:flex;padding:14px 0 13px}
+.c2 .kpi{flex:1;text-align:center;position:relative;padding:0 6px}
+.c2 .kpi+.kpi:before{content:"";position:absolute;right:0;top:6px;bottom:6px;width:.5px;background:#E7E2F0}
+.c2 .kpi .v{font-size:30px;font-weight:700;letter-spacing:-.8px;line-height:1.1;font-variant-numeric:tabular-nums}
+.c2 .kpi .v small{font-size:17px;font-weight:600;letter-spacing:0;margin-right:1px}
+.c2 .kpi .l{font-size:12px;color:#6E6585;margin-top:3px;white-space:nowrap}
+.c2 .segwrap{margin:16px -16px 0 -16px;padding-right:16px;overflow:hidden}
+.c2 .seg{display:inline-flex;background:#EEEAF4;border-radius:10px;padding:2px;white-space:nowrap}
+.c2 .seg span{height:32px;padding:0 15px;display:flex;align-items:center;font-size:13.5px;font-weight:500;color:#4A3F63;border-radius:8px}
+.c2 .seg span.on{background:#fff;color:#24173D;font-weight:600;box-shadow:0 1px 3px rgba(36,23,61,.1),0 0 0 .5px rgba(36,23,61,.04)}
+.c2 .banner{display:flex;align-items:center;gap:10px;margin-top:14px;padding:0 12px 0 10px;min-height:48px;border-radius:12px;background:#EFEAFF;color:#4B2FC0;font-size:13.5px;font-weight:500}
+.c2 .banner .tx{flex:1;min-width:0}
+.c2 .banner a{color:#7A5AF8;font-weight:600;text-decoration:none;font-size:13px}
+.c2 .next{display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px}
+.c2 .next .tx{flex:1}
+.c2 .next .lb{font-size:12px;color:#6E6585}
+.c2 .next .vl{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.c2 .qa{display:flex;padding:14px 4px 12px}
+.c2 .qa .q{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11.5px;color:#24173D;font-weight:500;text-align:center;white-space:nowrap}
+.c2 .qa .q .ci{width:46px;height:46px;border-radius:50%;background:#F4F1FA;color:#7A5AF8;display:flex;align-items:center;justify-content:center}
+.c2 .qa .q.pri .ci{background:#7A5AF8;color:#fff}
+.c2 .team .lrow{min-height:56px}
+.c2 .team .lrow+.lrow:after{right:62px}
+.c2 .team .av{width:36px;height:36px;font-size:14px}
+.c2 .team .tx .n{font-size:15px;font-weight:600;line-height:1.2}
+.c2 .team .tx .r{font-size:12.5px;color:#6E6585}
+.c2 .pair{display:flex;width:36px;flex:none}
+.c2 .pair .av{width:26px;height:26px;font-size:11px;box-shadow:0 0 0 2px #fff}
+.c2 .pair .av+.av{margin-right:-12px;margin-top:10px}
+
+/* ---------- 3. form ---------- */
+.c2 .fbar{height:54px;display:flex;align-items:center;justify-content:space-between;margin:0 -4px}
+.c2 .fbar .cx{min-width:60px;min-height:44px;display:flex;align-items:center;color:#7A5AF8;font-size:16px;padding:0 4px}
+.c2 .fbar .ttl{text-align:center}
+.c2 .fbar .ttl b{display:block;font-size:16px;font-weight:600}
+.c2 .fbar .ttl span{display:block;font-size:12px;color:#6E6585;font-variant-numeric:tabular-nums}
+.c2 .fbar .sv{min-width:60px;display:flex;justify-content:flex-end;align-items:center;gap:4px;font-size:12px;color:#A39BB5;padding:0 4px}
+.c2 .frow{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:0 14px;font-size:15px;position:relative}
+.c2 .frow .val{display:flex;align-items:center;gap:4px;color:#6E6585;font-variant-numeric:tabular-nums}
+.c2 .hair{height:.5px;background:#E7E2F0;margin-right:14px}
+.c2 .coop{padding:10px 14px 14px}
+.c2 .coop .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.c2 .coop .big{font-size:28px;font-weight:700;color:#7A5AF8;letter-spacing:-.6px;font-variant-numeric:tabular-nums;line-height:1}
+.c2 .fine{display:flex;align-items:center;gap:10px}
+.c2 .mini{display:flex;background:#F4F1FA;border-radius:9px;height:32px}
+.c2 .mini span{width:36px;display:flex;align-items:center;justify-content:center;color:#24173D}
+.c2 .mini span+span{border-right:.5px solid #DCD5E8}
+.c2 .steps{display:flex;height:44px;background:#F4F1FA;border-radius:10px;padding:2px;direction:ltr;flex-direction:row-reverse}
+.c2 .steps span{flex:1;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:500;color:#6E6585;border-radius:8px;font-variant-numeric:tabular-nums}
+.c2 .steps span.f{color:#6440E8}
+.c2 .steps span.on{background:#7A5AF8;color:#fff;font-weight:600;box-shadow:0 1px 3px rgba(122,90,248,.35)}
+.c2 .moods{display:flex;gap:7px;padding:8px}
+.c2 .moods span{flex:1;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#24173D;background:#F7F5FA}
+.c2 .moods span.on{background:#EFEAFF;color:#6440E8;font-weight:600;box-shadow:inset 0 0 0 1.5px #7A5AF8}
+.c2 .goal{display:flex;align-items:center;gap:10px;padding:12px 14px;min-height:72px;position:relative}
+.c2 .goal+.goal:after{content:"";position:absolute;top:0;right:14px;left:0;height:.5px;background:#E7E2F0}
+.c2 .goal .gt{flex:1;min-width:0}
+.c2 .goal .gn{font-size:14.5px;font-weight:600;line-height:1.25}
+.c2 .goal .gc{display:flex;align-items:center;gap:6px;font-size:12px;color:#6E6585;margin-top:3px}
+.c2 .tally{display:flex;gap:5px;flex:none}
+.c2 .tally span{width:44px;height:44px;border-radius:10px;background:#F7F5FA;box-shadow:inset 0 0 0 .5px #E7E2F0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.c2 .tally em{font-style:normal;font-size:13px;font-weight:600;margin-bottom:3px}
+.c2 .tally b{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.c2 .tally .ok em{color:#2B8660}.c2 .tally .no em{color:#C4507A}.c2 .tally .pr em{color:#A3670F}
+.c2 .note{padding:12px 14px;min-height:84px;font-size:15px;line-height:1.45}
+.c2 .foot{position:absolute;left:0;right:0;bottom:0;height:100px;background:rgba(247,245,250,.96);border-top:.5px solid #E7E2F0;display:flex;gap:10px;padding:12px 16px 0;z-index:4}
+.c2 .foot .b1{flex:1;height:50px;border-radius:14px;background:#7A5AF8;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(122,90,248,.28)}
+.c2 .foot .b2{height:50px;padding:0 16px;border-radius:14px;background:#fff;box-shadow:0 0 0 .5px #E7E2F0;color:#24173D;font-size:15px;font-weight:500;display:flex;align-items:center;white-space:nowrap}
+
+/* ---------- 4. progress ---------- */
+.c2 .bar .mid.who{display:flex;align-items:center;gap:7px}
+.c2 .bar .mid.who .av{width:24px;height:24px;font-size:11px}
+.c2 .seg.p{margin-top:0}
+.c2 .chart{padding:14px 14px 12px}
+.c2 .chart .hd{display:flex;justify-content:space-between;align-items:flex-start}
+.c2 .chart .hd .tt{font-size:15px;font-weight:600}
+.c2 .chart .hd .st{font-size:12.5px;color:#6E6585;margin-top:1px}
+.c2 .chart .hd .kv{text-align:left}
+.c2 .chart .hd .kv .v{font-size:30px;font-weight:700;letter-spacing:-.8px;line-height:1;font-variant-numeric:tabular-nums}
+.c2 .chart .hd .kv .chip{margin-top:6px}
+.c2 .chart svg{display:block;width:100%;height:auto;margin-top:12px;overflow:visible}
+.c2 .axis{display:flex;justify-content:space-between;font-size:11.5px;color:#A39BB5;margin-top:4px;padding:0 34px 0 0}
+.c2 .gl{padding:13px 14px 14px;position:relative}
+.c2 .gl+.gl:after{content:"";position:absolute;top:0;right:14px;left:0;height:.5px;background:#E7E2F0}
+.c2 .gl .top{display:flex;align-items:flex-start;gap:10px}
+.c2 .gl .top .gt{flex:1;min-width:0}
+.c2 .gl .pc{font-size:20px;font-weight:700;letter-spacing:-.4px;font-variant-numeric:tabular-nums;line-height:1.1}
+.c2 .gl .bar2{height:4px;border-radius:2px;background:#EFEAFF;margin-top:10px;position:relative;overflow:hidden}
+.c2 .gl .bar2 b{position:absolute;top:0;bottom:0;right:0;background:#7A5AF8;border-radius:2px}
+</style>
+
+<div class="c2 phones">
+
+<!-- ================= 1. HOME ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+  <div class="island"></div>
+  <div class="sb"><span class="clock">9:41</span><span class="sys"><svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.5 6.9a6.4 6.4 0 0 1 9 0l-1.4 1.4a4.4 4.4 0 0 0-6.2 0zM1.3 4.6a9.6 9.6 0 0 1 13.4 0l-1.4 1.4a7.6 7.6 0 0 0-10.6 0z"/></svg><svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#24173D" stroke-opacity=".4"/><rect x="2.2" y="2.2" width="18.6" height="7.6" rx="2"/><rect x="23.6" y="4" width="1.8" height="4" rx=".9" fill-opacity=".4"/></svg></span></div>
+  <div class="content">
+    <div class="home-top">
+      <img src="img/logo.png" alt="Doing">
+      <div class="acts">
+        <div class="bell"><svg class="i" viewBox="0 0 24 24"><path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><i></i></div>
+        <div class="av lilac" style="width:32px;height:32px;font-size:13px">מ</div>
+      </div>
+    </div>
+    <div class="h1">בוקר טוב, מיכל</div>
+    <div class="date">יום שלישי, 3 בנובמבר</div>
+
+    <div class="sec"><h3>היום · 4 מפגשים</h3><a>יומן מלא</a></div>
+    <div class="group tl">
+      <div class="tl-row past">
+        <div class="t">08:30</div><div class="rail"><i></i></div>
+        <div class="tl-main"><div class="nm">נגה <span>· שירה</span></div><div class="sub">טיפול</div></div>
+        <span class="chip amber">ממתין לטופס</span>
+      </div>
+      <div class="tl-row live">
+        <div class="t">11:00</div><div class="rail"><i></i></div>
+        <div class="tl-main"><div class="nm">ליאם <span>· דנה</span></div><div class="sub">טיפול</div>
+          <div class="prog"><span class="trk"><b></b></span><span class="num">עוד 54 דק׳</span></div></div>
+        <span class="chip violet"><span class="live-dot"></span>עכשיו</span>
+      </div>
+      <div class="tl-row">
+        <div class="t">14:00</div><div class="rail"><i></i></div>
+        <div class="tl-main"><div class="nm">עומר <span>· מיכל</span></div><div class="sub">הדרכת הורים</div></div>
+        <span class="chip plain">מתוכנן</span>
+      </div>
+      <div class="tl-row">
+        <div class="t">16:30</div><div class="rail"><i></i></div>
+        <div class="tl-main"><div class="nm">תמר <span>· שירה</span></div><div class="sub">טיפול</div></div>
+        <span class="chip plain">מתוכנן</span>
+      </div>
+    </div>
+
+    <div class="sec"><h3>דורש תשומת לב</h3></div>
+    <div class="group">
+      <div class="lrow"><span class="ibox"><svg class="i s" viewBox="0 0 24 24"><path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z"/><path d="M14 3.5V8h4.5M9 13h6M9 16.5h4"/></svg></span><span class="tx"><b>2</b>טפסים ממתינים</span><svg class="i s chev" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg></div>
+      <div class="lrow"><span class="ibox"><svg class="i s" viewBox="0 0 24 24"><path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-9l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/></svg></span><span class="tx"><b>3</b>הודעות חדשות</span><svg class="i s chev" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg></div>
+    </div>
+
+    <div class="sec"><h3>ילדים</h3><a>הכל</a></div>
+    <div class="group kids">
+      <div class="k"><div class="av pink">נ</div><span class="kn">נגה</span><span class="ka">בת 6</span></div>
+      <div class="k"><div class="av mint">ל</div><span class="kn">ליאם</span><span class="ka">בן 5</span></div>
+      <div class="k"><div class="av amber">ע</div><span class="kn">עומר</span><span class="ka">בן 7</span></div>
+      <div class="k"><div class="av blue">ת</div><span class="kn">תמר</span><span class="ka">בת 4</span></div>
+    </div>
+  </div>
+  <nav class="tabbar">
+    <a class="on"><svg class="i" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20h-5v-5.5H9V20H4z"/></svg><span>היום</span></a>
+    <a><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19.5c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5"/><circle cx="16.5" cy="9.5" r="2.4"/><path d="M16.5 14.5c2.2 0 3.7 1.3 4.2 3.8"/></svg><span>ילדים</span></a>
+    <a><svg class="i" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg><span>יומן</span></a>
+    <a><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-9l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/></svg><b class="badge">3</b></span><span>הודעות</span></a>
+  </nav>
+  <div class="hi"></div>
+</div></div><figcaption>היום · מסך הבית</figcaption></figure>
+
+<!-- ================= 2. KID HUB ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+  <div class="island"></div>
+  <div class="sb"><span class="clock">9:41</span><span class="sys"><svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.5 6.9a6.4 6.4 0 0 1 9 0l-1.4 1.4a4.4 4.4 0 0 0-6.2 0zM1.3 4.6a9.6 9.6 0 0 1 13.4 0l-1.4 1.4a7.6 7.6 0 0 0-10.6 0z"/></svg><svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#24173D" stroke-opacity=".4"/><rect x="2.2" y="2.2" width="18.6" height="7.6" rx="2"/><rect x="23.6" y="4" width="1.8" height="4" rx=".9" fill-opacity=".4"/></svg></span></div>
+  <div class="content">
+    <div class="bar">
+      <span class="back"><svg class="i" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12l-6 6"/></svg>ילדים</span>
+      <span class="btn"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r=".9"/><circle cx="12" cy="12" r=".9"/><circle cx="18" cy="12" r=".9"/></svg></span>
+    </div>
+    <div class="kid-h">
+      <div class="av pink">נ</div>
+      <div><div class="nm">נגה</div><div class="meta">בת 6 · בטיפול מאז מרץ</div></div>
+    </div>
+    <div class="group kpis">
+      <div class="kpi"><div class="v">85<small>%</small></div><div class="l">שיתוף פעולה</div></div>
+      <div class="kpi"><div class="v">12</div><div class="l">טיפולים החודש</div></div>
+      <div class="kpi"><div class="v">4</div><div class="l">מטרות פעילות</div></div>
+    </div>
+    <div class="segwrap"><div class="seg"><span class="on">סקירה</span><span>טיפולים</span><span>התקדמות</span><span>הודעות</span><span>איסוף נתונים</span></div></div>
+
+    <div class="banner"><svg class="i s" viewBox="0 0 24 24"><path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z"/><path d="M14 3.5V8h4.5M9 16c1-1.5 1.8-2 2.5-.8s1.5.8 2.5-.4"/></svg><span class="tx">הסכם הטיפול ממתין לחתימת ההורים</span><a>תזכורת</a></div>
+
+    <div class="sec" style="margin-top:18px"><h3>הטיפול הבא</h3></div>
+    <div class="group next">
+      <span class="ibox"><svg class="i s" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg></span>
+      <div class="tx"><div class="vl">יום רביעי · 08:30</div><div class="lb">טיפול עם שירה</div></div>
+      <svg class="i s chev" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg>
+    </div>
+
+    <div class="sec"><h3>פעולות מהירות</h3></div>
+    <div class="group qa">
+      <div class="q pri"><span class="ci"><svg class="i" viewBox="0 0 24 24"><path d="M15 4.5 19.5 9 9 19.5H4.5V15z"/><path d="M12.5 7l4.5 4.5"/></svg></span>מלא טופס</div>
+      <div class="q"><span class="ci"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></svg></span>סדר יום</div>
+      <div class="q"><span class="ci"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16.5" rx="2.5"/><path d="M9 9h6M9 12.5h6M9 16h3.5"/></svg></span>דיווח יומי</div>
+      <div class="q"><span class="ci"><svg class="i" viewBox="0 0 24 24"><path d="M12 3.5 13.6 9l5.4 1.5-5.4 1.6L12 17.5l-1.6-5.4L5 10.5 10.4 9z"/><path d="M18 16v4M16 18h4"/></svg></span>צ׳אט AI</div>
+      <div class="q"><span class="ci"><svg class="i" viewBox="0 0 24 24"><path d="M4.5 18.5c2.5 0 3-5 5-5s1 3.5 3 3.5 2-2 3.5-2"/><path d="M4 21h16"/><path d="M15 3.5l3 3-6.5 6.5H8.5v-3z"/></svg></span>הסכם טיפול</div>
+    </div>
+
+    <div class="sec"><h3>צוות</h3><a>עריכה</a></div>
+    <div class="group team">
+      <div class="lrow"><div class="av lilac">ש</div><div class="tx"><div class="n">שירה</div><div class="r">מטפלת</div></div><svg class="i s chev" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg></div>
+      <div class="lrow"><div class="av mint">ד</div><div class="tx"><div class="n">דנה</div><div class="r">מטפלת</div></div><svg class="i s chev" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg></div>
+      <div class="lrow"><div class="av amber">ר</div><div class="tx"><div class="n">רותם</div><div class="r">מדריכת הורים</div></div><svg class="i s chev" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg></div>
+      <div class="lrow"><div class="pair"><div class="av blue">א</div><div class="av pink">א</div></div><div class="tx"><div class="n">אבא ואמא של נגה</div><div class="r">הורים</div></div><svg class="i s chev" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg></div>
+    </div>
+  </div>
+  <nav class="tabbar">
+    <a><svg class="i" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20h-5v-5.5H9V20H4z"/></svg><span>היום</span></a>
+    <a class="on"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19.5c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5"/><circle cx="16.5" cy="9.5" r="2.4"/><path d="M16.5 14.5c2.2 0 3.7 1.3 4.2 3.8"/></svg><span>ילדים</span></a>
+    <a><svg class="i" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg><span>יומן</span></a>
+    <a><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-9l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/></svg><b class="badge">3</b></span><span>הודעות</span></a>
+  </nav>
+  <div class="hi"></div>
+</div></div><figcaption>נגה · כרטיס ילד</figcaption></figure>
+
+<!-- ================= 3. SESSION FORM ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+  <div class="island"></div>
+  <div class="sb"><span class="clock">9:41</span><span class="sys"><svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.5 6.9a6.4 6.4 0 0 1 9 0l-1.4 1.4a4.4 4.4 0 0 0-6.2 0zM1.3 4.6a9.6 9.6 0 0 1 13.4 0l-1.4 1.4a7.6 7.6 0 0 0-10.6 0z"/></svg><svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#24173D" stroke-opacity=".4"/><rect x="2.2" y="2.2" width="18.6" height="7.6" rx="2"/><rect x="23.6" y="4" width="1.8" height="4" rx=".9" fill-opacity=".4"/></svg></span></div>
+  <div class="content">
+    <div class="fbar">
+      <span class="cx">ביטול</span>
+      <div class="ttl"><b>טופס טיפול · נגה</b><span>3.11.2026 · שירה</span></div>
+      <span class="sv"><svg class="i xs" viewBox="0 0 24 24"><path d="M7 18.5h10a4 4 0 0 0 .6-8 5.5 5.5 0 0 0-10.7-1A4.5 4.5 0 0 0 7 18.5z"/><path d="m9.5 13.5 2 2 3.5-3.5"/></svg>נשמר</span>
+    </div>
+
+    <div class="group" style="margin-top:6px">
+      <div class="frow"><span>משך הטיפול</span><span class="val">90 דק׳<svg class="i xs chev" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg></span></div>
+      <div class="hair"></div>
+      <div class="coop">
+        <div class="hd">
+          <span style="font-size:15px">שיתוף פעולה</span>
+          <div class="fine"><div class="mini"><span><svg class="i xs" viewBox="0 0 24 24"><path d="M6 12h12"/></svg></span><span><svg class="i xs" viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></span></div><span class="big">85%</span></div>
+        </div>
+        <div class="steps"><span class="f">10</span><span class="f">20</span><span class="f">30</span><span class="f">40</span><span class="f">50</span><span class="f">60</span><span class="f">70</span><span class="on">80</span><span>90</span><span>100</span></div>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:20px"><h3>מצב רוח</h3></div>
+    <div class="group moods"><span class="on">שמחה</span><span>רגועה</span><span>עייפה</span><span>מתוסכלת</span></div>
+
+    <div class="sec" style="margin-top:20px"><h3>מטרות שעבדנו עליהן</h3><a>+ הוספה</a></div>
+    <div class="group">
+      <div class="goal"><div class="gt"><div class="gn">קשר עין בפנייה בשם</div><div class="gc"><i class="dot d-lang"></i>שפה ותקשורת</div></div>
+        <div class="tally"><span class="ok"><em>+</em><b>8</b></span><span class="no"><em>−</em><b>2</b></span><span class="pr"><em>r</em><b>1</b></span></div></div>
+      <div class="goal"><div class="gt"><div class="gn">הרכבת פאזל 12 חלקים</div><div class="gc"><i class="dot d-fine"></i>מוטוריקה עדינה</div></div>
+        <div class="tally"><span class="ok"><em>+</em><b>4</b></span><span class="no"><em>−</em><b>3</b></span><span class="pr"><em>r</em><b>2</b></span></div></div>
+      <div class="goal"><div class="gt"><div class="gn">משחק תורות עם חבר</div><div class="gc"><i class="dot d-play"></i>משחק וחברה</div></div>
+        <div class="tally"><span class="ok"><em>+</em><b>3</b></span><span class="no"><em>−</em><b>4</b></span><span class="pr"><em>r</em><b>3</b></span></div></div>
+    </div>
+
+    <div class="sec" style="margin-top:20px"><h3>הצלחות</h3></div>
+    <div class="group note">השלימה פאזל לבד בפעם הראשונה</div>
+  </div>
+  <div class="foot">
+    <span class="b2">שמירה כטיוטה</span>
+    <span class="b1"><svg class="i s" viewBox="0 0 24 24"><path d="m5.5 12.5 4 4 9-9"/></svg>שמירת הטופס</span>
+  </div>
+  <div class="hi"></div>
+</div></div><figcaption>טופס טיפול</figcaption></figure>
+
+<!-- ================= 4. PROGRESS ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+  <div class="island"></div>
+  <div class="sb"><span class="clock">9:41</span><span class="sys"><svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.5 6.9a6.4 6.4 0 0 1 9 0l-1.4 1.4a4.4 4.4 0 0 0-6.2 0zM1.3 4.6a9.6 9.6 0 0 1 13.4 0l-1.4 1.4a7.6 7.6 0 0 0-10.6 0z"/></svg><svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#24173D" stroke-opacity=".4"/><rect x="2.2" y="2.2" width="18.6" height="7.6" rx="2"/><rect x="23.6" y="4" width="1.8" height="4" rx=".9" fill-opacity=".4"/></svg></span></div>
+  <div class="content">
+    <div class="bar">
+      <span class="back"><svg class="i" viewBox="0 0 24 24"><path d="M9.5 6 15.5 12l-6 6"/></svg>ילדים</span>
+      <span class="mid who"><span class="av pink">נ</span>נגה</span>
+      <span class="btn"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r=".9"/><circle cx="12" cy="12" r=".9"/><circle cx="18" cy="12" r=".9"/></svg></span>
+    </div>
+    <div class="segwrap" style="margin-top:6px"><div class="seg"><span>סקירה</span><span>טיפולים</span><span class="on">התקדמות</span><span>הודעות</span><span>איסוף נתונים</span></div></div>
+
+    <div class="group chart" style="margin-top:16px">
+      <div class="hd">
+        <div><div class="tt">שיתוף פעולה</div><div class="st">8 טיפולים אחרונים</div></div>
+        <div class="kv"><div class="v">85%</div><span class="chip green">+25 נק׳</span></div>
+      </div>
+      <svg viewBox="0 0 296 132" aria-label="שיתוף פעולה, 8 טיפולים אחרונים">
+        <defs><linearGradient id="c2g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7A5AF8" stop-opacity=".16"/><stop offset="1" stop-color="#7A5AF8" stop-opacity="0"/></linearGradient></defs>
+        <g stroke="#E7E2F0" stroke-width="1"><line x1="0" y1="12" x2="270" y2="12" stroke-dasharray="2 3"/><line x1="0" y1="66" x2="270" y2="66" stroke-dasharray="2 3"/><line x1="0" y1="120" x2="270" y2="120"/></g>
+        <g fill="#A39BB5" font-size="10" font-family="IBM Plex Sans Hebrew, sans-serif" text-anchor="end"><text x="296" y="15.5">100</text><text x="296" y="69.5">75</text><text x="296" y="123.5">50</text></g>
+        <path d="M262 98.4L229 87.6L196 102.7L163 72.5L130 66L97 76.8L64 50.9L31 44.4L31 120L262 120Z" fill="url(#c2g)"/>
+        <path d="M262 98.4L229 87.6L196 102.7L163 72.5L130 66L97 76.8L64 50.9L31 44.4" fill="none" stroke="#7A5AF8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <g fill="#fff" stroke="#7A5AF8" stroke-width="1.5"><circle cx="262" cy="98.4" r="2.8"/><circle cx="229" cy="87.6" r="2.8"/><circle cx="196" cy="102.7" r="2.8"/><circle cx="163" cy="72.5" r="2.8"/><circle cx="130" cy="66" r="2.8"/><circle cx="97" cy="76.8" r="2.8"/><circle cx="64" cy="50.9" r="2.8"/></g>
+        <circle cx="31" cy="44.4" r="9" fill="#7A5AF8" fill-opacity=".14"/>
+        <circle cx="31" cy="44.4" r="4.5" fill="#7A5AF8" stroke="#fff" stroke-width="2"/>
+        <rect x="14" y="16" width="34" height="18" rx="6" fill="#24173D"/>
+        <text x="31" y="29" fill="#fff" font-size="11" font-weight="600" font-family="IBM Plex Sans Hebrew, sans-serif" text-anchor="middle">85%</text>
+      </svg>
+      <div class="axis"><span>לפני חודשיים</span><span>היום</span></div>
+    </div>
+
+    <div class="sec"><h3>מטרות פעילות · 4</h3><a>כל המטרות</a></div>
+    <div class="group">
+      <div class="gl"><div class="top"><div class="gt"><div class="gn" style="font-size:15px;font-weight:600">קשר עין בפנייה בשם</div><div class="gc" style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#6E6585;margin-top:2px"><i class="dot d-lang"></i>שפה ותקשורת</div></div><span class="pc">78%</span></div><div class="bar2"><b style="width:78%"></b></div></div>
+      <div class="gl"><div class="top"><div class="gt"><div class="gn" style="font-size:15px;font-weight:600">הרכבת פאזל 12 חלקים</div><div class="gc" style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#6E6585;margin-top:2px"><i class="dot d-fine"></i>מוטוריקה עדינה</div></div><span class="pc">55%</span></div><div class="bar2"><b style="width:55%"></b></div></div>
+      <div class="gl"><div class="top"><div class="gt"><div class="gn" style="font-size:15px;font-weight:600">משחק תורות עם חבר</div><div class="gc" style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#6E6585;margin-top:2px"><i class="dot d-play"></i>משחק וחברה</div></div><span class="pc">40%</span></div><div class="bar2"><b style="width:40%"></b></div></div>
+      <div class="gl"><div class="top"><div class="gt"><div class="gn" style="font-size:15px;font-weight:600">לבישת מעיל באופן עצמאי</div><div class="gc" style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#6E6585;margin-top:2px"><i class="dot d-adl"></i>ADL</div></div><span class="pc">62%</span></div><div class="bar2"><b style="width:62%"></b></div></div>
+    </div>
+  </div>
+  <nav class="tabbar">
+    <a><svg class="i" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20h-5v-5.5H9V20H4z"/></svg><span>היום</span></a>
+    <a class="on"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19.5c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5"/><circle cx="16.5" cy="9.5" r="2.4"/><path d="M16.5 14.5c2.2 0 3.7 1.3 4.2 3.8"/></svg><span>ילדים</span></a>
+    <a><svg class="i" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg><span>יומן</span></a>
+    <a><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-9l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z"/></svg><b class="badge">3</b></span><span>הודעות</span></a>
+  </nav>
+  <div class="hi"></div>
+</div></div><figcaption>התקדמות</figcaption></figure>
+
+</div>
+</div>
+  <div class="label"><h3>הדמיות</h3><span>נוצרו עם gpt-image-2.5. לוחצים להגדלה. ייתכנו שגיאות כתיב קטנות בתמונות.</span></div>
+  <div class="renders">
+    <figure class="render"><button type="button"><img src="img/c2-flare.jpg" alt="לילך שקט: בית, כרטיס ילד וטופס טיפול" loading="lazy"></button><figcaption><b>Flare</b> · בית, כרטיס ילד, טופס טיפול</figcaption></figure>
+    <figure class="render"><button type="button"><img src="img/c2-sun.jpg" alt="לילך שקט: התקדמות, יומן ומסך נוסף" loading="lazy"></button><figcaption><b>Sunburst</b> · התקדמות, יומן ומסך נוסף</figcaption></figure>
+    <figure class="render wide"><button type="button"><img src="img/c2-desk.jpg" alt="לילך שקט: גרסת מחשב" loading="lazy"></button><figcaption><b>Sunburst</b> · גרסת מחשב עם ניווט צד, אותה מערכת</figcaption></figure>
+  </div>
+  <div class="cmts" data-concept="c2" hidden></div>
+</section>
+<section class="concept" id="c3" aria-labelledby="c3-h">
+  <div class="chead">
+    <div class="t">
+      <span class="eyebrow">כיוון 3</span>
+      <h2 id="c3-h">שקיעה סגולה<em>Purple Dusk</em></h2>
+      <p class="thesis">חוויה עוטפת וחגיגית. גרדיאנטים רכים של לבנדר, אפרסק וורוד, וכרטיסי זכוכית מעליהם. הכיוון הכי 'וואו', עם טבעות התקדמות וכותרת גדולה לכל ילד.</p>
+    </div>
+    <div class="spec">
+      <div class="sw" aria-label="פלטה"><i style="background:#C9B8FF;color:#1F1633">#C9B8FF</i><i style="background:#E6D9FF;color:#1F1633">#E6D9FF</i><i style="background:#FFD3C2;color:#1F1633">#FFD3C2</i><i style="background:#FFC1DA;color:#1F1633">#FFC1DA</i><i style="background:#7B4DFF;color:#fff">#7B4DFF</i><i style="background:#1F1633;color:#fff">#1F1633</i></div>
+      <div class="type"><span class="big" style="font-family:'Rubik', sans-serif">שלום מיכל</span><small>Rubik, כותרות גדולות ובטוחות</small></div>
+    </div>
+  </div>
+  <ul class="sig"><li><b>ילדים כסטוריז</b>שורת עיגולים עם טבעת גרדיאנט. נכנסים לילד בלחיצה.</li><li><b>כרטיס "עכשיו"</b>הטיפול החי עם טבעת התקדמות של הזמן.</li><li><b>סרגל צף</b>ניווט בצורת גלולה מזכוכית, מנותק מהקצה.</li></ul>
+  <div class="label"><h3>ארבעה מסכים, מקודדים</h3><span>עברית אמיתית בגופנים אמיתיים. בטלפון גוללים לצד.</span></div>
+  <div class="rail"><style>
+.c3 .app{position:absolute;inset:0;overflow:hidden;font-family:'Rubik','Heebo',sans-serif;color:#1F1633;-webkit-font-smoothing:antialiased;
+  background:
+   radial-gradient(70% 38% at 100% 2%, #C9B8FF 0%, rgba(201,184,255,0) 72%),
+   radial-gradient(62% 34% at 0% 16%, #FFC1DA 0%, rgba(255,193,218,0) 70%),
+   radial-gradient(70% 36% at 100% 58%, #FFD3C2 0%, rgba(255,211,194,0) 70%),
+   radial-gradient(75% 40% at 0% 82%, #C9B8FF 0%, rgba(201,184,255,0) 72%),
+   radial-gradient(60% 30% at 80% 100%, #FFC1DA 0%, rgba(255,193,218,0) 70%),
+   #EFE6FF;}
+.c3 .app *{box-sizing:border-box;margin:0;padding:0}
+.c3 .num{font-variant-numeric:tabular-nums}
+.c3 .glass{background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.7);border-radius:26px;box-shadow:0 14px 34px -18px rgba(76,40,160,.35),inset 0 1px 0 rgba(255,255,255,.6)}
+.c3 .ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.c3 .ic.s{width:18px;height:18px}
+.c3 .ic.xs{width:15px;height:15px;stroke-width:2}
+
+/* status bar */
+.c3 .sb{position:relative;z-index:6;height:44px;display:flex;align-items:center;justify-content:space-between;padding:4px 26px 0 32px;direction:ltr;font-weight:600;font-size:15px;color:#1F1633}
+.c3 .sb .r{display:flex;gap:6px;align-items:center}
+.c3 .sb svg{fill:#1F1633;display:block}
+
+/* bottom nav */
+.c3 .nav{position:absolute;z-index:8;left:18px;right:18px;bottom:24px;height:68px;border-radius:34px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.8);box-shadow:0 18px 36px -14px rgba(76,40,160,.45)}
+.c3 .ni{position:relative;width:62px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#5E5277}
+.c3 .ni .d{width:40px;height:40px;border-radius:50%;display:grid;place-items:center}
+.c3 .ni.on .d{background:linear-gradient(135deg,#7B4DFF,#B36BFF);color:#fff;box-shadow:0 8px 16px -6px rgba(123,77,255,.75)}
+.c3 .ni b{font-size:11px;font-weight:600;color:#7B4DFF;line-height:14px;margin-top:2px}
+.c3 .ni i{position:absolute;top:10px;left:14px;min-width:16px;height:16px;border-radius:8px;background:#FF5C8A;color:#fff;font:600 10px/16px 'Rubik',sans-serif;font-style:normal;text-align:center;border:2px solid #fff;box-sizing:content-box}
+.c3 .hi{position:absolute;z-index:9;bottom:8px;left:50%;transform:translateX(-50%);width:128px;height:5px;border-radius:3px;background:#1F1633}
+
+.c3 .content{position:relative;z-index:2;padding:0 20px}
+.c3 .av{display:grid;place-items:center;border-radius:50%;color:#fff;font-weight:600;flex:none}
+.c3 .k-n{background:linear-gradient(140deg,#B36BFF,#7B4DFF)}
+.c3 .k-l{background:linear-gradient(140deg,#9DB4FF,#6A80F5)}
+.c3 .k-o{background:linear-gradient(140deg,#86DCC4,#2FAE93)}
+.c3 .k-t{background:linear-gradient(140deg,#FFB59A,#FF7FA8)}
+.c3 .k-s{background:linear-gradient(140deg,#FFC1DA,#E46CA4)}
+.c3 .k-d{background:linear-gradient(140deg,#9DB4FF,#6A80F5)}
+.c3 .k-r{background:linear-gradient(140deg,#FFD3A8,#F09A4E)}
+.c3 .k-p{background:linear-gradient(140deg,#C9B8FF,#8F7AD6)}
+.c3 .ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#1F1633;position:relative}
+.c3 .sech{display:flex;align-items:baseline;justify-content:space-between;margin:18px 4px 10px}
+.c3 .sech h2{font-size:17px;font-weight:700;letter-spacing:-.2px}
+.c3 .sech span{font-size:13px;color:#5E5277}
+.c3 .sech a{font-size:13px;color:#7B4DFF;font-weight:500;display:flex;align-items:center;gap:2px}
+
+/* ---------- HOME ---------- */
+.c3 .top{display:flex;align-items:center;justify-content:space-between;height:48px}
+.c3 .top img{height:32px;display:block}
+.c3 .top .btns{display:flex;gap:8px}
+.c3 .top .ib i{position:absolute;top:7px;left:8px;width:9px;height:9px;border-radius:50%;background:#FF5C8A;border:2px solid #fff}
+.c3 .hello{font-size:28px;font-weight:700;letter-spacing:-.5px;margin-top:4px;line-height:1.15}
+.c3 .date{font-size:14px;color:#5E5277;margin-top:4px}
+.c3 .stories{display:flex;justify-content:space-between;margin:14px -2px 0}
+.c3 .st{width:62px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.c3 .ring{position:relative;width:62px;height:62px;border-radius:50%;padding:3px;background:conic-gradient(from 200deg,#7B4DFF,#B36BFF,#FF9EC7,#FFC2A8,#7B4DFF)}
+.c3 .ring .in{width:100%;height:100%;border-radius:50%;padding:3px;background:#F6F0FF}
+.c3 .ring .av{width:100%;height:100%;font-size:21px}
+.c3 .ring.lv{background:conic-gradient(from 200deg,#FF5C8A,#FF9EC7,#B36BFF,#7B4DFF,#FF5C8A)}
+.c3 .ring .tag{position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#FF5C8A,#FF8FB0);color:#fff;font-size:9.5px;font-weight:600;padding:0 6px;height:16px;line-height:16px;border-radius:8px;border:2px solid #F6F0FF;white-space:nowrap}
+.c3 .ring.add{background:none;border:2px dashed rgba(123,77,255,.45);padding:0;display:grid;place-items:center;color:#7B4DFF}
+.c3 .st span{font-size:12.5px;font-weight:500;white-space:nowrap}
+.c3 .st span em{font-style:normal;color:#5E5277;font-weight:400}
+
+.c3 .hero{margin-top:14px;padding:16px 16px 14px 18px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden}
+.c3 .hero .tx{flex:1;min-width:0;position:relative}
+.c3 .live{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;background:rgba(255,92,138,.12);color:#E23D6D;font-size:12px;font-weight:600}
+.c3 .live::before{content:"";width:7px;height:7px;border-radius:50%;background:#FF5C8A;box-shadow:0 0 0 3px rgba(255,92,138,.22)}
+.c3 .hero h3{font-size:22px;font-weight:700;margin-top:9px;letter-spacing:-.3px;line-height:1.2}
+.c3 .hero h3 em{font-style:normal;font-weight:400;color:#5E5277}
+.c3 .hero .sub{font-size:13px;color:#5E5277;margin-top:3px}
+.c3 .gbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 18px;border-radius:22px;background:linear-gradient(135deg,#7B4DFF,#B36BFF);color:#fff;font-size:14px;font-weight:600;box-shadow:0 10px 20px -8px rgba(123,77,255,.7);white-space:nowrap}
+.c3 .hero .gbtn{margin-top:12px}
+.c3 .pr{position:relative;width:104px;height:104px;flex:none}
+.c3 .pr svg{width:100%;height:100%;display:block}
+.c3 .pr .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.c3 .pr .c b{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.c3 .pr .c span{font-size:11px;color:#5E5277;margin-top:3px}
+
+.c3 .attn{display:flex;gap:10px;margin-top:10px}
+.c3 .attn .glass{flex:1;min-width:0;height:54px;border-radius:27px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;font-size:13px;font-weight:500;white-space:nowrap}
+.c3 .attn .ico{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none}
+.c3 .attn b{font-weight:700}
+.c3 .peach{background:#FFE3D6;color:#D0602F}
+.c3 .pink{background:#FFDDEA;color:#D63C79}
+
+.c3 .sched{padding:6px 14px}
+.c3 .row{display:flex;align-items:center;gap:10px;height:58px;border-bottom:1px solid rgba(94,82,119,.1)}
+.c3 .row:last-child{border-bottom:0}
+.c3 .row .t{width:42px;font-size:15px;font-weight:600;flex:none}
+.c3 .row .av{width:38px;height:38px;font-size:15px}
+.c3 .row .nm{flex:1;min-width:0}
+.c3 .row .nm b{display:block;font-size:15px;font-weight:600}
+.c3 .row .nm b em{font-style:normal;font-weight:400;color:#5E5277}
+.c3 .row .nm span{font-size:12.5px;color:#5E5277}
+.c3 .chip{height:26px;padding:0 10px;border-radius:13px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap;flex:none}
+.c3 .chip.wait{background:#FFE3D6;color:#C2552B}
+.c3 .chip.now{background:linear-gradient(135deg,#7B4DFF,#B36BFF);color:#fff}
+.c3 .chip.plan{background:rgba(123,77,255,.1);color:#5E5277}
+.c3 .row.on{background:linear-gradient(90deg,rgba(201,184,255,0),rgba(201,184,255,.35));margin:0 -14px;padding:0 14px;border-bottom-color:transparent}
+
+/* ---------- KID ---------- */
+.c3 .khead{position:absolute;top:0;left:0;right:0;height:300px;z-index:1;
+  background:
+   radial-gradient(60% 70% at 85% 10%, #B79CFF 0%, rgba(183,156,255,0) 70%),
+   radial-gradient(55% 60% at 10% 30%, #FFB3D2 0%, rgba(255,179,210,0) 70%),
+   radial-gradient(70% 60% at 60% 90%, #FFCDB8 0%, rgba(255,205,184,0) 70%),
+   linear-gradient(170deg,#C3A9FF,#E2B8F2 55%,#FFC9C9);
+  -webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+.c3 .khead.sm{height:210px}
+.c3 .kbar{position:absolute;z-index:4;top:52px;left:16px;right:16px;display:flex;justify-content:space-between}
+.c3 .kbar .ib{background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.7)}
+.c3 .kid-id{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;margin-top:8px}
+.c3 .kid-id .nmr{display:flex;align-items:center;gap:8px;margin-top:6px}
+.c3 .bigav{width:86px;height:86px;border-radius:50%;padding:4px;background:conic-gradient(from 200deg,#7B4DFF,#B36BFF,#FF9EC7,#FFC2A8,#7B4DFF);box-shadow:0 16px 30px -12px rgba(90,40,180,.55)}
+.c3 .bigav .in{width:100%;height:100%;border-radius:50%;padding:4px;background:rgba(255,255,255,.9)}
+.c3 .bigav .av{width:100%;height:100%;font-size:32px}
+.c3 .kid-id h1{font-size:28px;font-weight:700;letter-spacing:-.5px;line-height:1.15}
+.c3 .kid-id .age{height:24px;padding:0 12px;border-radius:12px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.75);font-size:12.5px;color:#5E5277;display:inline-flex;align-items:center}
+.c3 .tabs{position:relative;z-index:3;margin:12px 16px 0;height:54px;border-radius:27px;padding:5px;display:flex;gap:4px;overflow:hidden;white-space:nowrap;
+  -webkit-mask-image:linear-gradient(to left,transparent 0,#000 48px);mask-image:linear-gradient(to left,transparent 0,#000 48px)}
+.c3 .tabs span{height:44px;padding:0 16px;border-radius:22px;display:inline-flex;align-items:center;font-size:14px;font-weight:500;color:#5E5277;flex:none}
+.c3 .tabs span.on{background:linear-gradient(135deg,#7B4DFF,#B36BFF);color:#fff;font-weight:600;box-shadow:0 8px 16px -8px rgba(123,77,255,.8)}
+.c3 .kc{position:relative;z-index:2;padding:0 16px}
+.c3 .banner{margin-top:10px;height:42px;border-radius:21px;display:flex;align-items:center;gap:10px;padding:0 6px 0 12px;background:linear-gradient(90deg,rgba(255,211,194,.75),rgba(255,193,218,.6));border:1px solid rgba(255,255,255,.7);font-size:13px;font-weight:500;color:#7A3A2A}
+.c3 .banner .ico{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.7);display:grid;place-items:center;color:#D0602F;flex:none}
+.c3 .banner p{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c3 .banner a{height:32px;padding:0 12px;border-radius:18px;background:#fff;color:#C2552B;font-size:12.5px;font-weight:600;display:grid;place-items:center;flex:none}
+.c3 .next{margin-top:8px;height:58px;display:flex;align-items:center;gap:12px;padding:0 14px 0 10px;border-radius:24px}
+.c3 .next .cal{width:44px;height:44px;border-radius:16px;background:linear-gradient(160deg,#EDE5FF,#FFFFFF);border:1px solid rgba(123,77,255,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.c3 .next .cal small{font-size:9.5px;color:#7B4DFF;font-weight:600;line-height:1}
+.c3 .next .cal b{font-size:18px;font-weight:700;line-height:1.1}
+.c3 .next .tx{flex:1;min-width:0}
+.c3 .next .tx small{display:block;font-size:12px;color:#5E5277}
+.c3 .next .tx b{font-size:15px;font-weight:600;white-space:nowrap}
+.c3 .next .go{width:36px;height:36px;border-radius:50%;background:rgba(123,77,255,.1);color:#7B4DFF;display:grid;place-items:center}
+.c3 .stats{margin-top:8px;padding:10px 14px 10px 10px;display:flex;align-items:center;gap:14px}
+.c3 .dial{position:relative;width:108px;height:108px;flex:none}
+.c3 .dial svg{width:100%;height:100%;display:block}
+.c3 .dial .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.c3 .dial .c b{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.c3 .dial .c span{font-size:11px;color:#5E5277;margin-top:4px}
+.c3 .stats .side{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.c3 .stats h4{font-size:15px;font-weight:700}
+.c3 .trend{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1F9E6E;font-weight:500}
+.c3 .mini{display:flex;gap:8px;margin-top:2px}
+.c3 .mini div{flex:1;border-radius:18px;background:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.8);padding:8px 10px}
+.c3 .mini b{display:block;font-size:22px;font-weight:700;line-height:1.1}
+.c3 .mini span{font-size:11px;color:#5E5277;line-height:1.25;display:block}
+.c3 .qa{display:flex;justify-content:space-between;margin-top:12px;padding:0 2px}
+.c3 .qa div{width:62px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;font-weight:500;text-align:center;white-space:nowrap}
+.c3 .qa .b{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#7B4DFF}
+.c3 .qa .b.p{background:linear-gradient(135deg,#7B4DFF,#B36BFF);color:#fff;border:0;box-shadow:0 10px 20px -8px rgba(123,77,255,.75)}
+.c3 .team{display:flex;gap:8px}
+.c3 .team .glass{flex:1;border-radius:20px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;min-width:0}
+.c3 .team .av{width:36px;height:36px;font-size:14px}
+.c3 .team b{font-size:12.5px;font-weight:600;line-height:1.1}
+.c3 .team span{font-size:10.5px;color:#5E5277;line-height:1.2}
+
+/* ---------- FORM ---------- */
+.c3 .fhead{position:relative;z-index:4;margin:6px 16px 0;height:62px;border-radius:31px;display:flex;align-items:center;gap:10px;padding:0 9px 0 8px}
+.c3 .fhead .ib{width:44px;height:44px;background:rgba(123,77,255,.08)}
+.c3 .fhead .tx{flex:1;min-width:0}
+.c3 .fhead b{display:block;font-size:16px;font-weight:700}
+.c3 .fhead span{font-size:12px;color:#5E5277}
+.c3 .fhead .av{width:40px;height:40px;font-size:16px;box-shadow:0 0 0 3px #fff}
+.c3 .fc{position:relative;z-index:2;padding:0 16px}
+.c3 .card{margin-top:10px;padding:14px 16px}
+.c3 .lbl{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600}
+.c3 .lbl .ic{color:#7B4DFF}
+.c3 .coop .hd{display:flex;align-items:center;justify-content:space-between}
+.c3 .gt{font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1;background:linear-gradient(135deg,#7B4DFF,#C26BFF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.c3 .sl{display:flex;align-items:center;gap:10px;margin-top:12px}
+.c3 .step{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.85);border:1px solid rgba(123,77,255,.18);display:grid;place-items:center;color:#7B4DFF;flex:none}
+.c3 .track{position:relative;flex:1;height:12px;border-radius:6px;background:rgba(123,77,255,.13)}
+.c3 .track .fill{position:absolute;top:0;bottom:0;right:0;width:83.3%;border-radius:6px;background:linear-gradient(270deg,#C9B8FF,#7B4DFF)}
+.c3 .track .th{position:absolute;top:50%;right:83.3%;width:30px;height:30px;margin-right:-15px;margin-top:-15px;border-radius:50%;background:#fff;border:3px solid #7B4DFF;box-shadow:0 6px 14px -4px rgba(123,77,255,.6)}
+.c3 .ends{display:flex;justify-content:space-between;padding:0 54px;margin-top:4px;font-size:11px;color:#5E5277}
+.c3 .frow{display:flex;align-items:center;justify-content:space-between;height:46px}
+.c3 .stepper{display:flex;align-items:center;gap:4px;height:46px;border-radius:23px;background:rgba(255,255,255,.75);border:1px solid rgba(123,77,255,.14);padding:0 1px}
+.c3 .stepper .step{border:0;background:transparent}
+.c3 .stepper b{min-width:62px;text-align:center;font-size:16px;font-weight:600}
+.c3 .hr{height:1px;background:rgba(94,82,119,.12);margin:12px 0}
+.c3 .moods{display:flex;gap:7px;margin-top:10px}
+.c3 .moods span{flex:1;height:58px;border-radius:20px;background:rgba(255,255,255,.7);border:1px solid rgba(123,77,255,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12.5px;font-weight:500;color:#5E5277}
+.c3 .moods span .ic{color:#9A8DB5}
+.c3 .moods span.on{background:linear-gradient(135deg,#7B4DFF,#B36BFF);color:#fff;border-color:transparent;box-shadow:0 10px 18px -8px rgba(123,77,255,.75)}
+.c3 .moods span.on .ic{color:#fff}
+.c3 .goal{margin-top:10px;padding:13px 14px 14px;border-radius:24px}
+.c3 .goal .gh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.c3 .goal .gh b{font-size:14.5px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c3 .cat{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:11px;font-size:11px;font-weight:500;white-space:nowrap;flex:none}
+.c3 .cat::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.c3 .cat-lang{background:rgba(123,77,255,.12);color:#6A3DF0}
+.c3 .cat-fine{background:rgba(255,138,92,.15);color:#D0602F}
+.c3 .cat-play{background:rgba(232,90,155,.14);color:#C93A80}
+.c3 .cat-adl{background:rgba(47,174,147,.15);color:#1E8E76}
+.c3 .tally{display:flex;gap:8px;margin-top:10px}
+.c3 .tally span{flex:1;height:46px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:18px;font-weight:700}
+.c3 .tally b{font-weight:700}
+.c3 .tally span em{font-style:normal;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:700;background:rgba(255,255,255,.85)}
+.c3 .tally .ok{background:rgba(47,174,147,.14);color:#168067}
+.c3 .tally .no{background:rgba(255,92,138,.13);color:#C8335F}
+.c3 .tally .pr2{background:rgba(123,77,255,.11);color:#6A3DF0}
+.c3 .fbar{position:absolute;z-index:8;left:0;right:0;bottom:0;padding:14px 16px 30px;display:flex;gap:10px;background:rgba(246,240,255,.72);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid rgba(255,255,255,.8);border-radius:28px 28px 0 0;box-shadow:0 -12px 30px -18px rgba(76,40,160,.4)}
+.c3 .fbar .gbtn{flex:1;height:54px;border-radius:27px;font-size:16px}
+.c3 .fbar .sec{height:54px;padding:0 18px;border-radius:27px;background:rgba(255,255,255,.8);border:1px solid rgba(123,77,255,.2);color:#7B4DFF;font-size:14px;font-weight:600;display:grid;place-items:center;white-space:nowrap}
+.c3 .ta{margin-top:10px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.75);border:1px solid rgba(123,77,255,.14);font-size:14px;line-height:1.5;min-height:70px}
+
+/* ---------- PROGRESS ---------- */
+.c3 .phd{position:relative;z-index:3;display:flex;align-items:center;gap:10px;padding:4px 16px 0;height:56px}
+.c3 .phd .ib{background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.7)}
+.c3 .phd .ring{width:48px;height:48px;padding:2px}
+.c3 .phd .ring .in{padding:2px;background:rgba(255,255,255,.9)}
+.c3 .phd .ring .av{font-size:17px}
+.c3 .phd .tx{flex:1}
+.c3 .phd b{display:block;font-size:20px;font-weight:700;line-height:1.15}
+.c3 .phd span{font-size:12.5px;color:#5E5277}
+.c3 .tabs.p{margin-top:10px}
+.c3 .chart{margin-top:12px;padding:16px 16px 12px}
+.c3 .chart .hd{display:flex;justify-content:space-between;align-items:flex-start}
+.c3 .chart h3{font-size:14px;font-weight:600;color:#5E5277}
+.c3 .chart .big{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+.c3 .chart .big .gt{font-size:34px}
+.c3 .pill8{height:28px;padding:0 10px;border-radius:14px;background:rgba(123,77,255,.1);color:#7B4DFF;font-size:12px;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap}
+.c3 .chart svg{display:block;width:100%;height:auto;margin-top:8px;direction:ltr}
+.c3 .xl{display:flex;justify-content:space-between;font-size:11px;color:#5E5277;padding:2px 30px 0 4px}
+.c3 .gg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c3 .gt2{padding:12px 12px 14px;border-radius:24px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.c3 .gt2 .tp{display:flex;align-items:center;justify-content:space-between}
+.c3 .mr{position:relative;width:58px;height:58px}
+.c3 .mr svg{width:100%;height:100%;display:block}
+.c3 .mr b{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:700}
+.c3 .gt2 p{font-size:13.5px;font-weight:600;line-height:1.3;min-height:35px}
+.c3 .gt2 .cat{align-self:flex-start}
+</style>
+
+<div class="c3 phones">
+
+<!-- ================= 1. HOME ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+  <div class="sb"><span class="num">9:41</span><span class="r">
+    <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+    <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5l2.6-3.1a3.8 3.8 0 0 0-5.2 0z"/><path d="M1 4.6a10.4 10.4 0 0 1 14 0l-1.5 1.8a8 8 0 0 0-11 0z" opacity=".95"/></svg>
+    <svg width="27" height="12" viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.5" fill="none" stroke="#1F1633" opacity=".45"/><rect x="2.5" y="2.5" width="19" height="7" rx="2"/><rect x="25" y="4" width="2" height="4" rx="1" opacity=".45"/></svg>
+  </span></div>
+
+  <div class="content">
+    <div class="top">
+      <img src="img/logo.png" alt="Doing">
+      <div class="btns">
+        <span class="ib glass"><svg class="ic" viewBox="0 0 24 24"><path d="M18 16.5H6l1.3-1.8V10.5a4.7 4.7 0 0 1 9.4 0v4.2z"/><path d="M10 19.5a2 2 0 0 0 4 0"/></svg><i></i></span>
+        <span class="av k-p" style="width:44px;height:44px;font-size:17px;box-shadow:0 0 0 2px #fff">מ</span>
+      </div>
+    </div>
+    <h1 class="hello">בוקר טוב, מיכל</h1>
+    <div class="date">יום שלישי, 3 בנובמבר</div>
+
+    <div class="stories">
+      <div class="st"><div class="ring"><div class="in"><div class="av k-n">נ</div></div></div><span>נגה <em>· 6</em></span></div>
+      <div class="st"><div class="ring lv"><div class="in"><div class="av k-l">ל</div></div><span class="tag">עכשיו</span></div><span>ליאם <em>· 5</em></span></div>
+      <div class="st"><div class="ring"><div class="in"><div class="av k-o">ע</div></div></div><span>עומר <em>· 7</em></span></div>
+      <div class="st"><div class="ring"><div class="in"><div class="av k-t">ת</div></div></div><span>תמר <em>· 4</em></span></div>
+      <div class="st"><div class="ring add"><svg class="ic" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></div><span style="color:#5E5277">ילד חדש</span></div>
+    </div>
+
+    <div class="hero glass">
+      <div class="tx">
+        <span class="live">עכשיו בטיפול</span>
+        <h3>ליאם <em>· עם דנה</em></h3>
+        <div class="sub num">טיפול · <bdi dir="ltr">11:00–12:30</bdi></div>
+        <span class="gbtn"><svg class="ic s" viewBox="0 0 24 24"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>פתיחת טופס</span>
+      </div>
+      <div class="pr">
+        <svg viewBox="0 0 100 100"><defs><linearGradient id="c3gh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7B4DFF"/><stop offset="1" stop-color="#FF8FC0"/></linearGradient></defs>
+          <circle cx="50" cy="50" r="42" fill="rgba(255,255,255,.5)" stroke="rgba(123,77,255,.13)" stroke-width="9"/>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="url(#c3gh)" stroke-width="9" stroke-linecap="round" pathLength="100" stroke-dasharray="65 100" transform="rotate(-90 50 50)"/>
+          <circle cx="16.02" cy="74.69" r="3" fill="#fff"/></svg>
+        <div class="c"><b class="num">58</b><span>מתוך 90 דק׳</span></div>
+      </div>
+    </div>
+
+    <div class="attn">
+      <div class="glass"><span class="ico peach"><svg class="ic s" viewBox="0 0 24 24"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 14h6"/></svg></span><span><b class="num">2</b> טפסים ממתינים</span></div>
+      <div class="glass"><span class="ico pink"><svg class="ic s" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span><span><b class="num">3</b> הודעות חדשות</span></div>
+    </div>
+
+    <div class="sech" style="margin-top:14px"><h2>הטיפולים של היום</h2><span class="num">4 טיפולים</span></div>
+    <div class="sched glass">
+      <div class="row"><span class="t num">08:30</span><span class="av k-n">נ</span><div class="nm"><b>נגה <em>· שירה</em></b><span>טיפול</span></div><span class="chip wait">ממתין לטופס</span></div>
+      <div class="row on"><span class="t num">11:00</span><span class="av k-l">ל</span><div class="nm"><b>ליאם <em>· דנה</em></b><span>טיפול</span></div><span class="chip now">עכשיו</span></div>
+      <div class="row"><span class="t num">14:00</span><span class="av k-o">ע</span><div class="nm"><b>עומר <em>· מיכל</em></b><span>הדרכת הורים</span></div><span class="chip plan">מתוכנן</span></div>
+      <div class="row"><span class="t num">16:30</span><span class="av k-t">ת</span><div class="nm"><b>תמר <em>· שירה</em></b><span>טיפול</span></div><span class="chip plan">מתוכנן</span></div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="ni on"><span class="d"><svg class="ic" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg></span><b>היום</b></div>
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14a4.5 4.5 0 0 1 4.5 5"/></svg></span></div>
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span></div>
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span><i>3</i></div>
+  </div>
+  <div class="hi"></div>
+</div></div><figcaption>היום · מסך הבית</figcaption></figure>
+
+<!-- ================= 2. KID HUB ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+  <div class="khead"></div>
+  <div class="sb"><span class="num">9:41</span><span class="r">
+    <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+    <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5l2.6-3.1a3.8 3.8 0 0 0-5.2 0z"/><path d="M1 4.6a10.4 10.4 0 0 1 14 0l-1.5 1.8a8 8 0 0 0-11 0z"/></svg>
+    <svg width="27" height="12" viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.5" fill="none" stroke="#1F1633" opacity=".45"/><rect x="2.5" y="2.5" width="19" height="7" rx="2"/><rect x="25" y="4" width="2" height="4" rx="1" opacity=".45"/></svg>
+  </span></div>
+  <div class="kbar">
+    <span class="ib"><svg class="ic" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+    <span class="ib"><svg class="ic" viewBox="0 0 24 24" style="fill:#1F1633;stroke:none"><circle cx="5.5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="18.5" cy="12" r="1.8"/></svg></span>
+  </div>
+  <div class="kid-id">
+    <div class="bigav"><div class="in"><div class="av k-n">נ</div></div></div>
+    <div class="nmr"><h1>נגה</h1><span class="age">בת 6</span></div>
+  </div>
+  <div class="tabs glass"><span class="on">סקירה</span><span>טיפולים</span><span>התקדמות</span><span>הודעות</span><span>איסוף נתונים</span></div>
+
+  <div class="kc">
+    <div class="banner"><span class="ico"><svg class="ic s" viewBox="0 0 24 24"><path d="M4 17c3 0 4-8 6-8s1 6 3 6 2-3 4-3 2 2 3 2"/><path d="M4 21h16"/></svg></span><p>הסכם הטיפול ממתין לחתימת ההורים</p><a>שליחה</a></div>
+
+    <div class="next glass"><span class="cal"><small>רביעי</small><b class="num">4</b></span><div class="tx"><small>הטיפול הבא</small><b class="num">יום רביעי · 08:30 · שירה</b></div><span class="go"><svg class="ic s" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span></div>
+
+    <div class="stats glass">
+      <div class="dial">
+        <svg viewBox="0 0 120 120"><defs><linearGradient id="c3gd" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7B4DFF"/><stop offset=".6" stop-color="#B36BFF"/><stop offset="1" stop-color="#FF9EC7"/></linearGradient></defs>
+          <circle cx="60" cy="60" r="57" fill="none" stroke="rgba(94,82,119,.28)" stroke-width="3" pathLength="100" stroke-dasharray=".35 2.15"/>
+          <circle cx="60" cy="60" r="45" fill="rgba(255,255,255,.55)" stroke="rgba(123,77,255,.12)" stroke-width="11"/>
+          <circle cx="60" cy="60" r="45" fill="none" stroke="url(#c3gd)" stroke-width="11" stroke-linecap="round" pathLength="100" stroke-dasharray="85 100" transform="rotate(-90 60 60)"/>
+          <circle cx="23.59" cy="33.55" r="7.5" fill="#fff" stroke="#FF9EC7" stroke-width="3"/></svg>
+        <div class="c"><b class="num">85%</b><span>טיפול אחרון</span></div>
+      </div>
+      <div class="side">
+        <h4>שיתוף פעולה</h4>
+        <span class="trend"><svg class="ic xs" viewBox="0 0 24 24"><path d="M4 16l6-6 4 4 6-6"/><path d="M15 8h5v5"/></svg><bdi dir="ltr" class="num">+3</bdi> מהטיפול הקודם</span>
+        <div class="mini"><div><b class="num">12</b><span>טיפולים החודש</span></div><div><b class="num">4</b><span>מטרות פעילות</span></div></div>
+      </div>
+    </div>
+
+    <div class="qa">
+      <div><span class="b p"><svg class="ic" viewBox="0 0 24 24"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>מלא טופס</div>
+      <div><span class="b glass"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span>סדר יום</div>
+      <div><span class="b glass"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4h6v3H9zM9 13.5l2 2 4-4"/></svg></span>דיווח יומי</div>
+      <div><span class="b glass"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg></span>צ׳אט AI</div>
+      <div><span class="b glass"><svg class="ic" viewBox="0 0 24 24"><path d="M4 17c3 0 4-8 6-8s1 6 3 6 2-3 4-3 2 2 3 2"/><path d="M4 21h16"/></svg></span>הסכם טיפול</div>
+    </div>
+
+    <div class="sech"><h2>הצוות של נגה</h2><a>ניהול<svg class="ic xs" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></a></div>
+    <div class="team">
+      <div class="glass"><span class="av k-s">ש</span><b>שירה</b><span>מטפלת</span></div>
+      <div class="glass"><span class="av k-d">ד</span><b>דנה</b><span>מטפלת</span></div>
+      <div class="glass"><span class="av k-r">ר</span><b>רותם</b><span>מדריכת הורים</span></div>
+      <div class="glass"><span class="av k-p">ה</span><b>הורים</b><span>אבא ואמא של נגה</span></div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg></span></div>
+    <div class="ni on"><span class="d"><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14a4.5 4.5 0 0 1 4.5 5"/></svg></span><b>ילדים</b></div>
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span></div>
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span><i>3</i></div>
+  </div>
+  <div class="hi"></div>
+</div></div><figcaption>נגה · כרטיס ילד</figcaption></figure>
+
+<!-- ================= 3. SESSION FORM ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+  <div class="sb"><span class="num">9:41</span><span class="r">
+    <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+    <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5l2.6-3.1a3.8 3.8 0 0 0-5.2 0z"/><path d="M1 4.6a10.4 10.4 0 0 1 14 0l-1.5 1.8a8 8 0 0 0-11 0z"/></svg>
+    <svg width="27" height="12" viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.5" fill="none" stroke="#1F1633" opacity=".45"/><rect x="2.5" y="2.5" width="19" height="7" rx="2"/><rect x="25" y="4" width="2" height="4" rx="1" opacity=".45"/></svg>
+  </span></div>
+
+  <div class="fhead glass">
+    <span class="ib"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+    <div class="tx"><b>טופס טיפול · נגה</b><span class="num">3.11.2026 · שירה</span></div>
+    <span class="av k-n">נ</span>
+  </div>
+
+  <div class="fc">
+    <div class="card glass coop">
+      <div class="hd"><span class="lbl"><svg class="ic s" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14a4.5 4.5 0 0 1 4.5 5"/></svg>שיתוף פעולה</span><span class="gt num">85%</span></div>
+      <div class="sl">
+        <span class="step"><svg class="ic" viewBox="0 0 24 24"><path d="M6 12h12"/></svg></span>
+        <div class="track"><div class="fill"></div><div class="th"></div></div>
+        <span class="step"><svg class="ic" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span>
+      </div>
+      <div class="ends num"><span>10</span><span>100</span></div>
+    </div>
+
+    <div class="card glass">
+      <div class="frow"><span class="lbl"><svg class="ic s" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>משך הטיפול</span>
+        <div class="stepper"><span class="step"><svg class="ic s" viewBox="0 0 24 24"><path d="M6 12h12"/></svg></span><b class="num">90 דק׳</b><span class="step"><svg class="ic s" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span></div></div>
+      <div class="hr"></div>
+      <span class="lbl"><svg class="ic s" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 14a4 4 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></svg>מצב רוח</span>
+      <div class="moods">
+        <span class="on"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8 13.5a4.5 4.5 0 0 0 8 0M9 9.5h.01M15 9.5h.01"/></svg>שמחה</span>
+        <span><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9 15h6M8 10h2M14 10h2"/></svg>רגועה</span>
+        <span><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10 15.5h4M8 10.5q1 1 2 0M14 10.5q1 1 2 0"/></svg>עייפה</span>
+        <span><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 16a4 4 0 0 1 7 0M8 9l2 1M16 9l-2 1"/></svg>מתוסכלת</span>
+      </div>
+    </div>
+
+    <div class="sech" style="margin-top:16px"><h2>מטרות שעבדנו עליהן</h2><span class="num">3 מטרות</span></div>
+    <div class="goal glass">
+      <div class="gh"><b>קשר עין בפנייה בשם</b><span class="cat cat-lang">שפה ותקשורת</span></div>
+      <div class="tally"><span class="ok"><em>+</em><b class="num">8</b></span><span class="no"><em>−</em><b class="num">2</b></span><span class="pr2"><em>r</em><b class="num">1</b></span></div>
+    </div>
+    <div class="goal glass">
+      <div class="gh"><b>הרכבת פאזל 12 חלקים</b><span class="cat cat-fine">מוטוריקה עדינה</span></div>
+      <div class="tally"><span class="ok"><em>+</em><b class="num">4</b></span><span class="no"><em>−</em><b class="num">3</b></span><span class="pr2"><em>r</em><b class="num">2</b></span></div>
+    </div>
+    <div class="goal glass">
+      <div class="gh"><b>משחק תורות עם חבר</b><span class="cat cat-play">משחק וחברה</span></div>
+      <div class="tally"><span class="ok"><em>+</em><b class="num">3</b></span><span class="no"><em>−</em><b class="num">4</b></span><span class="pr2"><em>r</em><b class="num">3</b></span></div>
+    </div>
+    <div class="sech"><h2>הצלחות</h2></div>
+    <div class="ta">השלימה פאזל לבד בפעם הראשונה</div>
+  </div>
+
+  <div class="fbar"><span class="sec">שמירה כטיוטה</span><span class="gbtn"><svg class="ic s" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>שמירת הטופס</span></div>
+  <div class="hi"></div>
+</div></div><figcaption>טופס טיפול</figcaption></figure>
+
+<!-- ================= 4. PROGRESS ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+  <div class="khead sm"></div>
+  <div class="sb"><span class="num">9:41</span><span class="r">
+    <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+    <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5l2.6-3.1a3.8 3.8 0 0 0-5.2 0z"/><path d="M1 4.6a10.4 10.4 0 0 1 14 0l-1.5 1.8a8 8 0 0 0-11 0z"/></svg>
+    <svg width="27" height="12" viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.5" fill="none" stroke="#1F1633" opacity=".45"/><rect x="2.5" y="2.5" width="19" height="7" rx="2"/><rect x="25" y="4" width="2" height="4" rx="1" opacity=".45"/></svg>
+  </span></div>
+  <div class="phd">
+    <span class="ib"><svg class="ic" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+    <div class="ring"><div class="in"><div class="av k-n">נ</div></div></div>
+    <div class="tx"><b>נגה</b><span>בת 6</span></div>
+  </div>
+  <div class="tabs glass p"><span>סקירה</span><span>טיפולים</span><span class="on">התקדמות</span><span>הודעות</span><span>איסוף נתונים</span></div>
+
+  <div class="kc">
+    <div class="chart glass">
+      <div class="hd">
+        <div><h3>שיתוף פעולה · 8 טיפולים אחרונים</h3>
+          <div class="big"><span class="gt num">85%</span><span class="trend"><svg class="ic xs" viewBox="0 0 24 24"><path d="M4 16l6-6 4 4 6-6"/><path d="M15 8h5v5"/></svg><bdi dir="ltr" class="num">+25</bdi> נק׳ מההתחלה</span></div></div>
+      </div>
+      <svg viewBox="0 0 300 146" role="img" aria-label="שיתוף פעולה ב-8 טיפולים אחרונים: 60, 65, 58, 72, 75, 70, 82, 85">
+        <defs>
+          <linearGradient id="c3ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9B6BFF" stop-opacity=".5"/><stop offset="1" stop-color="#FFC1DA" stop-opacity="0"/></linearGradient>
+          <linearGradient id="c3gl" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#C9A2FF"/><stop offset="1" stop-color="#7B4DFF"/></linearGradient>
+          <linearGradient id="c3gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7B4DFF"/><stop offset="1" stop-color="#B36BFF"/></linearGradient>
+        </defs>
+        <g stroke="rgba(94,82,119,.16)" stroke-width="1" stroke-dasharray="3 4"><path d="M8 14H268M8 74H268M8 134H268"/></g>
+        <g font-family="Rubik, sans-serif" font-size="10.5" fill="#5E5277" text-anchor="end"><text x="298" y="17.5">100</text><text x="298" y="77.5">75</text><text x="298" y="137.5">50</text></g>
+        <path d="M262 110 L228 98 L194 114.8 L160 81.2 L126 74 L92 86 L58 57.2 L24 50 L24 134 L262 134 Z" fill="url(#c3ga)"/>
+        <path d="M262 110 L228 98 L194 114.8 L160 81.2 L126 74 L92 86 L58 57.2 L24 50" fill="none" stroke="url(#c3gl)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <g fill="#fff" stroke="#9B6BFF" stroke-width="2"><circle cx="262" cy="110" r="3.5"/><circle cx="228" cy="98" r="3.5"/><circle cx="194" cy="114.8" r="3.5"/><circle cx="160" cy="81.2" r="3.5"/><circle cx="126" cy="74" r="3.5"/><circle cx="92" cy="86" r="3.5"/><circle cx="58" cy="57.2" r="3.5"/></g>
+        <circle cx="24" cy="50" r="10" fill="#7B4DFF" opacity=".16"/>
+        <circle cx="24" cy="50" r="5.5" fill="#7B4DFF" stroke="#fff" stroke-width="2.5"/>
+        <rect x="2" y="16" width="44" height="22" rx="11" fill="url(#c3gb)"/>
+        <path d="M20 38 L24 42.5 L28 38 Z" fill="#9460FF"/>
+        <text x="24" y="31" font-family="Rubik, sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">85%</text>
+      </svg>
+      <div class="xl"><span>לפני חודשיים</span><span>היום</span></div>
+    </div>
+
+    <div class="sech"><h2>מטרות פעילות</h2><span class="num">4 מטרות</span></div>
+    <div class="gg">
+      <div class="gt2 glass"><div class="tp"><div class="mr"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(123,77,255,.13)" stroke-width="6"/><circle cx="30" cy="30" r="24" fill="none" stroke="#7B4DFF" stroke-width="6" stroke-linecap="round" pathLength="100" stroke-dasharray="78 100" transform="rotate(-90 30 30)"/></svg><b class="num">78%</b></div></div><p>קשר עין בפנייה בשם</p><span class="cat cat-lang">שפה ותקשורת</span></div>
+      <div class="gt2 glass"><div class="tp"><div class="mr"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,138,92,.16)" stroke-width="6"/><circle cx="30" cy="30" r="24" fill="none" stroke="#FF8A5C" stroke-width="6" stroke-linecap="round" pathLength="100" stroke-dasharray="55 100" transform="rotate(-90 30 30)"/></svg><b class="num">55%</b></div></div><p>הרכבת פאזל 12 חלקים</p><span class="cat cat-fine">מוטוריקה עדינה</span></div>
+      <div class="gt2 glass"><div class="tp"><div class="mr"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(232,90,155,.15)" stroke-width="6"/><circle cx="30" cy="30" r="24" fill="none" stroke="#E85A9B" stroke-width="6" stroke-linecap="round" pathLength="100" stroke-dasharray="40 100" transform="rotate(-90 30 30)"/></svg><b class="num">40%</b></div></div><p>משחק תורות עם חבר</p><span class="cat cat-play">משחק וחברה</span></div>
+      <div class="gt2 glass"><div class="tp"><div class="mr"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(47,174,147,.15)" stroke-width="6"/><circle cx="30" cy="30" r="24" fill="none" stroke="#2FAE93" stroke-width="6" stroke-linecap="round" pathLength="100" stroke-dasharray="62 100" transform="rotate(-90 30 30)"/></svg><b class="num">62%</b></div></div><p>לבישת מעיל באופן עצמאי</p><span class="cat cat-adl">ADL</span></div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg></span></div>
+    <div class="ni on"><span class="d"><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14a4.5 4.5 0 0 1 4.5 5"/></svg></span><b>ילדים</b></div>
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span></div>
+    <div class="ni"><span class="d"><svg class="ic" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span><i>3</i></div>
+  </div>
+  <div class="hi"></div>
+</div></div><figcaption>התקדמות</figcaption></figure>
+
+</div>
+</div>
+  <div class="label"><h3>הדמיות</h3><span>נוצרו עם gpt-image-2.5. לוחצים להגדלה. ייתכנו שגיאות כתיב קטנות בתמונות.</span></div>
+  <div class="renders">
+    <figure class="render"><button type="button"><img src="img/c3-flare.jpg" alt="שקיעה סגולה: בית, כרטיס ילד וטופס טיפול" loading="lazy"></button><figcaption><b>Flare</b> · בית, כרטיס ילד, טופס טיפול</figcaption></figure>
+    <figure class="render"><button type="button"><img src="img/c3-sun.jpg" alt="שקיעה סגולה: התקדמות, יומן ומסך נוסף" loading="lazy"></button><figcaption><b>Sunburst</b> · התקדמות, יומן ומסך נוסף</figcaption></figure>
+    <figure class="render wide"><button type="button"><img src="img/c3-desk.jpg" alt="שקיעה סגולה: גרסת מחשב" loading="lazy"></button><figcaption><b>Sunburst</b> · גרסת מחשב עם ניווט צד, אותה מערכת</figcaption></figure>
+  </div>
+  <div class="cmts" data-concept="c3" hidden></div>
+</section>
+<section class="concept" id="c4" aria-labelledby="c4-h">
+  <div class="chead">
+    <div class="t">
+      <span class="eyebrow">כיוון 4</span>
+      <h2 id="c4-h">מחברת שטח<em>Field Notebook</em></h2>
+      <p class="thesis">מרגיש כמו מחברת יפה של מטפלת: נייר חם, עט סגול, מרקר מאחורי מילים חשובות ומדבקות. בכל מסך פעולה אחת גדולה באזור האגודל.</p>
+    </div>
+    <div class="spec">
+      <div class="sw" aria-label="פלטה"><i style="background:#FFFBF3;color:#2A2140">#FFFBF3</i><i style="background:#6B4FD8;color:#fff">#6B4FD8</i><i style="background:#2A2140;color:#fff">#2A2140</i><i style="background:#FFE58A;color:#2A2140">#FFE58A</i><i style="background:#FFC4DD;color:#2A2140">#FFC4DD</i><i style="background:#BFF0CF;color:#2A2140">#BFF0CF</i><i style="background:#CFE3FF;color:#2A2140">#CFE3FF</i></div>
+      <div class="type"><span class="big" style="font-family:'Secular One', 'Heebo', sans-serif">מה עכשיו?</span><small>Secular One · Heebo · Playpen לכתב יד</small></div>
+    </div>
+  </div>
+  <ul class="sig"><li><b>"מה עכשיו?"</b>כרטיס ענק עם הטיפול הנוכחי וכפתור סגול להתחלה.</li><li><b>מרקר ומדבקות</b>הדגשות בצבעי מרקר ותגיות מדבקה מוטות קלות.</li><li><b>גרף על נייר משובץ</b>קו בסגנון מרקר על רקע נקודות.</li></ul>
+  <div class="label"><h3>ארבעה מסכים, מקודדים</h3><span>עברית אמיתית בגופנים אמיתיים. בטלפון גוללים לצד.</span></div>
+  <div class="rail"><style>
+.c4 .app{position:absolute;inset:0;display:flex;flex-direction:column;color:#2A2140;font-family:'Heebo','Assistant',sans-serif;font-size:14px;line-height:1.35;background-color:#FFFBF3;background-image:radial-gradient(circle,#E8DDC8 1.1px,transparent 1.5px);background-size:18px 18px;background-position:9px 6px;overflow:hidden}
+.c4 .defs{position:absolute;width:0;height:0;overflow:hidden}
+.c4 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.c4 svg.i.s{width:18px;height:18px}
+.c4 .num{font-variant-numeric:tabular-nums}
+
+/* status bar */
+.c4 .sb{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;direction:ltr;font-family:'Heebo',sans-serif;font-weight:600;font-size:15px;color:#2A2140}
+.c4 .sb .r{display:flex;gap:6px;align-items:center}
+.c4 .sb svg{display:block}
+
+/* shared typography */
+.c4 .h{font-family:'Secular One','Rubik',sans-serif;font-weight:400;letter-spacing:0}
+.c4 .note{font-family:'Playpen Sans Hebrew','Heebo',cursive;font-size:12.5px;color:#6B4FD8;line-height:1.3}
+.c4 .muted{color:#7B7088}
+.c4 .mk{position:relative;display:inline-block;z-index:0;isolation:isolate;padding:0 2px}
+.c4 .mk::before{content:"";position:absolute;inset:18% -7px 4% -6px;z-index:-1;border-radius:9px 16px 7px 14px;transform:skew(-10deg) rotate(-1.6deg);background:#FFE58A}
+.c4 .mk.pk::before{background:#FFC4DD}
+.c4 .mk.mn::before{background:#BFF0CF}
+.c4 .mk.sk::before{background:#CFE3FF}
+.c4 .mk.lo::before{inset:52% -5px 0 -5px}
+.c4 .sq{display:block;height:8px;fill:none;stroke:#6B4FD8;stroke-width:2.2;stroke-linecap:round}
+.c4 .dash{border:0;border-top:2px dashed #E3D7C1;margin:0}
+
+/* sticker */
+.c4 .stk{display:inline-flex;align-items:center;gap:5px;border-radius:10px;padding:5px 10px;font-weight:600;font-size:12.5px;border:2px solid #fff;box-shadow:0 1px 0 rgba(42,33,64,.06),0 4px 10px -3px rgba(42,33,64,.22);white-space:nowrap}
+.c4 .y{background:#FFE58A;color:#5E4700}
+.c4 .p{background:#FFC4DD;color:#8E2458}
+.c4 .m{background:#BFF0CF;color:#17633A}
+.c4 .k{background:#CFE3FF;color:#24508F}
+.c4 .l{background:#E4DCFF;color:#4A33A8}
+.c4 .o{background:#FFD9BF;color:#8A4310}
+
+.c4 .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:'Secular One',sans-serif;font-size:16px;flex:none;border:2px solid #fff;box-shadow:0 2px 6px -2px rgba(42,33,64,.25)}
+.c4 .av.sm{width:26px;height:26px;font-size:12.5px}
+
+/* top bar (inner screens) */
+.c4 .tb{height:48px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px}
+.c4 .ib{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;color:#2A2140}
+.c4 .tb .ttl{font-size:15px;font-weight:600;color:#7B7088}
+
+.c4 .wrap{padding:0 18px;flex:1;min-height:0;position:relative}
+.c4 .sec{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px}
+.c4 .sec .h{font-size:18px}
+
+/* bottom nav: paper strip */
+.c4 .nav{position:absolute;left:0;right:0;bottom:0;height:86px;background:#FFF3DC;z-index:5;box-shadow:0 -6px 18px -10px rgba(90,70,30,.35)}
+.c4 .nav::before{content:"";position:absolute;left:0;right:0;top:-6px;height:7px;background:radial-gradient(circle at 6px 7px,#FFF3DC 5.5px,transparent 6px) 0 0/12px 7px repeat-x}
+.c4 .nav::after{content:"";position:absolute;left:0;right:0;top:4px;border-top:1.5px dashed #E6D3AE}
+.c4 .nav ul{list-style:none;margin:0;padding:8px 10px 0;display:flex;justify-content:space-around}
+.c4 .nav li{position:relative;width:70px;height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#7B7088;font-size:12px;font-weight:500}
+.c4 .nav li.on{color:#6B4FD8;font-weight:700}
+.c4 .nav .ring{position:absolute;left:-4px;top:-5px;width:78px;height:60px;fill:none;stroke:#6B4FD8;stroke-width:2.2;stroke-linecap:round}
+.c4 .nav .bd{position:absolute;top:2px;right:14px;min-width:18px;height:18px;border-radius:9px;background:#FF7FB2;color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid #FFF3DC;transform:rotate(6deg)}
+.c4 .hi{position:absolute;bottom:8px;left:50%;width:128px;height:5px;margin-left:-64px;border-radius:3px;background:#2A2140;z-index:6}
+
+/* ---------- 1 home ---------- */
+.c4 .hd{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 0;height:46px;flex:none}
+.c4 .hd img{height:28px;display:block}
+.c4 .hd .tools{display:flex;align-items:center;gap:6px}
+.c4 .bell{position:relative}
+.c4 .bell i{position:absolute;top:10px;left:11px;width:8px;height:8px;border-radius:50%;background:#FF7FB2;border:1.5px solid #FFFBF3}
+.c4 .greet{padding:6px 18px 0;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.c4 .greet .h{font-size:26px;line-height:1.2}
+.c4 .greet .date{font-size:14px;margin-top:2px}
+.c4 .greet .note{transform:rotate(-2deg);margin-top:2px}
+.c4 .att{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:none}
+.c4 .att .stk{font-size:12.5px;padding:6px 10px}
+.c4 .att .stk:first-child{transform:rotate(-2deg)}
+.c4 .att .stk:last-child{transform:rotate(2.5deg)}
+.c4 .now{position:relative;margin:14px 18px 0;background:#fff;border-radius:22px;padding:16px 16px 16px;box-shadow:0 1px 0 #EFE5D2,0 12px 26px -14px rgba(60,40,10,.35);flex:none}
+.c4 .tape{position:absolute;top:-9px;left:50%;width:74px;height:20px;margin-left:-37px;background:rgba(207,227,255,.8);transform:rotate(-3deg);border-radius:2px;box-shadow:0 1px 2px rgba(42,33,64,.08)}
+.c4 .now .top{display:flex;align-items:center;justify-content:space-between}
+.c4 .now .h{font-size:24px}
+.c4 .live{transform:rotate(3deg)}
+.c4 .live i{width:8px;height:8px;border-radius:50%;background:#E0306F;box-shadow:0 0 0 3px rgba(224,48,111,.2)}
+.c4 .now .who{display:flex;align-items:center;gap:10px;margin:12px 0 4px}
+.c4 .now .t{font-family:'Secular One',sans-serif;font-size:30px;line-height:1;color:#2A2140}
+.c4 .now .who .names{font-size:15px;font-weight:600}
+.c4 .now .who .names span{display:block;font-size:13px;font-weight:400;color:#7B7088}
+.c4 .now .avs{display:flex;margin-inline-start:auto}
+.c4 .now .avs .av+.av{margin-inline-start:-8px}
+.c4 .cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:62px;border-radius:18px;background:#6B4FD8;color:#fff;font-family:'Secular One',sans-serif;font-size:19px;box-shadow:0 4px 0 #4E35B0,0 14px 22px -10px rgba(107,79,216,.6);margin-top:12px}
+.c4 .cta .pl{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center}
+.c4 .cta small{font-family:'Heebo',sans-serif;font-size:14px;font-weight:500;opacity:.85}
+.c4 .day{padding:14px 18px 0;flex:none}
+.c4 .day .note{transform:rotate(-2deg)}
+.c4 .ck{list-style:none;margin:0;padding:0}
+.c4 .ck li{display:flex;align-items:center;gap:10px;height:44px;border-bottom:1.5px dashed #E8DCC6;position:relative}
+.c4 .ck li:last-child{border-bottom:0}
+.c4 .box{width:22px;height:22px;flex:none;color:#6B4FD8}
+.c4 .ck .tm{font-family:'Secular One',sans-serif;font-size:15px;width:44px;font-variant-numeric:tabular-nums}
+.c4 .ck .tx{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c4 .ck .tx b{font-weight:700}
+.c4 .ck .done .tx{color:#7B7088}
+.c4 .ck .stk{font-size:11.5px;padding:3px 8px}
+.c4 .ck .hl::before{content:"";position:absolute;inset:6px -8px;border-radius:10px 16px 9px 14px;background:rgba(255,196,221,.45);transform:skew(-6deg);z-index:-1}
+.c4 .ck .hl{z-index:0}
+.c4 .ck .plan{font-family:'Playpen Sans Hebrew',cursive;font-size:12px;color:#7B7088}
+
+.c4 .kids{display:flex;gap:6px;padding:8px 18px 0;flex:none}
+.c4 .kd{flex:1;min-width:0;display:flex;align-items:center;gap:5px;height:42px;padding:0 6px;border-radius:13px;background:#fff;font-size:13px;font-weight:700;line-height:1.15;box-shadow:0 1px 0 #EFE5D2,0 6px 12px -10px rgba(60,40,10,.4);white-space:nowrap}
+.c4 .kd i{display:block;font-style:normal;font-weight:400;color:#7B7088;font-size:11px}
+/* ---------- 2 kid ---------- */
+.c4 .kh{display:flex;align-items:center;gap:14px;padding:2px 18px 0;flex:none}
+.c4 .kh .av{width:66px;height:66px;font-size:30px;border-width:3px;transform:rotate(-4deg)}
+.c4 .kh .h{font-size:36px;line-height:1.1}
+.c4 .kh .sub{display:flex;align-items:center;gap:8px;margin-top:2px}
+.c4 .kh .sub .note{transform:rotate(-3deg)}
+.c4 .tabs{display:flex;gap:22px;padding:12px 18px 0;white-space:nowrap;flex:none;overflow:hidden;font-size:15px;color:#7B7088;font-weight:500}
+.c4 .tabs span{position:relative;height:34px;flex:none}
+.c4 .tabs .on{color:#2A2140;font-weight:700}
+.c4 .tabs .on .sq{position:absolute;right:-3px;bottom:2px;width:calc(100% + 6px)}
+.c4 .tabsline{margin:0 18px;flex:none}
+.c4 .pin{position:relative;margin:12px 18px 0;background:#FFF1A6;border-radius:4px 4px 14px 4px;padding:10px 12px 10px 10px;display:flex;align-items:center;gap:10px;transform:rotate(-.8deg);box-shadow:0 8px 14px -10px rgba(90,70,0,.5);flex:none}
+.c4 .pin .tape{width:52px;margin-left:-26px;top:-8px;background:rgba(255,196,221,.75);transform:rotate(4deg)}
+.c4 .pin .tx{flex:1;font-size:13.5px;font-weight:600;color:#4A3A00}
+.c4 .pin .go{font-family:'Playpen Sans Hebrew',cursive;font-size:12px;color:#6B4FD8;white-space:nowrap}
+.c4 .stats{display:flex;gap:10px;padding:13px 18px 0;flex:none}
+.c4 .stats .stk{flex:1;flex-direction:column;align-items:flex-start;gap:0;padding:9px 10px 8px;border-radius:14px;white-space:normal}
+.c4 .stats .stk b{font-family:'Secular One',sans-serif;font-weight:400;font-size:26px;line-height:1.05;font-variant-numeric:tabular-nums}
+.c4 .stats .stk span{font-size:12px;font-weight:500;line-height:1.2}
+.c4 .stats .stk:nth-child(1){transform:rotate(-2deg)}
+.c4 .stats .stk:nth-child(2){transform:rotate(1.5deg) translateY(3px)}
+.c4 .stats .stk:nth-child(3){transform:rotate(-1deg)}
+.c4 .nxt{margin:13px 18px 0;border:2px dashed #D9CBB0;border-radius:16px;padding:9px 12px;display:flex;align-items:center;gap:10px;flex:none}
+.c4 .nxt .ic{width:36px;height:36px;border-radius:12px;background:#E4DCFF;color:#6B4FD8;display:grid;place-items:center}
+.c4 .nxt .lb{font-size:12px;color:#7B7088}
+.c4 .nxt .vl{font-size:15px;font-weight:700}
+.c4 .kid .cta{margin:12px 18px 0;width:auto;flex:none;font-size:20px}
+.c4 .qa{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 18px 0;flex:none}
+.c4 .qa span{display:flex;align-items:center;gap:8px;height:46px;border-radius:14px;background:#fff;padding:0 10px;font-size:14px;font-weight:600;box-shadow:0 1px 0 #EFE5D2,0 6px 12px -10px rgba(60,40,10,.4)}
+.c4 .qa .q{width:28px;height:28px;border-radius:9px;display:grid;place-items:center}
+.c4 .team{padding:12px 18px 0;flex:none}
+.c4 .team .row{display:flex;gap:14px}
+.c4 .team .pp{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;font-weight:600;width:64px;text-align:center}
+.c4 .team .pp span{font-weight:400;color:#7B7088;font-size:11px}
+
+/* ---------- 3 form ---------- */
+.c4 .fh{display:flex;align-items:center;gap:6px;padding:0 10px 0 12px;height:52px;flex:none}
+.c4 .fh .h{font-size:21px;flex:1}
+.c4 .fmeta{display:flex;gap:8px;padding:0 18px 10px;flex:none}
+.c4 .fmeta .stk{font-size:12px;padding:3px 9px}
+.c4 .fmeta .stk:first-child{transform:rotate(-1.5deg)}
+.c4 .fmeta .stk:last-child{transform:rotate(2deg)}
+.c4 .fb{padding:10px 18px 0;flex:none}
+.c4 .fl{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.c4 .fl .lb{font-size:15px;font-weight:700}
+.c4 .fl .big{font-family:'Secular One',sans-serif;font-size:24px;color:#6B4FD8;line-height:1}
+.c4 .rng{position:relative;height:30px}
+.c4 .rng .tr{position:absolute;left:0;right:0;top:12px;height:8px;border-radius:4px;background:#EFE5D2}
+.c4 .rng .fi{position:absolute;right:0;top:9px;height:14px;width:83.3%;border-radius:7px 10px 6px 12px;background:#BFF0CF;transform:skew(-8deg)}
+.c4 .rng .kn{position:absolute;top:2px;left:calc(16.7% - 14px);width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid #6B4FD8;box-shadow:0 3px 8px -2px rgba(107,79,216,.5)}
+.c4 .scale{display:flex;justify-content:space-between;font-size:11.5px;color:#7B7088;margin-top:2px}
+.c4 .dur{display:flex;align-items:center;justify-content:space-between}
+.c4 .stp{display:flex;align-items:center;gap:4px;background:#fff;border-radius:14px;padding:3px;box-shadow:0 1px 0 #EFE5D2,0 6px 12px -10px rgba(60,40,10,.4)}
+.c4 .stp i{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-style:normal;font-size:20px;font-weight:700;color:#6B4FD8;background:#F3EEFF}
+.c4 .stp b{min-width:64px;text-align:center;font-size:16px}
+.c4 .chips{display:flex;gap:6px}
+.c4 .chip{flex:1;height:44px;border-radius:14px;border:2px solid #E6DAC4;display:flex;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:600;color:#5A5068;background:#FFFBF3}
+.c4 .chip.on{background:#FFE58A;border-color:#fff;color:#4A3A00;box-shadow:0 4px 10px -4px rgba(120,90,0,.45);transform:rotate(-2deg)}
+.c4 .goals{padding:12px 18px 0;flex:none}
+.c4 .goal{padding:9px 0 10px;border-top:1.5px dashed #E3D7C1}
+.c4 .goal .gt{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.c4 .goal .gt b{font-size:14.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c4 .goal .stk{font-size:11px;padding:2px 7px;border-width:1.5px;transform:rotate(-2deg)}
+.c4 .tal{display:flex;gap:7px}
+.c4 .tal span{flex:1;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-weight:700;font-size:15px;border:2px solid transparent}
+.c4 .tal span em{font-style:normal;font-family:'Secular One',sans-serif;font-size:19px;font-variant-numeric:tabular-nums}
+.c4 .tal .tp{background:#DDF7E6;color:#17633A;border-color:#BFF0CF}
+.c4 .tal .tn{background:#FFE3EE;color:#8E2458;border-color:#FFC4DD}
+.c4 .tal .tr{background:#E6F0FF;color:#24508F;border-color:#CFE3FF}
+.c4 .tal .tr small{font-size:13px;font-weight:600}
+.c4 .win{padding:12px 18px 0;flex:none}
+.c4 .ta{background:#fff;border-radius:14px;padding:11px 12px;min-height:70px;font-family:'Playpen Sans Hebrew',cursive;font-size:14px;color:#2A2140;box-shadow:inset 0 0 0 2px #EFE5D2;background-image:repeating-linear-gradient(transparent 0 25px,#F1E7D6 25px 26px);background-position:0 8px}
+.c4 .foot{position:absolute;left:0;right:0;bottom:0;padding:14px 18px 30px;background:linear-gradient(rgba(255,251,243,0),#FFFBF3 22%);z-index:5;display:flex;gap:10px;align-items:center}
+.c4 .foot .cta{margin:0;flex:1}
+.c4 .foot .sec2{width:86px;height:62px;border-radius:18px;border:2px dashed #C9B8F2;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#6B4FD8;background:#fff;gap:1px}
+
+/* ---------- 4 progress ---------- */
+.c4 .ph{display:flex;align-items:center;gap:9px}
+.c4 .ph .av{width:34px;height:34px;font-size:16px;transform:rotate(-4deg)}
+.c4 .ph .h{font-size:22px}
+.c4 .chart{position:relative;margin:10px 18px 0;background:rgba(255,255,255,.75);border-radius:20px;padding:12px 12px 10px;box-shadow:0 1px 0 #EFE5D2,0 12px 24px -16px rgba(60,40,10,.4);flex:none}
+.c4 .chart .h{font-size:16px}
+.c4 .chart .cap{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.c4 .chart svg.g{display:block;width:100%;height:auto}
+.c4 .chart .ax{display:flex;justify-content:space-between;font-size:11.5px;color:#7B7088;padding:0 4px 0 30px}
+.c4 .chart .anno{position:absolute;left:74px;top:50px;transform:rotate(-5deg)}
+.c4 .gl{padding:10px 18px 0;flex:none}
+.c4 .gi{padding:6px 0 7px;border-bottom:1.5px dashed #E3D7C1}
+.c4 .gi .r1{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.c4 .gi .r1 b{font-size:14.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c4 .gi .r1 .stk{font-size:11px;padding:2px 7px;border-width:1.5px}
+.c4 .gi .r1 .pc{font-family:'Secular One',sans-serif;font-size:17px;width:44px;text-align:left;font-variant-numeric:tabular-nums}
+.c4 .bar{height:12px;border-radius:6px;background:#F1E8D8;position:relative}
+.c4 .bar i{position:absolute;right:0;top:-2px;height:16px;border-radius:7px 12px 6px 10px;transform:skew(-10deg)}
+.c4 .share{position:absolute;left:18px;right:18px;bottom:80px;z-index:6}
+.c4 .share .cta{height:52px;font-size:17px;margin:0}
+</style>
+
+<div class="c4 phones">
+
+<!-- ================= 1. HOME ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+<svg class="defs" aria-hidden="true">
+  <symbol id="c4i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="c4i-back" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="c4i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="18.5" r="1.2"/></symbol>
+  <symbol id="c4i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+  <symbol id="c4i-kids" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.3"/><path d="M3 20c.6-3.6 3-5.6 6-5.6s5.4 2 6 5.6"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16.5 14.6c2.6-.3 4.2 1.6 4.6 4.6"/></symbol>
+  <symbol id="c4i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h3M8 17h6"/></symbol>
+  <symbol id="c4i-chat" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"/><path d="M8.5 9h7M8.5 12.5h4.5"/></symbol>
+  <symbol id="c4i-form" viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="2.5"/><path d="M9 3h6v3H9z"/><path d="M8.5 11l1.6 1.6L13 9.8M8.5 16.5h7"/></symbol>
+  <symbol id="c4i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
+  <symbol id="c4i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="c4i-pen" viewBox="0 0 24 24"><path d="M15.5 4.5l4 4L9 19l-5 1 1-5z"/><path d="M13 7l4 4"/></symbol>
+  <symbol id="c4i-spark" viewBox="0 0 24 24"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8z"/><path d="M18.5 16v4M16.5 18h4"/></symbol>
+  <symbol id="c4i-sign" viewBox="0 0 24 24"><path d="M3.5 17c2.5 0 3-6 5-6s1 5 3 5 2-3 3.5-3 1.5 2 5.5 2"/><path d="M3.5 21h17"/></symbol>
+  <symbol id="c4i-list" viewBox="0 0 24 24"><path d="M9.5 6.5h10M9.5 12h10M9.5 17.5h10"/><path d="M4 6.5l1 1 2-2M4 12l1 1 2-2"/><circle cx="5.2" cy="17.5" r="1.1"/></symbol>
+  <symbol id="c4i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="c4i-save" viewBox="0 0 24 24"><path d="M5 4.5h11l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19z"/><path d="M8.5 4.5V9h6V4.5M8 20.5v-6h8v6"/></symbol>
+  <symbol id="c4i-share" viewBox="0 0 24 24"><path d="M12 15V3.5M7.5 8L12 3.5 16.5 8"/><path d="M5 12.5v6A2 2 0 0 0 7 20.5h10a2 2 0 0 0 2-2v-6"/></symbol>
+  <symbol id="c4i-boxon" viewBox="0 0 24 24"><path d="M4.5 4.2c4.8-.5 10-.4 15.1.1.4 5 .3 10.3-.1 15.3-5 .4-10.2.4-15.1 0-.4-5.1-.4-10.3.1-15.4z"/><path d="M7.5 12.3l3.3 3.4 7.4-9.4" stroke-width="2.6"/></symbol>
+  <symbol id="c4i-box" viewBox="0 0 24 24"><path d="M4.5 4.2c4.8-.5 10-.4 15.1.1.4 5 .3 10.3-.1 15.3-5 .4-10.2.4-15.1 0-.4-5.1-.4-10.3.1-15.4z"/></symbol>
+  <symbol id="c4i-ring" viewBox="0 0 78 60"><path d="M42 5C21 3 5 14 5 30c0 15 15 25 35 25 20 0 34-10 34-25C74 15 58 5 36 7c-6 .6-11 2-15 4"/></symbol>
+  <symbol id="c4i-squig" viewBox="0 0 100 8"><path d="M2 5c6-4 10 2 16-1s10 2 16-1 10 2 16-1 10 2 16-1 10 2 16-1 8 2 16-1"/></symbol>
+</svg>
+
+<div class="sb"><span class="num">9:41</span><span class="r">
+<svg width="18" height="11" viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#2A2140"/><rect x="5" y="5" width="3" height="6" rx="1" fill="#2A2140"/><rect x="10" y="2.5" width="3" height="8.5" rx="1" fill="#2A2140"/><rect x="15" y="0" width="3" height="11" rx="1" fill="#2A2140"/></svg>
+<svg width="16" height="11" viewBox="0 0 16 11"><path d="M8 10.5l2.2-2.6a3.3 3.3 0 0 0-4.4 0z M3.6 5.6a6.5 6.5 0 0 1 8.8 0l-1.3 1.5a4.6 4.6 0 0 0-6.2 0z M1 2.9a10 10 0 0 1 14 0L13.7 4.4a8 8 0 0 0-11.4 0z" fill="#2A2140"/></svg>
+<svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#2A2140" opacity=".45"/><rect x="2.5" y="2.5" width="16" height="7" rx="1.8" fill="#2A2140"/><rect x="23.8" y="4" width="1.7" height="4" rx=".8" fill="#2A2140" opacity=".45"/></svg>
+</span></div>
+
+<div class="hd">
+  <img src="img/logo.png" alt="Doing">
+  <div class="tools">
+    <span class="ib bell"><svg class="i"><use href="#c4i-bell"/></svg><i></i></span>
+    <span class="av l">מ</span>
+  </div>
+</div>
+
+<div class="greet">
+  <div>
+    <div class="h">בוקר טוב, <span class="mk">מיכל</span></div>
+    <div class="date muted">יום שלישי, 3 בנובמבר</div>
+    <div class="note">4 טיפולים היום</div>
+  </div>
+  <div class="att">
+    <span class="stk y"><svg class="i s"><use href="#c4i-form"/></svg>2 טפסים ממתינים</span>
+    <span class="stk k"><svg class="i s"><use href="#c4i-chat"/></svg>3 הודעות חדשות</span>
+  </div>
+</div>
+
+<div class="now">
+  <span class="tape"></span>
+  <div class="top"><span class="h"><span class="mk lo">מה עכשיו?</span></span><span class="stk p live"><i></i>עכשיו</span></div>
+  <div class="who">
+    <span class="t num">11:00</span>
+    <span class="names">ליאם · טיפול<span>עם דנה · חדר 2</span></span>
+    <span class="avs"><span class="av k">ל</span><span class="av o">ד</span></span>
+  </div>
+  <div class="cta"><span class="pl"><svg class="i s" style="fill:#fff;stroke:none"><use href="#c4i-play"/></svg></span>התחלת טיפול <small>/ מילוי טופס</small></div>
+</div>
+
+<div class="day">
+  <div class="sec"><span class="h">היום שלי</span><span class="note">1 מתוך 4 בוצעו</span></div>
+  <ul class="ck">
+    <li class="done"><svg class="i box"><use href="#c4i-boxon"/></svg><span class="tm">08:30</span><span class="tx"><b>נגה</b> · שירה · טיפול</span><span class="stk y">ממתין לטופס</span></li>
+    <li class="hl"><svg class="i box"><use href="#c4i-box"/></svg><span class="tm">11:00</span><span class="tx"><b>ליאם</b> · דנה · טיפול</span><span class="stk p">עכשיו</span></li>
+    <li><svg class="i box" style="color:#BBAECB"><use href="#c4i-box"/></svg><span class="tm">14:00</span><span class="tx"><b>עומר</b> · מיכל · הדרכת הורים</span><span class="plan">מתוכנן</span></li>
+    <li><svg class="i box" style="color:#BBAECB"><use href="#c4i-box"/></svg><span class="tm">16:30</span><span class="tx"><b>תמר</b> · שירה · טיפול</span><span class="plan">מתוכנן</span></li>
+  </ul>
+</div>
+
+<div class="kids">
+  <span class="kd"><span class="av sm m">נ</span><span>נגה<i>בת 6</i></span></span>
+  <span class="kd"><span class="av sm k">ל</span><span>ליאם<i>בן 5</i></span></span>
+  <span class="kd"><span class="av sm y">ע</span><span>עומר<i>בן 7</i></span></span>
+  <span class="kd"><span class="av sm p">ת</span><span>תמר<i>בת 4</i></span></span>
+</div>
+
+<nav class="nav"><ul>
+  <li class="on"><svg class="ring"><use href="#c4i-ring"/></svg><svg class="i"><use href="#c4i-sun"/></svg>היום</li>
+  <li><svg class="i"><use href="#c4i-kids"/></svg>ילדים</li>
+  <li><svg class="i"><use href="#c4i-cal"/></svg>יומן</li>
+  <li><svg class="i"><use href="#c4i-chat"/></svg>הודעות<span class="bd num">3</span></li>
+</ul></nav>
+<span class="hi"></span>
+</div></div><figcaption>היום · מסך הבית</figcaption></figure>
+
+<!-- ================= 2. KID HUB ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app kid">
+<div class="sb"><span class="num">9:41</span><span class="r">
+<svg width="18" height="11" viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#2A2140"/><rect x="5" y="5" width="3" height="6" rx="1" fill="#2A2140"/><rect x="10" y="2.5" width="3" height="8.5" rx="1" fill="#2A2140"/><rect x="15" y="0" width="3" height="11" rx="1" fill="#2A2140"/></svg>
+<svg width="16" height="11" viewBox="0 0 16 11"><path d="M8 10.5l2.2-2.6a3.3 3.3 0 0 0-4.4 0z M3.6 5.6a6.5 6.5 0 0 1 8.8 0l-1.3 1.5a4.6 4.6 0 0 0-6.2 0z M1 2.9a10 10 0 0 1 14 0L13.7 4.4a8 8 0 0 0-11.4 0z" fill="#2A2140"/></svg>
+<svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#2A2140" opacity=".45"/><rect x="2.5" y="2.5" width="16" height="7" rx="1.8" fill="#2A2140"/><rect x="23.8" y="4" width="1.7" height="4" rx=".8" fill="#2A2140" opacity=".45"/></svg>
+</span></div>
+
+<div class="tb"><span class="ib"><svg class="i"><use href="#c4i-back"/></svg></span><span class="ttl">כרטיס ילד</span><span class="ib"><svg class="i"><use href="#c4i-dots"/></svg></span></div>
+
+<div class="kh">
+  <span class="av m">נ</span>
+  <div>
+    <div class="h"><span class="mk pk">נגה</span></div>
+    <div class="sub"><span class="stk l" style="transform:rotate(2deg);font-size:12px;padding:2px 8px">בת 6</span><span class="note">אוהבת פאזלים ובועות סבון</span></div>
+  </div>
+</div>
+
+<div class="tabs"><span class="on">סקירה<svg class="sq" viewBox="0 0 100 8" preserveAspectRatio="none"><use href="#c4i-squig"/></svg></span><span>טיפולים</span><span>התקדמות</span><span>הודעות</span><span>איסוף נתונים</span></div>
+<hr class="dash tabsline">
+
+<div class="pin"><span class="tape"></span><svg class="i" style="color:#8A6A00"><use href="#c4i-sign"/></svg><span class="tx">הסכם הטיפול ממתין לחתימת ההורים</span><span class="go">לשלוח שוב</span></div>
+
+<div class="stats">
+  <span class="stk m"><b>85%</b><span>שיתוף פעולה</span></span>
+  <span class="stk k"><b>12</b><span>טיפולים החודש</span></span>
+  <span class="stk y"><b>4</b><span>מטרות פעילות</span></span>
+</div>
+
+<div class="nxt"><span class="ic"><svg class="i s"><use href="#c4i-clock"/></svg></span><div><div class="lb">הטיפול הבא</div><div class="vl num">יום רביעי · 08:30 · שירה</div></div></div>
+
+<div class="cta"><svg class="i"><use href="#c4i-form"/></svg>מלא טופס</div>
+
+<div class="qa">
+  <span><i class="q l"><svg class="i s"><use href="#c4i-list"/></svg></i>סדר יום</span>
+  <span><i class="q y"><svg class="i s"><use href="#c4i-pen"/></svg></i>דיווח יומי</span>
+  <span><i class="q p"><svg class="i s"><use href="#c4i-spark"/></svg></i>צ׳אט AI</span>
+  <span><i class="q m"><svg class="i s"><use href="#c4i-sign"/></svg></i>הסכם טיפול</span>
+</div>
+
+<div class="team">
+  <div class="sec"><span class="h">הצוות של נגה</span><span class="note">4 אנשים</span></div>
+  <div class="row">
+    <span class="pp"><span class="av l">ש</span>שירה<span>מטפלת</span></span>
+    <span class="pp"><span class="av o">ד</span>דנה<span>מטפלת</span></span>
+    <span class="pp"><span class="av k">ר</span>רותם<span>מדריכת הורים</span></span>
+    <span class="pp"><span class="av y">ה</span>הורים<span>אבא ואמא של נגה</span></span>
+  </div>
+</div>
+
+<nav class="nav"><ul>
+  <li><svg class="i"><use href="#c4i-sun"/></svg>היום</li>
+  <li class="on"><svg class="ring"><use href="#c4i-ring"/></svg><svg class="i"><use href="#c4i-kids"/></svg>ילדים</li>
+  <li><svg class="i"><use href="#c4i-cal"/></svg>יומן</li>
+  <li><svg class="i"><use href="#c4i-chat"/></svg>הודעות<span class="bd num">3</span></li>
+</ul></nav>
+<span class="hi"></span>
+</div></div><figcaption>נגה · כרטיס ילד</figcaption></figure>
+
+<!-- ================= 3. SESSION FORM ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+<div class="sb"><span class="num">9:41</span><span class="r">
+<svg width="18" height="11" viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#2A2140"/><rect x="5" y="5" width="3" height="6" rx="1" fill="#2A2140"/><rect x="10" y="2.5" width="3" height="8.5" rx="1" fill="#2A2140"/><rect x="15" y="0" width="3" height="11" rx="1" fill="#2A2140"/></svg>
+<svg width="16" height="11" viewBox="0 0 16 11"><path d="M8 10.5l2.2-2.6a3.3 3.3 0 0 0-4.4 0z M3.6 5.6a6.5 6.5 0 0 1 8.8 0l-1.3 1.5a4.6 4.6 0 0 0-6.2 0z M1 2.9a10 10 0 0 1 14 0L13.7 4.4a8 8 0 0 0-11.4 0z" fill="#2A2140"/></svg>
+<svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#2A2140" opacity=".45"/><rect x="2.5" y="2.5" width="16" height="7" rx="1.8" fill="#2A2140"/><rect x="23.8" y="4" width="1.7" height="4" rx=".8" fill="#2A2140" opacity=".45"/></svg>
+</span></div>
+
+<div class="fh"><span class="ib"><svg class="i"><use href="#c4i-x"/></svg></span><span class="h">טופס טיפול · <span class="mk mn">נגה</span></span><span class="note" style="transform:rotate(-4deg)">נשמר אוטומטית</span></div>
+<div class="fmeta"><span class="stk y num">3.11.2026</span><span class="stk l">שירה</span></div>
+<hr class="dash" style="margin:0 18px">
+
+<div class="fb">
+  <div class="fl"><span class="lb">שיתוף פעולה</span><span class="big num">85%</span></div>
+  <div class="rng"><span class="tr"></span><span class="fi"></span><span class="kn"></span></div>
+  <div class="scale num"><span>10</span><span>100</span></div>
+</div>
+
+<div class="fb dur"><span class="fl" style="margin:0"><span class="lb">משך הטיפול</span></span><span class="stp"><i>+</i><b class="num">90 דק׳</b><i>−</i></span></div>
+
+<div class="fb">
+  <div class="fl"><span class="lb">מצב רוח</span></div>
+  <div class="chips"><span class="chip on">שמחה</span><span class="chip">רגועה</span><span class="chip">עייפה</span><span class="chip">מתוסכלת</span></div>
+</div>
+
+<div class="goals">
+  <div class="sec" style="margin-bottom:4px"><span class="h" style="font-size:17px">מטרות שעבדנו עליהן</span><span class="note">לחיצה = ניסיון</span></div>
+  <div class="goal"><div class="gt"><b>קשר עין בפנייה בשם</b><span class="stk k">שפה ותקשורת</span></div>
+    <div class="tal"><span class="tp">+<em>8</em></span><span class="tn">−<em>2</em></span><span class="tr"><small>עזרה</small><em>1</em></span></div></div>
+  <div class="goal"><div class="gt"><b>הרכבת פאזל 12 חלקים</b><span class="stk y">מוטוריקה עדינה</span></div>
+    <div class="tal"><span class="tp">+<em>4</em></span><span class="tn">−<em>3</em></span><span class="tr"><small>עזרה</small><em>2</em></span></div></div>
+  <div class="goal"><div class="gt"><b>משחק תורות עם חבר</b><span class="stk p">משחק וחברה</span></div>
+    <div class="tal"><span class="tp">+<em>3</em></span><span class="tn">−<em>4</em></span><span class="tr"><small>עזרה</small><em>3</em></span></div></div>
+</div>
+
+<div class="win">
+  <div class="fl"><span class="lb">הצלחות</span></div>
+  <div class="ta">השלימה פאזל לבד בפעם הראשונה</div>
+</div>
+
+<div class="foot">
+  <div class="cta"><svg class="i"><use href="#c4i-save"/></svg>שמירת הטופס</div>
+  <div class="sec2"><svg class="i s"><use href="#c4i-pen"/></svg>שמירה כטיוטה</div>
+</div>
+<span class="hi"></span>
+</div></div><figcaption>טופס טיפול</figcaption></figure>
+
+<!-- ================= 4. PROGRESS ================= -->
+<figure class="phone"><div class="screen" dir="rtl"><div class="app">
+<div class="sb"><span class="num">9:41</span><span class="r">
+<svg width="18" height="11" viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#2A2140"/><rect x="5" y="5" width="3" height="6" rx="1" fill="#2A2140"/><rect x="10" y="2.5" width="3" height="8.5" rx="1" fill="#2A2140"/><rect x="15" y="0" width="3" height="11" rx="1" fill="#2A2140"/></svg>
+<svg width="16" height="11" viewBox="0 0 16 11"><path d="M8 10.5l2.2-2.6a3.3 3.3 0 0 0-4.4 0z M3.6 5.6a6.5 6.5 0 0 1 8.8 0l-1.3 1.5a4.6 4.6 0 0 0-6.2 0z M1 2.9a10 10 0 0 1 14 0L13.7 4.4a8 8 0 0 0-11.4 0z" fill="#2A2140"/></svg>
+<svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#2A2140" opacity=".45"/><rect x="2.5" y="2.5" width="16" height="7" rx="1.8" fill="#2A2140"/><rect x="23.8" y="4" width="1.7" height="4" rx=".8" fill="#2A2140" opacity=".45"/></svg>
+</span></div>
+
+<div class="tb"><span class="ib"><svg class="i"><use href="#c4i-back"/></svg></span><span class="ph"><span class="av m">נ</span><span class="h"><span class="mk pk">נגה</span></span><span class="stk l" style="transform:rotate(2deg);font-size:12px;padding:2px 8px">בת 6</span></span><span class="ib"><svg class="i"><use href="#c4i-dots"/></svg></span></div>
+
+<div class="tabs"><span>סקירה</span><span>טיפולים</span><span class="on">התקדמות<svg class="sq" viewBox="0 0 100 8" preserveAspectRatio="none"><use href="#c4i-squig"/></svg></span><span>הודעות</span><span>איסוף נתונים</span></div>
+<hr class="dash tabsline">
+
+<div class="chart">
+  <div class="cap"><span class="h">שיתוף פעולה · 8 טיפולים אחרונים</span></div>
+  <svg class="g" viewBox="0 6 300 136" direction="ltr" aria-label="שיתוף פעולה, 8 טיפולים אחרונים, מ-60% עד 85%">
+    <g stroke="#E2D5BE" stroke-width="1" stroke-dasharray="2 4">
+      <path d="M8 14H272M8 38H272M8 62H272M8 86H272M8 110H272"/>
+    </g>
+    <path d="M8 134H272" stroke="#D6C7AB" stroke-width="1.5"/>
+    <g font-family="Heebo,sans-serif" font-size="10" fill="#7B7088" text-anchor="end" style="font-variant-numeric:tabular-nums">
+      <text x="298" y="17">100</text><text x="298" y="65">80</text><text x="298" y="113">60</text><text x="298" y="137">50</text>
+    </g>
+    <polyline points="262,110 228,98 194,114.8 160,81.2 126,74 92,86 58,57.2 24,50" fill="none" stroke="#FFE58A" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>
+    <polyline points="262,110 228,98 194,114.8 160,81.2 126,74 92,86 58,57.2 24,50" fill="none" stroke="#6B4FD8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="#FFFBF3" stroke="#6B4FD8" stroke-width="2.2">
+      <circle cx="262" cy="110" r="3.6"/><circle cx="228" cy="98" r="3.6"/><circle cx="194" cy="114.8" r="3.6"/><circle cx="160" cy="81.2" r="3.6"/><circle cx="126" cy="74" r="3.6"/><circle cx="92" cy="86" r="3.6"/><circle cx="58" cy="57.2" r="3.6"/>
+    </g>
+    <circle cx="24" cy="50" r="7" fill="#6B4FD8" stroke="#fff" stroke-width="2.5"/>
+    <g transform="rotate(-4 46 26)">
+      <rect x="8" y="12" width="46" height="24" rx="7" fill="#FFC4DD" stroke="#fff" stroke-width="2"/>
+      <text x="31" y="29" text-anchor="middle" font-family="Secular One,sans-serif" font-size="15" fill="#8E2458" style="font-variant-numeric:tabular-nums">85%</text>
+    </g>
+  </svg>
+  <div class="ax"><span>היום</span><span>לפני חודשיים</span></div>
+  <span class="note anno">שיא חדש!</span>
+</div>
+
+<div class="gl">
+  <div class="sec" style="margin-bottom:2px"><span class="h" style="font-size:17px">מטרות</span><span class="note">+25 נק׳ מאז ספטמבר</span></div>
+  <div class="gi"><div class="r1"><b>קשר עין בפנייה בשם</b><span class="stk k">שפה ותקשורת</span><span class="pc">78%</span></div><div class="bar"><i style="width:78%;background:#9FC6FF"></i></div></div>
+  <div class="gi"><div class="r1"><b>הרכבת פאזל 12 חלקים</b><span class="stk y">מוטוריקה עדינה</span><span class="pc">55%</span></div><div class="bar"><i style="width:55%;background:#FFD84D"></i></div></div>
+  <div class="gi"><div class="r1"><b>משחק תורות עם חבר</b><span class="stk p">משחק וחברה</span><span class="pc">40%</span></div><div class="bar"><i style="width:40%;background:#FFA3C9"></i></div></div>
+  <div class="gi"><div class="r1"><b>לבישת מעיל באופן עצמאי</b><span class="stk m">ADL</span><span class="pc">62%</span></div><div class="bar"><i style="width:62%;background:#8FE3AE"></i></div></div>
+</div>
+
+<div class="share"><div class="cta"><svg class="i"><use href="#c4i-share"/></svg>שליחת סיכום להורים</div></div>
+
+<nav class="nav"><ul>
+  <li><svg class="i"><use href="#c4i-sun"/></svg>היום</li>
+  <li class="on"><svg class="ring"><use href="#c4i-ring"/></svg><svg class="i"><use href="#c4i-kids"/></svg>ילדים</li>
+  <li><svg class="i"><use href="#c4i-cal"/></svg>יומן</li>
+  <li><svg class="i"><use href="#c4i-chat"/></svg>הודעות<span class="bd num">3</span></li>
+</ul></nav>
+<span class="hi"></span>
+</div></div><figcaption>התקדמות</figcaption></figure>
+
+</div>
+</div>
+  <div class="label"><h3>הדמיות</h3><span>נוצרו עם gpt-image-2.5. לוחצים להגדלה. ייתכנו שגיאות כתיב קטנות בתמונות.</span></div>
+  <div class="renders">
+    <figure class="render"><button type="button"><img src="img/c4-flare.jpg" alt="מחברת שטח: בית, כרטיס ילד וטופס טיפול" loading="lazy"></button><figcaption><b>Flare</b> · בית, כרטיס ילד, טופס טיפול</figcaption></figure>
+    <figure class="render"><button type="button"><img src="img/c4-sun.jpg" alt="מחברת שטח: התקדמות, יומן ומסך נוסף" loading="lazy"></button><figcaption><b>Sunburst</b> · התקדמות, יומן ומסך נוסף</figcaption></figure>
+    <figure class="render wide"><button type="button"><img src="img/c4-desk.jpg" alt="מחברת שטח: גרסת מחשב" loading="lazy"></button><figcaption><b>Sunburst</b> · גרסת מחשב עם ניווט צד, אותה מערכת</figcaption></figure>
+  </div>
+  <div class="cmts" data-concept="c4" hidden></div>
+</section>
+
+<section class="pages" id="pages" aria-labelledby="pages-h">
+  <span class="eyebrow">איך כל מסך באפליקציה עובר למערכת החדשה</span>
+  <h2 id="pages-h">כל המסכים, אותה מערכת</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>מסך היום</th><th>איפה הוא במערכת החדשה</th><th>מה משתנה במובייל</th></tr></thead>
+    <tbody>
+      <tr><td>ניהול ילדים</td><td>טאב "ילדים" + שורת ילדים במסך "היום"</td><td>רשימה עם תמונה, הטיפול הבא ותגית "ממתין לטופס". הפעולות (לוח, סטטיסטיקה, קישור) בתפריט של שורה.</td></tr>
+      <tr><td>כרטיס ילד · סקירה</td><td>ילדים ← ילד ← סקירה</td><td>כותרת עם 3 מדדים, המפגש הבא, פעולות מהירות כאריחים, צוות כרשימה.</td></tr>
+      <tr><td>טיפולים / לוח פגישות</td><td>טאב "יומן" + טאב "טיפולים" בכרטיס</td><td>רצועת שבוע ותצוגת יום במקום חודש צפוף. "+ פגישה" ככפתור צף.</td></tr>
+      <tr><td>טופס טיפול</td><td>כפתור + ← מלא טופס, או מהטיפול ביומן</td><td>מסך ממוקד ביד אחת: בורר שיתוף פעולה, מונים + / − / r לכל מטרה, שמירה דביקה ושמירת טיוטה.</td></tr>
+      <tr><td>התקדמות ומטרות</td><td>כרטיס ילד ← התקדמות</td><td>גרף אחד בראש, מטרות עם פס התקדמות וצבע תחום. ניהול מטרות נפתח כגיליון.</td></tr>
+      <tr><td>איסוף נתונים, תוכניות למידה</td><td>כרטיס ילד ← טאבים</td><td>טבלאות הופכות לכרטיסים בשורה, עם עמודות נבחרות.</td></tr>
+      <tr><td>סדר יום, דיווח יומי</td><td>פעולות מהירות בכרטיס + כפתור +</td><td>אותו רכיב דירוג (טוב / בסדר / קשה) בכל המערכת, כפתורים גדולים.</td></tr>
+      <tr><td>הודעות, מרכז הודעות</td><td>תחת "עוד" + תג בסרגל</td><td>תיבת דואר אחת, לא נקרא מודגש, הקשר "על נגה" בכל הודעה.</td></tr>
+      <tr><td>צ׳אט AI, סיכום תקופתי</td><td>תחת "עוד" + פעולה בכרטיס ילד</td><td>צ׳אט במסך מלא, הסיכום ככרטיס שאפשר לשתף.</td></tr>
+      <tr><td>טפסים, אנשי צוות, שעות צוות</td><td>תחת "עוד"</td><td>רשימות עם חיפוש. בשעות צוות מספרים גדולים וטבלה נגללת.</td></tr>
+      <tr><td>הסכם טיפול</td><td>באנר בסקירה + פעולה מהירה</td><td>חתימה במסך מלא לרוחב, סטטוס כתגית.</td></tr>
+      <tr><td>מרכז הידע, מדריכת הורים</td><td>תחת "עוד"</td><td>מאמרים בטיפוגרפיה של הכיוון שנבחר.</td></tr>
+      <tr><td>מצב מטפלת, מצב הורים</td><td>אותה מערכת, פחות יעדים</td><td>מטפלת: היום, ילדים, +, הודעות. הורים: כרטיס הילד בלבד, לקריאה.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="pick" id="pick" aria-labelledby="pick-h">
+  <span class="eyebrow">ההמלצה שלי</span>
+  <h2 id="pick-h">חדר משחקים, עם השלד של לילך שקט</h2>
+  <p>הכיוון הראשון הכי קרוב למה שמיכל אוהבת: הפסטלים, העיגוליות של הלוגו, הסגול. הכיוון השני מסודר יותר לעבודה בשטח. השילוב שאני מציע:</p>
+  <ol>
+    <li>הצבעים, הגופן העגול והאריחים הצבעוניים מכיוון 1.</li>
+    <li>ציר הזמן של "היום", המדדים הגדולים בכרטיס ילד והטופס המסודר מכיוון 2.</li>
+    <li>הכפתור + המרכזי והניווט התחתון בכל מקרה.</li>
+  </ol>
+  <p>אם מיכל רוצה משהו חגיגי יותר, כיוון 3 עובד טוב כשכבה מעל אותו שלד. כיוון 4 מתאים אם רוצים שזה ירגיש פחות כמו תוכנה ויותר כמו מחברת של מטפלת.</p>
+</section>
+
+<div class="cmts" data-concept="general" hidden></div>
+
+</div>
+
+<dialog class="lb" id="lb"><img alt="" id="lb-img"><button type="button" id="lb-close" aria-label="סגירה">×</button></dialog>
+<script>
+(function(){
+  var lb=document.getElementById('lb'), im=document.getElementById('lb-img');
+  document.querySelectorAll('.render button').forEach(function(b){
+    b.addEventListener('click',function(){ im.src=b.querySelector('img').src; im.alt=b.querySelector('img').alt; if(lb.showModal) lb.showModal(); });
+  });
+  document.getElementById('lb-close').addEventListener('click',function(){lb.close()});
+  lb.addEventListener('click',function(e){ if(e.target===lb) lb.close(); });
+})();
+</script>
+<!-- Comments layer for the hosted copy on startdoing.co.il only (Firestore: designComments). -->
+<style>
+.cmts{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:clamp(16px,3vw,24px);display:flex;flex-direction:column;gap:14px}
+.cmts h3{font-size:22px;display:flex;align-items:center;gap:10px}
+.cmts h3 .n{font-family:var(--f-body);font-size:13px;font-weight:700;background:var(--accent);color:var(--surface);border-radius:999px;padding:2px 10px}
+.cmts form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.cmts textarea{grid-column:1/-1;min-height:88px;resize:vertical}
+.cmts input,.cmts select,.cmts textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:10px 14px;width:100%;min-width:0}
+.cmts input:focus,.cmts select:focus,.cmts textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.cmts .row{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cmts button[type=submit]{font:inherit;font-weight:700;font-size:16px;background:var(--accent);color:var(--surface);border:0;border-radius:999px;padding:12px 26px;min-height:46px;cursor:pointer}
+.cmts button[disabled]{opacity:.6;cursor:default}
+.cmts .msg{font-size:14px;color:var(--muted)}
+.cmts ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.cmts li{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:2px}
+.cmts li .meta{font-size:13px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
+.cmts li .meta b{color:var(--ink)}
+.cmts li .meta .scr{background:var(--accent-soft);border-radius:999px;padding:0 8px}
+.cmts li p{white-space:pre-wrap;overflow-wrap:anywhere}
+.cmts .empty{color:var(--muted);font-size:14.5px}
+.ov .cc,.cnav .cc{font-size:12px;font-weight:700;color:var(--accent)}
+@media (max-width:640px){.cmts form{grid-template-columns:minmax(0,1fr)}}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+  var NAMES={c1:'חדר משחקים',c2:'לילך שקט',c3:'שקיעה סגולה',c4:'מחברת שטח',general:'כללי'};
+  var SCREENS=['כללי','מסך הבית','כרטיס ילד','טופס טיפול','התקדמות','הדמיות','גרסת מחשב'];
+  firebase.initializeApp({apiKey:"AIzaSyDHE7FKHJ92rXXfz_3hLX8e9s8lC9g9g9o",authDomain:"aba-ai-d74f5.firebaseapp.com",projectId:"aba-ai-d74f5"});
+  var col=firebase.firestore().collection('designComments');
+  var savedName=''; try{savedName=localStorage.getItem('dc-name')||''}catch(e){}
+
+  var boxes={};
+  document.querySelectorAll('.cmts[data-concept]').forEach(function(box){
+    var c=box.dataset.concept; box.hidden=false; boxes[c]=box;
+    var isGen=c==='general';
+    box.innerHTML='<h3>'+(isGen?'הערות כלליות':'הערות על "'+NAMES[c]+'"')+' <span class="n">0</span></h3>'+
+      '<ul aria-live="polite"><li class="empty">עוד אין הערות. אפשר להיות הראשונים.</li></ul>'+
+      '<form>'+
+        '<input id="dc-name-'+c+'" name="name" maxlength="60" placeholder="השם שלך" required autocomplete="name">'+
+        (isGen?'<input type="hidden" name="screen" value="כללי">':'<select id="dc-screen-'+c+'" name="screen" aria-label="על איזה מסך">'+SCREENS.map(function(s){return '<option>'+s+'</option>'}).join('')+'</select>')+
+        '<textarea id="dc-text-'+c+'" name="text" maxlength="2000" placeholder="מה אהבת? מה היית משנה?" required></textarea>'+
+        '<div class="row"><button type="submit">שליחת הערה</button><span class="msg"></span></div>'+
+      '</form>';
+    var f=box.querySelector('form'), msg=box.querySelector('.msg'), btn=f.querySelector('button');
+    f.name.value=savedName;
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      var name=f.name.value.trim(), text=f.text.value.trim();
+      if(!name||!text){msg.textContent='צריך שם וטקסט.';return}
+      btn.disabled=true; msg.textContent='שולח…';
+      try{localStorage.setItem('dc-name',name)}catch(e){}
+      document.querySelectorAll('.cmts input[name=name]').forEach(function(i){if(!i.value)i.value=name});
+      col.add({concept:c,screen:f.screen.value,name:name,text:text,createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+        .then(function(){f.text.value='';msg.textContent='נשלח. תודה!'})
+        .catch(function(){msg.textContent='השליחה נכשלה. בדקו את החיבור ונסו שוב.'})
+        .finally(function(){btn.disabled=false});
+    });
+  });
+
+  function fmt(ts){ if(!ts) return 'עכשיו'; var d=ts.toDate(); return d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'})+' · '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); }
+  function el(tag,cls,text){var x=document.createElement(tag); if(cls)x.className=cls; if(text!=null)x.textContent=text; return x}
+
+  col.orderBy('createdAt','asc').onSnapshot(function(snap){
+    var by={c1:[],c2:[],c3:[],c4:[],general:[]};
+    snap.forEach(function(d){var v=d.data(); if(by[v.concept]) by[v.concept].push(v)});
+    Object.keys(boxes).forEach(function(c){
+      var ul=boxes[c].querySelector('ul'), list=by[c]; ul.textContent='';
+      boxes[c].querySelector('.n').textContent=list.length;
+      if(!list.length){ul.appendChild(el('li','empty','עוד אין הערות. אפשר להיות הראשונים.'));return}
+      list.forEach(function(v){
+        var li=el('li'), meta=el('div','meta');
+        meta.appendChild(el('b',null,v.name)); if(v.screen&&v.screen!=='כללי') meta.appendChild(el('span','scr',v.screen)); meta.appendChild(el('span',null,fmt(v.createdAt)));
+        li.appendChild(meta); li.appendChild(el('p',null,v.text)); ul.appendChild(li);
+      });
+    });
+    ['c1','c2','c3','c4'].forEach(function(c){
+      document.querySelectorAll('a[href="#'+c+'"]').forEach(function(a){
+        var s=a.querySelector('.cc'); if(!s){s=el('span','cc');a.appendChild(s)}
+        s.textContent=by[c].length?' · '+by[c].length+' הערות':'';
+      });
+    });
+  },function(){Object.keys(boxes).forEach(function(c){boxes[c].querySelector('ul').innerHTML='<li class="empty">לא הצלחנו לטעון הערות כרגע.</li>'})});
+})();
+</script>
+
+</body></html>
