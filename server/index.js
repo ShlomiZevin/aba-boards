@@ -6,6 +6,7 @@ const cors = require('cors');
 
 const avatarRoutes = require('./routes/avatar');
 const therapyRoutes = require('./routes/therapy');
+const mcpRoutes = require('./routes/mcp');
 const { router: adminRoutes, publicRouter: adminPublicRoutes } = require('./routes/admin');
 const { router: paypalRoutes, publicRouter: webhookRoutes } = require('./routes/paypal');
 const { authenticate } = require('./middleware/auth');
@@ -83,6 +84,9 @@ app.post('/api/therapy/meeting-vote', async (req, res) => {
     res.status(500).json({ error: err.message || 'Vote failed' });
   }
 });
+
+// MCP server for ChatGPT / Claude connectors — OAuth-protected, at /mcp (+ /oauth/*, /.well-known/*)
+app.use(mcpRoutes);
 
 // API Routes
 app.use('/api/avatar', avatarRoutes);

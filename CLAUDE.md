@@ -486,6 +486,28 @@ so nothing depends on the browser. The UI is a drawer in `ChatCenter.tsx` (`comp
 
 ---
 
+## MCP Server (ChatGPT / Claude connectors)
+
+The same data tools as the AI chat, exposed over MCP so anyone can connect their own ChatGPT, Claude
+or other MCP client. **Server only** — no client code involved.
+
+- **URL:** `https://avatar-server-1018338671074.me-west1.run.app/mcp` (Streamable HTTP, stateless,
+  JSON responses — `routes/mcp.js`, hand-written JSON-RPC, no SDK dependency).
+- **Auth: OAuth 2.1** with dynamic client registration and PKCE (`services/mcp-auth.js`). The sign-in
+  page (`/oauth/authorize`) takes the person's normal site credential: an admin access code, a
+  therapist link (`/t/<id>`) or a parent link (`/p/<kidId>`). The token stores that identity and it is
+  re-checked on every call (deactivated code / deleted practitioner → cut off).
+- **Same scoping as the site chat:** tools come from `toolsForRole()` and run through
+  `executeToolCall` (`chat-center.js`). Parents default to their own kid. On top of that, a non-super
+  admin can't reach another centre's kid by raw ID (`adminMayAccess`). Extra `search` / `fetch` tools
+  for OpenAI connectors.
+- Tokens: access 24h, refresh 90 days (rotated). Stored only as sha256 in `mcpTokens`,
+  `mcpAuthCodes`; clients in `mcpClients`. TTL policies on `expiresAt` for both token collections.
+- Failed sign-ins are rate-limited per IP (8 per 15 min) — admin codes are short.
+- Discovery: `/.well-known/oauth-protected-resource[/mcp]`, `/.well-known/oauth-authorization-server`.
+
+---
+
 ## Build Models (מודלים לבנייה) — all users
 
 Step-by-step Lego / magnet build guides, produced by a separate Claude session ("ABBA") in

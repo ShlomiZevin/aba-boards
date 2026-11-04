@@ -353,6 +353,16 @@ const CHAT_TOOLS = [
   },
 ];
 
+// Filter tools by role — therapists and parents get fewer tools. Shared with the MCP server.
+const THERAPIST_TOOLS = ['list_kids', 'get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries', 'get_learning_plan', 'get_summary_data', 'get_daily_reports', 'get_daily_agenda'];
+const PARENT_TOOLS = ['get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries', 'get_daily_reports', 'get_daily_agenda'];
+
+function toolsForRole(source) {
+  if (source === 'therapist') return CHAT_TOOLS.filter(t => THERAPIST_TOOLS.includes(t.name));
+  if (source === 'parent') return CHAT_TOOLS.filter(t => PARENT_TOOLS.includes(t.name));
+  return CHAT_TOOLS;
+}
+
 function buildSystemPrompt(kidId, source) {
   const isTherapist = source === 'therapist';
   const isParent = source === 'parent';
@@ -917,16 +927,8 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
 
   const elapsed = () => `${((Date.now() - chatStart) / 1000).toFixed(1)}s`;
 
-  // Filter tools by role — therapists and parents get fewer tools
-  const THERAPIST_TOOLS = ['list_kids', 'get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries', 'get_learning_plan', 'get_summary_data', 'get_daily_reports', 'get_daily_agenda'];
-  const PARENT_TOOLS = ['get_kid_profile', 'get_goals', 'get_session_forms', 'get_sessions', 'get_data_entries', 'get_daily_reports', 'get_daily_agenda'];
-
-  let roleTools = CHAT_TOOLS;
-  if (source === 'therapist') roleTools = CHAT_TOOLS.filter(t => THERAPIST_TOOLS.includes(t.name));
-  else if (source === 'parent') roleTools = CHAT_TOOLS.filter(t => PARENT_TOOLS.includes(t.name));
-
   const systemPrompt = buildSystemPrompt(kidId, source);
-  const tools = roleTools;
+  const tools = toolsForRole(source);
 
   console.log(`[Chat ${elapsed()}] Starting chat (source=${source}, kidId=${kidId}, msgCount=${messages.length}, tools=${tools.length})`);
   emitStatus({ type: 'thinking', label: 'חושב...' });
@@ -983,4 +985,4 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
   return { reply: 'לא הצלחתי לעבד את הבקשה. נסו שוב.', boardUpdated, summaryCreated, toolsUsed };
 }
 
-module.exports = { handleChat, executeToolCall, buildSystemPrompt }; // the last two are exported for tests
+module.exports = { handleChat, executeToolCall, buildSystemPrompt, toolsForRole }; // executeToolCall + toolsForRole also back the MCP server
