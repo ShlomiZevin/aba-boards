@@ -1158,6 +1158,45 @@ router.delete('/summaries/:id', requireAdmin, asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
+// ==================== DOCUMENTS (per kid / general) ====================
+// Visibility + role rules live in services/docs.js; req carries authType/adminId/isSuperAdmin/practitionerId/kidViewId.
+
+const docsService = require('../services/docs');
+const docsHandler = (fn) => asyncHandler(async (req, res) => {
+  try {
+    await fn(req, res);
+  } catch (err) {
+    if (err instanceof docsService.DocError) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+});
+
+router.get('/kids/:kidId/docs', docsHandler(async (req, res) => {
+  res.json(await docsService.listForKid(req, req.params.kidId));
+}));
+
+router.get('/docs', docsHandler(async (req, res) => {
+  if (req.query.scope !== 'general') return res.status(400).json({ error: 'scope=general is required' });
+  res.json(await docsService.listGeneral(req));
+}));
+
+router.get('/docs/:id', docsHandler(async (req, res) => {
+  res.json(await docsService.getDoc(req, req.params.id));
+}));
+
+router.post('/docs', requireAdmin, docsHandler(async (req, res) => {
+  res.status(201).json(await docsService.createDoc(req, req.body || {}, { source: 'app' }));
+}));
+
+router.put('/docs/:id', requireAdmin, docsHandler(async (req, res) => {
+  res.json(await docsService.updateDoc(req, req.params.id, req.body || {}));
+}));
+
+router.delete('/docs/:id', requireAdmin, docsHandler(async (req, res) => {
+  await docsService.deleteDoc(req, req.params.id);
+  res.status(204).send();
+}));
+
 // ==================== CREW HOURS ====================
 
 router.get('/crew-hours', asyncHandler(async (req, res) => {

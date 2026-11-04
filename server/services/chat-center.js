@@ -985,4 +985,4 @@ async function handleChat(adminId, messages, kidId, onToolStatus, source, practi
   return { reply: 'לא הצלחתי לעבד את הבקשה. נסו שוב.', boardUpdated, summaryCreated, toolsUsed };
 }
 
-module.exports = { handleChat, executeToolCall, buildSystemPrompt, toolsForRole }; // executeToolCall + toolsForRole also back the MCP server
+module.exports = { handleChat, executeToolCall, buildSystemPrompt, toolsForRole, resolveKidId }; // executeToolCall + toolsForRole also back the MCP server

@@ -513,6 +513,34 @@ redesigned app (`therapy-center-v2`, admin nav "חיבור לעוזרי AI"), sh
 
 ---
 
+## Documents (מסמכים / מחברת)
+
+Free markdown documents, per kid or general for the centre (`kidId: null`): meeting prep, guidance,
+notes. Written in the app, or sent in from ChatGPT / Claude through the MCP (`save_document`,
+`update_document` with replace/append, `list_documents`, `get_document`). Separate from `summaries`
+(periodic summaries keep their own flow).
+
+| Where | What |
+|-------|------|
+| `docs/{id}` | `{ kidId\|null, adminId, type, title, content, visibility, source, createdBy, createdAt, updatedAt }` |
+
+- `type`: `meeting-prep` · `guidance` · `note` · `summary` · `other`. `source`: `chatgpt` · `claude` · `mcp` · `app` · `site-chat`.
+- **Visibility is enforced in `services/docs.js`**: `private` (default — the centre's admins only),
+  `team` (+ the kid's linked therapists, read-only), `parents` (+ the kid's parents, read-only).
+  A doc the caller may not see answers 404. Only admins write; other centres can't reach it.
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/therapy/kids/:kidId/docs` | the kid's docs visible to the caller, newest first |
+| `GET /api/therapy/docs?scope=general` | the centre's general docs (not for parents) |
+| `GET /api/therapy/docs/:id` | one doc |
+| `POST /api/therapy/docs` · `PUT /docs/:id` · `DELETE /docs/:id` | admin only |
+
+UI (in `therapy-center-v2`): a "מחברת" tab on the kid page and "מסמכים כלליים"; a doc opens at
+`/docs/:id` (`/t/:practitionerId/docs/:id`, `/p/:kidId/docs/:id`) — the links the MCP returns.
+
+---
+
 ## Build Models (מודלים לבנייה) — all users
 
 Step-by-step Lego / magnet build guides, produced by a separate Claude session ("ABBA") in

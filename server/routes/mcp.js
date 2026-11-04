@@ -10,7 +10,8 @@
 
 const express = require('express');
 const auth = require('../services/mcp-auth');
-const { executeToolCall, toolsForRole } = require('../services/chat-center');
+const { executeToolCall, toolsForRole, resolveKidId } = require('../services/chat-center');
+const docsService = require('../services/docs');
 const therapyService = require('../services/therapy');
 
 const router = express.Router();
@@ -212,7 +213,8 @@ const INSTRUCTIONS = `Data access to "Doing", an Israeli ABA (Applied Behavior A
 - Access is scoped to the signed-in person: an admin sees their centre's kids, a therapist only kids linked to them, parents only their own child (kid tools default to that child).
 - Session forms = per-session therapy notes; get_daily_reports = school day reports (marks: "+" did it right away, "-" did not, with the help given; "ר" as on the paper form); get_daily_agenda = the day plan (סדר יום); get_summary_data = everything for a periodic summary in one call.
 - Never invent kid-specific data — fetch it. Don't show internal IDs to the user.
-- update_board_layout replaces the whole reward board: get_board_layout first, then send the complete modified layout.`;
+- update_board_layout replaces the whole reward board: get_board_layout first, then send the complete modified layout.
+- Documents: save_document puts a markdown document (meeting prep, guidance, notes, a summary) into Doing — on a kid's notebook page, or as a general centre document when no kid is given. It is private to the centre's admins unless the user asks to share it with the team or the parents. When the user asks to "send / save / put this in Doing", use save_document with the finished text, not a description of it. Use update_document (mode "append") to add to an existing one.`;
 
 // OpenAI connectors (deep research / company knowledge) look for `search` and `fetch`.
 const EXTRA_TOOLS = [
@@ -228,14 +230,71 @@ const EXTRA_TOOLS = [
   },
 ];
 
-const WRITE_TOOLS = new Set(['create_kid', 'update_board_layout']);
+// Documents — Michal's meeting prep / guidance / notes, sent from the assistant into Doing (services/docs.js).
+const KID_REF = {
+  kidId: { type: 'string', description: 'Kid ID (if known)' },
+  kidName: { type: 'string', description: 'Kid name in Hebrew (if ID not known)' },
+};
+const DOC_TYPE = { type: 'string', enum: docsService.TYPES, description: 'meeting-prep = הכנה לפגישה, guidance = הדרכה, note = הערה, summary = סיכום, other' };
+const DOC_VIS = { type: 'string', enum: docsService.VISIBILITY, description: 'private (default) = centre admins only; team = + the kid’s therapists; parents = + the kid’s parents. Only share when the user asks.' };
+const DOC_TOOLS = [
+  {
+    name: 'save_document',
+    admin: true,
+    description: 'Save a new document into Doing: meeting prep, guidance, notes, a summary — written in markdown (Hebrew). With a kid it goes on that kid’s notebook page; without one it is a general centre document. Private by default. Returns the document id and a link.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ...KID_REF,
+        title: { type: 'string', description: 'Short title, e.g. "הכנה לפגישת צוות 12.11"' },
+        content: { type: 'string', description: 'The full document in markdown' },
+        type: DOC_TYPE,
+        visibility: DOC_VIS,
+      },
+      required: ['title', 'content'],
+    },
+  },
+  {
+    name: 'update_document',
+    admin: true,
+    description: 'Change an existing Doing document: replace its content (default) or append to it (mode "append"), and/or change its title, type or visibility.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Document id (from save_document or list_documents)' },
+        title: { type: 'string' },
+        content: { type: 'string', description: 'Markdown — replaces the content, or is added at the end with mode "append"' },
+        mode: { type: 'string', enum: ['replace', 'append'] },
+        type: DOC_TYPE,
+        visibility: DOC_VIS,
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_documents',
+    description: 'List the documents in Doing for a kid (or the general centre documents when general=true): id, title, type, visibility, dates. Use get_document to read one.',
+    input_schema: {
+      type: 'object',
+      properties: { ...KID_REF, general: { type: 'boolean', description: 'true = general centre documents instead of a kid’s' } },
+    },
+  },
+  {
+    name: 'get_document',
+    description: 'Read one Doing document in full (markdown).',
+    input_schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+  },
+];
+const docToolsFor = (ctx) => DOC_TOOLS.filter((t) => !t.admin || ctx.authType === 'admin');
+
+const WRITE_TOOLS = new Set(['create_kid', 'update_board_layout', 'save_document', 'update_document']);
 
 function sourceOf(ctx) {
   return ctx.authType === 'therapist' ? 'therapist' : ctx.authType === 'parent' ? 'parent' : 'admin';
 }
 
 function toolList(ctx) {
-  return [...toolsForRole(sourceOf(ctx)), ...EXTRA_TOOLS].map((t) => ({
+  return [...toolsForRole(sourceOf(ctx)), ...docToolsFor(ctx), ...EXTRA_TOOLS].map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: t.input_schema,
@@ -243,6 +302,59 @@ function toolList(ctx) {
       ? { readOnlyHint: false, destructiveHint: t.name === 'update_board_layout', openWorldHint: false }
       : { readOnlyHint: true, openWorldHint: false },
   }));
+}
+
+function docUrl(ctx, doc) {
+  if (ctx.authType === 'parent') return `${SITE}/p/${encodeURIComponent(doc.kidId)}/docs/${doc.id}`;
+  if (ctx.authType === 'therapist') return `${SITE}/t/${ctx.practitionerId}/docs/${doc.id}`;
+  return `${SITE}/docs/${doc.id}`;
+}
+
+// Which assistant wrote it — from the OAuth client's registered name.
+const clientNames = new Map();
+async function sourceForClient(clientId) {
+  if (!clientNames.has(clientId)) {
+    const c = await auth.getClient(clientId);
+    clientNames.set(clientId, (c && c.clientName) || '');
+  }
+  const n = clientNames.get(clientId).toLowerCase();
+  return { source: /chatgpt|openai/.test(n) ? 'chatgpt' : /claude|anthropic/.test(n) ? 'claude' : 'mcp', name: clientNames.get(clientId) || 'MCP' };
+}
+
+async function runDocTool(ctx, name, input) {
+  const kidIdFor = async () => {
+    if (ctx.authType === 'parent') return ctx.kidViewId;
+    if (!input.kidId && !input.kidName) return null;
+    const r = await resolveKidId({ kidId: input.kidId, kidName: input.kidName }, ctx.adminId);
+    if (r.error) throw new docsService.DocError(404, r.error);
+    return r.kidId;
+  };
+  try {
+    switch (name) {
+      case 'save_document': {
+        const kidId = await kidIdFor();
+        const { source, name: clientName } = await sourceForClient(ctx.clientId);
+        const doc = await docsService.createDoc(ctx, { ...input, kidId }, { source, createdBy: { type: 'mcp', name: `${ctx.adminName || 'מנהלת'} דרך ${clientName}` } });
+        return { saved: true, id: doc.id, title: doc.title, kidId: doc.kidId, visibility: doc.visibility, url: docUrl(ctx, doc) };
+      }
+      case 'update_document': {
+        const doc = await docsService.updateDoc(ctx, input.id, input, { mode: input.mode === 'append' ? 'append' : 'replace' });
+        return { updated: true, id: doc.id, title: doc.title, visibility: doc.visibility, url: docUrl(ctx, doc) };
+      }
+      case 'list_documents': {
+        const docs = input.general ? await docsService.listGeneral(ctx) : await docsService.listForKid(ctx, await kidIdFor() || '');
+        return docs.map(({ content, ...d }) => ({ ...d, length: content.length }));
+      }
+      case 'get_document': {
+        const doc = await docsService.getDoc(ctx, input.id);
+        return { ...doc, url: docUrl(ctx, doc) };
+      }
+    }
+  } catch (err) {
+    if (err instanceof docsService.DocError) return { error: err.message };
+    throw err;
+  }
+  return null;
 }
 
 function kidUrl(ctx, kidId) {
@@ -296,6 +408,8 @@ async function runTool(ctx, name, args) {
       metadata: { type: 'kid' },
     };
   }
+
+  if (docToolsFor(ctx).some((t) => t.name === name)) return runDocTool(ctx, name, input);
 
   if (!allowed) return null;
   if (ctx.authType === 'parent' && !input.kidId && !input.kidName) input.kidId = ctx.kidViewId;
