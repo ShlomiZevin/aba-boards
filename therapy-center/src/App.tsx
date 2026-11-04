@@ -191,7 +191,8 @@ function App() {
     }}>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter basename="/therapy">
+        {/* basename follows the build's base: /therapy normally, /therapy-classic for the kept-old-version build */}
+        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <ScrollToTop />
           <Routes>
             {/* Public */}

@@ -1,0 +1,746 @@
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { goalsApi, kidsApi, goalTemplatesApi, categoryLpTemplatesApi } from '../api/client';
+import { GOAL_CATEGORIES, PRESET_DC_ACTIVITY, PRESET_DC_DTT } from '../types';
+import type { GoalCategoryId, GoalLibraryItem, GoalFormTemplate, CategoryLpTemplate, Kid } from '../types';
+import GoalFormTemplateEditor from '../components/GoalFormTemplateEditor';
+import Icon from '../v2/Icon';
+import { CATEGORY_TONE } from '../v2/kidColor';
+import '../v2/pages/dr-admin.css';
+
+export default function GoalLibraryManager() {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<GoalCategoryId | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'kids' | 'name'>('kids');
+  const [orphansOnly, setOrphansOnly] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+
+  // Template editor
+  const [editingTemplate, setEditingTemplate] = useState<{ goal: GoalLibraryItem; type: 'lp' | 'dc' } | null>(null);
+
+  // Add goal modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newCategoryId, setNewCategoryId] = useState<GoalCategoryId>('general');
+
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Assign-to-kid modal
+  const [showAssignModal, setShowAssignModal] = useState(false);
+
+  // Apply-template modal
+  const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
+  const [kidSearch, setKidSearch] = useState('');
+  const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
+  const [showKidDropdown, setShowKidDropdown] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const kidSearchRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [showDetachConfirm, setShowDetachConfirm] = useState(false);
+
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['goals-library-all'],
+    queryFn: () => goalsApi.getAllLibrary(),
+  });
+
+  const { data: kidsRes } = useQuery({
+    queryKey: ['kids'],
+    queryFn: () => kidsApi.getAll(),
+  });
+  const kids: Kid[] = kidsRes?.data || [];
+
+  // Category LP templates
+  const { data: catLpRes } = useQuery({
+    queryKey: ['category-lp-templates'],
+    queryFn: () => categoryLpTemplatesApi.getAll(),
+  });
+  const catLpTemplates: CategoryLpTemplate[] = catLpRes?.data || [];
+  const catLpMap = useMemo(() => {
+    const m = new Map<string, CategoryLpTemplate>();
+    catLpTemplates.forEach(t => m.set(t.id, t));
+    return m;
+  }, [catLpTemplates]);
+
+  const [editingCategoryLp, setEditingCategoryLp] = useState<{ categoryId: GoalCategoryId; nameHe: string } | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => goalsApi.deleteLibraryItem(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['goals-library-all'] });
+      const prev = queryClient.getQueryData(['goals-library-all']);
+      queryClient.setQueryData(['goals-library-all'], (old: typeof response) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.filter(item => item.id !== id) };
+      });
+      setConfirmingDelete(null);
+      setSelectedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+      return { prev };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.prev) queryClient.setQueryData(['goals-library-all'], context.prev);
+    },
+  });
+
+  const addLibraryMutation = useMutation({
+    mutationFn: (data: { title: string; categoryId: GoalCategoryId }) =>
+      goalsApi.addLibraryItem(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+      setShowAddModal(false);
+      setNewTitle('');
+      setNewCategoryId('general');
+    },
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: async ({ kidId, goals }: { kidId: string; goals: GoalLibraryItem[] }) => {
+      for (const goal of goals) {
+        await goalsApi.add(kidId, { categoryId: goal.categoryId, title: goal.title });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+      setShowAssignModal(false);
+      setSelectedIds(new Set());
+      setSelectedKidId(null);
+      setKidSearch('');
+    },
+  });
+
+  const detachMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        await goalTemplatesApi.updateTemplates(id, {
+          dataCollectionTemplate: null,
+          dcPresetName: null,
+          dcPresetSourceId: null,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      setShowDetachConfirm(false);
+      setSelectedIds(new Set());
+    },
+  });
+
+  const items = response?.data || [];
+  const orphanCount = useMemo(() => items.filter(i => i.isOrphan).length, [items]);
+
+  const filtered = useMemo(() => {
+    let result = items;
+    if (orphansOnly) result = result.filter(item => item.isOrphan);
+    if (categoryFilter !== 'all') result = result.filter(item => item.categoryId === categoryFilter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(item => item.title.toLowerCase().includes(q));
+    }
+    if (sortBy === 'name') result = [...result].sort((a, b) => a.title.localeCompare(b.title, 'he'));
+    else result = [...result].sort((a, b) => (b.activeCount ?? b.usageCount) - (a.activeCount ?? a.usageCount));
+    return result;
+  }, [items, categoryFilter, search, sortBy, orphansOnly]);
+
+  const selectedGoals = useMemo(() => items.filter(item => selectedIds.has(item.id)), [items, selectedIds]);
+
+  const getCategoryName = (catId: GoalCategoryId) =>
+    GOAL_CATEGORIES.find(c => c.id === catId)?.nameHe || catId;
+
+  // Selection helpers
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(item => item.id)));
+    }
+  };
+
+  // Kid autocomplete
+  const filteredKids = kidSearch.trim()
+    ? kids.filter(k => k.name.includes(kidSearch.trim()))
+    : kids;
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+          kidSearchRef.current && !kidSearchRef.current.contains(e.target as Node)) {
+        setShowKidDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => { setHighlightedIndex(-1); }, [kidSearch]);
+
+  const selectKid = (kid: Kid) => {
+    setSelectedKidId(kid.id);
+    setKidSearch(kid.name);
+    setShowKidDropdown(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleKidKeyDown = (e: React.KeyboardEvent) => {
+    if (!showKidDropdown || selectedKidId) return;
+    const count = filteredKids.length;
+    if (count === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightedIndex(prev => (prev + 1) % count); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(prev => (prev - 1 + count) % count); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < count) selectKid(filteredKids[highlightedIndex]);
+      else if (count === 1) selectKid(filteredKids[0]);
+    }
+  };
+
+  return (
+    <div className="container dr-adm dr-gl">
+      <div className="content-card">
+        <div className="content-card-header">
+          <div>
+            <h2>ספריית מטרות</h2>
+            <span style={{ fontSize: '0.85em', color: 'var(--muted)' }}>{items.length} מטרות בספרייה</span>
+          </div>
+          <button className="btn-primary btn-small" onClick={() => setShowAddModal(true)}>
+            + הוסף מטרה
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="form-group" style={{ marginBottom: 12 }}>
+          <input
+            type="text"
+            placeholder="חיפוש מטרה..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Controls row */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setSortBy(s => s === 'kids' ? 'name' : 'kids')}
+            className="btn-secondary btn-small"
+          >
+            {sortBy === 'kids' ? 'מיון: ילדים ↓' : 'מיון: א-ב'}
+          </button>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.9em' }}>
+            <input type="checkbox" checked={orphansOnly} onChange={(e) => setOrphansOnly(e.target.checked)} style={{ accentColor: 'var(--red)' }} />
+            ללא ילד משויך ({orphanCount})
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.9em', marginRight: 'auto' }}>
+            <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} style={{ accentColor: 'var(--pen)' }} />
+            בחר הכל
+          </label>
+        </div>
+
+        {/* Category chips */}
+        <div className="tabs" style={{ marginBottom: 16 }}>
+          <button className={`tab-btn${categoryFilter === 'all' ? ' active' : ''}`} onClick={() => setCategoryFilter('all')}>
+            הכל
+          </button>
+          {GOAL_CATEGORIES.map(cat => (
+            <button key={cat.id} className={`tab-btn${categoryFilter === cat.id ? ' active' : ''}`} onClick={() => setCategoryFilter(cat.id)}>
+              {cat.nameHe}
+            </button>
+          ))}
+        </div>
+
+        {/* Category LP template buttons */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+          <span style={{ fontSize: '0.78em', color: 'var(--muted)', fontWeight: 600, alignSelf: 'center', marginLeft: 6 }}>ת. למידה לקטגוריה:</span>
+          {GOAL_CATEGORIES.map(cat => {
+            const has = catLpMap.has(cat.id) && (catLpMap.get(cat.id)!.tables?.length ?? 0) > 0;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setEditingCategoryLp({ categoryId: cat.id, nameHe: cat.nameHe })}
+                style={{
+                  background: has ? 'var(--m-lilac)' : 'var(--paper-2)',
+                  border: '1px solid',
+                  borderColor: has ? '#D5C8FA' : 'var(--line)',
+                  borderRadius: 6, cursor: 'pointer', fontSize: '0.73em', padding: '3px 10px',
+                  color: has ? 'var(--ink)' : 'var(--muted)',
+                  fontWeight: 600,
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                {has ? <Icon name="book" size={14} /> : '+'} {cat.nameHe}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Content */}
+        {isLoading ? (
+          <div className="loading">טוען...</div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state"><p>לא נמצאו מטרות</p></div>
+        ) : (
+          <div className="goal-library-list">
+            {filtered.map(item => (
+              <div key={item.id} className="goal-library-row">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggleSelection(item.id)}
+                  style={{ accentColor: 'var(--pen)', cursor: 'pointer' }}
+                />
+                <span
+                  className={`goal-library-cat nb-chip tone-${CATEGORY_TONE[item.categoryId] || 'lilac'}`}
+                >
+                  {getCategoryName(item.categoryId)}
+                </span>
+                <span className="goal-library-title">{item.title}</span>
+                <span className="goal-library-count" title="ילדים פעילים">{item.activeCount ?? item.usageCount}</span>
+                <button
+                  title="איסוף נתונים — עריכת טופס"
+                  onClick={() => setEditingTemplate({ goal: item, type: 'dc' })}
+                  style={{
+                    background: item.dataCollectionTemplate ? 'var(--m-mint)' : 'var(--paper-2)',
+                    border: '1px solid',
+                    borderColor: item.dataCollectionTemplate ? '#A9E3BD' : 'var(--line)',
+                    borderRadius: 6, cursor: 'pointer', fontSize: '0.73em', padding: '3px 10px',
+                    color: item.dataCollectionTemplate ? 'var(--ink)' : 'var(--muted)',
+                    fontWeight: 600,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  {item.dataCollectionTemplate ? <><Icon name="form" size={14} /> טופס איסוף</> : '+ טופס איסוף'}
+                </button>
+                <button
+                  title="תוכנית למידה — עריכת טופס"
+                  onClick={() => setEditingTemplate({ goal: item, type: 'lp' })}
+                  style={{
+                    background: item.learningPlanTemplate ? 'var(--m-sky)' : 'var(--paper-2)',
+                    border: '1px solid',
+                    borderColor: item.learningPlanTemplate ? '#B9D3F7' : 'var(--line)',
+                    borderRadius: 6, cursor: 'pointer', fontSize: '0.73em', padding: '3px 10px',
+                    color: item.learningPlanTemplate ? 'var(--ink)' : 'var(--muted)',
+                    fontWeight: 600,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  {item.learningPlanTemplate ? <><Icon name="book" size={14} /> ת. למידה</> : '+ ת. למידה'}
+                </button>
+                {confirmingDelete === item.id ? (
+                  <span className="goal-library-confirm">
+                    בטוח?
+                    <button onClick={() => deleteMutation.mutate(item.id)} className="btn-danger btn-small">כן</button>
+                    <button onClick={() => setConfirmingDelete(null)} className="btn-secondary btn-small">לא</button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingDelete(item.id)}
+                    style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: '0.85em', padding: '2px 6px' }}
+                  >מחק</button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Floating selection bar */}
+      {selectedIds.size > 0 && (
+        <div className="goal-library-selection-bar">
+          <span>{selectedIds.size} נבחרו</span>
+          <button
+            className="btn-primary btn-small"
+            onClick={() => {
+              setShowAssignModal(true);
+              setKidSearch('');
+              setSelectedKidId(null);
+            }}
+          >
+            שייך לילד
+          </button>
+          <button
+            className="btn-primary btn-small"
+            style={{ background: 'var(--ink)' }}
+            onClick={() => setShowApplyTemplateModal(true)}
+          >
+            החל תבנית
+          </button>
+          <button
+            className="btn-small"
+            style={{ background: 'var(--red)', color: 'white', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: '0.85em' }}
+            onClick={() => setShowDetachConfirm(true)}
+          >
+            נתק מתבנית
+          </button>
+          <button className="btn-secondary btn-small" onClick={() => setSelectedIds(new Set())}>
+            ביטול
+          </button>
+        </div>
+      )}
+
+      {/* Add Goal Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>הוספת מטרה לספרייה</h3>
+            <div className="form-group">
+              <label>קטגוריה</label>
+              <select value={newCategoryId} onChange={(e) => setNewCategoryId(e.target.value as GoalCategoryId)}>
+                {GOAL_CATEGORIES.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.nameHe}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>שם המטרה</label>
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="הכנס שם מטרה..."
+                autoFocus
+              />
+            </div>
+            {addLibraryMutation.isError && (
+              <div style={{ color: 'var(--red)', fontSize: '0.85em', marginBottom: 8 }}>
+                {(addLibraryMutation.error as Error)?.message || 'שגיאה בהוספת מטרה'}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>ביטול</button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!newTitle.trim() || addLibraryMutation.isPending}
+                onClick={() => addLibraryMutation.mutate({ title: newTitle.trim(), categoryId: newCategoryId })}
+              >
+                {addLibraryMutation.isPending ? 'מוסיף...' : 'הוסף'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Editor Modal */}
+      {editingTemplate && (
+        <GoalFormTemplateEditor
+          goal={editingTemplate.goal}
+          formType={editingTemplate.type}
+          onClose={() => setEditingTemplate(null)}
+        />
+      )}
+
+      {editingCategoryLp && (
+        <GoalFormTemplateEditor
+          goal={{
+            id: editingCategoryLp.categoryId,
+            title: editingCategoryLp.nameHe,
+            categoryId: editingCategoryLp.categoryId,
+            usageCount: 0,
+            learningPlanTemplate: catLpMap.has(editingCategoryLp.categoryId)
+              ? { tables: catLpMap.get(editingCategoryLp.categoryId)!.tables }
+              : undefined,
+          }}
+          formType="lp"
+          onClose={() => setEditingCategoryLp(null)}
+          isCategoryTemplate
+          onSaveOverride={async (template) => {
+            await categoryLpTemplatesApi.save(editingCategoryLp.categoryId, { tables: template.tables });
+          }}
+        />
+      )}
+
+      {/* Assign-to-Kid Modal */}
+      {showAssignModal && (
+        <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>שיוך {selectedIds.size} מטרות לילד/ה</h3>
+
+            <div className="form-group">
+              <label>בחר ילד/ה</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  ref={kidSearchRef}
+                  type="text"
+                  value={kidSearch}
+                  onChange={e => {
+                    setKidSearch(e.target.value);
+                    setShowKidDropdown(true);
+                    if (selectedKidId) setSelectedKidId(null);
+                  }}
+                  onFocus={() => setShowKidDropdown(true)}
+                  onKeyDown={handleKidKeyDown}
+                  placeholder="הקלד שם ילד..."
+                  autoFocus
+                  autoComplete="off"
+                />
+                {showKidDropdown && filteredKids.length > 0 && !selectedKidId && (
+                  <div
+                    ref={dropdownRef}
+                    style={{
+                      position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 10,
+                      background: 'white', border: '1px solid var(--line)', borderRadius: 8,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: 200, overflowY: 'auto',
+                    }}
+                  >
+                    {filteredKids.map((k, i) => (
+                      <button
+                        key={k.id}
+                        type="button"
+                        onClick={() => selectKid(k)}
+                        style={{
+                          display: 'block', width: '100%', padding: '8px 12px', border: 'none',
+                          background: i === highlightedIndex ? 'var(--pen-soft)' : 'transparent',
+                          textAlign: 'right', cursor: 'pointer', fontSize: '0.95em', color: 'var(--ink-2)',
+                        }}
+                        onMouseEnter={() => setHighlightedIndex(i)}
+                      >
+                        {k.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedKidId && (
+              <div style={{ fontSize: '0.85em', color: 'var(--muted)', marginBottom: 8 }}>
+                {selectedGoals.map(g => g.title).join(', ')}
+              </div>
+            )}
+
+            {assignMutation.isError && (
+              <div style={{ color: 'var(--red)', fontSize: '0.85em', marginBottom: 8 }}>
+                {(assignMutation.error as Error)?.message || 'שגיאה בשיוך המטרות'}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setShowAssignModal(false)}>ביטול</button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!selectedKidId || assignMutation.isPending}
+                onClick={() => assignMutation.mutate({ kidId: selectedKidId!, goals: selectedGoals })}
+              >
+                {assignMutation.isPending ? `משייך ${selectedGoals.length} מטרות...` : 'שייך'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detach Confirm */}
+      {showDetachConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDetachConfirm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ textAlign: 'center', padding: '24px 28px', maxWidth: 400 }}>
+            <h3 style={{ margin: '0 0 10px' }}>ניתוק תבנית</h3>
+            <div style={{ fontSize: '0.9em', color: 'var(--muted)', marginBottom: 16 }}>
+              למחוק את תבנית איסוף הנתונים מ-{selectedIds.size} מטרות?
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setShowDetachConfirm(false)}>ביטול</button>
+              <button
+                type="button"
+                style={{ background: 'var(--red)', color: 'white', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600 }}
+                disabled={detachMutation.isPending}
+                onClick={() => detachMutation.mutate(Array.from(selectedIds))}
+              >
+                {detachMutation.isPending ? 'מנתק...' : 'נתק'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Apply Template Modal */}
+      {showApplyTemplateModal && (
+        <ApplyTemplateModal
+          targetIds={Array.from(selectedIds)}
+          allItems={items}
+          onClose={() => setShowApplyTemplateModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+            queryClient.invalidateQueries({ queryKey: ['goals'] });
+            setShowApplyTemplateModal(false);
+            setSelectedIds(new Set());
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// -------- Apply Template Modal --------
+function ApplyTemplateModal({ targetIds, allItems, onClose, onSuccess }: {
+  targetIds: string[];
+  allItems: GoalLibraryItem[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [selectedBuiltIn, setSelectedBuiltIn] = useState<string | null>(null);
+  const [replaceTitle, setReplaceTitle] = useState(true);
+  const [appliedCount, setAppliedCount] = useState<number | null>(null);
+
+  const templateField = 'dataCollectionTemplate' as const;
+  const presetNameField = 'dcPresetName' as const;
+
+  // Built-in presets
+  const builtInPresets = [
+    { id: 'builtin_dc_activity', label: 'פעילות', template: PRESET_DC_ACTIVITY },
+    { id: 'builtin_dc_dtt', label: 'ניסויים DTT', template: PRESET_DC_DTT },
+  ];
+
+  // Deduplicate saved presets by column fingerprint
+  const allWithPreset = allItems.filter(g => g[presetNameField] && g[templateField]);
+  const seenKeys = new Set<string>();
+  const savedPresets = allWithPreset.filter(g => {
+    const cols = (g[templateField]?.tables || []).flatMap(t => t.columns || []);
+    const key = cols.map(c => `${c.label}|${c.description || ''}`).join(';;');
+    if (seenKeys.has(key)) return false;
+    seenKeys.add(key);
+    return true;
+  });
+
+  const withGoalTitle = (template: GoalFormTemplate, goalTitle: string): GoalFormTemplate => ({
+    ...template,
+    tables: template.tables.map(t => ({ ...t, title: goalTitle })),
+  });
+
+  const applyMutation = useMutation({
+    mutationFn: async () => {
+      if (selectedBuiltIn) {
+        const preset = builtInPresets.find(p => p.id === selectedBuiltIn);
+        if (!preset) throw new Error('Preset not found');
+        for (const targetId of targetIds) {
+          const target = allItems.find(g => g.id === targetId);
+          const tmpl = replaceTitle && target ? withGoalTitle(preset.template, target.title) : preset.template;
+          await goalTemplatesApi.updateTemplates(targetId, { [templateField]: tmpl });
+        }
+        return { applied: targetIds.length };
+      }
+      if (!selectedSourceId) throw new Error('No source selected');
+      const res = await goalTemplatesApi.bulkApply(selectedSourceId, targetIds, 'dc', { replaceTitle });
+      return res.data;
+    },
+    onSuccess: (res) => {
+      setAppliedCount(res?.applied || targetIds.length);
+    },
+  });
+
+  if (appliedCount !== null) {
+    return (
+      <div className="modal-overlay" onClick={onSuccess}>
+        <div className="modal" onClick={e => e.stopPropagation()} style={{ textAlign: 'center', padding: '32px 28px' }}>
+          <div style={{ fontSize: '2.5em', marginBottom: 10 }}>✓</div>
+          <div style={{ fontSize: '1.05em', fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
+            התבנית הוחלה על {appliedCount} מטרות
+          </div>
+          <button type="button" className="btn-primary" onClick={onSuccess} style={{ marginTop: 14 }}>סגור</button>
+        </div>
+      </div>
+    );
+  }
+
+  const hasSelection = !!selectedSourceId || !!selectedBuiltIn;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+        <h3 style={{ margin: '0 0 4px' }}>החלת תבנית על {targetIds.length} מטרות</h3>
+        <div style={{ fontSize: '0.82em', color: 'var(--muted)', marginBottom: 14 }}>בחר תבנית איסוף נתונים</div>
+
+        {/* Template sources — single list */}
+        <div style={{ flex: 1, overflowY: 'auto', marginBottom: 14 }}>
+          <div style={{ fontSize: '0.76em', fontWeight: 700, color: 'var(--muted)', marginBottom: 6 }}>תבניות מובנות:</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+            {builtInPresets.map(p => (
+              <label key={p.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                border: `1.5px solid ${selectedBuiltIn === p.id ? 'var(--green)' : 'var(--line)'}`,
+                borderRadius: 8, cursor: 'pointer',
+                background: selectedBuiltIn === p.id ? '#EEFBF2' : 'white',
+              }}>
+                <input
+                  type="radio"
+                  name="template-source"
+                  checked={selectedBuiltIn === p.id}
+                  onChange={() => { setSelectedBuiltIn(p.id); setSelectedSourceId(null); }}
+                  style={{ accentColor: 'var(--green)' }}
+                />
+                <span style={{ fontSize: '0.88em', fontWeight: 600, color: 'var(--ink-2)' }}>{p.label}</span>
+              </label>
+            ))}
+            {savedPresets.map(g => {
+              const cat = GOAL_CATEGORIES.find(c => c.id === g.categoryId);
+              const cols = (g[templateField]?.tables || []).flatMap(t => t.columns || []);
+              const colSummary = cols.length > 0 ? cols.map(c => c.label).join(', ') : '';
+              return (
+                <label key={g.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                  border: `1.5px solid ${selectedSourceId === g.id ? 'var(--pen)' : '#B9D3F7'}`,
+                  borderRadius: 8, cursor: 'pointer',
+                  background: selectedSourceId === g.id ? '#EFF5FF' : 'var(--paper-2)',
+                }}>
+                  <input
+                    type="radio"
+                    name="template-source"
+                    checked={selectedSourceId === g.id}
+                    onChange={() => { setSelectedSourceId(g.id); setSelectedBuiltIn(null); }}
+                    style={{ accentColor: 'var(--pen)' }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.88em', fontWeight: 600, color: 'var(--ink)' }}>{g[presetNameField]}</div>
+                    {colSummary && <div style={{ fontSize: '0.72em', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cols.length} עמודות: {colSummary}</div>}
+                    <div style={{ fontSize: '0.68em', color: 'var(--line)' }}>{g.title}</div>
+                  </div>
+                  {cat && (
+                    <span className={`nb-chip tone-${CATEGORY_TONE[cat.id] || 'lilac'}`} style={{ fontSize: '0.7em', padding: '1px 7px', flexShrink: 0 }}>
+                      {cat.nameHe}
+                    </span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+
+        </div>
+
+        {/* Replace block title option */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.84em', color: 'var(--ink-2)', marginBottom: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={replaceTitle} onChange={e => setReplaceTitle(e.target.checked)} style={{ accentColor: 'var(--green)' }} />
+          החלף כותרת בלוק בשם המטרה
+        </label>
+
+        {/* Error */}
+        {applyMutation.isError && (
+          <div style={{ color: 'var(--red)', fontSize: '0.82em', marginBottom: 8 }}>
+            {(applyMutation.error as Error)?.message || 'שגיאה'}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>ביטול</button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!hasSelection || applyMutation.isPending}
+            onClick={() => applyMutation.mutate()}
+          >
+            {applyMutation.isPending ? 'מחיל...' : `החל על ${targetIds.length} מטרות`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

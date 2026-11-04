@@ -23,12 +23,28 @@
     ],
     "rewrites": [
       {
+        "source": "/therapy-classic/**",
+        "destination": "/therapy-classic/index.html"
+      },
+      {
         "source": "/therapy/**",
         "destination": "/therapy/index.html"
       },
       {
         "source": "**",
         "destination": "/index.html"
+      }
+    ],
+    "redirects": [
+      {
+        "source": "/therapy-v2",
+        "destination": "/therapy/",
+        "type": 301
+      },
+      {
+        "source": "/therapy-v2/**",
+        "destination": "/therapy/",
+        "type": 301
       }
     ]
   }

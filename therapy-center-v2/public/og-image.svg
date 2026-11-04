@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1b4b"/>
+      <stop offset="40%" style="stop-color:#312e81"/>
+      <stop offset="100%" style="stop-color:#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="50%" style="stop-color:#f093fb"/>
+      <stop offset="100%" style="stop-color:#667eea"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="250" cy="120" r="300" fill="#667eea" opacity="0.08"/>
+  <circle cx="1000" cy="500" r="250" fill="#f093fb" opacity="0.08"/>
+  <circle cx="100" cy="550" r="200" fill="#764ba2" opacity="0.08"/>
+
+  <!-- Accent lines -->
+  <rect x="0" y="0" width="1200" height="5" fill="url(#accent)"/>
+  <rect x="0" y="625" width="1200" height="5" fill="url(#accent)"/>
+
+  <!-- Title (centered) -->
+  <text x="600" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="64" fill="white">הכלי המקצועי</text>
+  <text x="600" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="64" fill="white">לניהול טיפול ילדים</text>
+
+  <!-- Subtitle (centered) -->
+  <text x="600" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="rgba(255,255,255,0.7)">ניהול מטפלות, מפגשים, טפסים, יעדים ולוחות משימות</text>
+  <text x="600" y="385" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="rgba(255,255,255,0.7)">הכל במקום אחד — מופעל בינה מלאכותית</text>
+
+  <!-- Feature pills (centered row) -->
+  <rect x="80" y="435" width="230" height="44" rx="22" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)"/>
+  <text x="195" y="464" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="white">בינה מלאכותית 🤖</text>
+
+  <rect x="340" y="435" width="200" height="44" rx="22" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)"/>
+  <text x="440" y="464" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="white">ניהול טפסים 📋</text>
+
+  <rect x="570" y="435" width="200" height="44" rx="22" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)"/>
+  <text x="670" y="464" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="white">מעקב יעדים 🎯</text>
+
+  <rect x="800" y="435" width="130" height="44" rx="22" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)"/>
+  <text x="865" y="464" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="white">🦕 דינו</text>
+
+  <rect x="960" y="435" width="160" height="44" rx="22" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)"/>
+  <text x="1040" y="464" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="white">📊 התקדמות</text>
+
+  <!-- Domain -->
+  <text x="60" y="590" font-family="Arial, sans-serif" font-size="22" fill="rgba(255,255,255,0.4)">startdoing.co.il</text>
+
+  <!-- Brand -->
+  <text x="1140" y="590" text-anchor="end" font-family="Arial, sans-serif" font-weight="bold" font-size="32" fill="#f59e0b">Doing</text>
+</svg>

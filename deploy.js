@@ -3,8 +3,9 @@
  * Deploy script for ABA Boards
  *
  * This script:
- * 1. Builds the therapy center React app
+ * 1. Builds the therapy center React app (the redesign, therapy-center-v2)
  * 2. Copies built files to public/therapy/
+ *    and builds the previous app (therapy-center) into public/therapy-classic/ as a fallback
  * 3. Deploys to Firebase Hosting
  *
  * Usage: node deploy.js
@@ -15,9 +16,14 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT_DIR = __dirname;
-const THERAPY_DIR = path.join(ROOT_DIR, 'therapy-center');
+// /therapy is the redesigned app ("מחברת שטח", Nov 2026). The previous app is kept,
+// unchanged, at /therapy-classic so anyone can switch back.
+const THERAPY_DIR = path.join(ROOT_DIR, 'therapy-center-v2');
 const THERAPY_DIST = path.join(THERAPY_DIR, 'dist');
 const PUBLIC_THERAPY = path.join(ROOT_DIR, 'public', 'therapy');
+const CLASSIC_DIR = path.join(ROOT_DIR, 'therapy-center');
+const CLASSIC_DIST = path.join(CLASSIC_DIR, 'dist-classic');
+const PUBLIC_CLASSIC = path.join(ROOT_DIR, 'public', 'therapy-classic');
 // Build-model guides from the ABBA session — must match MODELS_BASE in therapy-center/src/api/client.ts
 const MODELS_SRC = path.join(ROOT_DIR, '..', 'reports', 'nevo-models');
 const PUBLIC_MODELS = path.join(ROOT_DIR, 'public', 'build-models-n7q4');
@@ -68,6 +74,12 @@ console.log('\n[2/3] Copying to public/therapy...');
 cleanDir(PUBLIC_THERAPY);
 copyDir(THERAPY_DIST, PUBLIC_THERAPY);
 console.log('Copied successfully!');
+
+// Step 2a: The previous app, built under /therapy-classic/
+console.log('\n[2a] Building the previous app into public/therapy-classic...');
+run('npx vite build --base /therapy-classic/ --outDir dist-classic', CLASSIC_DIR);
+cleanDir(PUBLIC_CLASSIC);
+copyDir(CLASSIC_DIST, PUBLIC_CLASSIC);
 
 // Step 2b: Copy build models (sources excluded; the folder index redirects to the Models tab)
 if (fs.existsSync(MODELS_SRC)) {

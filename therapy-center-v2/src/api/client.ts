@@ -1,0 +1,956 @@
+import type {
+  Kid,
+  Practitioner,
+  Parent,
+  Agreement,
+  AgreementStatus,
+  Goal,
+  GoalLibraryItem,
+  GoalFormTemplate,
+  GoalFormRow,
+  KidGoalLearningPlan,
+  LearningPlanVersion,
+  KidGoalDataEntry,
+  TableBlockData,
+  Session,
+  SessionType,
+  SessionForm,
+  MeetingForm,
+  MeetingDraft,
+  Summary,
+  FormTemplate,
+  Notification,
+  BoardRequest,
+  ApiResponse,
+  GroupedKidsResponse,
+  CategoryLpTemplate,
+  GoalTableBlock,
+  KidGameState,
+  GamePlayState,
+  KidAgenda,
+  AgendaDay,
+  AgendaDayPlan,
+  DailyReport,
+  DailyReportSummary,
+  ReportSection,
+} from '../types';
+import { toDate } from '../utils/date';
+
+/** Sessions older than this are dropped from "waiting for a form" lists (v2). */
+export const PENDING_FORM_MAX_DAYS = 14;
+export function isRecentForPendingForm(s: { scheduledDate: unknown }): boolean {
+  return toDate(s.scheduledDate).getTime() >= Date.now() - PENDING_FORM_MAX_DAYS * 86400000;
+}
+
+// Auto-detect: dev uses Vite proxy, production uses Cloud Run
+const API_BASE = import.meta.env.DEV
+  ? '/api/therapy'  // Dev: proxied by Vite to localhost:3001
+  : 'https://avatar-server-1018338671074.me-west1.run.app/api/therapy';  // Prod: Cloud Run
+
+const ADMIN_API_BASE = import.meta.env.DEV
+  ? '/api/admin'
+  : 'https://avatar-server-1018338671074.me-west1.run.app/api/admin';
+
+// Auth context for therapist/parent views (set by route components)
+let _therapistId: string | null = null;
+let _parentKidId: string | null = null;
+
+export function setTherapistAuth(id: string | null) { _therapistId = id; }
+export function setParentAuth(kidId: string | null) { _parentKidId = kidId; }
+
+function getAuthHeaders(): Record<string, string> {
+  // Therapist/parent auth must take priority when set (via route components).
+  // Otherwise an admin_key still in localStorage overrides the intended auth type,
+  // causing e.g. GET /notifications/mine to return [] instead of the therapist's notifications.
+  if (_therapistId) return { 'X-Practitioner-Id': _therapistId };
+  if (_parentKidId) return { 'X-Kid-Id': encodeURIComponent(_parentKidId) };
+  const adminKey = localStorage.getItem('admin_key');
+  if (adminKey) return { 'X-Admin-Key': adminKey };
+  return {};
+}
+
+async function fetchApi<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      ...options,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Request failed' };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+// Kids API
+export const kidsApi = {
+  getAll: () => fetchApi<Kid[]>('/kids'),
+  getById: (kidId: string) => fetchApi<Kid>(`/kids/${kidId}`),
+  create: (data: { name: string; age?: number | string; gender?: string }) =>
+    fetchApi<Kid>('/kids', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (kidId: string, data: Partial<Kid>) =>
+    fetchApi<Kid>(`/kids/${kidId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (kidId: string) =>
+    fetchApi<void>(`/kids/${kidId}`, { method: 'DELETE' }),
+  getAllGrouped: () => fetchApi<GroupedKidsResponse>('/kids/all-grouped'),
+  detach: (kidId: string) => fetchApi<void>(`/kids/${kidId}/detach`, { method: 'POST' }),
+  attach: (kidId: string) => fetchApi<void>(`/kids/${kidId}/attach`, { method: 'POST' }),
+};
+
+// Mini-Games API
+// Game *config* is part of the kid document, so it saves through kidsApi.update.
+// Only play state (written by the games themselves) lives here.
+export const gamesApi = {
+  getState: (kidId: string) =>
+    fetchApi<KidGameState>(`/kids/${kidId}/game-state`),
+  saveState: (kidId: string, gameId: string, state: GamePlayState) =>
+    fetchApi<KidGameState>(`/kids/${kidId}/game-state/${gameId}`, {
+      method: 'PUT',
+      body: JSON.stringify(state),
+    }),
+  resetState: (kidId: string, gameId: string) =>
+    fetchApi<KidGameState>(`/kids/${kidId}/game-state/${gameId}/reset`, {
+      method: 'POST',
+    }),
+};
+
+// Daily agenda (סדר יום)
+export const agendaApi = {
+  get: (kidId: string, from: string, to: string) =>
+    fetchApi<KidAgenda>(`/kids/${kidId}/agenda?from=${from}&to=${to}`),
+  saveRoutine: (kidId: string, routine: Record<number, AgendaDayPlan>) =>
+    fetchApi<Record<number, AgendaDayPlan>>(`/kids/${kidId}/agenda/routine`, {
+      method: 'PUT',
+      body: JSON.stringify({ routine }),
+    }),
+  /** `items: null` returns the day to the weekly routine. */
+  saveDay: (kidId: string, date: string, items: AgendaDayPlan | null) =>
+    fetchApi<AgendaDay>(`/kids/${kidId}/agenda/days/${date}`, {
+      method: 'PUT',
+      body: JSON.stringify({ items }),
+    }),
+  setDone: (kidId: string, date: string, itemId: string, done: boolean) =>
+    fetchApi<AgendaDay>(`/kids/${kidId}/agenda/days/${date}/done`, {
+      method: 'PUT',
+      body: JSON.stringify({ itemId, done }),
+    }),
+};
+
+// Daily report (דיווח יומי)
+export const dailyReportsApi = {
+  list: (kidId: string) => fetchApi<DailyReportSummary[]>(`/kids/${kidId}/daily-reports`),
+  get: (kidId: string, date: string) => fetchApi<DailyReport | null>(`/kids/${kidId}/daily-reports/${date}`),
+  saveMeta: (kidId: string, date: string, reporter: string) =>
+    fetchApi<DailyReport>(`/kids/${kidId}/daily-reports/${date}`, {
+      method: 'PUT',
+      body: JSON.stringify({ reporter }),
+    }),
+  remove: (kidId: string, date: string) =>
+    fetchApi<{ deleted: boolean }>(`/kids/${kidId}/daily-reports/${date}`, { method: 'DELETE' }),
+  saveItem: (kidId: string, date: string, section: ReportSection, item: { id: string }) =>
+    fetchApi<DailyReport>(`/kids/${kidId}/daily-reports/${date}/${section}/${item.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(item),
+    }),
+  removeItem: (kidId: string, date: string, section: ReportSection, itemId: string) =>
+    fetchApi<DailyReport | null>(`/kids/${kidId}/daily-reports/${date}/${section}/${itemId}`, {
+      method: 'DELETE',
+    }),
+};
+
+// Practitioners API
+export const practitionersApi = {
+  getForKid: (kidId: string) =>
+    fetchApi<Practitioner[]>(`/kids/${kidId}/practitioners`),
+  add: (kidId: string, data: Omit<Practitioner, 'id' | 'createdAt'>) =>
+    fetchApi<Practitioner>(`/kids/${kidId}/practitioners`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<Practitioner>) =>
+    fetchApi<Practitioner>(`/practitioners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    fetchApi<void>(`/practitioners/${id}`, { method: 'DELETE' }),
+  unlink: (kidId: string, practitionerId: string) =>
+    fetchApi<void>(`/kids/${kidId}/practitioners/${practitionerId}`, { method: 'DELETE' }),
+  linkExisting: (kidId: string, practitionerId: string) =>
+    fetchApi<void>(`/kids/${kidId}/practitioners/link`, {
+      method: 'POST',
+      body: JSON.stringify({ practitionerId }),
+    }),
+  create: (data: Omit<Practitioner, 'id' | 'createdAt'>) =>
+    fetchApi<Practitioner>('/practitioners', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getMyTherapists: () => fetchApi<Practitioner[]>('/practitioners/my-therapists'),
+  getKidsForPractitioner: (practitionerId: string) =>
+    fetchApi<Kid[]>(`/practitioners/${practitionerId}/kids`),
+  getInfo: (practitionerId: string) =>
+    fetchApi<Practitioner>(`/practitioners/${practitionerId}/info`),
+};
+
+// Parents API
+export const parentsApi = {
+  getForKid: (kidId: string) => fetchApi<Parent[]>(`/kids/${kidId}/parents`),
+  add: (kidId: string, data: Omit<Parent, 'id' | 'kidId' | 'createdAt'>) =>
+    fetchApi<Parent>(`/kids/${kidId}/parents`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<Parent>) =>
+    fetchApi<Parent>(`/parents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) => fetchApi<void>(`/parents/${id}`, { method: 'DELETE' }),
+};
+
+// Treatment Agreement API
+// The signer is resolved server-side from the auth headers; a parent only
+// passes which of the kid's registered parents they are.
+export const agreementApi = {
+  getForKid: (kidId: string) => fetchApi<Agreement | null>(`/kids/${kidId}/agreement`),
+  save: (kidId: string, data: { title?: string; content: string; noticeWeeks?: number; adminRole?: string; startDate?: string | null; status?: AgreementStatus }) =>
+    fetchApi<Agreement>(`/kids/${kidId}/agreement`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  /** `newParentName` — a parent from a shared link who isn't on record yet signs and is registered. */
+  sign: (kidId: string, data: { signatureImage: string; parentId?: string; newParentName?: string }) =>
+    fetchApi<Agreement>(`/kids/${kidId}/agreement/sign`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  delete: (kidId: string) =>
+    fetchApi<{ deleted: boolean }>(`/kids/${kidId}/agreement`, { method: 'DELETE' }),
+  /** Email each unsigned parent (with an email on record) their link to sign. */
+  emailParents: (kidId: string, parentIds?: string[]) =>
+    fetchApi<{
+      results: { parentId: string; name: string; status: 'sent' | 'failed' | 'no-email' | 'signed' }[];
+      agreement: Agreement;
+    }>(`/kids/${kidId}/agreement/email-parents`, {
+      method: 'POST',
+      body: JSON.stringify(parentIds ? { parentIds } : {}),
+    }),
+};
+
+// Goals API
+export const goalsApi = {
+  getForKid: (kidId: string) => fetchApi<Goal[]>(`/kids/${kidId}/goals`),
+  add: (kidId: string, data: Omit<Goal, 'id' | 'kidId' | 'createdAt' | 'isActive'>) =>
+    fetchApi<Goal>(`/kids/${kidId}/goals`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<Goal>) =>
+    fetchApi<Goal>(`/goals/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) => fetchApi<void>(`/goals/${id}`, { method: 'DELETE' }),
+  searchLibrary: (search: string) =>
+    fetchApi<GoalLibraryItem[]>(`/goals/library?search=${encodeURIComponent(search)}`),
+  getAllLibrary: () =>
+    fetchApi<GoalLibraryItem[]>('/goals/library/all'),
+  deleteLibraryItem: (id: string) =>
+    fetchApi<void>(`/goals/library/${id}`, { method: 'DELETE' }),
+  addLibraryItem: (data: { title: string; categoryId: string }) =>
+    fetchApi<GoalLibraryItem>('/goals/library', { method: 'POST', body: JSON.stringify(data) }),
+  migrateLibraryLinks: (kidId: string) =>
+    fetchApi<{ matched: { goalId: string; title: string; libraryItemId: string }[]; unmatched: { goalId: string; title: string }[] }>(
+      `/kids/${kidId}/goals/migrate-library-links`, { method: 'POST' }
+    ),
+};
+
+// Goal Templates API (admin only)
+export const goalTemplatesApi = {
+  updateTemplates: (
+    libraryItemId: string,
+    data: {
+      learningPlanTemplate?: GoalFormTemplate | null;
+      dataCollectionTemplate?: GoalFormTemplate | null;
+      dcPresetName?: string | null;
+      lpPresetName?: string | null;
+      dcPresetSourceId?: string | null;
+      lpPresetSourceId?: string | null;
+    }
+  ) =>
+    fetchApi<GoalLibraryItem>(`/goals/library/${libraryItemId}/templates`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  bulkApply: (sourceId: string, targetIds: string[], formType: 'lp' | 'dc', options?: { replaceTitle?: boolean }) =>
+    fetchApi<{ applied: number }>(`/goals/library/${sourceId}/apply-template`, {
+      method: 'POST',
+      body: JSON.stringify({ targetIds, formType, replaceTitle: options?.replaceTitle }),
+    }),
+};
+
+// Goal Learning Plans API (per kid)
+export const goalPlansApi = {
+  get: (kidId: string, goalLibraryId: string) =>
+    fetchApi<KidGoalLearningPlan>(`/kids/${kidId}/goal-plans/${goalLibraryId}`),
+  save: (kidId: string, goalLibraryId: string, data: { goalTitle: string; tables: TableBlockData[] }) =>
+    fetchApi<KidGoalLearningPlan>(`/kids/${kidId}/goal-plans/${goalLibraryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  getVersions: (kidId: string, goalLibraryId: string) =>
+    fetchApi<LearningPlanVersion[]>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions`),
+  saveVersion: (kidId: string, goalLibraryId: string, data?: { versionLabel?: string }) =>
+    fetchApi<LearningPlanVersion>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+  getVersion: (kidId: string, goalLibraryId: string, versionId: string) =>
+    fetchApi<LearningPlanVersion>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions/${versionId}`),
+  deleteVersion: (kidId: string, goalLibraryId: string, versionId: string) =>
+    fetchApi<void>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions/${versionId}`, { method: 'DELETE' }),
+  restoreVersion: (kidId: string, goalLibraryId: string, versionId: string) =>
+    fetchApi<KidGoalLearningPlan>(`/kids/${kidId}/goal-plans/${goalLibraryId}/versions/${versionId}/restore`, {
+      method: 'POST',
+    }),
+};
+
+// Category LP Templates API
+export const categoryLpTemplatesApi = {
+  getAll: () => fetchApi<CategoryLpTemplate[]>('/category-lp-templates'),
+  get: (categoryId: string) => fetchApi<CategoryLpTemplate>(`/category-lp-templates/${categoryId}`),
+  save: (categoryId: string, data: { tables: GoalTableBlock[] }) =>
+    fetchApi<CategoryLpTemplate>(`/category-lp-templates/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (categoryId: string) =>
+    fetchApi<void>(`/category-lp-templates/${categoryId}`, { method: 'DELETE' }),
+};
+
+// Goal Data Collection API (per kid)
+export const goalDataApi = {
+  getEntries: (kidId: string, goalLibraryId: string) =>
+    fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/goal-data/${goalLibraryId}`),
+  addEntry: (
+    kidId: string,
+    goalLibraryId: string,
+    data: { goalTitle: string; sessionDate: string; practitionerId?: string; tables: TableBlockData[]; status?: string }
+  ) =>
+    fetchApi<KidGoalDataEntry>(`/kids/${kidId}/goal-data/${goalLibraryId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  bulkAddEntries: (
+    kidId: string,
+    goalLibraryId: string,
+    entries: { goalTitle: string; sessionDate: string; practitionerId?: string; tables: TableBlockData[] }[]
+  ) =>
+    fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/goal-data/${goalLibraryId}/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ entries }),
+    }),
+  updateEntry: (
+    kidId: string,
+    goalLibraryId: string,
+    entryId: string,
+    data: { tables: TableBlockData[] }
+  ) =>
+    fetchApi<KidGoalDataEntry>(`/kids/${kidId}/goal-data/${goalLibraryId}/${entryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteEntry: (kidId: string, goalLibraryId: string, entryId: string) =>
+    fetchApi<void>(`/kids/${kidId}/goal-data/${goalLibraryId}/${entryId}`, { method: 'DELETE' }),
+  getPending: (kidId: string) =>
+    fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/pending-dc`),
+  getAllEntries: (kidId: string) =>
+    fetchApi<KidGoalDataEntry[]>(`/kids/${kidId}/all-dc`),
+};
+
+// Goal Form File Upload API
+export interface GoalFormUploadResult {
+  goalTitle: string;
+  formType: 'lp' | 'dc';
+  targetBlockId: string;
+  columns: import('../types').GoalColumnDef[] | null;
+  rows: GoalFormRow[] | null;
+  entries: (GoalFormRow & { sessionDate: string })[] | null;
+  /** Multi-block LP results: [{tableId, columns?, rows}] */
+  tables?: { tableId: string; columns?: import('../types').GoalColumnDef[] | null; rows: GoalFormRow[] }[];
+}
+
+export const goalFormUploadApi = {
+  upload: (
+    kidId: string,
+    goalLibraryId: string,
+    file: File,
+    formType: 'lp' | 'dc',
+    updateStructure: boolean
+  ): Promise<ApiResponse<GoalFormUploadResult>> => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('formType', formType);
+    form.append('updateStructure', String(updateStructure));
+    return fetch(`${API_BASE}/kids/${kidId}/goal-forms/${goalLibraryId}/upload`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: form,
+    }).then(async r => {
+      const data = await r.json();
+      if (!r.ok) return { success: false as const, error: data.error || 'שגיאה בהעלאה' };
+      return { success: true as const, data };
+    }).catch(err => ({ success: false as const, error: (err as Error).message }));
+  },
+};
+
+// Sessions API
+export const sessionsApi = {
+  getForKid: (kidId: string, filters?: { from?: string; to?: string; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.from) params.append('from', filters.from);
+    if (filters?.to) params.append('to', filters.to);
+    if (filters?.status) params.append('status', filters.status);
+    const query = params.toString();
+    return fetchApi<Session[]>(`/kids/${kidId}/sessions${query ? `?${query}` : ''}`);
+  },
+  schedule: (
+    kidId: string,
+    data: { scheduledDate: string; therapistId?: string; type?: string }
+  ) =>
+    fetchApi<Session>(`/kids/${kidId}/sessions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  scheduleRecurring: (
+    kidId: string,
+    data: { scheduledDate: string; therapistId?: string; type?: string; until: string }
+  ) =>
+    fetchApi<Session[]>(`/kids/${kidId}/sessions/recurring`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<Session>) =>
+    fetchApi<Session>(`/sessions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    fetchApi<void>(`/sessions/${id}`, { method: 'DELETE' }),
+  // v2: a form still missing more than two weeks after the session is no longer shown as waiting.
+  getAlerts: async () => {
+    const res = await fetchApi<Session[]>('/sessions/alerts');
+    if (res.success && res.data) res.data = res.data.filter(isRecentForPendingForm);
+    return res;
+  },
+  getAll: (filters?: { from?: string; to?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.from) params.append('from', filters.from);
+    if (filters?.to) params.append('to', filters.to);
+    const q = params.toString();
+    return fetchApi<Session[]>(`/sessions${q ? `?${q}` : ''}`);
+  },
+  create: (data: {
+    scheduledDate: string;
+    kidId?: string;
+    customTitle?: string;
+    title?: string;
+    notes?: string;
+    therapistId?: string;
+    type?: SessionType;
+    until?: string;
+  }) =>
+    fetchApi<Session>('/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
+// Meeting Forms API
+export const meetingFormsApi = {
+  getForKid: (kidId: string) => fetchApi<MeetingForm[]>(`/kids/${kidId}/meeting-forms`),
+  getById: (id: string) => fetchApi<MeetingForm>(`/meeting-forms/${id}`),
+  submit: (data: Omit<MeetingForm, 'id' | 'createdAt' | 'updatedAt'>) =>
+    fetchApi<MeetingForm>('/meeting-forms', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  autosave: (data: Partial<MeetingForm> & { id?: string }) =>
+    fetchApi<MeetingForm>('/meeting-forms/autosave', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  finalize: (id: string, data: Partial<MeetingForm>) =>
+    fetchApi<MeetingForm>(`/meeting-forms/${id}/finalize`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<MeetingForm>) =>
+    fetchApi<MeetingForm>(`/meeting-forms/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) => fetchApi<void>(`/meeting-forms/${id}`, { method: 'DELETE' }),
+};
+
+// Meeting Drafts API
+export interface MeetingDraftKey {
+  kidId?: string;
+  sessionId?: string;
+  formId?: string;
+  sessionDate?: string;
+}
+
+export const meetingDraftsApi = {
+  get: (key: MeetingDraftKey) => {
+    const qs = new URLSearchParams();
+    if (key.kidId) qs.set('kidId', key.kidId);
+    if (key.sessionId) qs.set('sessionId', key.sessionId);
+    if (key.formId) qs.set('formId', key.formId);
+    if (key.sessionDate) qs.set('sessionDate', key.sessionDate);
+    return fetchApi<MeetingDraft | null>(`/meeting-drafts?${qs.toString()}`);
+  },
+  upsert: (key: MeetingDraftKey, content: string) =>
+    fetchApi<MeetingDraft>('/meeting-drafts', {
+      method: 'PUT',
+      body: JSON.stringify({ ...key, content }),
+    }),
+  getForKid: (kidId: string) => fetchApi<MeetingDraft[]>(`/kids/${kidId}/meeting-drafts`),
+  delete: (id: string) => fetchApi<void>(`/meeting-drafts/${id}`, { method: 'DELETE' }),
+};
+
+// Summaries API
+export const summariesApi = {
+  getForKid: (kidId: string) => fetchApi<Summary[]>(`/kids/${kidId}/summaries`),
+  getById: (id: string) => fetchApi<Summary>(`/summaries/${id}`),
+  create: (data: { kidId: string; title: string; content: string; fromDate: string; toDate: string }) =>
+    fetchApi<Summary>('/summaries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<Summary>) =>
+    fetchApi<Summary>(`/summaries/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) => fetchApi<void>(`/summaries/${id}`, { method: 'DELETE' }),
+};
+
+// Forms API
+export const formTemplateApi = {
+  get: (kidId: string) =>
+    fetchApi<FormTemplate>(`/kids/${kidId}/form-template`),
+  update: (kidId: string, template: FormTemplate) =>
+    fetchApi<FormTemplate>(`/kids/${kidId}/form-template`, {
+      method: 'PUT',
+      body: JSON.stringify(template),
+    }),
+};
+
+export const formsApi = {
+  getForKid: (kidId: string, filters?: { weekOf?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.weekOf) params.append('weekOf', filters.weekOf);
+    const query = params.toString();
+    return fetchApi<SessionForm[]>(`/kids/${kidId}/forms${query ? `?${query}` : ''}`);
+  },
+  getById: (id: string) => fetchApi<SessionForm>(`/forms/${id}`),
+  getForSession: (sessionId: string) =>
+    fetchApi<SessionForm>(`/sessions/${sessionId}/form`),
+  submit: (data: Omit<SessionForm, 'id' | 'createdAt' | 'updatedAt'>) =>
+    fetchApi<SessionForm>('/forms', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<SessionForm>) =>
+    fetchApi<SessionForm>(`/forms/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    fetchApi<void>(`/forms/${id}`, { method: 'DELETE' }),
+  createFormLink: (kidId: string, sessionId?: string) =>
+    fetchApi<{ token: string; url: string }>('/forms/create-link', {
+      method: 'POST',
+      body: JSON.stringify({ kidId, sessionId }),
+    }),
+};
+
+// Notifications API
+export const notificationsApi = {
+  send: (data: { kidId: string; message: string; targets: { type: string; id: string; name: string }[] }) =>
+    fetchApi<void>('/notifications', { method: 'POST', body: JSON.stringify(data) }),
+  getMine: () => fetchApi<Notification[]>('/notifications/mine'),
+  getSent: (kidId: string) => fetchApi<Notification[]>(`/notifications/sent?kidId=${kidId}`),
+  getAllSent: (opts?: { includeHidden?: boolean }) =>
+    fetchApi<Notification[]>(`/notifications/all-sent${opts?.includeHidden ? '?includeHidden=true' : ''}`),
+  markRead: (id: string) => fetchApi<void>(`/notifications/${id}/read`, { method: 'PUT' }),
+  markAllRead: () => fetchApi<void>('/notifications/mine/read-all', { method: 'PUT' }),
+  dismiss: (id: string) => fetchApi<void>(`/notifications/${id}/dismiss`, { method: 'PUT' }),
+  adminDismiss: (id: string) => fetchApi<void>(`/notifications/${id}/admin-dismiss`, { method: 'PUT' }),
+  delete: (id: string) => fetchApi<void>(`/notifications/${id}`, { method: 'DELETE' }),
+  deleteAll: () => fetchApi<{ deleted: number }>('/notifications/all', { method: 'DELETE' }),
+};
+
+// Board Requests API (super-admin only)
+export const boardRequestsApi = {
+  getAll: () => fetchApi<BoardRequest[]>('/board-requests'),
+  generate: (id: string) =>
+    fetchApi<{ kidId: string; boardUrl: string; builderUrl: string }>(`/board-requests/${id}/generate`, {
+      method: 'POST',
+    }),
+  update: (id: string, data: Partial<BoardRequest>) =>
+    fetchApi<BoardRequest>(`/board-requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    fetchApi<void>(`/board-requests/${id}`, { method: 'DELETE' }),
+};
+
+// Admin API (super-admin operations)
+async function fetchAdminApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${ADMIN_API_BASE}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      ...options,
+    });
+    if (response.status === 204) return { success: true, data: undefined as unknown as T };
+    const data = await response.json();
+    if (!response.ok) return { success: false, error: data.error || 'Request failed' };
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export interface AdminOverviewParent {
+  id: string;
+  kidId?: string;
+  name?: string;
+  mobile?: string;
+  email?: string;
+}
+export interface AdminOverviewKid {
+  id: string;
+  name: string;
+  age?: number | string;
+  gender?: string;
+  createdAt: string | null;
+  totalMoney: number;
+  hasBoardLayout: boolean;
+  tasksCount: number;
+  parents: AdminOverviewParent[];
+  sessionsCount: number;
+  formsCount: number;
+  meetingFormsCount: number;
+}
+export interface AdminOverviewCrew {
+  id: string;
+  name: string;
+  type?: string;
+  mobile?: string;
+  email?: string;
+  createdAt: string | null;
+}
+export interface AdminOverviewEntry {
+  adminId: string;
+  name: string;
+  key: string;
+  active: boolean;
+  createdAt: string | null;
+  createdBy: string | null;
+  mobile: string;
+  email: string;
+  subscription: { plan: string; status: string; trialEndDate: string | null; proEndDate: string | null } | null;
+  counts: { kids: number; crew: number; parents: number; sessions: number; forms: number; meetingForms: number };
+  kids: AdminOverviewKid[];
+  crew: AdminOverviewCrew[];
+  parents: AdminOverviewParent[];
+}
+export interface AdminOverviewResponse {
+  admins: AdminOverviewEntry[];
+  orphanKids: { id: string; name: string; age?: number | string; gender?: string; createdAt: string | null; totalMoney: number; hasBoardLayout: boolean }[];
+  totals: { admins: number; orphanKids: number; kidsAcrossAllAdmins: number; crewAcrossAllAdmins: number; parentsAcrossAllAdmins: number };
+}
+
+export const adminApi = {
+  createKey: (data: { name: string; key: string; mobile?: string; email?: string }) =>
+    fetchAdminApi<{ key: string; adminId: string; name: string }>('/create-key', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listAdmins: () =>
+    fetchAdminApi<{ docId: string; adminId: string; name: string; key: string; active: boolean; mobile: string; email: string; createdAt: string | null }[]>('/list'),
+  getOverview: () =>
+    fetchAdminApi<AdminOverviewResponse>('/overview'),
+  deleteAdmin: (adminId: string) =>
+    fetchAdminApi<void>(`/${adminId}`, { method: 'DELETE' }),
+  changeKey: (newKey: string) =>
+    fetchAdminApi<{ success: boolean }>('/change-key', {
+      method: 'POST',
+      body: JSON.stringify({ newKey }),
+    }),
+  updateProfile: (data: { name: string; mobile?: string; email?: string }) =>
+    fetchAdminApi<{ success: boolean; name: string; mobile: string; email: string }>('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  getSubscription: () =>
+    fetchAdminApi<{ plan: string; status: string; trialEndDate: string | null; proEndDate: string | null; billingCycle: string | null; nextPaymentDate: string | null; paypalSubscriptionId: string | null; isSuperAdmin?: boolean }>('/subscription'),
+  createSubscription: (billingCycle: 'monthly' | 'yearly') =>
+    fetchAdminApi<{ approvalUrl: string; subscriptionId: string }>('/subscription/create', {
+      method: 'POST',
+      body: JSON.stringify({ billingCycle }),
+    }),
+  activateSubscription: (subscriptionId: string) =>
+    fetchAdminApi<{ success: boolean }>('/subscription/activate', {
+      method: 'POST',
+      body: JSON.stringify({ subscriptionId }),
+    }),
+  cancelSubscription: () =>
+    fetchAdminApi<{ success: boolean }>('/subscription/cancel', { method: 'POST' }),
+  signup: (data: { name: string; mobile: string; email: string; key: string }) =>
+    fetch(`${ADMIN_API_BASE}/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(async r => {
+      const d = await r.json();
+      if (!r.ok) return { success: false as const, error: d.error || 'שגיאה' };
+      return { success: true as const, data: d as { key: string; adminId: string; name: string } };
+    }),
+};
+
+// Crew Hours API
+export interface CrewHoursSession {
+  date: string;
+  duration: number;
+  kidId: string;
+  kidName: string;
+}
+
+export interface CrewHoursEntry {
+  practitionerId: string;
+  practitionerName: string;
+  practitionerType: string;
+  totalMinutes: number;
+  sessionCount: number;
+  kids: { kidId: string; kidName: string; totalMinutes: number; sessionCount: number }[];
+  sessions: CrewHoursSession[];
+}
+
+export const crewHoursApi = {
+  get: (filters?: { from?: string; to?: string; kidId?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.from) params.append('from', filters.from);
+    if (filters?.to) params.append('to', filters.to);
+    if (filters?.kidId) params.append('kidId', filters.kidId);
+    const query = params.toString();
+    return fetchApi<CrewHoursEntry[]>(`/crew-hours${query ? `?${query}` : ''}`);
+  },
+};
+
+// AI Chat API
+export interface ChatResponse {
+  reply: string;
+  boardUpdated?: boolean;
+  summaryCreated?: boolean;
+  toolsUsed?: string[];
+  conversationId?: string | null;
+}
+
+export interface ChatStatusEvent {
+  type: 'thinking' | 'tool' | 'done' | 'error';
+  label?: string;
+  tool?: string;
+  reply?: string;
+  boardUpdated?: boolean;
+  summaryCreated?: boolean;
+  toolsUsed?: string[];
+  error?: string;
+  conversationId?: string | null;
+}
+
+export interface ChatHistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  at?: string;
+  toolsUsed?: string[];
+  boardUpdated?: boolean;
+  summaryCreated?: boolean;
+  images?: string[];
+  imageModelLabel?: string;
+}
+
+export interface ChatConversationSummary {
+  id: string;
+  title: string;
+  ownerType: 'admin' | 'therapist' | 'parent';
+  ownerName: string;
+  ownerRole: string;
+  kidId: string | null;
+  kidName: string | null;
+  messageCount: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+  expiresAt: string | null;
+  isMine: boolean;
+}
+
+export interface ChatConversation extends ChatConversationSummary {
+  messages: ChatHistoryMessage[];
+}
+
+// Chat history — 14 days from the last message. Own conversations only, except
+// the super admin, who may list (scope 'all') and read everyone's.
+export const chatHistoryApi = {
+  list: (scope: 'mine' | 'all' = 'mine') =>
+    fetchApi<ChatConversationSummary[]>(`/chat/conversations${scope === 'all' ? '?scope=all' : ''}`),
+  get: (id: string) => fetchApi<ChatConversation>(`/chat/conversations/${encodeURIComponent(id)}`),
+  remove: (id: string) => fetchApi<{ success: boolean }>(`/chat/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+};
+
+export const chatApi = {
+  send: (messages: { role: string; content: string }[], kidId?: string | null) =>
+    fetchApi<ChatResponse>('/chat', {
+      method: 'POST',
+      body: JSON.stringify({ messages, kidId }),
+    }),
+
+  sendStream: async (
+    messages: { role: string; content: string }[],
+    kidId: string | null,
+    onStatus: (event: ChatStatusEvent) => void,
+    extraBody?: Record<string, unknown>,
+  ): Promise<ChatResponse> => {
+    const response = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ messages, kidId, stream: true, ...extraBody }),
+    });
+
+    if (!response.ok) {
+      let msg = `HTTP ${response.status}`;
+      try { msg = (await response.json()).error || msg; } catch { /* not JSON */ }
+      throw new Error(msg);
+    }
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result: ChatResponse = { reply: '' };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event: ChatStatusEvent = JSON.parse(line.slice(6));
+          onStatus(event);
+          if (event.type === 'done') {
+            result = {
+              reply: event.reply || '',
+              boardUpdated: event.boardUpdated,
+              summaryCreated: event.summaryCreated,
+              toolsUsed: event.toolsUsed,
+              conversationId: event.conversationId,
+            };
+          }
+          if (event.type === 'error') {
+            throw new Error(event.error || 'Chat error');
+          }
+        } catch (e) {
+          if (e instanceof SyntaxError) continue; // skip malformed SSE lines
+          throw e;
+        }
+      }
+    }
+
+    return result;
+  },
+};
+
+// Build models (Lego / magnet guides from reports/nevo-models) — super admin only.
+// Dev: served live by Express; prod: copied into Firebase Hosting by deploy.js.
+export const MODELS_BASE = import.meta.env.DEV ? '/api/nevo-models' : '/build-models-n7q4';
+
+export interface BuildModel {
+  id: string;
+  title: string;
+  type: 'lego' | 'magnet';
+  kid: string;
+  pieces: number;
+  steps: number;
+  minutes: number;
+  difficulty: string;
+  thumb: string;
+  concept: string;
+  path: string;
+  createdAt: string;
+}
+
+export const modelsApi = {
+  getManifest: async (): Promise<BuildModel[]> => {
+    const res = await fetch(`${MODELS_BASE}/models-manifest.json`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.models || [];
+  },
+};
+
+// AI Image generation (Leonardo) — text-to-image, 9:16 tall, 2 images per request
+export type ImageModel = 'gpt-image-2' | 'nano-banana-2' | 'nano-banana-pro';
+
+export interface GenerateImageResponse {
+  images: string[];
+  cost: number;
+  costCurrency: string;
+  model: ImageModel;
+  modelLabel: string;
+  width: number;
+  height: number;
+  conversationId?: string | null;
+}
+
+export const IMAGE_MODELS: { value: ImageModel; label: string }[] = [
+  { value: 'nano-banana-2', label: 'Nano Banana 2' },
+  { value: 'nano-banana-pro', label: 'Nano Banana Pro' },
+  { value: 'gpt-image-2', label: 'GPT Image 2' },
+];
+
+export const imagesApi = {
+  generate: (prompt: string, model: ImageModel, history?: { conversationId?: string | null; kidId?: string | null }) =>
+    fetchApi<GenerateImageResponse>('/generate-image', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, model, ...history }),
+    }),
+};

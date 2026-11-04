@@ -1,0 +1,1347 @@
+import { useState, useEffect } from 'react';
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isMobile;
+}
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { goalTemplatesApi, goalsApi } from '../api/client';
+import ConfirmModal from './ConfirmModal';
+import {
+  GOAL_CATEGORIES,
+  normalizeTemplate,
+} from '../types';
+import type { GoalFormTemplate, GoalTableBlock, GoalTableType, GoalColumnDef, GoalColumnType, GoalLibraryItem } from '../types';
+import Icon from '../v2/Icon';
+import '../v2/pages/kp.css';
+
+function makeId() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
+// -------- Column type — compact pill toggle --------
+const TYPE_LABELS: Record<string, string> = {
+  text: 'טקסט',
+  date: 'תאריך',
+  options: 'אפשרויות',
+  checkbox: 'סימון',
+};
+
+function TypePills({ value, onChange }: { value: GoalColumnType; onChange: (t: GoalColumnType) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {(Object.keys(TYPE_LABELS) as GoalColumnType[]).map(t => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          style={{
+            padding: '3px 9px',
+            border: `1.5px solid ${value === t ? 'var(--pen)' : 'var(--line)'}`,
+            borderRadius: 20,
+            cursor: 'pointer',
+            fontSize: '0.76em',
+            background: value === t ? 'var(--pen-soft)' : 'white',
+            color: value === t ? 'var(--pen)' : 'var(--ink-2)',
+            fontWeight: value === t ? 600 : 400,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {TYPE_LABELS[t]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// -------- Options chip editor --------
+function OptionsEditor({ options, onChange }: { options: string[]; onChange: (opts: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+
+  function commit() {
+    const val = draft.trim();
+    if (val && !options.includes(val)) onChange([...options, val]);
+    setDraft('');
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commit(); }
+    if (e.key === 'Backspace' && !draft && options.length > 0) onChange(options.slice(0, -1));
+  }
+
+  return (
+    <div style={{
+      display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+      border: '1.5px solid var(--line)', borderRadius: 7, padding: '5px 9px',
+      background: 'var(--paper)', minHeight: 34, cursor: 'text',
+      marginTop: 6,
+    }}>
+      {options.map((opt, i) => (
+        <span key={i} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 2,
+          background: 'var(--pen-soft)', color: 'var(--pen)', borderRadius: 12,
+          padding: '2px 9px', fontSize: '0.8em', fontWeight: 500,
+        }}>
+          {opt}
+          <button type="button" onClick={() => onChange(options.filter((_, j) => j !== i))}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#818cf8', fontSize: '1em', padding: 0, lineHeight: 1, marginRight: 2 }}>×</button>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={handleKey}
+        onBlur={commit}
+        placeholder={options.length === 0 ? 'הקלד ולחץ Enter...' : ''}
+        style={{
+          border: 'none', outline: 'none', fontSize: '0.8em', flex: 1, minWidth: 80,
+          background: 'transparent', padding: '1px 0',
+        }}
+      />
+    </div>
+  );
+}
+
+// -------- Single column row — compact single-line layout --------
+function ColumnRow({ col, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isLast, isMobile }: {
+  col: GoalColumnDef;
+  onChange: (c: GoalColumnDef) => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
+  isMobile?: boolean;
+}) {
+  return (
+    <div style={{ marginBottom: 5 }}>
+      {/* Main row: order | name | type | remove */}
+      <div style={{
+        display: 'flex', gap: 7,
+        alignItems: isMobile ? 'stretch' : 'center',
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
+        padding: '7px 10px',
+        background: 'white',
+        border: '1.5px solid var(--line)',
+        borderRadius: (['options', 'repeated'].includes(col.type) || (col.type === 'repeated' && col.innerType === 'options')) ? '8px 8px 0 0' : 8,
+        borderBottom: (['options', 'repeated'].includes(col.type) || (col.type === 'repeated' && col.innerType === 'options')) ? '1px solid var(--paper-2)' : undefined,
+      }}>
+        {/* Order arrows */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+          <button type="button" onClick={onMoveUp} disabled={isFirst}
+            style={{ background: 'none', border: 'none', cursor: isFirst ? 'default' : 'pointer', color: isFirst ? 'var(--line)' : 'var(--muted)', fontSize: '0.65em', padding: 0, lineHeight: 1 }}>▲</button>
+          <button type="button" onClick={onMoveDown} disabled={isLast}
+            style={{ background: 'none', border: 'none', cursor: isLast ? 'default' : 'pointer', color: isLast ? 'var(--line)' : 'var(--muted)', fontSize: '0.65em', padding: 0, lineHeight: 1 }}>▼</button>
+        </div>
+
+        {/* Name + description inputs */}
+        <div style={{ flex: isMobile ? '1 1 calc(100% - 30px)' : 1, minWidth: 80, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <input
+            type="text"
+            value={col.label}
+            onChange={e => onChange({ ...col, label: e.target.value })}
+            placeholder="שם עמודה..."
+            autoComplete="off"
+            style={{
+              width: '100%',
+              padding: '5px 9px',
+              border: '1.5px solid var(--line)',
+              borderRadius: 6,
+              fontSize: '0.87em',
+              fontWeight: 500,
+              outline: 'none',
+              background: 'white',
+              color: 'var(--ink)',
+              fontFamily: 'inherit',
+            }}
+          />
+          <input
+            type="text"
+            value={col.description || ''}
+            onChange={e => onChange({ ...col, description: e.target.value || undefined })}
+            placeholder="תיאור (אופציונלי)..."
+            autoComplete="off"
+            style={{
+              width: '100%',
+              padding: '3px 9px',
+              border: '1px solid var(--paper-2)',
+              borderRadius: 5,
+              fontSize: '0.76em',
+              outline: 'none',
+              background: 'var(--paper)',
+              color: 'var(--muted)',
+              fontFamily: 'inherit',
+            }}
+          />
+        </div>
+
+        {/* Type pills — show effective type (innerType for repeated, type otherwise) */}
+        <TypePills
+          value={(col.type === 'repeated' ? (col.innerType || 'checkbox') : col.type) as GoalColumnType}
+          onChange={t => {
+            if (col.type === 'repeated') {
+              onChange({ ...col, innerType: t, options: t === 'options' ? (col.options || []) : undefined });
+            } else {
+              onChange({ ...col, type: t, options: t === 'options' ? (col.options || []) : undefined });
+            }
+          }}
+        />
+
+        {/* Repeated toggle */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', flexShrink: 0 }}>
+          <input
+            type="checkbox"
+            checked={col.type === 'repeated'}
+            onChange={e => {
+              if (e.target.checked) {
+                onChange({ ...col, type: 'repeated', innerType: col.type === 'repeated' ? col.innerType : col.type, repeatCount: col.repeatCount || 10 });
+              } else {
+                const effectiveType = col.innerType || 'text';
+                onChange({ ...col, type: effectiveType, innerType: undefined, repeatCount: undefined });
+              }
+            }}
+            style={{ width: 14, height: 14, accentColor: 'var(--pen)', cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: '0.73em', color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>חוזר</span>
+        </label>
+
+        {/* Remove */}
+        <button type="button" onClick={onRemove}
+          style={{
+            background: 'none', border: '1.5px solid var(--red-soft)', borderRadius: 5,
+            color: 'var(--red)', cursor: 'pointer', fontSize: '0.85em', padding: '3px 7px', flexShrink: 0,
+          }}><Icon name="close" size={14} /></button>
+      </div>
+
+      {/* Options editor — shown when effective type is options */}
+      {((col.type === 'options') || (col.type === 'repeated' && col.innerType === 'options')) && (
+        <div style={{
+          padding: '6px 10px',
+          background: 'white',
+          border: '1.5px solid var(--line)',
+          borderTop: 'none',
+          borderRadius: col.type === 'repeated' ? undefined : '0 0 8px 8px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '0.73em', color: 'var(--muted)' }}>אפשרויות:</div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: '0.73em', color: 'var(--ink-2)' }}>
+              <input
+                type="checkbox"
+                checked={!!col.multiSelect}
+                onChange={e => onChange({ ...col, multiSelect: e.target.checked || undefined })}
+                style={{ width: 13, height: 13, accentColor: 'var(--pen)', cursor: 'pointer' }}
+              />
+              רב-בחירה
+            </label>
+          </div>
+          <OptionsEditor
+            options={col.options || []}
+            onChange={opts => onChange({ ...col, options: opts })}
+          />
+        </div>
+      )}
+
+      {/* Repeated column config — repeat count */}
+      {col.type === 'repeated' && (
+        <div style={{
+          padding: '8px 10px',
+          background: 'white',
+          border: '1.5px solid var(--line)',
+          borderTop: 'none',
+          borderRadius: '0 0 8px 8px',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ fontSize: '0.73em', color: 'var(--muted)' }}>מספר חזרות:</span>
+          <input
+            type="number"
+            min={2}
+            max={50}
+            value={col.repeatCount || 10}
+            onChange={e => onChange({ ...col, repeatCount: Math.max(2, Math.min(50, parseInt(e.target.value) || 10)) })}
+            style={{
+              width: 70, padding: '4px 8px', border: '1.5px solid var(--line)',
+              borderRadius: 6, fontSize: '0.85em', fontFamily: 'inherit',
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -------- Preview cell content helper --------
+function PreviewCellContent({ col, rowIdx }: { col: GoalColumnDef; rowIdx: number }) {
+  if (col.type === 'checkbox') {
+    const checked = rowIdx === 0;
+    return <span className={`kp-cell-check${checked ? ' is-yes' : ' is-no'}`} aria-label={checked ? 'כן' : 'לא'}><Icon name={checked ? 'check' : 'close'} size={14} strokeWidth={2.8} /></span>;
+  }
+  if (col.type === 'date') {
+    return <span style={{ color: 'var(--muted)' }}>{rowIdx === 0 ? '01/01/2025' : '15/03/2025'}</span>;
+  }
+  if (col.type === 'options') {
+    const opts = col.options || [];
+    if (opts.length === 0) return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>;
+    const vals = col.multiSelect && opts.length >= 2
+      ? [opts[rowIdx % opts.length], opts[(rowIdx + 1) % opts.length]]
+      : [opts[rowIdx % opts.length]];
+    return (
+      <span style={{
+        background: 'var(--pen-soft)', color: 'var(--pen)', borderRadius: 10,
+        padding: '1px 8px', fontSize: '0.92em', fontWeight: 500,
+      }}>
+        {vals.join(', ')}
+      </span>
+    );
+  }
+  if (col.type === 'repeated') {
+    const count = col.repeatCount || 10;
+    const innerCol: GoalColumnDef = { id: 'preview', label: '', type: col.innerType || 'checkbox', options: col.options, multiSelect: col.multiSelect };
+    return (
+      <div style={{ display: 'flex', gap: 2 }}>
+        {Array.from({ length: Math.min(count, 6) }).map((_, i) => (
+          <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 4, padding: '1px 4px', minWidth: 22, textAlign: 'center' }}>
+            <PreviewCellContent col={innerCol} rowIdx={i} />
+          </div>
+        ))}
+        {count > 6 && <span style={{ color: 'var(--muted)', fontSize: '0.8em' }}>...+{count - 6}</span>}
+      </div>
+    );
+  }
+  // text
+  return <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>טקסט...</span>;
+}
+
+// -------- Block preview (used in both side panel and fullscreen) --------
+function BlockPreview({ block }: { block: GoalTableBlock }) {
+  const { type, columns } = block;
+  if (columns.length === 0) {
+    return (
+      <div style={{ border: '2px dashed var(--line)', borderRadius: 8, padding: '12px', textAlign: 'center', color: '#cbd5e1', fontSize: '0.8em' }}>
+        {type === 'vertical' ? 'שדות יוצגו כאן' : 'עמודות יוצגו כאן'}
+      </div>
+    );
+  }
+
+  if (type === 'vertical') {
+    return (
+      <div style={{ border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
+        {columns.map((col, i) => (
+          <div key={col.id} style={{
+            display: 'grid', gridTemplateColumns: '140px 1fr',
+            borderBottom: i < columns.length - 1 ? '1px solid var(--paper-2)' : 'none',
+          }}>
+            <div style={{ background: 'var(--paper)', padding: '7px 10px', fontSize: '0.8em', fontWeight: 600, color: 'var(--ink-2)', borderLeft: '1px solid var(--line)' }}>
+              {col.label || '—'}
+              {col.description && <div style={{ fontSize: '0.82em', color: 'var(--muted)', fontWeight: 400, marginTop: 1 }}>{col.description}</div>}
+            </div>
+            <div style={{ padding: '7px 10px', fontSize: '0.8em' }}>
+              <PreviewCellContent col={col} rowIdx={0} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 8 }}>
+      <table style={{ borderCollapse: 'collapse', fontSize: '0.8em', minWidth: '100%' }}>
+        <thead>
+          <tr>
+            {columns.map(col => col.type === 'repeated' ? (
+              <th key={col.id} colSpan={col.repeatCount || 10} style={{
+                padding: '6px 10px', background: 'var(--paper)', border: '1px solid var(--line)',
+                textAlign: 'center', fontWeight: 600, color: 'var(--ink-2)',
+              }}>
+                <div style={{ whiteSpace: 'nowrap' }}>{col.label || '—'}</div>
+                {col.description && <div style={{ fontSize: '0.82em', color: 'var(--muted)', fontWeight: 400, whiteSpace: 'nowrap' }}>{col.description}</div>}
+              </th>
+            ) : (
+              <th key={col.id} style={{
+                padding: '6px 10px', background: 'var(--paper)', border: '1px solid var(--line)',
+                textAlign: 'right', fontWeight: 600, color: 'var(--ink-2)',
+              }}>
+                <div style={{ whiteSpace: 'nowrap' }}>{col.label || '—'}</div>
+                {col.description && <div style={{ fontSize: '0.82em', color: 'var(--muted)', fontWeight: 400, whiteSpace: 'nowrap' }}>{col.description}</div>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {[0, 1].map(ri => (
+            <tr key={ri}>
+              {columns.flatMap(col => {
+                if (col.type === 'repeated') {
+                  const count = col.repeatCount || 10;
+                  const innerCol: GoalColumnDef = { id: 'inner', label: '', type: col.innerType || 'checkbox', options: col.options, multiSelect: col.multiSelect };
+                  return Array.from({ length: count }).map((_, i) => (
+                    <td key={`${col.id}__${i}`} style={{ padding: '4px 3px', border: '1px solid var(--paper-2)', textAlign: 'center' }}>
+                      <PreviewCellContent col={innerCol} rowIdx={ri + i} />
+                    </td>
+                  ));
+                }
+                return [(
+                  <td key={col.id} style={{ padding: '6px 10px', border: '1px solid var(--paper-2)', whiteSpace: 'nowrap' }}>
+                    <PreviewCellContent col={col} rowIdx={ri} />
+                  </td>
+                )];
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// -------- Live preview panel --------
+function LivePreviewPanel({ blocks }: { blocks: GoalTableBlock[]; title?: string }) {
+  const hasAny = blocks.some(b => b.columns.length > 0);
+  return (
+    <div>
+      {!hasAny ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#cbd5e1', fontSize: '0.85em', lineHeight: 1.8 }}>
+          הוסף עמודות<br />כדי לראות תצוגה מקדימה
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {blocks.filter(b => b.columns.length > 0).map((block, idx) => (
+            <div key={block.id}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                <span style={{ fontSize: '0.7em', fontWeight: 700, color: 'var(--pen)', background: 'var(--pen-soft)', borderRadius: 20, padding: '2px 8px' }}>
+                  {idx + 1}
+                </span>
+                {block.title && <span style={{ fontSize: '0.82em', fontWeight: 600, color: 'var(--ink)' }}>{block.title}</span>}
+                <span style={{ fontSize: '0.71em', color: 'var(--muted)' }}>({block.type === 'vertical' ? 'אנכי' : 'אופקי'})</span>
+              </div>
+              <BlockPreview block={block} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -------- Table block editor --------
+const TABLE_TYPE_CARDS: { type: GoalTableType; label: string; desc: string }[] = [
+  { type: 'vertical', label: 'אנכי', desc: 'שדה אחד לכל שורה — לפרטים והוראות' },
+  { type: 'horizontal', label: 'אופקי', desc: 'עמודות עם שורות — לטבלאות נתונים' },
+];
+
+function TableBlockEditor({ block, idx, total, onChange, onRemove, onMoveUp, onMoveDown, isMobile }: {
+  block: GoalTableBlock;
+  idx: number;
+  total: number;
+  onChange: (b: GoalTableBlock) => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isMobile?: boolean;
+}) {
+  function addColumn() {
+    onChange({ ...block, columns: [...block.columns, { id: makeId(), label: '', type: 'text' }] });
+  }
+
+  function updateColumn(colIdx: number, col: GoalColumnDef) {
+    onChange({ ...block, columns: block.columns.map((c, i) => i === colIdx ? col : c) });
+  }
+
+  function removeColumn(colIdx: number) {
+    onChange({ ...block, columns: block.columns.filter((_, i) => i !== colIdx) });
+  }
+
+  function moveColumn(colIdx: number, dir: -1 | 1) {
+    const cols = [...block.columns];
+    const swap = colIdx + dir;
+    if (swap < 0 || swap >= cols.length) return;
+    [cols[colIdx], cols[swap]] = [cols[swap], cols[colIdx]];
+    onChange({ ...block, columns: cols });
+  }
+
+  return (
+    <div style={{
+      border: '2px solid #D6CBF4',
+      borderRadius: 12,
+      marginBottom: 14,
+      background: '#fafbff',
+      overflow: 'hidden',
+    }}>
+      {/* Header bar */}
+      <div style={{
+        background: 'var(--pen-soft)',
+        padding: '8px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        borderBottom: '1px solid #D6CBF4',
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+          <button type="button" onClick={onMoveUp} disabled={idx === 0}
+            style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? '#D6CBF4' : 'var(--pen)', fontSize: '0.72em', padding: 0, lineHeight: 1 }}>▲</button>
+          <button type="button" onClick={onMoveDown} disabled={idx === total - 1}
+            style={{ background: 'none', border: 'none', cursor: idx === total - 1 ? 'default' : 'pointer', color: idx === total - 1 ? '#D6CBF4' : 'var(--pen)', fontSize: '0.72em', padding: 0, lineHeight: 1 }}>▼</button>
+        </div>
+
+        <span style={{ fontSize: '0.73em', fontWeight: 700, color: 'var(--pen)', background: 'var(--pen-soft)', borderRadius: 20, padding: '2px 9px', flexShrink: 0 }}>
+          טבלה {idx + 1}
+        </span>
+
+        <input
+          type="text"
+          value={block.title || ''}
+          onChange={e => onChange({ ...block, title: e.target.value })}
+          placeholder="כותרת (אופציונלי)..."
+          style={{
+            flex: 1, padding: '4px 8px', border: '1.5px solid #D6CBF4', borderRadius: 6,
+            fontSize: '0.87em', fontWeight: 500, outline: 'none',
+            background: 'white', color: 'var(--ink)', fontFamily: 'inherit',
+          }}
+        />
+
+        {total > 1 && (
+          <button type="button" onClick={onRemove}
+            style={{ background: 'none', border: '1.5px solid var(--red-soft)', borderRadius: 5, color: 'var(--red)', cursor: 'pointer', fontSize: '0.75em', padding: '3px 8px', flexShrink: 0 }}>
+            הסר
+          </button>
+        )}
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '11px 13px' }}>
+        {/* Type selector */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: '0.74em', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.03em' }}>סוג טבלה:</div>
+          <div style={{ display: 'flex', gap: 7 }}>
+            {TABLE_TYPE_CARDS.map(tc => (
+              <button
+                key={tc.type}
+                type="button"
+                onClick={() => onChange({ ...block, type: tc.type })}
+                style={{
+                  flex: 1, padding: '8px 11px',
+                  border: `2px solid ${block.type === tc.type ? 'var(--pen)' : 'var(--line)'}`,
+                  borderRadius: 9,
+                  background: block.type === tc.type ? 'var(--pen-soft)' : 'white',
+                  cursor: 'pointer', textAlign: 'right',
+                }}
+              >
+                <div style={{ fontSize: '0.87em', fontWeight: 700, color: block.type === tc.type ? 'var(--pen)' : 'var(--ink)' }}>{tc.label}</div>
+                <div style={{ fontSize: '0.71em', color: 'var(--ink-2)', marginTop: 2 }}>{tc.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Column label */}
+        <div style={{ fontSize: '0.74em', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+          {block.type === 'vertical' ? 'שדות:' : 'עמודות:'}
+        </div>
+
+        {block.columns.length === 0 && (
+          <div style={{ border: '2px dashed var(--line)', borderRadius: 7, padding: '12px', textAlign: 'center', color: 'var(--muted)', fontSize: '0.82em', marginBottom: 6 }}>
+            {block.type === 'vertical' ? 'הוסף שדות לטבלה' : 'הוסף עמודות לטבלה'}
+          </div>
+        )}
+
+        {block.columns.map((col, colIdx) => (
+          <ColumnRow
+            key={col.id}
+            col={col}
+            onChange={c => updateColumn(colIdx, c)}
+            onRemove={() => removeColumn(colIdx)}
+            onMoveUp={() => moveColumn(colIdx, -1)}
+            onMoveDown={() => moveColumn(colIdx, 1)}
+            isFirst={colIdx === 0}
+            isLast={colIdx === block.columns.length - 1}
+            isMobile={isMobile}
+          />
+        ))}
+
+        <button type="button" onClick={addColumn}
+          style={{
+            width: '100%', padding: '7px', border: '1.5px dashed var(--pen)', borderRadius: 7,
+            background: 'none', color: 'var(--pen)', cursor: 'pointer', fontSize: '0.83em', fontWeight: 600,
+            marginTop: 2,
+          }}>
+          + {block.type === 'vertical' ? 'הוסף שדה' : 'הוסף עמודה'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// -------- Preset strip --------
+function PresetStrip({ formType, onLoad }: {
+  formType: 'lp' | 'dc';
+  onLoad: (t: GoalFormTemplate, presetName?: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: libraryRes } = useQuery({
+    queryKey: ['goals-library-all'],
+    queryFn: () => goalsApi.getAllLibrary(),
+  });
+
+  const presetNameField = formType === 'lp' ? 'lpPresetName' : 'dcPresetName';
+  const templateField = formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate';
+  const allWithPreset = ((libraryRes?.data || []) as GoalLibraryItem[]).filter(
+    g => g[presetNameField] && g[templateField]
+  );
+  // Deduplicate by column fingerprint (same columns = same template)
+  const seen = new Set<string>();
+  const savedPresets = allWithPreset.filter(g => {
+    const cols = (g[templateField]?.tables || []).flatMap(t => t.columns || []);
+    const key = cols.map(c => `${c.label}|${c.description || ''}`).join(';;');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const removePresetMutation = useMutation({
+    mutationFn: (goalId: string) =>
+      goalTemplatesApi.updateTemplates(goalId, { [presetNameField]: null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+    },
+  });
+
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const confirmPreset = savedPresets.find(g => g.id === confirmRemoveId);
+
+  if (savedPresets.length === 0) return null;
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.72em', fontWeight: 700, color: 'var(--ink-2)' }}>תבניות:</span>
+        {savedPresets.map(g => (
+          <div key={g.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 0, background: 'var(--paper-2)', border: '1px solid var(--line)', borderRadius: 20, overflow: 'hidden' }}>
+            <button
+              type="button"
+              onClick={() => onLoad(g[templateField]!, g[presetNameField] as string)}
+              style={{
+                padding: '2px 8px 2px 10px', background: 'none', cursor: 'pointer',
+                border: 'none', fontSize: '0.78em', fontWeight: 600, color: 'var(--ink)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {g[presetNameField]}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmRemoveId(g.id)}
+              title="הסר מתבניות"
+              style={{
+                background: 'none', border: 'none', borderRight: '1px solid var(--line)',
+                color: 'var(--muted)', cursor: 'pointer', padding: '2px 6px', fontSize: '0.7em',
+                lineHeight: 1,
+              }}
+            ><Icon name="close" size={16} /></button>
+          </div>
+        ))}
+      </div>
+      {confirmPreset && (
+        <ConfirmModal
+          title="הסרת תבנית"
+          message={`להסיר את "${confirmPreset[presetNameField]}" מרשימת התבניות?`}
+          confirmText="הסר"
+          onConfirm={() => { removePresetMutation.mutate(confirmRemoveId!); setConfirmRemoveId(null); }}
+          onCancel={() => setConfirmRemoveId(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// -------- Apply to goals modal --------
+function ApplyToGoalsModal({ sourceGoal, formType, currentBlocks, onClose }: {
+  sourceGoal: GoalLibraryItem;
+  formType: 'lp' | 'dc';
+  currentBlocks?: GoalTableBlock[];
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState('');
+  const [replaceTitle, setReplaceTitle] = useState(true);
+  const [appliedCount, setAppliedCount] = useState<number | null>(null);
+
+  const { data: libraryRes, isLoading } = useQuery({
+    queryKey: ['goals-library-all'],
+    queryFn: () => goalsApi.getAllLibrary(),
+  });
+
+  const templateField = formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate';
+  const allGoals = ((libraryRes?.data || []) as GoalLibraryItem[]).filter(g => g.id !== sourceGoal.id);
+  const filtered = search.trim()
+    ? allGoals.filter(g => g.title.includes(search.trim()))
+    : allGoals;
+
+  // Group by category
+  const grouped = GOAL_CATEGORIES.map(cat => ({
+    cat,
+    goals: filtered.filter(g => g.categoryId === cat.id),
+  })).filter(g => g.goals.length > 0);
+
+  const sourceIdField = formType === 'lp' ? 'lpPresetSourceId' : 'dcPresetSourceId';
+  // Use live editor blocks if provided, otherwise fall back to saved template
+  const srcTemplate: GoalFormTemplate | null = currentBlocks
+    ? { tables: currentBlocks }
+    : sourceGoal[templateField] ?? null;
+
+  const bulkMutation = useMutation({
+    mutationFn: async () => {
+      const targetIdArr = Array.from(selectedIds);
+      if (replaceTitle && srcTemplate) {
+        for (const targetId of targetIdArr) {
+          const target = allGoals.find(g => g.id === targetId);
+          const tmpl = target
+            ? { ...srcTemplate, tables: srcTemplate.tables.map(t => ({ ...t, title: target.title })) }
+            : srcTemplate;
+          await goalTemplatesApi.updateTemplates(targetId, {
+            [templateField]: tmpl,
+            [sourceIdField]: sourceGoal.id,
+          });
+        }
+        return { data: { applied: targetIdArr.length } };
+      }
+      // bulkApply reads from DB — save current blocks first to ensure DB is up to date
+      if (currentBlocks) {
+        await goalTemplatesApi.updateTemplates(sourceGoal.id, {
+          [templateField]: { tables: currentBlocks },
+        });
+      }
+      return goalTemplatesApi.bulkApply(sourceGoal.id, targetIdArr, formType);
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      setAppliedCount(res.data?.applied || selectedIds.size);
+    },
+  });
+
+  function toggleId(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleCategory(catGoals: GoalLibraryItem[]) {
+    const allSelected = catGoals.every(g => selectedIds.has(g.id));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      catGoals.forEach(g => allSelected ? next.delete(g.id) : next.add(g.id));
+      return next;
+    });
+  }
+
+  if (appliedCount !== null) {
+    return (
+      <div className="modal-overlay" style={{ zIndex: 300 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div style={{
+          background: 'white', borderRadius: 14, padding: '32px 28px', textAlign: 'center',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxWidth: 400,
+        }}>
+          <div style={{ marginBottom: 10, color: 'var(--green)' }}><Icon name="check" size={40} strokeWidth={2.4} /></div>
+          <div style={{ fontSize: '1.05em', fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
+            התבנית הוחלה על {appliedCount} מטרות
+          </div>
+          <button type="button" className="btn-primary" onClick={onClose} style={{ marginTop: 14 }}>סגור</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 300 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div
+        style={{
+          background: 'white', borderRadius: 14, width: 'min(520px, 95vw)',
+          maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.18)', overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: '15px 20px 11px', borderBottom: '1px solid var(--paper-2)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '1.02em', color: 'var(--ink)' }}>החל תבנית על מטרות נוספות</h3>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3em', cursor: 'pointer', color: 'var(--muted)' }}><Icon name="close" size={14} /></button>
+          </div>
+          <div style={{ fontSize: '0.82em', color: 'var(--ink-2)', marginTop: 3 }}>
+            מקור: {sourceGoal.title}
+          </div>
+        </div>
+
+        {/* Search */}
+        <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--paper-2)', flexShrink: 0 }}>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש מטרה..."
+            style={{
+              width: '100%', padding: '7px 12px', border: '1.5px solid var(--line)',
+              borderRadius: 7, fontSize: '0.88em', outline: 'none', fontFamily: 'inherit',
+            }}
+          />
+        </div>
+
+        {/* Goal list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 14px' }}>
+          {isLoading ? (
+            <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)' }}>טוען...</div>
+          ) : grouped.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)', fontSize: '0.88em' }}>לא נמצאו מטרות</div>
+          ) : grouped.map(({ cat, goals }) => (
+            <div key={cat.id} style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5,
+                  cursor: 'pointer', userSelect: 'none',
+                }}
+                onClick={() => toggleCategory(goals)}
+              >
+                <input
+                  type="checkbox"
+                  checked={goals.every(g => selectedIds.has(g.id))}
+                  readOnly
+                  style={{ accentColor: cat.color }}
+                />
+                <span style={{
+                  fontSize: '0.78em', fontWeight: 700, color: cat.color,
+                  background: `${cat.color}18`, borderRadius: 10, padding: '2px 9px',
+                }}>
+                  {cat.nameHe}
+                </span>
+                <span style={{ fontSize: '0.72em', color: 'var(--muted)' }}>({goals.length})</span>
+              </div>
+              {goals.map(g => {
+                const hasTemplate = !!g[templateField];
+                return (
+                  <label key={g.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px 5px 22px',
+                    cursor: 'pointer', borderRadius: 6, fontSize: '0.87em', color: 'var(--ink)',
+                    background: selectedIds.has(g.id) ? '#f0f9ff' : 'transparent',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(g.id)}
+                      onChange={() => toggleId(g.id)}
+                      style={{ accentColor: 'var(--pen)' }}
+                    />
+                    <span style={{ flex: 1 }}>{g.title}</span>
+                    {hasTemplate && (
+                      <span style={{ fontSize: '0.72em', color: '#C2410C', background: '#FFF6D6', borderRadius: 8, padding: '1px 7px' }}>
+                        יש תבנית
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '11px 20px', borderTop: '1px solid var(--paper-2)', flexShrink: 0,
+          display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.82em', color: 'var(--ink-2)' }}>
+              {selectedIds.size > 0 ? `${selectedIds.size} נבחרו` : 'בחר מטרות'}
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {bulkMutation.isError && (
+                <span style={{ color: 'var(--red)', fontSize: '0.82em', alignSelf: 'center' }}>שגיאה בהחלה</span>
+              )}
+              <button type="button" className="btn-secondary" onClick={onClose}>ביטול</button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => bulkMutation.mutate()}
+                disabled={selectedIds.size === 0 || bulkMutation.isPending}
+              >
+                {bulkMutation.isPending ? 'מחיל...' : `החל על ${selectedIds.size} מטרות`}
+              </button>
+            </div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82em', color: 'var(--ink-2)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={replaceTitle} onChange={e => setReplaceTitle(e.target.checked)} style={{ accentColor: 'var(--green)' }} />
+            החלף כותרת בלוק בשם המטרה
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------- Main component --------
+interface Props {
+  goal: GoalLibraryItem;
+  formType: 'lp' | 'dc';
+  onClose: () => void;
+  /** Override default save behavior (e.g. for category templates) */
+  onSaveOverride?: (template: GoalFormTemplate) => Promise<unknown>;
+  /** When true, hide preset/linked-goals/apply sections */
+  isCategoryTemplate?: boolean;
+}
+
+export default function GoalFormTemplateEditor({ goal, formType, onClose, onSaveOverride, isCategoryTemplate }: Props) {
+  const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
+
+  const existingTemplate = formType === 'lp' ? goal.learningPlanTemplate : goal.dataCollectionTemplate;
+  const initialBlocks = normalizeTemplate(existingTemplate ?? null);
+
+  const [blocks, setBlocks] = useState<GoalTableBlock[]>(
+    initialBlocks.length > 0
+      ? initialBlocks
+      : [{ id: makeId(), title: '', type: 'horizontal', columns: [] }]
+  );
+  const [previewFullscreen, setPreviewFullscreen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showUpdateLinked, setShowUpdateLinked] = useState<string[] | null>(null);
+  const hasExistingTemplate = initialBlocks.length > 0;
+
+  const presetNameField = formType === 'lp' ? 'lpPresetName' : 'dcPresetName';
+  const sourceIdField = formType === 'lp' ? 'lpPresetSourceId' : 'dcPresetSourceId';
+
+  // Query library to find linked goals and source preset info
+  const { data: libraryForLinked } = useQuery({
+    queryKey: ['goals-library-all'],
+    queryFn: () => goalsApi.getAllLibrary(),
+  });
+  const allLibItems = (libraryForLinked?.data || []) as GoalLibraryItem[];
+  const templateKey = formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate';
+  const linkedGoalIds = allLibItems
+    .filter(g => g.id !== goal.id && g[sourceIdField] === goal.id && g[templateKey])
+    .map(g => g.id);
+
+  // If this goal is connected to a template source, find the source's preset name
+  const sourceGoalId = goal[sourceIdField] as string | undefined;
+  const sourceGoal = sourceGoalId ? allLibItems.find(g => g.id === sourceGoalId) : undefined;
+  const sourcePresetName = sourceGoal?.[presetNameField] as string | undefined;
+
+  const [saveAsPreset, setSaveAsPreset] = useState(!!goal[presetNameField] || !!sourceGoalId);
+  const [presetName, setPresetName] = useState<string>((goal[presetNameField] as string) || sourcePresetName || goal.title);
+
+  // When library loads and we discover this goal is connected to a source preset, auto-check
+  useEffect(() => {
+    if (sourcePresetName && !goal[presetNameField]) {
+      setSaveAsPreset(true);
+      setPresetName(sourcePresetName);
+    }
+  }, [sourcePresetName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function loadPreset(preset: GoalFormTemplate, presetNameFromStrip?: string) {
+    setBlocks(preset.tables.map(b => ({
+      ...b,
+      id: makeId(),
+      columns: b.columns.map(c => ({ ...c, id: makeId() })),
+    })));
+    if (presetNameFromStrip) {
+      setSaveAsPreset(true);
+      setPresetName(presetNameFromStrip);
+    }
+  }
+
+  function addBlock() {
+    setBlocks(prev => [...prev, { id: makeId(), title: '', type: 'horizontal', columns: [] }]);
+  }
+
+  function updateBlock(idx: number, block: GoalTableBlock) {
+    setBlocks(prev => prev.map((b, i) => i === idx ? block : b));
+  }
+
+  function removeBlock(idx: number) {
+    setBlocks(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  function moveBlock(idx: number, dir: -1 | 1) {
+    setBlocks(prev => {
+      const next = [...prev];
+      const swap = idx + dir;
+      if (swap < 0 || swap >= next.length) return prev;
+      [next[idx], next[swap]] = [next[swap], next[idx]];
+      return next;
+    });
+  }
+
+  // Is this goal a connected target (not the source itself)?
+  const isLinkedTarget = !!sourceGoalId && sourceGoalId !== goal.id;
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const template: GoalFormTemplate = { tables: blocks };
+
+      if (onSaveOverride) {
+        await onSaveOverride(template);
+        return;
+      }
+
+      const templateKey = formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate';
+
+      // Save template on this goal only (never set presetName on a linked target)
+      await goalTemplatesApi.updateTemplates(goal.id, {
+        [templateKey]: template,
+        ...(!isLinkedTarget ? { [presetNameField]: saveAsPreset ? (presetName.trim() || goal.title) : null } : {}),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      queryClient.invalidateQueries({ queryKey: ['category-lp-templates'] });
+
+      if (isCategoryTemplate) {
+        onClose();
+        return;
+      }
+
+      // Find goals to update: all connected goals except current one
+      const allLinked = isLinkedTarget
+        ? [
+            ...allLibItems
+              .filter(g => g.id !== goal.id && (g[sourceIdField] === sourceGoalId || g.id === sourceGoalId) && g[templateKey])
+              .map(g => g.id),
+          ]
+        : linkedGoalIds;
+      if (saveAsPreset && allLinked.length > 0) {
+        setShowUpdateLinked(allLinked);
+      } else {
+        onClose();
+      }
+    },
+  });
+
+  const updateLinkedMutation = useMutation({
+    mutationFn: (targetIds: string[]) => goalTemplatesApi.bulkApply(isLinkedTarget ? sourceGoalId! : goal.id, targetIds, formType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      onClose();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => {
+      if (isCategoryTemplate && onSaveOverride) {
+        // For category templates, delete means save empty tables
+        return onSaveOverride({ tables: [] });
+      }
+      return goalTemplatesApi.updateTemplates(goal.id, {
+        [formType === 'lp' ? 'learningPlanTemplate' : 'dataCollectionTemplate']: null,
+        [presetNameField]: null,
+        [sourceIdField]: null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals-library-all'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      queryClient.invalidateQueries({ queryKey: ['category-lp-templates'] });
+      onClose();
+    },
+  });
+
+  const title = formType === 'lp' ? 'תוכנית למידה' : 'איסוף נתונים';
+  const hasColumns = blocks.some(b => b.columns.length > 0);
+
+  return (
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+
+      {/* ── Fullscreen preview overlay ── */}
+      {previewFullscreen && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, background: 'white', zIndex: 200,
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '14px 22px', borderBottom: '1px solid var(--line)', flexShrink: 0,
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1em', color: 'var(--ink)' }}>תצוגה מקדימה — {title}</div>
+              <div style={{ fontSize: '0.82em', color: 'var(--ink-2)', marginTop: 2 }}>{goal.title}</div>
+            </div>
+            <button
+              onClick={() => setPreviewFullscreen(false)}
+              style={{ background: 'none', border: '1.5px solid var(--line)', borderRadius: 7, padding: '6px 14px', cursor: 'pointer', fontSize: '0.87em', color: 'var(--ink-2)', fontWeight: 500 }}
+            >
+              <Icon name="close" size={15} /> סגור
+            </button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: 900, width: '100%', margin: '0 auto' }}>
+            <LivePreviewPanel blocks={blocks} title={title} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Main modal ── */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: 'min(1180px, 97vw)',
+          maxHeight: '94vh',
+          background: 'white',
+          borderRadius: 14,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+          padding: '15px 20px 11px',
+          borderBottom: '1px solid var(--paper-2)',
+          flexShrink: 0,
+        }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.07em', color: 'var(--ink)' }}>עריכת תבנית — {title}</h3>
+            <div style={{ fontSize: '0.83em', color: 'var(--ink-2)', marginTop: 3 }}>{goal.title}</div>
+          </div>
+          <button onClick={onClose}
+            style={{ background: 'none', border: 'none', fontSize: '1.3em', cursor: 'pointer', color: 'var(--muted)', padding: '0 4px' }}><Icon name="close" size={14} /></button>
+        </div>
+
+        {/* Preset strip */}
+        {!isCategoryTemplate && (
+        <div style={{ padding: '11px 20px', borderBottom: '1px solid var(--paper-2)', flexShrink: 0 }}>
+          <PresetStrip formType={formType} onLoad={loadPreset} />
+        </div>
+        )}
+
+        {/* Two-column main area */}
+        <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+
+          {/* Left: editor */}
+          <div style={{
+            flex: isMobile ? '1 1 100%' : '0 0 56%',
+            overflowY: 'auto',
+            padding: isMobile ? '12px' : '14px 12px 14px 20px',
+            borderLeft: isMobile ? 'none' : '1px solid var(--paper-2)',
+          }}>
+            {isMobile && (
+              <div style={{ marginBottom: 10, textAlign: 'left' }}>
+                <button
+                  type="button"
+                  onClick={() => setPreviewFullscreen(true)}
+                  disabled={!hasColumns}
+                  style={{
+                    background: hasColumns ? 'white' : 'var(--paper)',
+                    border: '1.5px solid var(--line)', borderRadius: 7,
+                    padding: '6px 12px', cursor: hasColumns ? 'pointer' : 'not-allowed',
+                    fontSize: '0.85em', color: hasColumns ? 'var(--ink-2)' : '#cbd5e1', fontWeight: 500,
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5" /></svg> תצוגה מקדימה
+                </button>
+              </div>
+            )}
+            <div style={{ fontSize: '0.76em', color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
+              הגדר טבלאות עם עמודות/שדות. ניתן להוסיף מספר טבלאות — כל אחת תוצג בנפרד בטופס.
+            </div>
+
+            {blocks.map((block, idx) => (
+              <TableBlockEditor
+                key={block.id}
+                block={block}
+                idx={idx}
+                total={blocks.length}
+                onChange={b => updateBlock(idx, b)}
+                onRemove={() => removeBlock(idx)}
+                onMoveUp={() => moveBlock(idx, -1)}
+                onMoveDown={() => moveBlock(idx, 1)}
+                isMobile={isMobile}
+              />
+            ))}
+
+            <button type="button" onClick={addBlock}
+              style={{
+                width: '100%', padding: '9px', border: '2px dashed #D6CBF4', borderRadius: 9,
+                background: '#fafbff', color: 'var(--pen)', cursor: 'pointer', fontSize: '0.87em', fontWeight: 600,
+              }}>
+              + הוסף טבלה
+            </button>
+          </div>
+
+          {/* Right: live preview — hidden on mobile */}
+          {!isMobile && (
+          <div style={{
+            flex: '0 0 44%',
+            overflowY: 'auto',
+            padding: '14px 20px 14px 12px',
+            background: 'var(--paper)',
+          }}>
+            {/* Preview header with fullscreen button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ fontSize: '0.74em', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                תצוגה מקדימה
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewFullscreen(true)}
+                title="הגדל תצוגה מקדימה"
+                style={{
+                  background: 'white', border: '1.5px solid var(--line)', borderRadius: 6,
+                  padding: '3px 9px', cursor: 'pointer', fontSize: '0.82em', color: 'var(--ink-2)',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5" /></svg> הגדל
+              </button>
+            </div>
+            <LivePreviewPanel blocks={blocks} title={title} />
+          </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ borderTop: '1px solid var(--line)', flexShrink: 0 }}>
+          {/* Row 1: Preset options (hidden for category templates) */}
+          {!isCategoryTemplate && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '8px 20px',
+            background: 'var(--paper)', borderBottom: '1px solid var(--paper-2)',
+          }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.82em', color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>
+              <input
+                type="checkbox"
+                checked={saveAsPreset}
+                onChange={e => setSaveAsPreset(e.target.checked)}
+                style={{ accentColor: 'var(--pen)' }}
+              />
+              שמור כתבנית מוכנה
+            </label>
+            {saveAsPreset && (
+              <input
+                type="text"
+                value={presetName}
+                onChange={e => setPresetName(e.target.value)}
+                placeholder="שם לתבנית..."
+                style={{
+                  padding: '4px 10px', border: '1.5px solid var(--line)', borderRadius: 6,
+                  fontSize: '0.82em', outline: 'none', flex: '0 1 200px', minWidth: 100,
+                  fontFamily: 'inherit', background: 'white',
+                }}
+              />
+            )}
+            <div style={{ flex: 1 }} />
+            {hasColumns && hasExistingTemplate && (
+              <button
+                type="button"
+                onClick={() => setShowApplyModal(true)}
+                style={{
+                  background: 'none', border: 'none', color: '#1d4ed8',
+                  fontSize: '0.82em', padding: '4px 0', cursor: 'pointer',
+                  fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'underline',
+                }}
+              >
+                החל על מטרות נוספות
+              </button>
+            )}
+          </div>
+          )}
+
+          {/* Row 2: Action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px' }}>
+            {hasExistingTemplate && !confirmDelete && (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                style={{ background: 'none', border: 'none', color: 'var(--red)', fontSize: '0.82em', padding: '4px 0', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap' }}
+              >
+                מחק תבנית
+              </button>
+            )}
+            {confirmDelete && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.83em', color: 'var(--red)' }}>
+                <span>למחוק?</span>
+                <button type="button" className="btn-danger btn-small" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+                  {deleteMutation.isPending ? '...' : 'כן'}
+                </button>
+                <button type="button" className="btn-secondary btn-small" onClick={() => setConfirmDelete(false)}>לא</button>
+              </div>
+            )}
+            <div style={{ flex: 1 }} />
+            {(saveMutation.isError || deleteMutation.isError) && (
+              <div style={{ color: 'var(--red)', fontSize: '0.82em' }}>
+                {((saveMutation.error || deleteMutation.error) as Error)?.message || 'שגיאה'}
+              </div>
+            )}
+            <button type="button" className="btn-secondary" onClick={onClose}>ביטול</button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || !hasColumns}
+            >
+              {saveMutation.isPending ? 'שומר...' : 'שמור תבנית'}
+            </button>
+          </div>
+        </div>
+
+        {/* Apply to goals modal */}
+        {showApplyModal && (
+          <ApplyToGoalsModal
+            sourceGoal={goal}
+            formType={formType}
+            currentBlocks={blocks}
+            onClose={() => setShowApplyModal(false)}
+          />
+        )}
+
+        {/* Update linked goals prompt */}
+        {showUpdateLinked && (
+          <div className="modal-overlay" style={{ zIndex: 300 }} onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowUpdateLinked(null); onClose(); } }}>
+            <div style={{
+              background: 'white', borderRadius: 14, padding: '28px 24px', textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxWidth: 420, width: '90vw',
+            }}>
+              <div style={{ fontSize: '1.05em', fontWeight: 600, color: 'var(--ink)', marginBottom: 8 }}>
+                {showUpdateLinked.length} מטרות נוספות משתמשות בתבנית זו
+              </div>
+              <div style={{ fontSize: '0.88em', color: 'var(--ink-2)', marginBottom: 18 }}>
+                לעדכן גם אותן?
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => { setShowUpdateLinked(null); onClose(); }}
+                >
+                  לא, רק מטרה זו
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => updateLinkedMutation.mutate(showUpdateLinked)}
+                  disabled={updateLinkedMutation.isPending}
+                >
+                  {updateLinkedMutation.isPending ? 'מעדכן...' : `כן, עדכן ${showUpdateLinked.length} מטרות`}
+                </button>
+              </div>
+              {updateLinkedMutation.isError && (
+                <div style={{ color: 'var(--red)', fontSize: '0.82em', marginTop: 10 }}>שגיאה בעדכון</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

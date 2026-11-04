@@ -1,0 +1,64 @@
+html.nb .td { display: flex; flex-direction: column; gap: 22px; }
+html.nb .td-hello { display: flex; flex-direction: column; gap: 6px; }
+html.nb .td-date { margin: 0; color: var(--muted); font-size: 16px; }
+html.nb .td-stickers { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+html.nb .td-stickers .nb-sticker { min-height: 40px; }
+
+html.nb .td-grid { display: grid; gap: 26px; }
+html.nb .td-col { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+
+/* what now */
+html.nb .td-now { padding: 22px 18px 18px; display: flex; flex-direction: column; gap: 16px; }
+html.nb .td-now-title { font-size: 26px; margin: 0; }
+html.nb .td-now-who { display: flex; align-items: center; gap: 14px; }
+html.nb .td-now-who > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+html.nb .td-now-who b { font-family: var(--f-display); font-weight: 400; font-size: 26px; line-height: 1.1; }
+html.nb .td-now-who span { color: var(--ink-2); font-size: 15px; }
+html.nb .td-state { align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 13px; transform: rotate(3deg); border: 2px solid #fff; box-shadow: 0 2px 5px rgba(42,33,64,.12); }
+html.nb .td-state.st-live { background: var(--m-mint); }
+html.nb .td-state.st-needs-form { background: var(--m-pink); }
+html.nb .td-state.st-next { background: var(--m-sky); }
+html.nb .td-now-actions { display: flex; flex-direction: column; gap: 10px; }
+html.nb .td-live { display: flex; align-items: center; gap: 12px; }
+html.nb .td-live-track { flex: 1; height: 10px; border-radius: 10px; background: var(--line-2); overflow: hidden; }
+html.nb .td-live-track i { display: block; height: 100%; background: var(--m-mint); border-inline-end: 3px solid var(--green); border-radius: 10px; }
+html.nb .td-live span { font-size: 14px; color: var(--ink-2); }
+html.nb .td-free { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+html.nb .td-free p { margin: 0; font-size: 18px; }
+
+/* day checklist */
+html.nb .td-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+html.nb .td-row {
+  display: grid; grid-template-columns: 30px 52px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-height: 62px; border-bottom: 1.5px dashed var(--line);
+}
+html.nb .td-check { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--ink-2); display: grid; place-items: center; color: #fff; }
+html.nb .td-row.st-done .td-check { background: var(--pen); border-color: var(--pen); }
+html.nb .td-time { font-weight: 700; color: var(--ink-2); font-size: 15px; }
+html.nb .td-what { display: flex; flex-direction: column; text-decoration: none; color: var(--ink); min-width: 0; }
+html.nb .td-what b { font-size: 17px; }
+html.nb .td-what span { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.nb .td-row.st-done .td-what b { text-decoration: line-through; text-decoration-color: rgba(42,33,64,.35); text-decoration-thickness: 2px; }
+html.nb .td-row.st-live { background: linear-gradient(100deg, transparent 0%, rgba(255,196,221,.55) 3%, rgba(255,196,221,.55) 97%, transparent 100%); border-radius: 10px; }
+html.nb .td-tag { font-size: 13.5px; color: var(--muted); font-family: var(--f-body); }
+html.nb .td-row.st-live .td-tag { color: var(--ink); font-weight: 600; }
+html.nb .td-row-cta {
+  min-height: 38px; padding: 0 14px; border-radius: 12px; display: inline-grid; place-items: center;
+  background: var(--m-yellow); color: var(--ink); font-weight: 700; text-decoration: none; font-size: 14.5px;
+  border: 2px solid #fff; box-shadow: 0 2px 5px rgba(42,33,64,.14); transform: rotate(-2deg);
+}
+html.nb .td-empty { padding: 18px 0; color: var(--muted); font-size: 17px; }
+
+/* kids */
+html.nb .td-kids { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+html.nb .td-kid {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px 12px;
+  background: var(--card); border: 1.5px solid var(--line); border-radius: var(--r-md);
+  text-decoration: none; color: var(--ink); box-shadow: var(--shadow-paper);
+}
+html.nb .td-kid b { font-size: 15.5px; margin-top: 2px; }
+html.nb .td-kid small { color: var(--muted); font-size: 12.5px; }
+
+@media (min-width: 900px) {
+  html.nb .td-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+}

@@ -1,0 +1,865 @@
+// Practitioner types
+export type PractitionerType = 'מטפלת' | 'מנתחת התנהגות' | 'מדריכת הורים';
+
+export interface Practitioner {
+  id: string;
+  name: string;
+  mobile?: string;
+  email?: string;
+  type: PractitionerType;
+  isSuperAdmin?: boolean;
+  createdAt: Date;
+  createdBy?: string;
+}
+
+export interface KidPractitioner {
+  id: string;
+  kidId: string;
+  practitionerId: string;
+  role: 'therapist' | 'admin';
+  addedAt: Date;
+  addedBy: string;
+}
+
+// Parent type
+export interface Parent {
+  id: string;
+  kidId: string;
+  name: string;
+  mobile?: string;
+  email?: string;
+  createdAt: Date;
+}
+
+// ==================== TREATMENT AGREEMENT ====================
+// A single signable agreement per kid, signed by the centre admin and by each
+// registered parent. Signing is one-way: a signer may re-draw their own
+// signature, but no one can take a signature off the document.
+
+export type AgreementStatus = 'draft' | 'active';
+
+/** Default description of the centre's signer; the admin can change it. */
+export const DEFAULT_ADMIN_ROLE = 'מדריכת הורים ומנתחת התנהגות';
+
+export interface AgreementSignature {
+  signerType: 'admin' | 'parent';
+  signerId: string;
+  signerName: string;
+  signerRole?: string;
+  /** PNG data URL drawn on the signature pad. */
+  signatureImage: string;
+  /** When this party first signed — kept even if they re-draw. */
+  signedAt: Date;
+  updatedAt: Date;
+  /** 1 on first signing, incremented each time the signature is re-drawn. */
+  revision: number;
+}
+
+export interface Agreement {
+  id: string;
+  kidId: string;
+  adminId: string;
+  title: string;
+  content: string;
+  /** Notice period, in weeks, for either party to end the treatment. */
+  noticeWeeks: number;
+  /** How the centre's signer is described, e.g. "מדריכת הורים ומנתחת התנהגות". */
+  adminRole: string;
+  startDate: string | null;
+  status: AgreementStatus;
+  /** Keyed `admin:<adminId>` / `parent:<parentId>` — one slot per signer. */
+  signatures: Record<string, AgreementSignature>;
+  /** When each parent was last emailed the agreement, keyed by parent id (ISO). */
+  parentEmails?: Record<string, string>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** The slot a given signer writes into. */
+export function signatureSlotKey(signerType: 'admin' | 'parent', signerId: string): string {
+  return `${signerType}:${signerId}`;
+}
+
+export function agreementIsSigned(agreement: Agreement | null | undefined): boolean {
+  return !!agreement && Object.keys(agreement.signatures || {}).length > 0;
+}
+
+// Goal form template types (for תוכנית למידה and איסוף נתונים)
+export type GoalColumnType = 'text' | 'date' | 'options' | 'checkbox' | 'repeated';
+
+export interface GoalColumnDef {
+  id: string;
+  label: string;
+  description?: string;
+  type: GoalColumnType;
+  options?: string[];
+  multiSelect?: boolean;      // for 'options' type: allow selecting multiple values
+  wide?: boolean; // kept for backward compat with old stored data, not shown in UI
+  // "repeated" column: splits into N mini-cells under one header
+  repeatCount?: number;       // number of occurrences (e.g. 10)
+  innerType?: GoalColumnType; // type each mini-cell uses (not nested 'repeated')
+}
+
+// A table block — the fundamental unit of a form template.
+// vertical: fields displayed as rows (label | value) — one row of data per block
+// horizontal: fields displayed as columns — multiple rows of data per block
+export type GoalTableType = 'vertical' | 'horizontal';
+
+export interface GoalTableBlock {
+  id: string;
+  title?: string;
+  type: GoalTableType;
+  columns: GoalColumnDef[];
+}
+
+export interface GoalFormTemplate {
+  tables: GoalTableBlock[];
+  updatedAt?: Date;
+}
+
+// A single row of filled data (columnId → value string)
+export type GoalFormRow = Record<string, string>;
+
+/** Storage key for occurrence `i` of a repeated column */
+export function repeatedKey(colId: string, i: number): string {
+  return `${colId}__${i}`;
+}
+
+/** Create an empty GoalFormRow, expanding repeated columns into sub-keys */
+export function emptyRowForColumns(columns: GoalColumnDef[]): GoalFormRow {
+  const row: GoalFormRow = {};
+  for (const col of columns) {
+    if (col.type === 'repeated' && col.repeatCount) {
+      for (let i = 0; i < col.repeatCount; i++) row[repeatedKey(col.id, i)] = '';
+    } else {
+      row[col.id] = '';
+    }
+  }
+  return row;
+}
+
+// Per-table filled data (rows can be 1 for vertical, N for horizontal)
+export interface TableBlockData {
+  tableId: string;
+  rows: GoalFormRow[];
+}
+
+export interface KidGoalLearningPlan {
+  id: string;
+  kidId: string;
+  goalLibraryId: string;
+  goalTitle: string;
+  tables: TableBlockData[];
+  updatedAt: Date;
+  updatedBy: string;
+}
+
+export interface LearningPlanVersion {
+  id: string;
+  tables: TableBlockData[];
+  goalTitle: string;
+  createdAt: Date;
+  createdBy: string;
+  versionLabel?: string;
+}
+
+// ---- Category-level LP templates ----
+
+export const CATEGORY_LP_PREFIX = 'cat__';
+
+export function categoryLpId(categoryId: GoalCategoryId): string {
+  return `${CATEGORY_LP_PREFIX}${categoryId}`;
+}
+
+export function isCategoryLpId(goalLibraryId: string): boolean {
+  return goalLibraryId.startsWith(CATEGORY_LP_PREFIX);
+}
+
+export function categoryIdFromLpId(goalLibraryId: string): GoalCategoryId {
+  return goalLibraryId.slice(CATEGORY_LP_PREFIX.length) as GoalCategoryId;
+}
+
+export interface CategoryLpTemplate {
+  id: string;              // = categoryId
+  tables: GoalTableBlock[];
+  updatedAt?: Date;
+}
+
+export interface KidGoalDataEntry {
+  id: string;
+  kidId: string;
+  goalLibraryId: string;
+  goalTitle: string;
+  sessionDate: Date;
+  practitionerId?: string;
+  tables: TableBlockData[];
+  status?: 'pending' | 'filled';
+  sessionFormId?: string;
+  createdAt: Date;
+}
+
+// ---- Backward-compat normalizers ----
+// Old Firestore data may have columns/rows/row at top level instead of tables.
+
+export function normalizeTemplate(t: GoalFormTemplate | null | undefined): GoalTableBlock[] {
+  if (!t) return [];
+  if (t.tables && t.tables.length > 0) return t.tables;
+  // old format: flat columns array
+  const oldCols = (t as unknown as Record<string, unknown>).columns as GoalColumnDef[] | undefined;
+  if (oldCols && oldCols.length > 0) {
+    return [{ id: 'default', title: '', type: 'horizontal', columns: oldCols }];
+  }
+  return [];
+}
+
+export function normalizeLpData(plan: KidGoalLearningPlan | null): TableBlockData[] {
+  if (!plan) return [];
+  if (plan.tables && plan.tables.length > 0) return plan.tables;
+  const oldRows = (plan as unknown as Record<string, unknown>).rows as GoalFormRow[] | undefined;
+  if (oldRows) return [{ tableId: 'default', rows: oldRows }];
+  return [];
+}
+
+export function normalizeDcEntry(entry: KidGoalDataEntry): TableBlockData[] {
+  if (entry.tables && entry.tables.length > 0) return entry.tables;
+  const oldRow = (entry as unknown as Record<string, unknown>).row as GoalFormRow | undefined;
+  if (oldRow) return [{ tableId: 'default', rows: [oldRow] }];
+  return [];
+}
+
+// ---- Built-in presets ----
+// Based on reference documents: תוכניתלמידה1.docx and דף איסוף.docx / דף 10.docx
+
+export const PRESET_LP_PROGRAM: GoalFormTemplate = {
+  tables: [
+    {
+      id: 'lp_meta',
+      title: 'פרטי תוכנית',
+      type: 'vertical',
+      columns: [
+        { id: 'child_name', label: 'שם הילד', type: 'text' },
+        { id: 'therapist_name', label: 'שם המטפלת', type: 'text' },
+        { id: 'goal_desc', label: 'תיאור המטרה', type: 'text' },
+        { id: 'general_instructions', label: 'הוראות כלליות', type: 'text' },
+      ],
+    },
+    {
+      id: 'lp_program',
+      title: 'תוכנית',
+      type: 'horizontal',
+      columns: [
+        { id: 'item', label: 'פריט / פעילות', type: 'text' },
+        { id: 'stimulus', label: 'גירוי', type: 'text' },
+        { id: 'response', label: 'תגובה', type: 'text' },
+        { id: 'prompts', label: 'רמזים', type: 'options', options: ['פיזי מלא', 'פיזי חלקי', 'מילולי', 'עצמאי'] },
+        { id: 'datePresented', label: 'תאריך הצגה', type: 'date' },
+        { id: 'dateAcquired', label: 'תאריך רכישה', type: 'date' },
+        { id: 'mastered', label: 'מסטר', type: 'options', options: ['כן', 'לא', 'חלקי'] },
+      ],
+    },
+  ],
+};
+
+export const PRESET_DC_ACTIVITY: GoalFormTemplate = {
+  tables: [
+    {
+      id: 'dc_activity',
+      title: 'פרטי פגישה',
+      type: 'horizontal',
+      columns: [
+        { id: 'activity', label: 'מה עשינו', type: 'text' },
+        { id: 'cooperation', label: 'שיתוף פעולה', type: 'options', options: ['מלא', 'חלקי', 'לא שיתף פעולה'] },
+        { id: 'assistance', label: 'כמה סייעתי', type: 'options', options: ['עצמאי', 'סיוע חלקי', 'סיוע מלא'] },
+        { id: 'difficulties', label: 'קשיים', type: 'text' },
+        { id: 'successes', label: 'הצלחות', type: 'text' },
+      ],
+    },
+  ],
+};
+
+export const PRESET_DC_DTT: GoalFormTemplate = {
+  tables: [
+    {
+      id: 'dc_dtt',
+      title: 'ניסויים',
+      type: 'horizontal',
+      columns: [
+        { id: 'item', label: 'הפריט שהוצג', type: 'text' },
+        { id: 'response', label: 'תגובת הילד', type: 'options', options: ['+', 'ר'] },
+        { id: 'notes', label: 'הערות', type: 'text' },
+      ],
+    },
+  ],
+};
+
+// Goal types
+export type GoalCategoryId =
+  | 'motor-gross'
+  | 'motor-fine'
+  | 'language'
+  | 'play-social'
+  | 'cognitive'
+  | 'adl'
+  | 'general';
+
+export interface GoalCategory {
+  id: GoalCategoryId;
+  name: string;
+  nameHe: string;
+  order: number;
+  color: string;
+}
+
+export interface Goal {
+  id: string;
+  kidId: string;
+  categoryId: GoalCategoryId;
+  title: string;
+  isActive: boolean;
+  createdAt: Date;
+  deactivatedAt?: Date;
+  libraryItemId?: string;
+  learningPlanTemplate?: GoalFormTemplate;
+  dataCollectionTemplate?: GoalFormTemplate;
+}
+
+export interface GoalLibraryItem {
+  id: string;
+  title: string;
+  categoryId: GoalCategoryId;
+  usageCount: number;
+  activeCount?: number;
+  isOrphan?: boolean;
+  learningPlanTemplate?: GoalFormTemplate;
+  dataCollectionTemplate?: GoalFormTemplate;
+  lpPresetName?: string | null;
+  dcPresetName?: string | null;
+  lpPresetSourceId?: string | null;
+  dcPresetSourceId?: string | null;
+}
+
+// Session types
+export type SessionStatus = 'scheduled' | 'pending_form' | 'completed' | 'missed';
+export type SessionType = 'therapy' | 'meeting' | 'guidance';
+
+export interface Session {
+  id: string;
+  kidId: string | null;
+  therapistId?: string;
+  scheduledDate: Date;
+  type?: SessionType;
+  status: SessionStatus;
+  formId?: string;
+  customTitle?: string | null;
+  title?: string | null;
+  notes?: string | null;
+  adminId?: string | null;
+  createdAt: Date;
+}
+
+// Meeting form types
+export interface MeetingAttendee {
+  id: string;
+  name: string;
+  type: 'parent' | 'practitioner';
+}
+
+export type MeetingFormStatus = 'in_progress' | 'completed';
+
+// Who can see a meeting (type פגישה). Set by the center admin. Default: everyone.
+// Absent/undefined is treated as visible to all (backward compatible).
+export interface MeetingVisibility {
+  parents: boolean;
+  therapists: boolean;
+}
+
+export interface MeetingForm {
+  id: string;
+  sessionId?: string;
+  kidId: string;
+  sessionDate: Date;
+  visibility?: MeetingVisibility;
+  attendees: MeetingAttendee[];
+  goalsWorkedOn: GoalSnapshot[];
+  additionalGoals: string[];
+  generalNotes: string;
+  behaviorNotes: string;
+  adl: string;
+  grossMotorPrograms: string;
+  programsOutsideRoom: string;
+  learningProgramsInRoom: string;
+  tasks: string;
+  status?: MeetingFormStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Meeting draft — free-form rich-text notes taken during a meeting,
+// independent of the structured meeting form. Keyed per (adminId, formId|sessionId|adhoc).
+export interface MeetingDraft {
+  id: string;
+  adminId: string;
+  kidId: string | null;
+  sessionId: string | null;
+  formId: string | null;
+  sessionDate: Date | null;
+  key: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Summary types
+export interface Summary {
+  id: string;
+  kidId: string;
+  adminId: string;
+  title: string;
+  content: string;
+  fromDate: Date;
+  toDate: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Form types
+export interface GoalSnapshot {
+  goalId: string;
+  goalTitle: string;
+  categoryId: GoalCategoryId;
+}
+
+export interface SessionForm {
+  id: string;
+  sessionId?: string;
+  kidId: string;
+  practitionerId: string;
+  sessionDate: Date;
+
+  // Structured fields
+  cooperation: number; // 10-100
+  sessionDuration: number; // minutes
+  sittingDuration: number; // minutes
+
+  // Rich text fields (HTML)
+  mood: string;
+  concentrationLevel: string;
+  newReinforcers: string;
+  wordsProduced: string;
+  breakActivities: string;
+  endOfSessionActivity: string;
+  successes: string;
+  difficulties: string;
+  notes: string;
+
+  // Goals
+  goalsWorkedOn: GoalSnapshot[];
+  additionalGoals: string[];
+
+  // Custom fields from dynamic template
+  customFields?: Record<string, string | number>;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ==================== Board Builder Types ====================
+
+export type BoardItemType = 'header' | 'task' | 'bank' | 'progress' | 'goal';
+export type TaskType = 'regular' | 'bonus' | 'calm-down';
+export type HeaderSize = 'small' | 'medium' | 'large';
+export type CoinStyle = 'points' | 'shekel' | 'dollar' | 'custom';
+export type ColorSchema = 'purple' | 'pink' | 'blue' | 'dark';
+export type CalmDownActivity = 'paint' | 'bubbles' | 'xylophone' | 'breathing' | 'scooter';
+
+export interface BoardTaskData {
+  id: number;
+  icon: string;
+  title: string;
+  type: TaskType;
+  requiresTestimony?: boolean;
+  trackTime?: boolean;
+  activeDays?: number[];
+  activityType?: CalmDownActivity;
+}
+
+export interface BoardLayoutItem {
+  id: number;
+  type: BoardItemType;
+  // Header
+  size?: HeaderSize;
+  text?: string;
+  // Bank
+  label?: string;
+  // Progress
+  title?: string;
+  // Task
+  taskType?: TaskType;
+  taskData?: BoardTaskData;
+  // Goal
+  icon?: string;
+  pointsRequired?: number;
+}
+
+export interface BoardLayout {
+  items: BoardLayoutItem[];
+}
+
+export interface BoardSettings {
+  dailyReward: number;
+  coinStyle: CoinStyle;
+  coinImageName?: string;
+  colorSchema: ColorSchema;
+  showDino: boolean;
+  soundsEnabled: boolean;
+  builderPin: string;
+  kidDescription: string;
+  behaviorGoals: string;
+}
+
+// Kid type (from existing collection)
+export interface Kid {
+  id: string;
+  name: string;
+  age?: number;
+  gender?: 'boy' | 'girl';
+  imageName?: string;
+  createdBy?: string;
+  adminId?: string;
+  // Board data (present in full Firestore document)
+  totalMoney?: number;
+  tasks?: BoardTaskData[];
+  dailyReward?: number;
+  completedTasks?: number[];
+  completedBonusTasks?: number[];
+  // Board layout & settings
+  boardLayout?: BoardLayout;
+  headerLabel?: string;
+  savingsLabel?: string;
+  regularTasksHeader?: string;
+  bonusTasksHeader?: string;
+  calmDownHeader?: string;
+  coinStyle?: CoinStyle;
+  coinImageName?: string;
+  colorSchema?: ColorSchema;
+  showDino?: boolean;
+  soundsEnabled?: boolean;
+  builderPin?: string;
+  kidDescription?: string;
+  behaviorGoals?: string;
+  personalInfo?: string;
+  // Mini-games assigned to this kid (see src/games/registry.ts)
+  games?: KidGameEntry[];
+}
+
+// ==================== MINI-GAMES ====================
+// Standalone games launched from a kid's page. They are independent of the
+// board's tasks/coins: a game is its own reward loop, run by the adult in the
+// room. Definitions live in src/games/registry.ts.
+
+export type GameConfigValue = string | number | boolean;
+export type GameConfigValues = Record<string, GameConfigValue>;
+
+/** What a kid has been assigned, stored on `kids/{kidId}.games`. */
+export interface KidGameEntry {
+  id: string;
+  enabled: boolean;
+  config: GameConfigValues;
+}
+
+export interface GameSettingOption {
+  value: string;
+  label: string;
+}
+
+/** One configurable option, rendered generically into a settings form. */
+export interface GameSetting {
+  key: string;
+  type: 'text' | 'number' | 'select' | 'checkbox';
+  label: string;
+  default: GameConfigValue;
+  help?: string;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  options?: GameSettingOption[];
+}
+
+export interface GameDefinition {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  settings: GameSetting[];
+}
+
+/** The contract every game component implements. */
+export interface GameComponentProps {
+  config: GameConfigValues;
+  state: GamePlayState;
+  /** False in parent view — the game is playable but settings are locked. */
+  canEdit: boolean;
+  onSaveState: (state: GamePlayState) => void;
+  onSaveConfig: (config: GameConfigValues) => void;
+  onExit: () => void;
+}
+
+/** Play state, written by the game itself into `kidGames/{kidId}`. */
+export interface GamePlayState {
+  placed?: number[];
+  tray?: number[];
+  towersBuilt?: number;
+  updatedAt?: string;
+}
+
+export type KidGameState = Record<string, GamePlayState>;
+
+// ==================== DAILY REPORT (דיווח יומי) ====================
+// Mirrors the paper daily form. Field meanings live in utils/dailyReport.ts.
+
+/** Paper marks: "+" did it right away, "-" didn't (note the help given), "r" = ר. */
+export type ReportMark = '+' | '-' | 'r' | '';
+
+export interface MarkValue {
+  m?: ReportMark;
+  /** What help was given / which instructions — free text. */
+  note?: string;
+}
+
+export interface LessonReport {
+  id: string;
+  title: string;
+  mood?: 'good' | 'ok' | 'hard' | '';
+  /** Cooperation during the lesson, 0–100. The precise measure beside the smiley. */
+  cooperationPct?: number;
+  summary?: string;
+  /** התארגנות לשיעור + תחילת עבודה */
+  start?: MarkValue;
+  independent?: { pace?: MarkValue; quality?: MarkValue; duration?: string; general?: MarkValue; specific?: MarkValue };
+  frontal?: { attention?: MarkValue; duration?: string; general?: MarkValue; specific?: MarkValue };
+  aide?: { cooperation?: MarkValue; duration?: string; instructions?: MarkValue };
+  academic?: string;
+  attention?: MarkValue;
+  compliance?: MarkValue;
+  notes?: string;
+  /** Which motivation-plan components (1–5) earned reinforcement. */
+  motivation?: { got?: number[]; notes?: string };
+}
+
+export interface BreakReport {
+  id: string;
+  time?: string;
+  duration?: string;
+  type?: string;
+  name?: string;
+  foodWhat?: string;
+  foodIndependent?: string;
+  activities?: string[];
+  activityNote?: string;
+  social?: string;
+  /** צ'ופר על התנהגות חברתית חיובית */
+  treat?: MarkValue;
+  /** התנהגות לא חברתית — how many times */
+  nonSocialCount?: number;
+  unexpected?: boolean;
+  support?: boolean;
+  supportNote?: string;
+  notes?: string;
+}
+
+export interface AbcReport {
+  id: string;
+  time?: string;
+  location?: string;
+  context?: string;
+  antecedents?: string[];
+  a?: string;
+  withWhom?: string;
+  behaviors?: string[];
+  b?: string;
+  intensity?: string;
+  duration?: string;
+  toward?: string;
+  consequences?: string[];
+  c?: string;
+  byWhom?: string;
+  notes?: string;
+}
+
+export interface DailyReport {
+  date: string;
+  reporter: string;
+  lessons: LessonReport[];
+  breaks: BreakReport[];
+  abc: AbcReport[];
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface DailyReportSummary {
+  date: string;
+  reporter: string;
+  lessons: number;
+  breaks: number;
+  abc: number;
+  updatedAt: string | null;
+}
+
+export type ReportSection = 'lessons' | 'breaks' | 'abc';
+
+// ==================== DAILY AGENDA (סדר יום) ====================
+
+export type AgendaPeriod = 'morning' | 'noon' | 'evening';
+
+export interface AgendaItem {
+  id: string;
+  title: string;
+  /** An emoji. */
+  icon: string;
+  /** Optional "HH:MM". */
+  time?: string;
+}
+
+export type AgendaDayPlan = Record<AgendaPeriod, AgendaItem[]>;
+
+export interface AgendaDay {
+  /** null → the day follows the weekly routine. */
+  items: AgendaDayPlan | null;
+  /** Ids of items ticked off that day. */
+  done: string[];
+}
+
+export interface KidAgenda {
+  /** Keyed by weekday, 0 = Sunday. */
+  routine: Record<number, AgendaDayPlan>;
+  /** Keyed by "YYYY-MM-DD"; only dates with something saved. */
+  days: Record<string, AgendaDay>;
+}
+
+// Super admin kid management
+export interface KidWithAdmin extends Kid {
+  adminName?: string;
+}
+
+export interface GroupedKidsResponse {
+  myKids: Kid[];
+  orphanKids: Kid[];
+  otherAdminKids: KidWithAdmin[];
+}
+
+// Form Template types
+export type FormFieldType = 'text' | 'number' | 'percentage';
+
+export interface FormTemplateSection {
+  id: string;
+  label: string;
+  type: FormFieldType;
+  order: number;
+  isDefault?: boolean;
+}
+
+export interface FormTemplate {
+  sections: FormTemplateSection[];
+  updatedAt?: Date;
+}
+
+export const DEFAULT_FORM_TEMPLATE: FormTemplateSection[] = [
+  { id: 'cooperation', label: 'שיתוף פעולה', type: 'percentage', order: 1, isDefault: true },
+  { id: 'sessionDuration', label: 'משך הטיפול (דקות)', type: 'number', order: 2, isDefault: true },
+  { id: 'sittingDuration', label: 'משך ישיבה (דקות)', type: 'number', order: 3, isDefault: true },
+  { id: 'mood', label: 'מצב רוח', type: 'text', order: 4, isDefault: true },
+  { id: 'concentrationLevel', label: 'רמת ריכוז / עייפות', type: 'text', order: 5, isDefault: true },
+  { id: 'newReinforcers', label: 'מחזקים (חדשים)', type: 'text', order: 6, isDefault: true },
+  { id: 'wordsProduced', label: 'מילים שהפיק', type: 'text', order: 7, isDefault: true },
+  { id: 'breakActivities', label: 'פעילות בהפסקות', type: 'text', order: 8, isDefault: true },
+  { id: 'endOfSessionActivity', label: 'פעילות סוף שיעור', type: 'text', order: 9, isDefault: true },
+  { id: 'successes', label: 'הצלחות', type: 'text', order: 10, isDefault: true },
+  { id: 'difficulties', label: 'קשיים', type: 'text', order: 11, isDefault: true },
+  { id: 'notes', label: 'הערות', type: 'text', order: 12, isDefault: true },
+];
+
+// Known field IDs for backward compatibility
+export const KNOWN_FIELD_IDS = DEFAULT_FORM_TEMPLATE.map(s => s.id);
+
+// Notification types
+export interface Notification {
+  id: string;
+  kidId: string;
+  adminId: string;
+  message: string;
+  createdAt: Date;
+  recipientType: 'practitioner' | 'parent';
+  recipientId: string;
+  recipientName: string;
+  read: boolean;
+  readAt?: Date;
+  dismissed?: boolean;
+  dismissedByAdmin?: boolean;
+}
+
+// Board Request types
+export interface BoardRequest {
+  id: string;
+  childName: string;
+  parentName?: string;
+  email?: string;
+  phone?: string;
+  age?: number;
+  gender?: 'boy' | 'girl';
+  childImage?: string;
+  childDescription?: string;
+  tasks?: string;
+  behaviorGoals?: string;
+  rewards?: string;
+  additionalNotes?: string;
+  dailyReward?: number;
+  coinStyle?: 'points' | 'shekel' | 'dollar';
+  colorSchema?: 'purple' | 'pink' | 'blue' | 'dark';
+  showDino?: boolean;
+  soundsEnabled?: boolean;
+  status: 'pending' | 'completed';
+  createdBoardId?: string;
+  inviteToken?: string;
+  submittedAt?: { _seconds: number; _nanoseconds: number };
+}
+
+// Subscription types
+export type SubscriptionPlan = 'trial' | 'pro';
+export type SubscriptionStatus = 'active' | 'expired' | 'cancelled';
+export type BillingCycle = 'monthly' | 'yearly';
+
+export interface Subscription {
+  adminId: string;
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  trialStartDate: Date;
+  trialEndDate: Date;
+  proStartDate?: Date;
+  proEndDate?: Date;
+  billingCycle?: BillingCycle;
+  priceILS?: number;
+  paypalSubscriptionId?: string;
+  paypalPayerId?: string;
+  lastPaymentDate?: Date;
+  nextPaymentDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// API response types
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+// Goal categories constant
+export const GOAL_CATEGORIES: GoalCategory[] = [
+  { id: 'motor-gross', name: 'Gross Motor', nameHe: 'מוטוריקה גסה', order: 1, color: '#4CAF50' },
+  { id: 'motor-fine', name: 'Fine Motor', nameHe: 'מוטוריקה עדינה', order: 2, color: '#2196F3' },
+  { id: 'language', name: 'Language/Communication', nameHe: 'שפה/תקשורת', order: 3, color: '#FF9800' },
+  { id: 'play-social', name: 'Play/Social', nameHe: 'משחק/חברה', order: 4, color: '#E91E63' },
+  { id: 'cognitive', name: 'Cognitive', nameHe: 'קוגנטיבי', order: 5, color: '#9C27B0' },
+  { id: 'adl', name: 'ADL', nameHe: 'ADL', order: 6, color: '#00BCD4' },
+  { id: 'general', name: 'General', nameHe: 'כללי', order: 7, color: '#607D8B' },
+];
