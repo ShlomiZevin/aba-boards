@@ -486,19 +486,21 @@ so nothing depends on the browser. The UI is a drawer in `ChatCenter.tsx` (`comp
 
 ---
 
-## Build Models (מודלים לבנייה) — super admin only
+## Build Models (מודלים לבנייה) — all users
 
 Step-by-step Lego / magnet build guides, produced by a separate Claude session ("ABBA") in
 `../reports/nevo-models/` (`<id>/index.html` self-contained 3D guide, `<id>/thumb.png`,
 `concepts/`, `models-manifest.json`; `_src/` is build source and is never served). **Don't edit the
 model pages** — they are regenerated from `_src`.
 
-- Page: `/models` (`pages/BuildModels.tsx`), sidebar entry inside the `isSuperAdmin` block. Grid from the
+- Page in all three views: `/models` (admin sidebar), `/t/:practitionerId/models` (therapist sidebar),
+  `/p/:kidId/models` (button in the parent's kid header) — `pages/BuildModels.tsx`. Grid from the
   manifest (filter Lego / magnets), opens a model full-screen in a new tab (made for the child's tablet).
 - `MODELS_BASE` in `api/client.ts`: dev → `/api/nevo-models` (Express serves the folder live, blocks
   `_src`); prod → `/build-models-n7q4` on Firebase Hosting, copied by `deploy.js` on every deploy.
   **New models reach production only with a hosting deploy.** The URLs are public but unlisted.
-- Each model's 🏠 link goes to `../index.html`, which redirects to `/therapy/models`.
+- Each model's 🏠 link goes to `../index.html`, which returns to the models page saved in
+  `localStorage.models_home` (set by `BuildModels`, so each view gets back to its own page).
 
 ---
 

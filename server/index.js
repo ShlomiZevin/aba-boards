@@ -23,11 +23,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Build-model guides (Lego / magnets) — produced by the ABBA session in reports/nevo-models.
 // Served live in local dev only; in prod deploy.js copies them into Firebase Hosting.
-// The folder's own index.html (its 🏠 target) redirects to the therapy-center Models tab.
+// The folder's own index.html (its 🏠 target) returns to the Models page the viewer came from.
 const MODELS_DIR = path.join(__dirname, '..', '..', 'reports', 'nevo-models');
 const fs = require('fs');
 if (fs.existsSync(MODELS_DIR)) {
-  app.get(['/api/nevo-models', '/api/nevo-models/', '/api/nevo-models/index.html'], (_req, res) => res.redirect('/therapy/models'));
+  const MODELS_HOME = '<!doctype html><meta charset="utf-8"><script>var h="/therapy/models";try{h=localStorage.getItem("models_home")||h}catch(e){}location.replace(h)</script>';
+  app.get(['/api/nevo-models', '/api/nevo-models/', '/api/nevo-models/index.html'], (_req, res) => res.type('html').send(MODELS_HOME));
   app.use('/api/nevo-models', (req, res, next) => {
     if (/^\/(_src|prompts)(\/|$)/.test(req.path) || /\.(py|md)$/i.test(req.path)) return res.status(404).end();
     next();

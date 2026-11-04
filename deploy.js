@@ -80,7 +80,7 @@ if (fs.existsSync(MODELS_SRC)) {
     if (entry.isDirectory()) copyDir(src, dest); else fs.copyFileSync(src, dest);
   }
   fs.writeFileSync(path.join(PUBLIC_MODELS, 'index.html'),
-    '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/therapy/models"><script>location.replace("/therapy/models")</script>');
+    '<!doctype html><meta charset="utf-8"><script>var h="/therapy/models";try{h=localStorage.getItem("models_home")||h}catch(e){}location.replace(h)</script>');
 }
 
 // Step 3: Deploy to Firebase

@@ -1022,6 +1022,9 @@ export default function KidDetail() {
           <Link to={links.kidAgenda(kidId!)} className="kid-toolbar-btn" title="סדר יום">📅<span className="toolbar-label">סדר יום</span></Link>
           <Link to={links.kidDailyReports(kidId!)} className="kid-toolbar-btn" title="דיווח יומי">📋<span className="toolbar-label">דיווח יומי</span></Link>
           {kid && <GameLauncher kid={kid} variant="toolbar" />}
+          {isParentView && (
+            <Link to={`/p/${kidId}/models`} className="kid-toolbar-btn" title="מודלים לבנייה">🧱<span className="toolbar-label">מודלים</span></Link>
+          )}
         </div>
         {/* Kid Action Links - desktop only (on mobile they're in the toolbar) */}
         <div className="kid-action-links">
@@ -1065,6 +1068,17 @@ export default function KidDetail() {
             <span>דיווח יומי</span>
           </Link>
           {kid && <GameLauncher kid={kid} />}
+          {/* Admins and therapists reach the models from the sidebar; parents have no sidebar */}
+          {isParentView && (
+            <Link
+              to={`/p/${kidId}/models`}
+              className="kid-action-link"
+              style={{ '--action-color': '#e53e3e' } as React.CSSProperties}
+            >
+              <span className="action-icon">🧱</span>
+              <span>מודלים לבנייה</span>
+            </Link>
+          )}
         </div>
       </div>
 

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { modelsApi, MODELS_BASE } from '../api/client';
 import type { BuildModel } from '../api/client';
-import { useAuth } from '../contexts/AuthContext';
+import { useTherapist } from '../contexts/TherapistContext';
 
 type Filter = 'all' | 'lego' | 'magnet';
 
@@ -10,24 +11,20 @@ const TYPE_LABEL: Record<BuildModel['type'], string> = { lego: 'לגו', magnet:
 const TYPE_COLOR: Record<BuildModel['type'], string> = { lego: '#e53e3e', magnet: '#3182ce' };
 
 export default function BuildModels() {
-  const { user } = useAuth();
+  const { isParentView, parentKidId } = useTherapist();
+  const location = useLocation();
   const [filter, setFilter] = useState<Filter>('all');
+
+  // A model page's 🏠 goes to the models folder index, which sends the viewer back here —
+  // to whichever view (admin / therapist / parent) they opened it from.
+  useEffect(() => {
+    try { localStorage.setItem('models_home', `/therapy${location.pathname}`); } catch { /* storage blocked */ }
+  }, [location.pathname]);
 
   const { data: models = [], isLoading, error } = useQuery({
     queryKey: ['build-models'],
     queryFn: modelsApi.getManifest,
-    enabled: !!user?.isSuperAdmin,
   });
-
-  if (!user?.isSuperAdmin) {
-    return (
-      <div className="container">
-        <div className="content-card">
-          <div className="empty-state"><p>אין הרשאה לצפות בדף זה</p></div>
-        </div>
-      </div>
-    );
-  }
 
   const shown = models.filter(m => filter === 'all' || m.type === filter);
 
@@ -38,9 +35,12 @@ export default function BuildModels() {
   ];
 
   return (
-    <div className="container">
+    <div className="container" dir="rtl">
       <div className="content-card">
-        <div className="content-card-header">
+        <div className="content-card-header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {isParentView && (
+            <Link to={`/p/${parentKidId}`} style={{ color: '#7c3aed', textDecoration: 'none', fontSize: '1rem' }}>→ חזרה</Link>
+          )}
           <h2>מודלים לבנייה</h2>
         </div>
         <p style={{ color: '#64748b', fontSize: '0.9em', marginTop: 0 }}>

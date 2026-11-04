@@ -114,6 +114,7 @@ function TherapistRoutes() {
           <Route path="/forms" element={<FormsOverview />} />
           <Route path="/notifications" element={<TherapistNotifications />} />
           <Route path="/chat" element={<ChatCenter />} />
+          <Route path="/models" element={<BuildModels />} />
           <Route path="/form/new" element={<FormFill />} />
           <Route path="/form/:formId/edit" element={<FormFill />} />
           <Route path="/form/:formId/view" element={<FormView />} />
@@ -149,6 +150,7 @@ function ParentRoutes() {
         <Route path="/daily-reports/*" element={<DailyReportsPage />} />
         <Route path="/agreement" element={<AgreementPage />} />
         <Route path="/chat" element={<ChatCenter />} />
+        <Route path="/models" element={<BuildModels />} />
         <Route path="/form/:formId/view" element={<FormView />} />
         <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
         <Route path="/summary/:summaryId/view" element={<SummaryView />} />
