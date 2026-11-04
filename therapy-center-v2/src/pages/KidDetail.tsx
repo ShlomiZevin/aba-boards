@@ -311,7 +311,8 @@ export default function KidDetail() {
 
   // Tab state
   type KidTab = 'overview' | 'progress' | 'sessions' | 'notebook' | 'notifications' | 'plans' | 'learning-plans' | 'crew-hours';
-  const [kidTab, setKidTab] = useState<KidTab>('overview');
+  // Opens on the sessions calendar, as the previous version did
+  const [kidTab, setKidTab] = useState<KidTab>('sessions');
 
   // State
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -918,11 +919,11 @@ export default function KidDetail() {
           : (sentNotificationsRes?.data || []).filter((n: Notification) => !n.read).length;
         return (
           <div className="kid-tab-bar kid-tab-bar-desktop">
-            <button className={`kid-tab${kidTab === 'overview' ? ' active' : ''}`} onClick={() => setKidTab('overview')}>
-              סקירה
-            </button>
             <button className={`kid-tab${kidTab === 'sessions' ? ' active' : ''}`} onClick={() => setKidTab('sessions')}>
               טיפולים
+            </button>
+            <button className={`kid-tab${kidTab === 'overview' ? ' active' : ''}`} onClick={() => setKidTab('overview')}>
+              סקירה
             </button>
             <button className={`kid-tab${kidTab === 'progress' ? ' active' : ''}`} onClick={() => setKidTab('progress')}>
               התקדמות
