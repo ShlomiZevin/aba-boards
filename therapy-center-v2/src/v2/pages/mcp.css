@@ -10,10 +10,10 @@ html.nb .mc-url-row input {
 }
 html.nb .mc-note { margin: 0; color: var(--ink-2); font-size: 14.5px; }
 html.nb .mc-grid { display: grid; gap: 16px; }
-html.nb .mc-steps { display: flex; flex-direction: column; gap: 10px; }
-html.nb .mc-steps ol { margin: 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 8px; }
-html.nb .mc-steps li { line-height: 1.5; }
-html.nb .mc-steps li::marker { color: var(--pen); font-weight: 700; }
+
+
+
+
 html.nb .mc-list, html.nb .mc-prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 html.nb .mc-list li { display: flex; align-items: center; gap: 10px; min-height: 40px; border-bottom: 1.5px dashed var(--line); }
 html.nb .mc-list svg { color: var(--green); flex: none; }
@@ -23,3 +23,7 @@ html.nb .mc-facts { display: flex; flex-direction: column; gap: 8px; padding: 14
   html.nb .mc-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 }
 html.nb .mc-brands { display: flex; gap: 8px; }
+html.nb .mc-can { display: flex; flex-direction: column; gap: 10px; }
+html.nb .mc-ico { width: 34px; height: 34px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--tone); color: var(--ink); }
+html.nb .mc-sub { margin: 0; font-size: 14.5px; }
+html.nb .mc-rules { list-style: none; margin: 6px 0 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; border-radius: 14px; background: var(--paper-2); border: 1.5px dashed var(--line); font-size: 14.5px; line-height: 1.5; }
