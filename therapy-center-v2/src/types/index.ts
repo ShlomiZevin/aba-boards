@@ -863,3 +863,24 @@ export const GOAL_CATEGORIES: GoalCategory[] = [
   { id: 'adl', name: 'ADL', nameHe: 'ADL', order: 6, color: '#00BCD4' },
   { id: 'general', name: 'General', nameHe: 'כללי', order: 7, color: '#607D8B' },
 ];
+
+// ==================== DOCUMENTS (מחברת) ====================
+// Written items per kid (or general when kidId is null): meeting prep, guidance, notes.
+// Created on the site by admins or sent from ChatGPT / Claude through the MCP server.
+export type DocType = 'meeting-prep' | 'guidance' | 'note' | 'summary' | 'other';
+export type DocVisibility = 'private' | 'team' | 'parents';
+export type DocSource = 'chatgpt' | 'claude' | 'mcp' | 'app' | 'site-chat';
+
+export interface Doc {
+  id: string;
+  kidId: string | null;
+  type: DocType;
+  title: string;
+  /** Markdown. */
+  content: string;
+  visibility: DocVisibility;
+  source: DocSource;
+  createdBy: { type: 'admin' | 'mcp' | 'site-chat'; name: string };
+  createdAt: string;
+  updatedAt: string;
+}

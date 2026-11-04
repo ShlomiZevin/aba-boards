@@ -33,6 +33,9 @@ import type {
   DailyReport,
   DailyReportSummary,
   ReportSection,
+  Doc,
+  DocType,
+  DocVisibility,
 } from '../types';
 import { toDate } from '../utils/date';
 
@@ -174,6 +177,25 @@ export const dailyReportsApi = {
     fetchApi<DailyReport | null>(`/kids/${kidId}/daily-reports/${date}/${section}/${itemId}`, {
       method: 'DELETE',
     }),
+};
+
+// Documents (מחברת): per kid, or general when kidId is null. Only admins write.
+export const docsApi = {
+  getForKid: (kidId: string) => fetchApi<Doc[]>(`/kids/${kidId}/docs`),
+  getGeneral: () => fetchApi<Doc[]>('/docs?scope=general'),
+  get: (id: string) => fetchApi<Doc>(`/docs/${id}`),
+  create: (data: { kidId: string | null; type: DocType; title: string; content: string; visibility: DocVisibility }) =>
+    fetchApi<Doc>('/docs', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<Pick<Doc, 'title' | 'content' | 'type' | 'visibility'>>) =>
+    fetchApi<Doc>(`/docs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: async (id: string): Promise<ApiResponse<void>> => {
+    // 204 has no body, so this can't go through fetchApi's response.json()
+    try {
+      const r = await fetch(`${API_BASE}/docs/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+      if (!r.ok) return { success: false, error: (await r.json().catch(() => ({}))).error || 'Request failed' };
+      return { success: true };
+    } catch (e) { return { success: false, error: (e as Error).message }; }
+  },
 };
 
 // Practitioners API

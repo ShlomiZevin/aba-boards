@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Today from './v2/pages/Today';
 import Kids from './v2/pages/Kids';
 import McpConnect from './v2/pages/McpConnect';
+import { DocPage, GeneralDocs } from './v2/pages/Docs';
 import KidDetail from './pages/KidDetail';
 import GamePage from './pages/GamePage';
 import AgendaPage from './pages/AgendaPage';
@@ -124,6 +125,8 @@ function TherapistRoutes() {
           <Route path="/form/:formId/view" element={<FormView />} />
           <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
           <Route path="/summary/:summaryId/view" element={<SummaryView />} />
+          <Route path="/docs/:docId" element={<DocPage />} />
+          <Route path="/docs" element={<GeneralDocs />} />
           <Route path="/install-app" element={<InstallApp />} />
           <Route path="*" element={<Navigate to={`/t/${practitionerId}`} replace />} />
         </Routes></TherapistShell>} />
@@ -158,6 +161,7 @@ function ParentRoutes() {
         <Route path="/form/:formId/view" element={<FormView />} />
         <Route path="/meeting-form/:formId/view" element={<MeetingFormView />} />
         <Route path="/summary/:summaryId/view" element={<SummaryView />} />
+        <Route path="/docs/:docId" element={<DocPage />} />
         <Route path="*" element={<Navigate to={`/p/${kidId}`} replace />} />
       </Routes>
     </TherapistContext.Provider>
@@ -239,6 +243,8 @@ function App() {
             <Route path="/meeting-form/:formId/edit" element={<AdminLayout><MeetingFormFill /></AdminLayout>} />
             <Route path="/meeting-form/:formId/view" element={<AdminLayout><MeetingFormView /></AdminLayout>} />
             <Route path="/summary/:summaryId/view" element={<AdminLayout><SummaryView /></AdminLayout>} />
+            <Route path="/docs/:docId" element={<AdminLayout><DocPage /></AdminLayout>} />
+            <Route path="/docs" element={<AdminLayout><GeneralDocs /></AdminLayout>} />
             <Route path="/practitioners" element={<AdminLayout><AllPractitioners /></AdminLayout>} />
             <Route path="/crew-hours" element={<AdminLayout><CrewHours /></AdminLayout>} />
             <Route path="/calendar" element={<AdminLayout><AllSessions /></AdminLayout>} />

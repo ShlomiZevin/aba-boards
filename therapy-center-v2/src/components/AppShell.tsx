@@ -110,6 +110,7 @@ export default function AppShell({ children }: AppShellProps) {
   ];
   const more: NavItem[] = [
     { path: '/forms', label: 'טפסים', icon: 'form' },
+    { path: '/docs', label: 'מסמכים', icon: 'book' },
     { path: '/chat', label: 'צ׳אט AI', icon: 'sparkle' },
     { path: '/practitioners', label: 'אנשי צוות', icon: 'team' },
     { path: '/crew-hours', label: 'שעות צוות', icon: 'clock' },

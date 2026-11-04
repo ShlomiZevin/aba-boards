@@ -315,6 +315,51 @@ on('PUT', '/api/therapy/kids/:id/agenda/days/:date/done', (m, _q, b) => {
 });
 on('PUT', '/api/therapy/kids/:id/agenda/days/:date', (m, _q, b) => { const a = agendas[m[1]] ||= { routine: {}, days: {} }; const d = a.days[m[2]] ||= { items: null, done: [] }; d.items = b.items; return d; });
 for (const p of ['pending-dc', 'all-dc', 'meeting-drafts']) on('GET', `/api/therapy/kids/:id/${p}`, () => []);
+// Documents (מחברת). Visibility: private = admins, team = + linked therapists, parents = + the kid's parents.
+const docs: Doc[] = [
+  { id: 'd-1', kidId: 'k-noga', type: 'meeting-prep', title: 'הכנה לפגישת הורים, נובמבר', visibility: 'private', source: 'chatgpt', createdBy: { type: 'mcp', name: 'מיכל' },
+    content: ['## נקודות לפתיחה', '', '- שיתוף הפעולה עלה ל־85% בשבועיים האחרונים', '- קשר עין בפנייה בשם: יציב', '', '## לשאול את ההורים', '', '1. איך הבוקר עובר בבית?', '2. האם מעיל לבד הצליח גם בגן?', '', '## לסיכום', '', 'להציע תרגול של משחק תורות בסופ״ש.'].join('\n'),
+    createdAt: iso(at(-1, 21)), updatedAt: iso(at(-1, 21)) },
+  { id: 'd-2', kidId: 'k-noga', type: 'guidance', title: 'הנחיות לצוות: מעברים בין פעילויות', visibility: 'team', source: 'app', createdBy: { type: 'admin', name: 'מיכל' },
+    content: ['- להודיע דקה לפני מעבר, עם טיימר חזותי.', '- לתת בחירה בין שתי פעילויות.', '- לחזק מיד מעבר רגוע.'].join('\n'),
+    createdAt: iso(at(-4, 12)), updatedAt: iso(at(-3, 9)) },
+  { id: 'd-3', kidId: 'k-noga', type: 'note', title: 'לבית: משחקים לסופ״ש', visibility: 'parents', source: 'claude', createdBy: { type: 'mcp', name: 'מיכל' },
+    content: 'פאזל של 16 חלקים, משחק תורות עם קוביה, ובועות סבון כחיזוק.', createdAt: iso(at(-6, 18)), updatedAt: iso(at(-6, 18)) },
+  { id: 'd-4', kidId: null, type: 'guidance', title: 'נוהל מילוי טפסים בסוף מפגש', visibility: 'team', source: 'app', createdBy: { type: 'admin', name: 'מיכל' },
+    content: 'ממלאים את טופס הטיפול עד סוף היום. טופס שלא מולא תוך שבועיים כבר לא מוצג כממתין.', createdAt: iso(at(-10, 10)), updatedAt: iso(at(-10, 10)) },
+];
+const DOC_TYPES = ['meeting-prep', 'guidance', 'note', 'summary', 'other'];
+type Role = { kind: 'admin' } | { kind: 'therapist'; id: string } | { kind: 'parent'; kidId: string } | { kind: 'none' };
+const roleOf = (h: Doc): Role => h['x-practitioner-id'] ? { kind: 'therapist', id: h['x-practitioner-id'] } : h['x-kid-id'] ? { kind: 'parent', kidId: decodeURIComponent(h['x-kid-id']) } : h['x-admin-key'] ? { kind: 'admin' } : { kind: 'none' };
+const canSee = (d: Doc, r: Role) => r.kind === 'admin'
+  || (r.kind === 'therapist' && d.visibility !== 'private' && (d.kidId === null || (kidTeam[d.kidId] || []).includes(r.id)))
+  || (r.kind === 'parent' && d.visibility === 'parents' && d.kidId === r.kidId);
+const byNewest = (a: Doc[]) => [...a].sort((x, y) => y.updatedAt.localeCompare(x.updatedAt));
+on('GET', '/api/therapy/kids/:id/docs', (m, _q, _b, h) => byNewest(docs.filter(d => d.kidId === m[1] && canSee(d, roleOf(h)))));
+on('GET', '/api/therapy/docs', (_m, q, _b, h) => {
+  const r = roleOf(h);
+  if (q.get('scope') !== 'general') return [];
+  if (r.kind === 'parent') return { __status: 403, error: 'אין הרשאה' };
+  return byNewest(docs.filter(d => d.kidId === null && canSee(d, r)));
+});
+on('GET', '/api/therapy/docs/:id', (m, _q, _b, h) => { const d = docs.find(x => x.id === m[1]); return d && canSee(d, roleOf(h)) ? d : { __status: 404, error: 'לא נמצא' }; });
+on('POST', '/api/therapy/docs', (_m, _q, b, h) => {
+  if (roleOf(h).kind !== 'admin') return { __status: 403, error: 'אין הרשאה' };
+  const now = iso(new Date());
+  const d = { id: newId('d'), kidId: b.kidId ?? null, type: DOC_TYPES.includes(b.type) ? b.type : 'other', title: b.title || 'ללא כותרת', content: b.content || '', visibility: b.visibility || 'private', source: 'app', createdBy: { type: 'admin', name: ADMIN.name }, createdAt: now, updatedAt: now };
+  docs.push(d); return d;
+});
+on('PUT', '/api/therapy/docs/:id', (m, _q, b, h) => {
+  if (roleOf(h).kind !== 'admin') return { __status: 403, error: 'אין הרשאה' };
+  const d = docs.find(x => x.id === m[1]); if (!d) return { __status: 404, error: 'לא נמצא' };
+  for (const k of ['title', 'content', 'type', 'visibility']) if (b[k] !== undefined) d[k] = b[k];
+  d.updatedAt = iso(new Date()); return d;
+});
+on('DELETE', '/api/therapy/docs/:id', (m, _q, _b, h) => {
+  if (roleOf(h).kind !== 'admin') return { __status: 403, error: 'אין הרשאה' };
+  const i = docs.findIndex(x => x.id === m[1]); if (i >= 0) docs.splice(i, 1); return {};
+});
+
 on('GET', '/api/therapy/kids/:id/game-state', () => ({}));
 on('GET', '/api/therapy/category-lp-templates', () => []);
 

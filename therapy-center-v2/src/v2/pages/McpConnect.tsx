@@ -62,12 +62,13 @@ export default function McpConnect() {
         <section className="nb-card mc-steps">
           <h2 className="nb-h2"><span className="nb-chip tone-mint">ChatGPT</span></h2>
           <ol>
-            <li>הגדרות ← <bdi><b>Apps &amp; Connectors</b></bdi> ← <bdi><b>Advanced</b></bdi></li>
-            <li>מפעילים את <bdi><b>Developer mode</b></bdi></li>
-            <li>יוצרים חיבור חדש (<bdi>Create connector</bdi>) ומדביקים את הכתובת</li>
-            <li>סוג אימות: <bdi><b>OAuth</b></bdi></li>
-            <li>בדף הכניסה של <bdi>Doing</bdi> מזינים את מפתח הגישה</li>
+            <li>הגדרות ← מקלידים <bdi>developer</bdi> בחיפוש ← פותחים <bdi><b>Developer</b></bdi> (תחת <bdi>Plugins</bdi>) ← מפעילים את <bdi><b>Developer mode</b></bdi></li>
+            <li>ב־<bdi>Plugins</bdi> לוחצים <bdi><b>Add custom MCP server</b></bdi></li>
+            <li>שם: <bdi>Doing</bdi> · חיבור: <bdi><b>Server URL</b></bdi> (לא <bdi>Tunnel</bdi>) ומדביקים את הכתובת · אימות: <bdi><b>OAuth</b></bdi>. את <bdi>Advanced OAuth settings</bdi> משאירים כמו שהם</li>
+            <li>מסמנים <bdi><b>I understand and want to continue</b></bdi> ← <bdi><b>Create as a plugin</b></bdi></li>
+            <li>בדף הכניסה של <bdi>Doing</bdi> שנפתח, מזינים את מפתח הגישה שבו נכנסים לאתר</li>
           </ol>
+          <p className="mc-note">עושים את זה באתר <bdi><b>chatgpt.com</b></bdi>, לא ב־<bdi>platform.openai.com</bdi> (זה אתר למפתחים).</p>
         </section>
         <section className="nb-card mc-steps">
           <h2 className="nb-h2"><span className="nb-chip tone-peach">Claude</span></h2>

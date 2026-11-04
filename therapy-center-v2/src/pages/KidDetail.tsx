@@ -15,6 +15,7 @@ import { GOAL_CATEGORIES } from '../types';
 import type { Practitioner, Parent, Goal, GoalCategoryId, Session, SessionType, PractitionerType, Notification, KidGoalDataEntry, Summary } from '../types';
 import ConfirmModal from '../components/ConfirmModal';
 import Icon from '../v2/Icon';
+import { KidDocsTab, useHasKidDocs } from '../v2/pages/Docs';
 import { kidColor, CATEGORY_TONE, CATEGORY_LABEL } from '../v2/kidColor';
 import '../v2/pages/kid.css';
 import '../v2/pages/kp.css';
@@ -304,9 +305,12 @@ export default function KidDetail() {
   const isReadOnly = isParentView;
   const isAdmin = !isTherapistView && !isParentView;
   const isSuperAdmin = isAdmin && (authUser?.isSuperAdmin ?? false);
+  // מחברת tab: always for admins; for therapists/parents only when something is shared with them
+  const hasSharedDocs = useHasKidDocs(urlKidId || parentKidId || undefined, !isAdmin);
+  const showNotebook = isAdmin || hasSharedDocs;
 
   // Tab state
-  type KidTab = 'overview' | 'progress' | 'sessions' | 'notifications' | 'plans' | 'learning-plans' | 'crew-hours';
+  type KidTab = 'overview' | 'progress' | 'sessions' | 'notebook' | 'notifications' | 'plans' | 'learning-plans' | 'crew-hours';
   const [kidTab, setKidTab] = useState<KidTab>('overview');
 
   // State
@@ -923,6 +927,11 @@ export default function KidDetail() {
             <button className={`kid-tab${kidTab === 'progress' ? ' active' : ''}`} onClick={() => setKidTab('progress')}>
               התקדמות
             </button>
+            {showNotebook && (
+              <button className={`kid-tab${kidTab === 'notebook' ? ' active' : ''}`} onClick={() => setKidTab('notebook')}>
+                מחברת
+              </button>
+            )}
             <button className={`kid-tab${kidTab === 'notifications' ? ' active' : ''}`} onClick={() => setKidTab('notifications')}>
               הודעות
               {unreadCount > 0 && <span className="kid-tab-badge">{unreadCount}</span>}
@@ -1717,6 +1726,9 @@ export default function KidDetail() {
           isSuperAdmin={isSuperAdmin}
         />
       )}
+
+      {/* === NOTEBOOK (documents) TAB === */}
+      {kidTab === 'notebook' && showNotebook && <KidDocsTab kidId={kidId!} />}
 
       {/* === CREW HOURS TAB === */}
       {kidTab === 'crew-hours' && (

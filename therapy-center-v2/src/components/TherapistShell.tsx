@@ -33,6 +33,7 @@ export default function TherapistShell({ children }: TherapistShellProps) {
   ];
   const more: NavItem[] = [
     { path: '/forms', label: 'טפסים', icon: 'form' },
+    { path: '/docs', label: 'מסמכים', icon: 'book' },
     { path: '/models', label: 'מודלים לבנייה', icon: 'blocks' },
     { path: '/install-app', label: 'התקנת אפליקציה', icon: 'phone' },
   ];
