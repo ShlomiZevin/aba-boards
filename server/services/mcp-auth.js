@@ -15,6 +15,10 @@ const CODE_TTL_MS = 5 * 60 * 1000;
 const ACCESS_TTL_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 const SCOPE = 'aba';
+// For now the connector is for the system manager (Michal) only. Set to false to open it to every
+// role — the per-role scoping below already handles admins, therapists and parents.
+const SUPER_ADMIN_ONLY = true;
+const isAllowed = (ctx) => !!ctx && (!SUPER_ADMIN_ONLY || ctx.isSuperAdmin);
 
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const newSecret = () => crypto.randomBytes(32).toString('base64url');
@@ -226,7 +230,7 @@ async function exchangeToken(req) {
       if (d.kind !== 'refresh') throw new OAuthError('invalid_grant', 'Not a refresh token');
       if (d.clientId !== client.id) throw new OAuthError('invalid_grant', 'Token was issued to another client');
     });
-    if (!(await contextForIdentity(data.identity))) throw new OAuthError('invalid_grant', 'Access was revoked');
+    if (!isAllowed(await contextForIdentity(data.identity))) throw new OAuthError('invalid_grant', 'Access was revoked');
     return issueTokens(client.id, data.identity, data.resource);
   }
 
@@ -246,11 +250,11 @@ async function contextForAccessToken(token) {
   const data = doc.data();
   if (data.kind !== 'access' || data.expiresAt.toMillis() < Date.now()) return null;
   const ctx = await contextForIdentity(data.identity);
-  return ctx ? { ...ctx, clientId: data.clientId } : null;
+  return isAllowed(ctx) ? { ...ctx, clientId: data.clientId } : null;
 }
 
 module.exports = {
-  OAuthError, SCOPE,
+  OAuthError, SCOPE, SUPER_ADMIN_ONLY, isAllowed, contextForIdentity,
   registerClient, getClient, validRedirectUri,
   identityFromCredential, createAuthCode, exchangeToken, revokeToken, contextForAccessToken,
 };

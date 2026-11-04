@@ -488,8 +488,12 @@ so nothing depends on the browser. The UI is a drawer in `ChatCenter.tsx` (`comp
 
 ## MCP Server (ChatGPT / Claude connectors)
 
-The same data tools as the AI chat, exposed over MCP so anyone can connect their own ChatGPT, Claude
-or other MCP client. **Server only** — no client code involved.
+The same data tools as the AI chat, exposed over MCP so a user can connect their own ChatGPT, Claude
+or other MCP client.
+
+**Currently Michal (super admin) only** — `SUPER_ADMIN_ONLY` in `services/mcp-auth.js`, enforced at
+sign-in, on refresh and on every call. Everything below about therapists and parents is ready but
+switched off; flip the flag to open it. The how-to-connect page in the UI is shown only to the super admin.
 
 - **URL:** `https://avatar-server-1018338671074.me-west1.run.app/mcp` (Streamable HTTP, stateless,
   JSON responses — `routes/mcp.js`, hand-written JSON-RPC, no SDK dependency).

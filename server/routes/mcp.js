@@ -146,6 +146,10 @@ router.post('/oauth/authorize', form, asyncHandler(async (req, res) => {
     return res.status(401).send(page({ params, clientName: client.clientName, error: 'הקוד או הקישור לא זוהו. בדקו ונסו שוב.' }));
   }
   const { label, ...stored } = identity;
+  if (!auth.isAllowed(await auth.contextForIdentity(stored))) {
+    recordFailure(ip);
+    return res.status(403).send(page({ params, clientName: client.clientName, error: 'החיבור פתוח כרגע רק למנהלת המערכת.' }));
+  }
   const code = await auth.createAuthCode({
     client, redirectUri: params.redirect_uri, codeChallenge: params.code_challenge, identity: stored, resource: params.resource,
   });
@@ -188,15 +192,15 @@ function page({ params, clientName, error }) {
   ${error ? `<div class="err">${esc(error)}</div>` : ''}
   ${params ? `<form method="post" action="/oauth/authorize" autocomplete="off">
     ${hidden}
-    <label for="credential">קוד גישה או קישור אישי</label>
+    <label for="credential">${auth.SUPER_ADMIN_ONLY ? 'קוד גישה' : 'קוד גישה או קישור אישי'}</label>
     <input id="credential" name="credential" type="password" required autofocus>
     <button type="submit">התחברות</button>
   </form>
-  <ul>
+  ${auth.SUPER_ADMIN_ONLY ? '<ul><li>קוד הגישה שבו נכנסים לאתר. החיבור פתוח כרגע רק למנהלת המערכת.</li></ul>' : `<ul>
     <li>מנהלת — קוד הגישה שבו נכנסים לאתר</li>
     <li>מטפל/ת — הקישור האישי שקיבלת (…/therapy/t/…)</li>
     <li>הורים — קישור ההורים של הילד/ה (…/therapy/p/…)</li>
-  </ul>
+  </ul>`}
   <p class="note">החיבור תקף עד 90 יום. אפשר לנתק אותו בכל עת מתוך הגדרות העוזר.</p>` : ''}
 </main></body></html>`;
 }
