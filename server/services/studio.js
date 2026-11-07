@@ -88,8 +88,22 @@ Keep everything joyful, gentle and safe for small children.`);
   };
 }
 
+const HEBREW = /[֐-׿]/;
+
 // Turn her wish (Hebrew, maybe spoken) + the photo into the prompt Piko gets.
-async function composePrompt(image, { mode, wish, build }) {
+// The prompt is always English: the video model reads only English, so a video prompt
+// with any Hebrew left in it is never sent (one more try, then an error).
+async function composePrompt(image, opts, attempt = 1) {
+  const prompt = await writePrompt(image, opts, attempt > 1);
+  if (HEBREW.test(prompt)) {
+    console.warn(`[studio] prompt had Hebrew (attempt ${attempt})`);
+    if (attempt < 2) return composePrompt(image, opts, attempt + 1);
+    if (opts.mode === 'video') throw new StudioError(500, piko.friendly('prompt'));
+  }
+  return prompt;
+}
+
+async function writePrompt(image, { mode, wish, build }, strict) {
   const isVideo = mode === 'video';
   const out = await askClaude(image, `${CONTEXT}
 
@@ -100,7 +114,7 @@ Write the prompt for ${isVideo
     ? 'an image-to-video model. This photo is the FIRST FRAME of a 6-second vertical video with sound.'
     : 'an image model that gets this photo as a reference and makes a new vertical 9:16 picture.'}
 Rules:
-- English, 60-110 words, concrete and visual.
+- English ONLY, 60-110 words, concrete and visual. Translate the wish; no Hebrew word or letter may remain.${strict ? ' Your previous answer contained Hebrew: write it entirely in English.' : ''}
 - Keep the children exactly as they are in the photo (faces, hair, clothes), and keep the build's exact shape, colours and material, now real and working.
 ${isVideo
     ? '- Describe the motion over the 6 seconds in order, the camera move, and the sound: cheerful music and matching sound effects, the kids laughing; no spoken words.'
