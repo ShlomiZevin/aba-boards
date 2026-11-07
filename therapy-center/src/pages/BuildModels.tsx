@@ -5,10 +5,10 @@ import { modelsApi, MODELS_BASE } from '../api/client';
 import type { BuildModel } from '../api/client';
 import { useTherapist } from '../contexts/TherapistContext';
 
-type Filter = 'all' | 'lego' | 'magnet';
+type Filter = 'all' | 'lego' | 'magnet' | 'beads';
 
-const TYPE_LABEL: Record<BuildModel['type'], string> = { lego: 'לגו', magnet: 'מגנטים' };
-const TYPE_COLOR: Record<BuildModel['type'], string> = { lego: '#e53e3e', magnet: '#3182ce' };
+const TYPE_LABEL: Record<BuildModel['type'], string> = { lego: 'לגו', magnet: 'מגנטים', beads: 'חרוזים' };
+const TYPE_COLOR: Record<BuildModel['type'], string> = { lego: '#e53e3e', magnet: '#3182ce', beads: '#d69e2e' };
 
 export default function BuildModels() {
   const { isParentView, parentKidId } = useTherapist();
@@ -32,6 +32,7 @@ export default function BuildModels() {
     { key: 'all', label: `הכל (${models.length})` },
     { key: 'lego', label: 'לגו' },
     { key: 'magnet', label: 'מגנטים' },
+    { key: 'beads', label: 'חרוזים' },
   ];
 
   return (
@@ -44,7 +45,7 @@ export default function BuildModels() {
           <h2>מודלים לבנייה</h2>
         </div>
         <p style={{ color: '#64748b', fontSize: '0.9em', marginTop: 0 }}>
-          מדריכי בנייה צעד-אחר-צעד בלגו ובמגנטים. לחיצה על מודל פותחת אותו במסך מלא — מתאים לטאבלט של הילד.
+          מדריכי בנייה צעד-אחר-צעד בלגו, במגנטים ובחרוזי גיהוץ. לחיצה על מודל פותחת אותו במסך מלא — מתאים לטאבלט של הילד.
         </p>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>

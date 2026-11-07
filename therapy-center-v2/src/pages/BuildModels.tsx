@@ -8,10 +8,10 @@ import Icon from '../v2/Icon';
 import type { Tone } from '../v2/kidColor';
 import '../v2/pages/tm.css';
 
-type Filter = 'all' | 'lego' | 'magnet';
+type Filter = 'all' | 'lego' | 'magnet' | 'beads';
 
-const TYPE_LABEL: Record<BuildModel['type'], string> = { lego: 'לגו', magnet: 'מגנטים' };
-const TYPE_TONE: Record<BuildModel['type'], Tone> = { lego: 'pink', magnet: 'sky' };
+const TYPE_LABEL: Record<BuildModel['type'], string> = { lego: 'לגו', magnet: 'מגנטים', beads: 'חרוזים' };
+const TYPE_TONE: Record<BuildModel['type'], Tone> = { lego: 'pink', magnet: 'sky', beads: 'yellow' };
 
 export default function BuildModels() {
   const { isParentView, parentKidId } = useTherapist();
@@ -35,6 +35,7 @@ export default function BuildModels() {
     { key: 'all', label: `הכל (${models.length})` },
     { key: 'lego', label: 'לגו' },
     { key: 'magnet', label: 'מגנטים' },
+    { key: 'beads', label: 'חרוזים' },
   ];
 
   return (
@@ -48,7 +49,7 @@ export default function BuildModels() {
         </div>
       </header>
       <p className="tm-models-intro">
-        מדריכי בנייה צעד-אחר-צעד בלגו ובמגנטים. לחיצה על מודל פותחת אותו במסך מלא — מתאים לטאבלט של הילד.
+        מדריכי בנייה צעד-אחר-צעד בלגו, במגנטים ובחרוזי גיהוץ. לחיצה על מודל פותחת אותו במסך מלא — מתאים לטאבלט של הילד.
       </p>
 
       <div className="tm-chips" role="group" aria-label="סינון לפי סוג">

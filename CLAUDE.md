@@ -543,7 +543,7 @@ UI (in `therapy-center-v2`): a "מחברת" tab on the kid page and "מסמכי�
 
 ## Build Models (מודלים לבנייה) — all users
 
-Step-by-step Lego / magnet build guides, produced by a separate Claude session ("ABBA") in
+Step-by-step Lego / magnet / ironing-bead (`type: "beads"`, 2D pegboard pattern) guides, produced by a separate Claude session ("ABBA") in
 `../reports/nevo-models/` (`<id>/index.html` self-contained 3D guide, `<id>/thumb.png`,
 `concepts/`, `models-manifest.json`; `_src/` is build source and is never served). **Don't edit the
 model pages** — they are regenerated from `_src`.

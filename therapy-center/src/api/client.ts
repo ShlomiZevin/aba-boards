@@ -894,7 +894,7 @@ export const MODELS_BASE = import.meta.env.DEV ? '/api/nevo-models' : '/build-mo
 export interface BuildModel {
   id: string;
   title: string;
-  type: 'lego' | 'magnet';
+  type: 'lego' | 'magnet' | 'beads';
   kid: string;
   pieces: number;
   steps: number;
