@@ -1256,6 +1256,54 @@ router.delete('/meeting-votes/:id', requireAdmin, asyncHandler(async (req, res) 
   res.json(result);
 }));
 
+// ==================== STUDIO (pictures / videos via Piko, super admin only) ====================
+
+const studio = require('../services/studio');
+const piko = require('../services/piko');
+const studioHandler = (fn) => asyncHandler(async (req, res) => {
+  try {
+    await fn(req, res);
+  } catch (err) {
+    if (err instanceof studio.StudioError) return res.status(err.status).json({ error: err.message });
+    if (err instanceof piko.PikoError) {
+      console.error('[studio] piko:', err.message);
+      return res.status(err.status >= 400 && err.status < 600 ? err.status : 502).json({ error: piko.friendly(err.code), code: err.code });
+    }
+    console.error('[studio]', err);
+    res.status(500).json({ error: 'משהו השתבש. אפשר לנסות שוב.' });
+  }
+});
+
+router.post('/studio/understand', requireSuperAdmin, studioHandler(async (req, res) => {
+  res.json(await studio.understand(req.body?.image));
+}));
+
+router.post('/studio/transcribe', requireSuperAdmin, studioHandler(async (req, res) => {
+  const { audio, mime, mode } = req.body || {};
+  res.json(await studio.transcribe({ audio: String(audio || '').replace(/^data:[^,]*,/, ''), mime, mode }));
+}));
+
+router.get('/studio/creations', requireSuperAdmin, studioHandler(async (req, res) => {
+  res.json(await studio.list(req));
+}));
+
+router.post('/studio/creations', requireSuperAdmin, studioHandler(async (req, res) => {
+  res.status(201).json(await studio.create(req, req.body || {}));
+}));
+
+router.get('/studio/creations/:id', requireSuperAdmin, studioHandler(async (req, res) => {
+  res.json(await studio.get(req, req.params.id));
+}));
+
+router.delete('/studio/creations/:id', requireSuperAdmin, studioHandler(async (req, res) => {
+  await studio.remove(req, req.params.id);
+  res.status(204).send();
+}));
+
+router.get('/studio/balance', requireSuperAdmin, studioHandler(async (req, res) => {
+  res.json(await studio.balance());
+}));
+
 // Error handling middleware
 router.use((err, req, res, next) => {
   console.error('Therapy API Error:', err);

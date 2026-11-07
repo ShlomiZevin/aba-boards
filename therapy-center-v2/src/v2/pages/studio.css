@@ -1,0 +1,125 @@
+/* סטודיו קסם — mobile first: one column, big thumb targets; desktop only widens it */
+html.nb .st { display: flex; flex-direction: column; gap: 16px; max-width: 980px; }
+html.nb .st-head { display: flex; flex-direction: column; gap: 4px; }
+html.nb .st-head p { margin: 0; font-size: 15.5px; }
+
+/* 1. the photo picker: the whole card is the button */
+html.nb .st-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46vh; padding: 28px 20px; text-align: center; cursor: pointer; font-family: inherit; color: var(--ink);
+  border: 2.5px dashed #CFC2F2; background: var(--card);
+}
+html.nb .st-drop b { font-family: var(--f-display); font-weight: 400; font-size: 24px; }
+html.nb .st-drop .nb-muted { font-size: 15px; max-width: 28ch; }
+html.nb .st-drop-ico { width: 84px; height: 84px; border-radius: 26px; display: grid; place-items: center; background: var(--m-pink); color: var(--ink); transform: rotate(-4deg); box-shadow: var(--shadow-paper); margin-bottom: 6px; }
+html.nb .st-drop:active { transform: translateY(2px); }
+
+/* 2. working card: photo on top, controls below */
+html.nb .st-work { display: flex; flex-direction: column; gap: 14px; padding: 12px; }
+html.nb .st-photo { position: relative; border-radius: 16px; overflow: hidden; background: var(--paper-2); }
+html.nb .st-photo img { display: block; width: 100%; max-height: 42vh; object-fit: cover; }
+html.nb .st-swap {
+  position: absolute; inset-block-start: 10px; inset-inline-start: 10px; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 38px; padding: 0 12px; border-radius: 999px; border: 0; background: rgba(255,255,255,.92); color: var(--ink);
+  font: 600 14px var(--f-body); cursor: pointer; box-shadow: 0 1px 4px rgba(42,33,64,.18);
+}
+/* once it is working: the photo becomes a strip so progress / result stay in view */
+html.nb .st-work.is-compact .st-photo img { max-height: 120px; }
+html.nb .st-work, html.nb .st-done { scroll-margin-top: 12px; }
+html.nb .st-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+html.nb .st-seen { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 15.5px; line-height: 1.45; padding: 10px 12px; border-radius: 14px; background: var(--m-yellow); }
+html.nb .st-seen svg { flex: none; margin-top: 2px; color: var(--pen); }
+html.nb .st-seen.is-busy svg { animation: st-spin 1.6s linear infinite; }
+@keyframes st-spin { to { transform: rotate(360deg); } }
+
+html.nb .st-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+html.nb .st-modes button {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 84px; padding: 10px 6px;
+  border-radius: 16px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink-2); cursor: pointer; font-family: inherit;
+}
+html.nb .st-modes b { font-size: 17px; color: var(--ink); }
+html.nb .st-modes small { font-size: 12.5px; color: var(--muted); }
+html.nb .st-modes .is-on { border: 2.5px solid var(--pen); background: var(--pen-soft); color: var(--pen); }
+
+html.nb .st-ideas { display: flex; flex-direction: column; gap: 8px; }
+html.nb .st-label { font-weight: 700; font-size: 14px; color: var(--ink-2); }
+html.nb .st-idea {
+  text-align: start; min-height: 48px; padding: 10px 14px; border-radius: 14px; border: 1.5px dashed var(--line);
+  background: var(--card); color: var(--ink); font: 500 15.5px/1.35 var(--f-body); cursor: pointer;
+}
+html.nb .st-idea.is-on { border: 2px solid var(--pen); background: var(--pen-soft); }
+
+html.nb .st-wish { display: flex; flex-direction: column; gap: 10px; }
+html.nb .st-wish textarea {
+  width: 100%; min-height: 96px; resize: vertical; padding: 12px 14px; border-radius: 16px; border: 1.5px solid var(--line);
+  background: var(--card); color: var(--ink); font: 16px/1.5 var(--f-body); /* 16px: no iOS zoom on focus */
+}
+html.nb .st-wish textarea:focus { outline: none; border-color: var(--pen); box-shadow: 0 0 0 3px var(--pen-soft); }
+html.nb .st-rec { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+html.nb .st-mic {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; min-width: 52%; padding: 0 18px;
+  border-radius: 999px; border: 2px solid var(--pen); background: var(--card); color: var(--pen); font: 700 16px var(--f-body); cursor: pointer;
+}
+html.nb .st-mic.is-rec { background: var(--red); border-color: var(--red); color: #fff; animation: st-pulse 1.2s ease-in-out infinite; }
+html.nb .st-mic:disabled { opacity: .6; }
+@keyframes st-pulse { 50% { box-shadow: 0 0 0 8px var(--red-soft); } }
+html.nb .st-rec-err { color: var(--red); font-size: 14px; }
+
+html.nb .st-go { width: 100%; min-height: 60px; font-size: 19px; border-radius: 18px; }
+html.nb .st-go:disabled { opacity: .55; }
+html.nb .st-hint { margin: -6px 0 0; font-size: 13.5px; text-align: center; }
+
+/* 3. progress while Piko works */
+html.nb .st-progress { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: var(--paper-2); border: 1.5px dashed var(--line); }
+html.nb .st-progress-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+html.nb .st-progress-top .hand { font-size: 17px; }
+html.nb .st-progress-top b { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; }
+html.nb .st-bar { height: 12px; border-radius: 999px; background: var(--card); overflow: hidden; border: 1.5px solid var(--line); }
+html.nb .st-bar i { display: block; height: 100%; border-radius: 999px; background: repeating-linear-gradient(-45deg, var(--pen) 0 10px, #8B73E6 10px 20px); transition: width .5s linear; animation: st-stripes 1s linear infinite; background-size: 28px 28px; }
+@keyframes st-stripes { to { background-position: 28px 0; } }
+
+/* 4. result: video full width; two pictures side by side even on a phone */
+html.nb .st-done { display: flex; flex-direction: column; gap: 14px; }
+html.nb .st-result { display: grid; gap: 10px; }
+html.nb .st-result.images { grid-template-columns: 1fr 1fr; }
+html.nb .st-media { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+html.nb .st-media video, html.nb .st-media img { display: block; width: 100%; max-width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 16px; background: #1d1830; box-shadow: var(--shadow-paper); }
+html.nb .st-result.video .st-media video { max-height: 72vh; width: auto; margin-inline: auto; }
+html.nb .st-media-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+html.nb .st-media-actions > * { flex: 1 1 0; min-width: 0; min-height: 46px; padding: 0 10px; font-size: 15px; }
+html.nb .st-next { display: flex; flex-direction: column; gap: 8px; }
+html.nb .st-next > * { width: 100%; }
+
+html.nb .st-error { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: 14px; background: var(--red-soft); color: var(--ink); font-weight: 600; margin: 0; }
+
+/* 5. gallery */
+html.nb .st-gallery { display: flex; flex-direction: column; gap: 10px; }
+html.nb .st-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+html.nb .st-tile { position: relative; padding: 0; border: 0; border-radius: 14px; overflow: hidden; aspect-ratio: 9 / 16; background: var(--paper-2); cursor: pointer; }
+html.nb .st-tile img, html.nb .st-tile-blank { display: block; width: 100%; height: 100%; object-fit: cover; }
+html.nb .st-tile-tag { position: absolute; inset-block-end: 6px; inset-inline-start: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.92); color: var(--ink); font: 700 11.5px var(--f-body); }
+html.nb .st-tile-state { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(42,33,64,.45); color: #fff; font-weight: 700; font-size: 14px; }
+html.nb .st-tile-state.bad { background: rgba(160,40,60,.55); }
+
+/* viewer: a bottom sheet on the phone */
+html.nb .st-sheet { position: fixed; inset: 0; z-index: 60; background: rgba(30,24,48,.5); display: flex; align-items: flex-end; }
+html.nb .st-sheet-body { width: 100%; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 14px 14px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+html.nb .st-sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+html.nb .st-sheet-head .hand { font-size: 18px; line-height: 1.35; }
+html.nb .st-x { flex: none; width: 44px; height: 44px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+html.nb .st-del { align-self: center; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 0; background: none; color: var(--muted); font: 600 14px var(--f-body); cursor: pointer; }
+html.nb .st-sheet .st-result.video .st-media video { max-height: 62vh; }
+
+@media (min-width: 900px) {
+  html.nb .st-work { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; padding: 16px; gap: 20px; }
+  html.nb .st-photo img { max-height: 70vh; }
+  html.nb .st-work.is-compact .st-photo img { max-height: 260px; }
+  html.nb .st-next { flex-direction: row; flex-wrap: wrap; }
+  html.nb .st-next > * { width: auto; }
+  html.nb .st-mic { min-width: 0; }
+  html.nb .st-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  html.nb .st-result.images { max-width: 640px; }
+  html.nb .st-sheet { align-items: center; justify-content: center; }
+  html.nb .st-sheet-body { width: min(560px, 94vw); border-radius: 22px; }
+}

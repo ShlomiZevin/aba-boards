@@ -109,6 +109,7 @@ export default function AppShell({ children }: AppShellProps) {
     { path: '/notifications', label: 'הודעות', icon: 'bell' },
   ];
   const more: NavItem[] = [
+    ...(user?.isSuperAdmin ? [{ path: '/studio', label: 'סטודיו קסם', icon: 'sparkle' as const }] : []),
     { path: '/forms', label: 'טפסים', icon: 'form' },
     { path: '/docs', label: 'מסמכים', icon: 'book' },
     { path: '/chat', label: 'צ׳אט AI', icon: 'sparkle' },
@@ -125,6 +126,7 @@ export default function AppShell({ children }: AppShellProps) {
     { path: '/install-app', label: 'התקנת אפליקציה', icon: 'phone' },
   ];
   const quick: QuickAction[] = [
+    ...(user?.isSuperAdmin ? [{ key: 'studio', label: 'סטודיו קסם', hint: 'תמונה של יצירה ← סרטון', icon: 'sparkle' as const, tone: 'lilac', needsKid: false, to: () => '/studio' }] : []),
     { key: 'form', label: 'טופס טיפול', hint: 'מילוי אחרי מפגש', icon: 'form', tone: 'yellow', needsKid: true, to: id => `/form/new?kidId=${id}` },
     { key: 'meet', label: 'פגישה חדשה', hint: 'תזמון ביומן', icon: 'calendar', tone: 'sky', needsKid: false, to: () => '/calendar?new=1' },
     { key: 'daily', label: 'דיווח יומי', hint: 'טוב · בסדר · קשה', icon: 'report', tone: 'mint', needsKid: true, to: id => `/kid/${id}/daily-reports` },

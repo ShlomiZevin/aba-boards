@@ -198,6 +198,37 @@ export const docsApi = {
   },
 };
 
+// סטודיו — pictures / videos of the kids' builds (super admin only; the server talks to Piko)
+export type StudioMode = 'video' | 'images';
+export interface StudioItem {
+  jobId: string; kind: 'image' | 'video'; model: string | null; status: string;
+  url: string | null; poster: string | null; w: number | null; h: number | null; dur: number | null;
+  progress: number; usd: number; error: string | null;
+}
+export interface StudioCreation {
+  id: string; mode: StudioMode; wish: string; prompt: string; description: string;
+  thumb: string | null; usd: number; createdAt: string | null; items: StudioItem[];
+}
+export interface StudioReading { description: string; build: string; ideas: { video: string[]; images: string[] } }
+
+export const studioApi = {
+  understand: (image: string) =>
+    fetchApi<StudioReading>('/studio/understand', { method: 'POST', body: JSON.stringify({ image }) }),
+  transcribe: (audio: string, mime: string, mode: StudioMode) =>
+    fetchApi<{ text: string }>('/studio/transcribe', { method: 'POST', body: JSON.stringify({ audio, mime, mode }) }),
+  create: (data: { image: string; thumb: string; wish: string; mode: StudioMode; build?: string; description?: string }) =>
+    fetchApi<StudioCreation>('/studio/creations', { method: 'POST', body: JSON.stringify(data) }),
+  get: (id: string) => fetchApi<StudioCreation>(`/studio/creations/${id}`),
+  list: () => fetchApi<StudioCreation[]>('/studio/creations'),
+  delete: async (id: string): Promise<ApiResponse<void>> => {
+    try {
+      const r = await fetch(`${API_BASE}/studio/creations/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+      if (!r.ok) return { success: false, error: (await r.json().catch(() => ({}))).error || 'Request failed' };
+      return { success: true };
+    } catch (e) { return { success: false, error: (e as Error).message }; }
+  },
+};
+
 // Practitioners API
 export const practitionersApi = {
   getForKid: (kidId: string) =>
@@ -928,7 +959,7 @@ export const MODELS_BASE = import.meta.env.DEV ? '/api/nevo-models' : '/build-mo
 export interface BuildModel {
   id: string;
   title: string;
-  type: 'lego' | 'magnet';
+  type: 'lego' | 'magnet' | 'beads';
   kid: string;
   pieces: number;
   steps: number;

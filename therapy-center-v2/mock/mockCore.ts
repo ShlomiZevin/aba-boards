@@ -375,6 +375,32 @@ on('GET', '/api/therapy/crew-hours', (_m, q) => practitioners.map(p => {
     kids: [...byKid.values()], sessions: fs.map(f => ({ date: f.sessionDate, duration: f.sessionDuration, kidId: f.kidId, kidName: kids.find(x => x.id === f.kidId)?.name || '' })) };
 }).filter(e => e.sessionCount > 0));
 
+// studio (סטודיו קסם): canned reading; jobs finish ~10 s after they start, using the uploaded photo as the "result"
+const studio: Doc[] = [];
+on('POST', '/api/therapy/studio/understand', () => ({
+  description: 'שני ילדים ליד כדור פורח צבעוני שבנו ממגנטים',
+  build: 'a hot-air balloon built from colourful magnetic tiles',
+  ideas: {
+    video: ['הילדים נכנסים לסל והכדור הפורח ממריא מעל העננים', 'הכדור הפורח עף מעל העיר והילדים מנופפים', 'הכדור הפורח נוחת על אי עם דקלים'],
+    images: ['הילדים בסל של כדור פורח אמיתי מעל ההרים', 'הכדור הפורח בשקיעה מעל הים', 'הילדים והכדור הפורח בציור צבעי מים'],
+  },
+}));
+on('POST', '/api/therapy/studio/transcribe', () => ({ text: 'שהילדים ייכנסו לכדור הפורח והוא יעוף לשמיים' }));
+const studioView = (c: Doc) => {
+  const ready = Date.now() - c.t0 > 10000;
+  return { ...c, image: undefined, t0: undefined, usd: ready ? (c.mode === 'video' ? 0.11 : 0.08) : 0,
+    items: c.items.map((i: Doc) => ready ? { ...i, status: 'done', url: i.kind === 'video' ? '' : c.image, poster: c.image, usd: i.kind === 'video' ? 0.11 : 0.04 } : i) };
+};
+on('GET', '/api/therapy/studio/creations', () => studio.map(studioView).reverse());
+on('POST', '/api/therapy/studio/creations', (_m, _q, b) => {
+  const c = { id: newId('st'), mode: b.mode, wish: b.wish || '', prompt: 'mock prompt', description: b.description || '', thumb: b.thumb, image: b.image, t0: Date.now(), createdAt: iso(new Date()),
+    items: b.mode === 'video' ? [{ jobId: newId('j'), kind: 'video', model: 'seedance', status: 'queued', usd: 0 }]
+      : ['flare', 'sunburst'].map(model => ({ jobId: newId('j'), kind: 'image', model, status: 'queued', usd: 0 })) };
+  studio.push(c); return studioView(c);
+});
+on('GET', '/api/therapy/studio/creations/:id', m => { const c = studio.find(x => x.id === m[1]); return c ? studioView(c) : { __status: 404, error: 'לא נמצא' }; });
+on('DELETE', '/api/therapy/studio/creations/:id', m => { const i = studio.findIndex(x => x.id === m[1]); if (i >= 0) studio.splice(i, 1); return {}; });
+
 // chat: a canned streamed reply
 on('POST', '/api/therapy/chat', () => ({ __sse: 'זו תשובה לדוגמה מהשרת המדומה. בגרסה האמיתית כאן יופיע סיכום מבוסס נתוני הילד.' }));
 

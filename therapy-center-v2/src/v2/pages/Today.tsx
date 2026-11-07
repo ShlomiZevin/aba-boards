@@ -106,6 +106,14 @@ export default function Today() {
         </div>
       </header>
 
+      {user?.isSuperAdmin && (
+        <Link to="/studio" className="td-studio">
+          <span className="td-studio-ico"><Icon name="camera" size={26} /></span>
+          <span className="td-studio-txt"><b>סטודיו קסם</b><small>תמונה של מה שהילדים בנו ← סרטון קסום</small></span>
+          <Icon name="chevron" size={22} />
+        </Link>
+      )}
+
       <div className="td-grid">
         <section className="td-col">
           {/* מה עכשיו? */}

@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Today from './v2/pages/Today';
 import Kids from './v2/pages/Kids';
 import McpConnect from './v2/pages/McpConnect';
+import Studio from './v2/pages/Studio';
 import { DocPage, GeneralDocs } from './v2/pages/Docs';
 import KidDetail from './pages/KidDetail';
 import GamePage from './pages/GamePage';
@@ -258,6 +259,7 @@ function App() {
             <Route path="/board-builder/:kidId" element={<AdminLayout><BoardBuilder /></AdminLayout>} />
             <Route path="/install-app" element={<AdminLayout><InstallApp /></AdminLayout>} />
             <Route path="/mcp-connect" element={<AdminLayout><McpConnect /></AdminLayout>} />
+            <Route path="/studio" element={<AdminLayout><Studio /></AdminLayout>} />
 
             {/* Public board builder — PIN-protected, no admin auth */}
             <Route path="/build/:kidId" element={<BoardBuilder isPublic />} />

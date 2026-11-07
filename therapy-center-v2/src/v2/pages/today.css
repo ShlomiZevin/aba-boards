@@ -62,3 +62,15 @@ html.nb .td-kid small { color: var(--muted); font-size: 12.5px; }
 @media (min-width: 900px) {
   html.nb .td-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
 }
+
+/* סטודיו קסם shortcut (Michal only): one big tap target right under the greeting */
+html.nb .td-studio {
+  display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 10px 14px; border-radius: var(--r-lg);
+  background: linear-gradient(100deg, var(--m-lilac), var(--m-pink)); color: var(--ink); text-decoration: none;
+  border: 2px solid #fff; box-shadow: var(--shadow-paper);
+}
+html.nb .td-studio:active { transform: translateY(2px); }
+html.nb .td-studio-ico { flex: none; width: 50px; height: 50px; border-radius: 16px; display: grid; place-items: center; background: #fff; color: var(--pen); transform: rotate(-4deg); }
+html.nb .td-studio-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+html.nb .td-studio-txt b { font-family: var(--f-display); font-weight: 400; font-size: 21px; }
+html.nb .td-studio-txt small { font-size: 14px; color: var(--ink-2); }
