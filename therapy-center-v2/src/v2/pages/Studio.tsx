@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { studioApi, type StudioCreation, type StudioMode, type StudioReading } from '../../api/client';
@@ -84,7 +84,7 @@ function Result({ creation }: { creation: StudioCreation }) {
   );
 }
 
-function Progress({ creation, startedAt }: { creation: StudioCreation | null; startedAt: number }) {
+function Progress({ creation, startedAt, compact }: { creation: StudioCreation | null; startedAt: number; compact?: boolean }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, []);
   const mode = creation?.mode || 'video';
@@ -95,10 +95,10 @@ function Progress({ creation, startedAt }: { creation: StudioCreation | null; st
   const doneCount = creation?.items.filter(i => i.status === 'done').length || 0;
   const label = !creation
     ? 'מסתכלת על התמונה וכותבת הוראות…'
-    : mode === 'video' ? 'הסרטון בדרך, זה לוקח כ־3 דקות. אפשר לצאת ולחזור, הוא יחכה ב״מה יצרנו״.' : `מציירת ${doneCount ? 'את התמונה השנייה' : 'שתי תמונות'}…`;
+    : mode === 'video' ? 'הסרטון בדרך, זה לוקח כ־3 דקות. אפשר לצאת ולחזור: הוא ממשיך, ויחכה ב״היצירות שלי״.' : `מציירת ${doneCount ? 'את התמונה השנייה' : 'שתי תמונות'}…`;
   return (
-    <div className="st-progress" role="status">
-      <div className="st-progress-top"><span className="hand">{label}</span><b dir="ltr">{fmt(elapsed)}</b></div>
+    <div className={`st-progress ${compact ? 'compact' : ''}`} role="status">
+      <div className="st-progress-top"><span className="hand">{compact ? `${Math.round(pct)}%` : label}</span><b dir="ltr">{fmt(elapsed)}</b></div>
       <div className="st-bar"><i style={{ width: `${pct}%` }} /></div>
     </div>
   );
@@ -158,17 +158,111 @@ function Recorder({ mode, onText, disabled }: { mode: StudioMode; onText: (t: st
   );
 }
 
+// Piko's job statuses, as Michal reads them
+const STATUS_HE: Record<string, string> = { queued: 'ממתין בתור', working: 'מתחיל ליצור', running: 'נוצר עכשיו', saving: 'כמעט מוכן', done: 'מוכן', failed: 'לא הצליח' };
+const ORDER = ['failed', 'queued', 'working', 'running', 'saving', 'done'];
+const statusOf = (c: StudioCreation) => {
+  const live = c.items.filter(i => !isFinal(i.status));
+  if (live.length) return live.map(i => i.status).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))[0];
+  return c.items.some(i => i.status === 'done') ? 'done' : 'failed';
+};
+
+function dayLabel(iso: string | null) {
+  if (!iso) return 'קודם';
+  const d = new Date(iso);
+  const today = new Date();
+  const y = new Date();
+  y.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'היום';
+  if (d.toDateString() === y.toDateString()) return 'אתמול';
+  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
+}
+const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '');
+const startOf = (c: StudioCreation) => (c.createdAt ? Date.parse(c.createdAt) : Date.now());
+
 function GalleryCard({ c, onOpen }: { c: StudioCreation; onOpen: () => void }) {
   const first = c.items.find(i => i.status === 'done');
   const cover = first?.kind === 'video' ? first.poster : first?.url;
-  const failed = c.items.every(i => i.status === 'failed');
+  const partial = c.items.some(i => i.status === 'failed');
   return (
     <button type="button" className="st-tile" onClick={onOpen}>
       {cover || c.thumb ? <img src={cover || c.thumb!} alt="" loading="lazy" /> : <span className="st-tile-blank" />}
-      <span className={`st-tile-tag ${c.mode}`}><Icon name={c.mode === 'video' ? 'film' : 'image'} size={14} /> {c.mode === 'video' ? 'סרטון' : `${c.items.length} תמונות`}</span>
-      {!allFinal(c) && <span className="st-tile-state">בדרך…</span>}
-      {failed && <span className="st-tile-state bad">לא הצליח</span>}
+      {c.mode === 'video' && <span className="st-tile-play"><Icon name="play" size={20} /></span>}
+      <span className={`st-tile-tag ${c.mode}`}>
+        <Icon name={c.mode === 'video' ? 'film' : 'image'} size={14} /> {c.mode === 'video' ? 'סרטון' : `${c.items.filter(i => i.status === 'done').length} תמונות`}{partial ? ' · חלקי' : ''}
+      </span>
     </button>
+  );
+}
+
+function RowCard({ c, onOpen, onRemove }: { c: StudioCreation; onOpen: () => void; onRemove?: () => void }) {
+  const st = statusOf(c);
+  const live = !allFinal(c);
+  return (
+    <div className={`st-row nb-card ${live ? 'is-live' : ''}`}>
+      <button type="button" className="st-row-main" onClick={onOpen}>
+        {c.thumb ? <img src={c.thumb} alt="" /> : <span className="st-row-blank" />}
+        <span className="st-row-body">
+          <span className="st-row-top">
+            <b>{c.mode === 'video' ? 'סרטון' : 'תמונות'}</b>
+            <span className={`st-status s-${st}`}>{STATUS_HE[st] || st}</span>
+          </span>
+          {(c.wish || c.description) && <span className="st-row-wish">{c.wish || c.description}</span>}
+          {live
+            ? <Progress creation={c} startedAt={startOf(c)} compact />
+            : <span className="st-row-time">{dayLabel(c.createdAt)} · {timeOf(c.createdAt)}</span>}
+        </span>
+      </button>
+      {onRemove && <button type="button" className="st-row-x" onClick={onRemove} aria-label="הסרה"><Icon name="trash" size={18} /></button>}
+    </div>
+  );
+}
+
+function MyCreations({ creations, onOpen, onRemove, onNew }: { creations: StudioCreation[]; onOpen: (id: string) => void; onRemove: (id: string) => void; onNew: () => void }) {
+  const live = creations.filter(c => !allFinal(c));
+  const ready = creations.filter(c => allFinal(c) && statusOf(c) === 'done');
+  const failed = creations.filter(c => allFinal(c) && statusOf(c) === 'failed');
+  const days: [string, StudioCreation[]][] = [];
+  for (const c of ready) {
+    const k = dayLabel(c.createdAt);
+    const g = days.find(d => d[0] === k);
+    if (g) g[1].push(c);
+    else days.push([k, [c]]);
+  }
+  if (!creations.length) {
+    return (
+      <div className="st-empty nb-card">
+        <p className="hand">עוד לא יצרנו כלום.</p>
+        <button type="button" className="nb-btn" onClick={onNew}><Icon name="camera" size={20} /> ליצירה הראשונה</button>
+      </div>
+    );
+  }
+  return (
+    <div className="st-mine">
+      {live.length > 0 && (
+        <section className="st-sec">
+          <h2 className="nb-h2">בדרך עכשיו <span className="st-count">{live.length}</span></h2>
+          {live.map(c => <RowCard key={c.id} c={c} onOpen={() => onOpen(c.id)} />)}
+        </section>
+      )}
+      {days.length > 0 && (
+        <section className="st-sec">
+          <h2 className="nb-h2">מוכנים <span className="st-count">{ready.length}</span></h2>
+          {days.map(([day, list]) => (
+            <div key={day} className="st-day">
+              <span className="st-day-label">{day}</span>
+              <div className="st-grid">{list.map(c => <GalleryCard key={c.id} c={c} onOpen={() => onOpen(c.id)} />)}</div>
+            </div>
+          ))}
+        </section>
+      )}
+      {failed.length > 0 && (
+        <section className="st-sec">
+          <h2 className="nb-h2">לא הצליחו <span className="st-count">{failed.length}</span></h2>
+          {failed.map(c => <RowCard key={c.id} c={c} onOpen={() => onOpen(c.id)} onRemove={() => onRemove(c.id)} />)}
+        </section>
+      )}
+    </div>
   );
 }
 
@@ -187,14 +281,32 @@ export default function Studio() {
   const [error, setError] = useState('');
   const [run, setRun] = useState<{ id: string | null; startedAt: number } | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'mine' ? 'mine' : 'new';
+  const goTab = (t: 'new' | 'mine') => { setParams(t === 'mine' ? { tab: 'mine' } : {}); window.scrollTo({ top: 0 }); };
 
   const { data: listRes } = useQuery({
     queryKey: ['studio'],
     queryFn: () => studioApi.list(),
     enabled: !!user?.isSuperAdmin,
-    refetchInterval: q => (q.state.data?.data || []).some(c => !allFinal(c)) ? 8000 : false,
+    refetchInterval: q => (q.state.data?.data || []).some(c => !allFinal(c)) ? 5000 : false,
   });
   const creations = listRes?.data || [];
+
+  // Jobs that keep running while she is away (or started before this visit): shown on top with progress,
+  // and the one that finishes while she is here opens by itself.
+  const waiting = creations.filter(c => !allFinal(c) && c.id !== run?.id);
+  const liveCount = creations.filter(c => !allFinal(c)).length;
+  const watched = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const c of creations) {
+      if (!allFinal(c)) watched.current.add(c.id);
+      else if (watched.current.has(c.id)) {
+        watched.current.delete(c.id);
+        if (c.id !== run?.id && c.items.some(i => i.status === 'done')) setOpenId(c.id);
+      }
+    }
+  }, [creations, run?.id]);
 
   const { data: runRes } = useQuery({
     queryKey: ['studio', run?.id],
@@ -249,6 +361,12 @@ export default function Studio() {
     qc.invalidateQueries({ queryKey: ['studio'], exact: true });
   }
 
+  async function remove(id: string) {
+    setOpenId(null);
+    await studioApi.delete(id);
+    qc.invalidateQueries({ queryKey: ['studio'], exact: true });
+  }
+
   function reset() {
     setPhoto(null); setReading(null); setWish(''); setRun(null); setError('');
     if (fileRef.current) fileRef.current.value = '';
@@ -268,6 +386,27 @@ export default function Studio() {
       </header>
 
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => pick(e.target.files?.[0])} />
+
+      <div className="st-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'new'} className={tab === 'new' ? 'is-on' : ''} onClick={() => goTab('new')}>
+          <Icon name="sparkle" size={18} /> יצירה חדשה
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'mine'} className={tab === 'mine' ? 'is-on' : ''} onClick={() => goTab('mine')}>
+          <Icon name="image" size={18} /> היצירות שלי
+          {liveCount > 0 ? <span className="st-tab-live">{liveCount} בדרך</span> : creations.length > 0 ? <span className="st-tab-n">{creations.length}</span> : null}
+        </button>
+      </div>
+
+      {tab === 'mine' ? (
+        <MyCreations creations={creations} onOpen={setOpenId} onRemove={remove} onNew={() => { reset(); goTab('new'); }} />
+      ) : (<>
+      {waiting.length > 0 && (
+        <button type="button" className="st-banner" onClick={() => goTab('mine')}>
+          <span className="st-banner-dot" />
+          <span className="st-banner-txt"><b>{waiting.length === 1 ? (waiting[0].mode === 'video' ? 'סרטון בדרך' : 'תמונות בדרך') : `${waiting.length} יצירות בדרך`}</b> · {STATUS_HE[statusOf(waiting[0])]}</span>
+          <span className="st-banner-go">לראות <Icon name="chevron" size={16} /></span>
+        </button>
+      )}
 
       {!photo ? (
         <button type="button" className="st-drop nb-card" onClick={() => fileRef.current?.click()}>
@@ -325,7 +464,15 @@ export default function Studio() {
               </>
             )}
 
-            {running && <Progress creation={current} startedAt={run!.startedAt} />}
+            {running && (
+              <>
+                <Progress creation={current} startedAt={run!.startedAt} />
+                <div className="st-while">
+                  <button type="button" className="nb-btn-ghost" onClick={reset}><Icon name="plus" size={18} /> עוד יצירה בינתיים</button>
+                  <button type="button" className="nb-btn-ghost" onClick={() => goTab('mine')}><Icon name="image" size={18} /> כל היצירות</button>
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}
@@ -350,18 +497,12 @@ export default function Studio() {
             {!someFailed && <button type="button" className="nb-btn-ghost" onClick={go}><Icon name="refresh" size={18} /> עוד גרסה</button>}
             <button type="button" className="nb-btn-ghost" onClick={() => setRun(null)}><Icon name="edit" size={18} /> לשנות את הבקשה</button>
             <button type="button" className="nb-btn-ghost" onClick={reset}><Icon name="camera" size={18} /> תמונה חדשה</button>
+            <button type="button" className="nb-btn-ghost" onClick={() => goTab('mine')}><Icon name="image" size={18} /> כל היצירות</button>
           </div>
         </section>
       )}
 
-      {creations.length > 0 && (
-        <section className="st-gallery">
-          <h2 className="nb-h2">מה יצרנו</h2>
-          <div className="st-grid">
-            {creations.map(c => <GalleryCard key={c.id} c={c} onOpen={() => setOpenId(c.id)} />)}
-          </div>
-        </section>
-      )}
+      </>)}
 
       {opened && (
         <div className="st-sheet" role="dialog" aria-modal="true" onClick={() => setOpenId(null)}>
@@ -370,9 +511,10 @@ export default function Studio() {
               <span className="hand">{opened.wish || opened.description || (opened.mode === 'video' ? 'סרטון' : 'תמונות')}</span>
               <button type="button" className="st-x" onClick={() => setOpenId(null)} aria-label="סגירה"><Icon name="close" /></button>
             </div>
-            {allFinal(opened) ? <Result creation={opened} /> : <p className="nb-muted">עדיין בדרך…</p>}
+            <span className={`st-status s-${statusOf(opened)}`}>{STATUS_HE[statusOf(opened)]} · {dayLabel(opened.createdAt)} {timeOf(opened.createdAt)}</span>
+            {allFinal(opened) ? <Result creation={opened} /> : <Progress creation={opened} startedAt={startOf(opened)} />}
             {opened.items.every(i => i.status === 'failed') && <p className="st-error">היצירה הזאת לא הצליחה.</p>}
-            <button type="button" className="st-del" onClick={async () => { await studioApi.delete(opened.id); setOpenId(null); qc.invalidateQueries({ queryKey: ['studio'], exact: true }); }}>
+            <button type="button" className="st-del" onClick={() => remove(opened.id)}>
               <Icon name="trash" size={16} /> הסרה מהרשימה
             </button>
           </div>

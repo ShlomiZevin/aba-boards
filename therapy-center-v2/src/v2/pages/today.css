@@ -74,3 +74,6 @@ html.nb .td-studio-ico { flex: none; width: 50px; height: 50px; border-radius: 1
 html.nb .td-studio-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 html.nb .td-studio-txt b { font-family: var(--f-display); font-weight: 400; font-size: 21px; }
 html.nb .td-studio-txt small { font-size: 14px; color: var(--ink-2); }
+html.nb .td-studio-busy { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--pen); }
+html.nb .td-studio-busy::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--pen); animation: td-blink 1.2s ease-in-out infinite; }
+@keyframes td-blink { 50% { opacity: .25; } }

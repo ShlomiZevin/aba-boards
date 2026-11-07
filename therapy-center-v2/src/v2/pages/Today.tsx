@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { kidsApi, sessionsApi, practitionersApi, notificationsApi } from '../../api/client';
+import { kidsApi, sessionsApi, practitionersApi, notificationsApi, studioApi } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTherapist } from '../../contexts/TherapistContext';
 import { toDate } from '../../utils/date';
@@ -27,6 +27,14 @@ type State = 'done' | 'needs-form' | 'live' | 'next' | 'later' | 'missed';
 
 export default function Today() {
   const { user } = useAuth();
+  // סטודיו: a video / pictures still being made shows on the home card (she left the studio and came back)
+  const { data: studioRes } = useQuery({
+    queryKey: ['studio'],
+    queryFn: () => studioApi.list(),
+    enabled: !!user?.isSuperAdmin,
+    refetchInterval: q => (q.state.data?.data || []).some(c => c.items.some(i => i.status !== 'done' && i.status !== 'failed')) ? 8000 : false,
+  });
+  const studioBusy = (studioRes?.data || []).filter(c => c.items.some(i => i.status !== 'done' && i.status !== 'failed'));
   const { isTherapistView, practitionerId } = useTherapist();
   const prefix = isTherapistView ? `/t/${practitionerId}` : '';
   const now = new Date();
@@ -107,9 +115,9 @@ export default function Today() {
       </header>
 
       {user?.isSuperAdmin && (
-        <Link to="/studio" className="td-studio">
+        <Link to={studioBusy.length ? "/studio?tab=mine" : "/studio"} className="td-studio">
           <span className="td-studio-ico"><Icon name="camera" size={26} /></span>
-          <span className="td-studio-txt"><b>סטודיו קסם</b><small>תמונה של מה שהילדים בנו ← סרטון קסום</small></span>
+          <span className="td-studio-txt"><b>סטודיו קסם</b><small>{studioBusy.length ? <span className="td-studio-busy">{studioBusy[0].mode === 'video' ? 'סרטון בדרך…' : 'תמונות בדרך…'}{studioBusy.length > 1 ? ` (+${studioBusy.length - 1})` : ''}</span> : 'תמונה של מה שהילדים בנו ← סרטון קסום'}</small></span>
           <Icon name="chevron" size={22} />
         </Link>
       )}

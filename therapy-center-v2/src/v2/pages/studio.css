@@ -79,6 +79,16 @@ html.nb .st-bar { height: 12px; border-radius: 999px; background: var(--card); o
 html.nb .st-bar i { display: block; height: 100%; border-radius: 999px; background: repeating-linear-gradient(-45deg, var(--pen) 0 10px, #8B73E6 10px 20px); transition: width .5s linear; animation: st-stripes 1s linear infinite; background-size: 28px 28px; }
 @keyframes st-stripes { to { background-position: 28px 0; } }
 
+/* jobs still running from before (she left and came back): on top, with progress */
+html.nb .st-waiting { display: flex; flex-direction: column; gap: 10px; }
+html.nb .st-wait { display: flex; align-items: center; gap: 12px; padding: 10px; border: 2px solid var(--pen-soft); }
+html.nb .st-wait img { flex: none; width: 64px; height: 84px; object-fit: cover; border-radius: 12px; }
+html.nb .st-wait-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+html.nb .st-wait-body b { font-size: 16.5px; }
+html.nb .st-wait-wish { font-size: 13.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.nb .st-progress.compact { padding: 0; background: none; border: 0; gap: 6px; }
+html.nb .st-progress.compact .hand { font-size: 15px; }
+
 /* 4. result: video full width; two pictures side by side even on a phone */
 html.nb .st-done { display: flex; flex-direction: column; gap: 14px; }
 html.nb .st-result { display: grid; gap: 10px; }
@@ -122,4 +132,52 @@ html.nb .st-sheet .st-result.video .st-media video { max-height: 62vh; }
   html.nb .st-result.images { max-width: 640px; }
   html.nb .st-sheet { align-items: center; justify-content: center; }
   html.nb .st-sheet-body { width: min(560px, 94vw); border-radius: 22px; }
+}
+
+/* tabs: יצירה חדשה | היצירות שלי (in the URL, so the phone's back button works) */
+html.nb .st-tabs { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px; border-radius: 18px; background: var(--paper-2); border: 1.5px solid var(--line); }
+html.nb .st-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; min-height: 50px; padding: 4px 8px; border: 0; border-radius: 14px; background: transparent; color: var(--ink-2); font: 700 15.5px var(--f-body); cursor: pointer; }
+html.nb .st-tabs button.is-on { background: var(--card); color: var(--pen); box-shadow: 0 1px 4px rgba(42,33,64,.14); }
+html.nb .st-tab-n { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--pen-soft); color: var(--pen); font-size: 12.5px; }
+html.nb .st-tab-live { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; background: var(--pen); color: #fff; font-size: 12.5px; }
+html.nb .st-tab-live::before, html.nb .st-banner-dot { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: st-blink 1.2s ease-in-out infinite; }
+@keyframes st-blink { 50% { opacity: .25; } }
+
+/* "something is running" strip on the new tab */
+html.nb .st-banner { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 14px; border-radius: 16px; border: 2px solid var(--pen-soft); background: var(--card); color: var(--ink); font: 500 15px var(--f-body); text-align: start; cursor: pointer; }
+html.nb .st-banner-dot { flex: none; color: var(--pen); width: 10px; height: 10px; }
+html.nb .st-banner-txt { flex: 1; min-width: 0; }
+html.nb .st-banner-go { flex: none; display: inline-flex; align-items: center; gap: 2px; color: var(--pen); font-weight: 700; }
+html.nb .st-while { display: flex; flex-direction: column; gap: 8px; }
+html.nb .st-while > * { width: 100%; }
+
+/* היצירות שלי */
+html.nb .st-mine { display: flex; flex-direction: column; gap: 22px; }
+html.nb .st-sec { display: flex; flex-direction: column; gap: 10px; }
+html.nb .st-sec .nb-h2 { display: flex; align-items: center; gap: 8px; }
+html.nb .st-count { font: 700 13px var(--f-body); padding: 2px 9px; border-radius: 999px; background: var(--paper-2); border: 1.5px solid var(--line); color: var(--ink-2); }
+html.nb .st-day { display: flex; flex-direction: column; gap: 6px; }
+html.nb .st-day-label { font-weight: 700; font-size: 14px; color: var(--muted); }
+html.nb .st-row { display: flex; align-items: stretch; gap: 4px; padding: 0; overflow: hidden; }
+html.nb .st-row.is-live { border: 2px solid var(--pen-soft); }
+html.nb .st-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px; border: 0; background: none; color: var(--ink); font-family: inherit; text-align: start; cursor: pointer; }
+html.nb .st-row-main img, html.nb .st-row-blank { flex: none; width: 60px; height: 80px; object-fit: cover; border-radius: 12px; background: var(--paper-2); }
+html.nb .st-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+html.nb .st-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+html.nb .st-row-top b { font-size: 16px; }
+html.nb .st-row-wish { font-size: 13.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.nb .st-row-time { font-size: 12.5px; color: var(--muted); }
+html.nb .st-row-x { flex: none; width: 48px; border: 0; border-inline-start: 1.5px dashed var(--line); background: none; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+html.nb .st-status { align-self: flex-start; flex: none; font: 700 12px var(--f-body); padding: 3px 9px; border-radius: 999px; background: var(--paper-2); color: var(--ink-2); }
+html.nb .st-status.s-queued { background: var(--m-yellow); color: var(--ink); }
+html.nb .st-status.s-working, html.nb .st-status.s-running, html.nb .st-status.s-saving { background: var(--pen-soft); color: var(--pen); }
+html.nb .st-status.s-done { background: var(--m-mint); color: var(--ink); }
+html.nb .st-status.s-failed { background: var(--red-soft); color: var(--red); }
+html.nb .st-tile-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.88); color: var(--ink); }
+html.nb .st-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 16px; text-align: center; }
+html.nb .st-empty .hand { font-size: 20px; margin: 0; }
+@media (min-width: 900px) {
+  html.nb .st-tabs { max-width: 520px; }
+  html.nb .st-while { flex-direction: row; }
+  html.nb .st-while > * { width: auto; }
 }
