@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
-import { studioApi, type StudioCreation, type StudioMode, type StudioReading } from '../../api/client';
+import { studioApi, type StudioCreation, type StudioMode, type StudioReading, type StudioVideoModel } from '../../api/client';
 import Icon from '../Icon';
 import './studio.css';
 
@@ -158,6 +158,34 @@ function Recorder({ mode, onText, disabled }: { mode: StudioMode; onText: (t: st
   );
 }
 
+// The one video choice Michal makes. Faithful faces is the default: the photos are of real kids.
+const VIDEO_CHOICES: { id: StudioVideoModel; title: string; note: string }[] = [
+  { id: 'fast', title: 'פנים נאמנות', note: 'הילדים נשארים עם הפנים שלהם, כמו בתמונה. בערך פי 3 במחיר.' },
+  { id: 'mini', title: 'טיוטה', note: 'זול ומהיר, לנסות רעיון. הפנים עלולות להשתנות קצת.' },
+];
+const videoModelOf = (c: StudioCreation) => c.mode === 'video' ? c.items[0]?.model : null;
+const MODEL_TAG: Record<string, string> = { fast: 'פנים נאמנות', mini: 'טיוטה' };
+
+function VideoModelPick({ value, onChange, prices }: { value: StudioVideoModel; onChange: (m: StudioVideoModel) => void; prices: Partial<Record<StudioVideoModel, number | null>> }) {
+  return (
+    <div className="st-vmodel" role="radiogroup" aria-label="איזה סרטון">
+      {VIDEO_CHOICES.map(c => (
+        <button key={c.id} type="button" role="radio" aria-checked={value === c.id} className={value === c.id ? 'is-on' : ''} onClick={() => onChange(c.id)}>
+          <span className="st-vmodel-dot" aria-hidden="true">{value === c.id && <Icon name="check" size={16} />}</span>
+          <span className="st-vmodel-body">
+            <span className="st-vmodel-top">
+              <b>{c.title}</b>
+              {c.id === 'fast' && <span className="st-vmodel-rec">מומלץ</span>}
+              {prices[c.id] != null && <span className="st-vmodel-usd">בערך ${prices[c.id]!.toFixed(2)}</span>}
+            </span>
+            <small>{c.note}</small>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Piko's job statuses, as Michal reads them
 const STATUS_HE: Record<string, string> = { queued: 'ממתין בתור', working: 'מתחיל ליצור', running: 'נוצר עכשיו', saving: 'כמעט מוכן', done: 'מוכן', failed: 'לא הצליח' };
 const ORDER = ['failed', 'queued', 'working', 'running', 'saving', 'done'];
@@ -189,7 +217,7 @@ function GalleryCard({ c, onOpen }: { c: StudioCreation; onOpen: () => void }) {
       {cover || c.thumb ? <img src={cover || c.thumb!} alt="" loading="lazy" /> : <span className="st-tile-blank" />}
       {c.mode === 'video' && <span className="st-tile-play"><Icon name="play" size={20} /></span>}
       <span className={`st-tile-tag ${c.mode}`}>
-        <Icon name={c.mode === 'video' ? 'film' : 'image'} size={14} /> {c.mode === 'video' ? 'סרטון' : `${c.items.filter(i => i.status === 'done').length} תמונות`}{partial ? ' · חלקי' : ''}
+        <Icon name={c.mode === 'video' ? 'film' : 'image'} size={14} /> {c.mode === 'video' ? 'סרטון' : `${c.items.filter(i => i.status === 'done').length} תמונות`}{videoModelOf(c) === 'mini' ? ' · טיוטה' : ''}{partial ? ' · חלקי' : ''}
       </span>
     </button>
   );
@@ -204,7 +232,7 @@ function RowCard({ c, onOpen, onRemove }: { c: StudioCreation; onOpen: () => voi
         {c.thumb ? <img src={c.thumb} alt="" /> : <span className="st-row-blank" />}
         <span className="st-row-body">
           <span className="st-row-top">
-            <b>{c.mode === 'video' ? 'סרטון' : 'תמונות'}</b>
+            <b>{c.mode === 'video' ? 'סרטון' : 'תמונות'}{MODEL_TAG[videoModelOf(c) || ''] ? ` · ${MODEL_TAG[videoModelOf(c)!]}` : ''}</b>
             <span className={`st-status s-${st}`}>{STATUS_HE[st] || st}</span>
           </span>
           {(c.wish || c.description) && <span className="st-row-wish">{c.wish || c.description}</span>}
@@ -277,6 +305,7 @@ export default function Studio() {
   const [reading, setReading] = useState<StudioReading | null>(null);
   const [readingBusy, setReadingBusy] = useState(false);
   const [mode, setMode] = useState<StudioMode>('video');
+  const [videoModel, setVideoModel] = useState<StudioVideoModel>('fast');
   const [wish, setWish] = useState('');
   const [error, setError] = useState('');
   const [run, setRun] = useState<{ id: string | null; startedAt: number } | null>(null);
@@ -292,6 +321,8 @@ export default function Studio() {
     refetchInterval: q => (q.state.data?.data || []).some(c => !allFinal(c)) ? 5000 : false,
   });
   const creations = listRes?.data || [];
+  const { data: optRes } = useQuery({ queryKey: ['studio-options'], queryFn: () => studioApi.options(), enabled: !!user?.isSuperAdmin, staleTime: 10 * 60 * 1000 });
+  const prices = Object.fromEntries((optRes?.data?.video || []).map(v => [v.id, v.usd])) as Partial<Record<StudioVideoModel, number | null>>;
 
   // Jobs that keep running while she is away (or started before this visit): shown on top with progress,
   // and the one that finishes while she is here opens by itself.
@@ -345,12 +376,13 @@ export default function Studio() {
     }
   }
 
-  async function go() {
+  async function go(model: StudioVideoModel = videoModel) {
     if (!photo) return;
+    if (model !== videoModel) setVideoModel(model);
     setError('');
     setRun({ id: null, startedAt: Date.now() });
     setTimeout(() => workRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-    const res = await studioApi.create({ image: photo.image, thumb: photo.thumb, wish: wish.trim(), mode, build: reading?.build, description: reading?.description });
+    const res = await studioApi.create({ image: photo.image, thumb: photo.thumb, wish: wish.trim(), mode, videoModel: mode === 'video' ? model : undefined, build: reading?.build, description: reading?.description });
     if (!res.success || !res.data) {
       setRun(null);
       setError(res.error || 'משהו השתבש. אפשר לנסות שוב.');
@@ -438,6 +470,8 @@ export default function Studio() {
                   </button>
                 </div>
 
+                {mode === 'video' && <VideoModelPick value={videoModel} onChange={setVideoModel} prices={prices} />}
+
                 {ideas.length > 0 && (
                   <div className="st-ideas">
                     <span className="st-label">רעיונות:</span>
@@ -457,8 +491,8 @@ export default function Studio() {
                   <Recorder mode={mode} disabled={false} onText={t => setWish(w => (w.trim() ? `${w.trim()} ${t}` : t))} />
                 </div>
 
-                <button type="button" className="nb-btn st-go" onClick={go} disabled={readingBusy}>
-                  <Icon name="sparkle" size={20} /> {mode === 'video' ? 'צרי סרטון' : 'צרי 2 תמונות'}
+                <button type="button" className="nb-btn st-go" onClick={() => go()} disabled={readingBusy}>
+                  <Icon name="sparkle" size={20} /> {mode === 'video' ? (videoModel === 'mini' ? 'צרי סרטון טיוטה' : 'צרי סרטון') : 'צרי 2 תמונות'}
                 </button>
                 {!wish.trim() && !readingBusy && <p className="st-hint nb-muted">בלי בקשה? אבחר בעצמי את הרעיון הכי מתאים.</p>}
               </>
@@ -480,7 +514,7 @@ export default function Studio() {
       {error && (
         <div className="st-error" role="alert">
           <span>{error}</span>
-          {photo && !run && <button type="button" className="nb-btn-ghost" onClick={go}><Icon name="refresh" size={18} /> לנסות שוב</button>}
+          {photo && !run && <button type="button" className="nb-btn-ghost" onClick={() => go()}><Icon name="refresh" size={18} /> לנסות שוב</button>}
         </div>
       )}
 
@@ -490,11 +524,14 @@ export default function Studio() {
           {someFailed && (
             <div className="st-error" role="alert">
               <span>{failedAll ? 'היצירה לא הצליחה הפעם.' : 'אחת התמונות לא הצליחה.'}</span>
-              <button type="button" className="nb-btn-ghost" onClick={go}><Icon name="refresh" size={18} /> לנסות שוב</button>
+              <button type="button" className="nb-btn-ghost" onClick={() => go()}><Icon name="refresh" size={18} /> לנסות שוב</button>
             </div>
           )}
           <div className="st-next">
-            {!someFailed && <button type="button" className="nb-btn-ghost" onClick={go}><Icon name="refresh" size={18} /> עוד גרסה</button>}
+            {!someFailed && videoModelOf(current) === 'mini' && (
+              <button type="button" className="nb-btn st-upgrade" onClick={() => go('fast')}><Icon name="sparkle" size={18} /> אהבתי! עכשיו עם פנים נאמנות</button>
+            )}
+            {!someFailed && <button type="button" className="nb-btn-ghost" onClick={() => go()}><Icon name="refresh" size={18} /> עוד גרסה</button>}
             <button type="button" className="nb-btn-ghost" onClick={() => setRun(null)}><Icon name="edit" size={18} /> לשנות את הבקשה</button>
             <button type="button" className="nb-btn-ghost" onClick={reset}><Icon name="camera" size={18} /> תמונה חדשה</button>
             <button type="button" className="nb-btn-ghost" onClick={() => goTab('mine')}><Icon name="image" size={18} /> כל היצירות</button>
@@ -511,7 +548,7 @@ export default function Studio() {
               <span className="hand">{opened.wish || opened.description || (opened.mode === 'video' ? 'סרטון' : 'תמונות')}</span>
               <button type="button" className="st-x" onClick={() => setOpenId(null)} aria-label="סגירה"><Icon name="close" /></button>
             </div>
-            <span className={`st-status s-${statusOf(opened)}`}>{STATUS_HE[statusOf(opened)]} · {dayLabel(opened.createdAt)} {timeOf(opened.createdAt)}</span>
+            <span className={`st-status s-${statusOf(opened)}`}>{STATUS_HE[statusOf(opened)]} · {dayLabel(opened.createdAt)} {timeOf(opened.createdAt)}{MODEL_TAG[videoModelOf(opened) || ''] ? ` · ${MODEL_TAG[videoModelOf(opened)!]}` : ''}</span>
             {allFinal(opened) ? <Result creation={opened} /> : <Progress creation={opened} startedAt={startOf(opened)} />}
             {opened.items.every(i => i.status === 'failed') && <p className="st-error">היצירה הזאת לא הצליחה.</p>}
             <button type="button" className="st-del" onClick={() => remove(opened.id)}>

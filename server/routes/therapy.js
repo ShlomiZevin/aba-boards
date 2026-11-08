@@ -1300,6 +1300,10 @@ router.delete('/studio/creations/:id', requireSuperAdmin, studioHandler(async (r
   res.status(204).send();
 }));
 
+router.get('/studio/options', requireSuperAdmin, studioHandler(async (req, res) => {
+  res.json(await studio.options());
+}));
+
 router.get('/studio/balance', requireSuperAdmin, studioHandler(async (req, res) => {
   res.json(await studio.balance());
 }));

@@ -3,7 +3,8 @@
 // Claude looks at the photo, suggests ideas and writes the final prompt; Piko makes the media.
 // Settings are fixed here, she never chooses them:
 //   pictures → two at once: flare + sunburst, medium quality, story 9:16
-//   video    → 6 s, 480p, 9:16, with sound, the photo is the first frame
+//   video    → 6 s, 480p, 9:16, with sound, the photo is the first frame.
+//              The one choice she has: 'fast' (faithful faces, the default) or 'mini' (cheap draft).
 //
 // Firestore: studioCreations/{id} = { adminId, mode, wish, prompt, description, thumb, items[], usd, createdAt, updatedAt }
 //   items[] = { jobId, kind: 'image'|'video', model, status (queued → working → running → saving → done | failed), progress, url, poster, urlAt, w, h, dur, usd, error }
@@ -21,6 +22,8 @@ const MAX_IMAGE = 12 * 1024 * 1024;
 
 const IMAGE_SETUP = { models: ['flare', 'sunburst'], size: 'story', quality: 'medium' };
 const VIDEO_SETUP = { duration: 6, quality: '480p', ratio: '9:16' };
+const VIDEO_MODELS = ['fast', 'mini'];
+const DEFAULT_VIDEO_MODEL = 'fast';
 
 class StudioError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -90,6 +93,12 @@ Keep everything joyful, gentle and safe for small children.`);
 
 const HEBREW = /[֐-׿]/;
 
+// Always added to the end of every prompt, whatever Claude wrote: the photos are almost always
+// of kids, and Michal wants them to recognise themselves in the result.
+const FACES = 'Keep every person\'s face identical to the reference photo: same facial features, face shape, '
+  + 'eyes, nose, mouth, skin tone, hair and age, so each child is clearly recognisable as themselves. '
+  + 'Do not change, beautify, swap or stylise any face; faces stay consistent in every frame.';
+
 // Turn her wish (Hebrew, maybe spoken) + the photo into the prompt Piko gets.
 // The prompt is always English: the video model reads only English, so a video prompt
 // with any Hebrew left in it is never sent (one more try, then an error).
@@ -100,7 +109,7 @@ async function composePrompt(image, opts, attempt = 1) {
     if (attempt < 2) return composePrompt(image, opts, attempt + 1);
     if (opts.mode === 'video') throw new StudioError(500, piko.friendly('prompt'));
   }
-  return prompt;
+  return `${prompt} ${FACES}`;
 }
 
 async function writePrompt(image, { mode, wish, build }, strict) {
@@ -115,7 +124,8 @@ Write the prompt for ${isVideo
     : 'an image model that gets this photo as a reference and makes a new vertical 9:16 picture.'}
 Rules:
 - English ONLY, 60-110 words, concrete and visual. Translate the wish; no Hebrew word or letter may remain.${strict ? ' Your previous answer contained Hebrew: write it entirely in English.' : ''}
-- Keep the children exactly as they are in the photo (faces, hair, clothes), and keep the build's exact shape, colours and material, now real and working.
+- Keep the children exactly as they are in the photo: the same faces (this matters most, they must be recognisable), hair and clothes. Keep the build's exact shape, colours and material, now real and working.
+- Prefer scenes where the faces stay visible and fairly close to the camera, with no fast turns, no masks or helmets covering the face.
 ${isVideo
     ? '- Describe the motion over the 6 seconds in order, the camera move, and the sound: cheerful music and matching sound effects, the kids laughing; no spoken words.'
     : '- Describe the scene, the kids\' happy expressions, the light and a bright storybook-photo look.'}
@@ -142,8 +152,9 @@ function serialize(id, d) {
 
 const isFinal = (s) => s === 'done' || s === 'failed';
 
-async function create(req, { image, thumb, wish, mode, build, description }) {
+async function create(req, { image, thumb, wish, mode, build, description, videoModel }) {
   if (mode !== 'video' && mode !== 'images') throw new StudioError(400, 'mode must be video or images');
+  const model = VIDEO_MODELS.includes(videoModel) ? videoModel : DEFAULT_VIDEO_MODEL;
   if (!piko.configured()) throw new StudioError(500, piko.friendly('auth'));
   parseImage(image);
   const cleanWish = String(wish || '').slice(0, 1000).trim();
@@ -151,8 +162,8 @@ async function create(req, { image, thumb, wish, mode, build, description }) {
 
   let items;
   if (mode === 'video') {
-    const job = await piko.createVideo({ prompt, start: image, ...VIDEO_SETUP });
-    items = [{ jobId: job.id, kind: 'video', model: 'seedance', status: job.status || 'queued' }];
+    const job = await piko.createVideo({ prompt, start: image, model, ...VIDEO_SETUP });
+    items = [{ jobId: job.id, kind: 'video', model: job.params?.model || model, status: job.status || 'queued' }];
   } else {
     const batches = await Promise.all(IMAGE_SETUP.models.map(model =>
       piko.createImages({ prompt, refs: [image], model, size: IMAGE_SETUP.size, quality: IMAGE_SETUP.quality, count: 1 })
@@ -239,4 +250,22 @@ async function balance() {
   return piko.getBalance();
 }
 
-module.exports = { StudioError, understand, composePrompt, create, get, list, remove, transcribe, balance, IMAGE_SETUP, VIDEO_SETUP };
+// The two video choices with today's price for our fixed setup, read from Piko's GET /config (never hardcoded).
+let optionsCache = null;
+async function options() {
+  if (optionsCache && Date.now() - optionsCache.at < 10 * 60 * 1000) return optionsCache.data;
+  const cfg = await piko.getConfig();
+  const models = (cfg?.video?.models || []).filter(m => VIDEO_MODELS.includes(m.id));
+  const data = {
+    defaultVideoModel: DEFAULT_VIDEO_MODEL,
+    video: VIDEO_MODELS.map(id => {
+      const m = models.find(x => x.id === id);
+      const perSec = m?.usdPerSecond?.[VIDEO_SETUP.quality];
+      return { id, usd: perSec ? Math.round(perSec * VIDEO_SETUP.duration * 100) / 100 : null };
+    }),
+  };
+  optionsCache = { at: Date.now(), data };
+  return data;
+}
+
+module.exports = { StudioError, understand, composePrompt, create, get, list, remove, transcribe, balance, options, IMAGE_SETUP, VIDEO_SETUP };

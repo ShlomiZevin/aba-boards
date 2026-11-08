@@ -200,6 +200,9 @@ export const docsApi = {
 
 // סטודיו — pictures / videos of the kids' builds (super admin only; the server talks to Piko)
 export type StudioMode = 'video' | 'images';
+// fast = faces stay as in the photo (default); mini = cheap draft, faces may change a little
+export type StudioVideoModel = 'fast' | 'mini';
+export interface StudioOptions { defaultVideoModel: StudioVideoModel; video: { id: StudioVideoModel; usd: number | null }[] }
 export interface StudioItem {
   jobId: string; kind: 'image' | 'video'; model: string | null; status: string;
   url: string | null; poster: string | null; w: number | null; h: number | null; dur: number | null;
@@ -216,10 +219,11 @@ export const studioApi = {
     fetchApi<StudioReading>('/studio/understand', { method: 'POST', body: JSON.stringify({ image }) }),
   transcribe: (audio: string, mime: string, mode: StudioMode) =>
     fetchApi<{ text: string }>('/studio/transcribe', { method: 'POST', body: JSON.stringify({ audio, mime, mode }) }),
-  create: (data: { image: string; thumb: string; wish: string; mode: StudioMode; build?: string; description?: string }) =>
+  create: (data: { image: string; thumb: string; wish: string; mode: StudioMode; videoModel?: StudioVideoModel; build?: string; description?: string }) =>
     fetchApi<StudioCreation>('/studio/creations', { method: 'POST', body: JSON.stringify(data) }),
   get: (id: string) => fetchApi<StudioCreation>(`/studio/creations/${id}`),
   list: () => fetchApi<StudioCreation[]>('/studio/creations'),
+  options: () => fetchApi<StudioOptions>('/studio/options'),
   delete: async (id: string): Promise<ApiResponse<void>> => {
     try {
       const r = await fetch(`${API_BASE}/studio/creations/${id}`, { method: 'DELETE', headers: getAuthHeaders() });

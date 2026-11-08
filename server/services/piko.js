@@ -66,9 +66,10 @@ async function createImages({ prompt, refs = [], model = 'flare', size = 'story'
   return data?.jobs || [data];
 }
 
-// Videos (Seedance 2.0 Mini, always with sound). `start` is the first frame.
-async function createVideo({ prompt, start, end, duration = 6, quality = '480p', ratio = '9:16' }) {
-  return call('POST', '/videos', { prompt, start, ...(end ? { end } : {}), duration, quality, ratio });
+// Videos (always with sound). `start` is the first frame.
+// model: 'mini' = cheap draft, faces may drift; 'fast' = keeps faces as in the start photo, ~3x the price.
+async function createVideo({ prompt, start, end, model = 'fast', duration = 6, quality = '480p', ratio = '9:16' }) {
+  return call('POST', '/videos', { prompt, start, ...(end ? { end } : {}), model, duration, quality, ratio });
 }
 
 // A fresh look at a job; done jobs carry a fresh 6-hour signed url each time.

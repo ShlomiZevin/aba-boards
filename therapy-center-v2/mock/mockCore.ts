@@ -391,10 +391,11 @@ const studioView = (c: Doc) => {
   return { ...c, image: undefined, t0: undefined, usd: ready ? (c.mode === 'video' ? 0.11 : 0.08) : 0,
     items: c.items.map((i: Doc) => ready ? { ...i, status: 'done', url: i.kind === 'video' ? '' : c.image, poster: c.image, usd: i.kind === 'video' ? 0.11 : 0.04 } : i) };
 };
+on('GET', '/api/therapy/studio/options', () => ({ defaultVideoModel: 'fast', video: [{ id: 'fast', usd: 0.34 }, { id: 'mini', usd: 0.11 }] }));
 on('GET', '/api/therapy/studio/creations', () => studio.map(studioView).reverse());
 on('POST', '/api/therapy/studio/creations', (_m, _q, b) => {
   const c = { id: newId('st'), mode: b.mode, wish: b.wish || '', prompt: 'mock prompt', description: b.description || '', thumb: b.thumb, image: b.image, t0: Date.now(), createdAt: iso(new Date()),
-    items: b.mode === 'video' ? [{ jobId: newId('j'), kind: 'video', model: 'seedance', status: 'queued', usd: 0 }]
+    items: b.mode === 'video' ? [{ jobId: newId('j'), kind: 'video', model: b.videoModel === 'mini' ? 'mini' : 'fast', status: 'queued', usd: 0 }]
       : ['flare', 'sunburst'].map(model => ({ jobId: newId('j'), kind: 'image', model, status: 'queued', usd: 0 })) };
   studio.push(c); return studioView(c);
 });
