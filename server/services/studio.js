@@ -235,6 +235,18 @@ async function list(req) {
   return fresh;
 }
 
+// The finished file itself, through this server: Piko's storage links don't allow the browser to
+// fetch them, and the phone needs the bytes to offer "save to Photos".
+async function file(req, id, jobId) {
+  const snap = await getOwned(req, id);
+  const d = await refresh(id, snap.data());
+  const item = (d.items || []).find(i => i.jobId === jobId && i.status === 'done' && i.url);
+  if (!item) throw new StudioError(404, 'הקובץ לא נמצא');
+  const res = await fetch(item.url);
+  if (!res.ok) throw new StudioError(502, piko.friendly('network'));
+  return { res, kind: item.kind };
+}
+
 async function remove(req, id) {
   const snap = await getOwned(req, id);
   await snap.ref.delete();
@@ -268,4 +280,4 @@ async function options() {
   return data;
 }
 
-module.exports = { StudioError, understand, composePrompt, create, get, list, remove, transcribe, balance, options, IMAGE_SETUP, VIDEO_SETUP };
+module.exports = { StudioError, understand, composePrompt, create, get, list, file, remove, transcribe, balance, options, IMAGE_SETUP, VIDEO_SETUP };

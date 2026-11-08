@@ -1295,6 +1295,15 @@ router.get('/studio/creations/:id', requireSuperAdmin, studioHandler(async (req,
   res.json(await studio.get(req, req.params.id));
 }));
 
+router.get('/studio/creations/:id/file/:jobId', requireSuperAdmin, studioHandler(async (req, res) => {
+  const { res: up, kind } = await studio.file(req, req.params.id, req.params.jobId);
+  res.set('Content-Type', up.headers.get('content-type') || (kind === 'video' ? 'video/mp4' : 'image/png'));
+  if (up.headers.get('content-length')) res.set('Content-Length', up.headers.get('content-length'));
+  res.set('Cache-Control', 'private, max-age=3600');
+  const { Readable } = require('stream');
+  Readable.fromWeb(up.body).pipe(res);
+}));
+
 router.delete('/studio/creations/:id', requireSuperAdmin, studioHandler(async (req, res) => {
   await studio.remove(req, req.params.id);
   res.status(204).send();

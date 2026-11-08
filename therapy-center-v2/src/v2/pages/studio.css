@@ -201,3 +201,6 @@ html.nb .st-empty .hand { font-size: 20px; margin: 0; }
   html.nb .st-while { flex-direction: row; }
   html.nb .st-while > * { width: auto; }
 }
+
+html.nb .st-save-hint { margin: 2px 0 0; font-size: 13.5px; line-height: 1.4; color: var(--ink-2); text-align: center; }
+html.nb .st-save-hint.is-err { color: var(--red); }

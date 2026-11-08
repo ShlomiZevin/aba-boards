@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
-import { studioApi, type StudioCreation, type StudioMode, type StudioReading, type StudioVideoModel } from '../../api/client';
+import { studioApi, type StudioCreation, type StudioMode, type StudioReading, type StudioVideoModel, type StudioItem } from '../../api/client';
 import Icon from '../Icon';
 import './studio.css';
 
@@ -43,25 +43,78 @@ function blobToBase64(blob: Blob): Promise<string> {
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-/** Save or share a finished file. Mobile: the share sheet (WhatsApp, gallery…); else a download. */
-async function saveFile(url: string, kind: 'image' | 'video', share: boolean) {
-  const name = `doing-${Date.now()}.${kind === 'video' ? 'mp4' : 'png'}`;
-  try {
-    const blob = await (await fetch(url)).blob();
-    const file = new File([blob], name, { type: blob.type || (kind === 'video' ? 'video/mp4' : 'image/png') });
-    if (share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file] });
-      return;
-    }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  } catch (err) {
-    if ((err as Error).name === 'AbortError') return; // closed the share sheet
-    window.open(url, '_blank', 'noopener');
+const IOS = typeof navigator !== 'undefined'
+  && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
+// Finished files, fetched once through our server and kept, so a tap opens the phone's sheet at once
+// (iPhone allows the share sheet only right after the tap, not after a long download).
+const files = new Map<string, Promise<File>>();
+function loadFile(creationId: string, item: StudioItem) {
+  let p = files.get(item.jobId);
+  if (!p) {
+    const name = `doing-${Date.now()}.${item.kind === 'video' ? 'mp4' : 'png'}`;
+    p = studioApi.file(creationId, item.jobId).then(blob => new File([blob], name, { type: blob.type || (item.kind === 'video' ? 'video/mp4' : 'image/png') }));
+    p.catch(() => files.delete(item.jobId));
+    files.set(item.jobId, p);
   }
+  return p;
+}
+
+function download(file: File) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file);
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+/** Save to the phone's photos, or share. iPhone: the share sheet ("Save Video / Save Image" → Photos).
+ *  Android and computers: "save" downloads it (Android shows it in the gallery); "share" opens the share sheet. */
+function MediaActions({ creationId, item }: { creationId: string; item: StudioItem }) {
+  const [state, setState] = useState<'' | 'busy' | 'again' | 'saved' | 'error'>('');
+  useEffect(() => { loadFile(creationId, item).catch(() => {}); }, [creationId, item.jobId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function act(share: boolean) {
+    setState('busy');
+    try {
+      const file = await loadFile(creationId, item);
+      if ((share || IOS) && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          setState('');
+        } catch (err) {
+          const name = (err as Error).name;
+          if (name === 'AbortError') setState('');
+          else if (name === 'NotAllowedError') setState('again'); // the file took a while: one more tap opens the sheet
+          else throw err;
+        }
+        return;
+      }
+      download(file);
+      setState('saved');
+    } catch {
+      setState('error');
+    }
+  }
+
+  const what = item.kind === 'video' ? 'הסרטון' : 'התמונה';
+  return (
+    <>
+      <div className="st-media-actions">
+        <button type="button" className="nb-btn" onClick={() => act(false)} disabled={state === 'busy'}>
+          <Icon name="download" size={18} /> {state === 'busy' ? 'מכינה…' : state === 'again' ? 'מוכן, לחצי שוב' : 'שמירה בטלפון'}
+        </button>
+        <button type="button" className="nb-btn-ghost" onClick={() => act(true)} disabled={state === 'busy'}>
+          <Icon name="share" size={18} /> שיתוף
+        </button>
+      </div>
+      {IOS && state !== 'error' && <p className="st-save-hint">בחלון שנפתח בוחרים ״{item.kind === 'video' ? 'שמירת סרטון' : 'שמירת תמונה'}״, ו{what} נכנס לתמונות.</p>}
+      {state === 'saved' && <p className="st-save-hint">{what} נשמר בטלפון ✓</p>}
+      {state === 'error' && <p className="st-save-hint is-err">לא הצלחתי לשמור. נסי שוב בעוד רגע.</p>}
+    </>
+  );
 }
 
 function Result({ creation }: { creation: StudioCreation }) {
@@ -74,10 +127,7 @@ function Result({ creation }: { creation: StudioCreation }) {
           {item.kind === 'video'
             ? <video src={item.url!} poster={item.poster || undefined} controls playsInline loop preload="metadata" />
             : <img src={item.url!} alt={creation.wish || creation.description} />}
-          <div className="st-media-actions">
-            <button type="button" className="nb-btn" onClick={() => saveFile(item.url!, item.kind, true)}><Icon name="share" size={18} /> שיתוף</button>
-            <button type="button" className="nb-btn-ghost" onClick={() => saveFile(item.url!, item.kind, false)}><Icon name="download" size={18} /> שמירה</button>
-          </div>
+          <MediaActions creationId={creation.id} item={item} />
         </figure>
       ))}
     </div>

@@ -224,6 +224,12 @@ export const studioApi = {
   get: (id: string) => fetchApi<StudioCreation>(`/studio/creations/${id}`),
   list: () => fetchApi<StudioCreation[]>('/studio/creations'),
   options: () => fetchApi<StudioOptions>('/studio/options'),
+  // the finished file's bytes, through our server (Piko's storage won't hand them to the browser)
+  file: async (id: string, jobId: string): Promise<Blob> => {
+    const r = await fetch(`${API_BASE}/studio/creations/${id}/file/${encodeURIComponent(jobId)}`, { headers: getAuthHeaders() });
+    if (!r.ok) throw new Error('file ' + r.status);
+    return r.blob();
+  },
   delete: async (id: string): Promise<ApiResponse<void>> => {
     try {
       const r = await fetch(`${API_BASE}/studio/creations/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
