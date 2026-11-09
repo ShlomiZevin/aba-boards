@@ -202,6 +202,8 @@ export const docsApi = {
 export type StudioMode = 'video' | 'images';
 // fast = faces stay as in the photo (default); mini = cheap draft, faces may change a little
 export type StudioVideoModel = 'fast' | 'mini';
+// transformation videos: 'end' = draw the final creature first, then morph into it (default); 'words' = description only
+export type StudioTransform = 'end' | 'words';
 export interface StudioOptions { defaultVideoModel: StudioVideoModel; video: { id: StudioVideoModel; usd: number | null }[] }
 export interface StudioItem {
   jobId: string; kind: 'image' | 'video'; model: string | null; status: string;
@@ -211,6 +213,7 @@ export interface StudioItem {
 export interface StudioCreation {
   id: string; mode: StudioMode; wish: string; prompt: string; description: string;
   thumb: string | null; usd: number; createdAt: string | null; items: StudioItem[];
+  note?: string; transform?: StudioTransform | null;
 }
 export interface StudioReading { description: string; build: string; ideas: { video: string[]; images: string[] } }
 
@@ -219,7 +222,7 @@ export const studioApi = {
     fetchApi<StudioReading>('/studio/understand', { method: 'POST', body: JSON.stringify({ image }) }),
   transcribe: (audio: string, mime: string, mode: StudioMode) =>
     fetchApi<{ text: string }>('/studio/transcribe', { method: 'POST', body: JSON.stringify({ audio, mime, mode }) }),
-  create: (data: { image: string; thumb: string; wish: string; mode: StudioMode; videoModel?: StudioVideoModel; build?: string; description?: string }) =>
+  create: (data: { image: string; thumb: string; wish: string; mode: StudioMode; videoModel?: StudioVideoModel; transform?: StudioTransform; build?: string; description?: string }) =>
     fetchApi<StudioCreation>('/studio/creations', { method: 'POST', body: JSON.stringify(data) }),
   get: (id: string) => fetchApi<StudioCreation>(`/studio/creations/${id}`),
   list: () => fetchApi<StudioCreation[]>('/studio/creations'),

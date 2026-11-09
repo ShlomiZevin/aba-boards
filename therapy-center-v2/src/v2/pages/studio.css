@@ -204,3 +204,9 @@ html.nb .st-empty .hand { font-size: 20px; margin: 0; }
 
 html.nb .st-save-hint { margin: 2px 0 0; font-size: 13.5px; line-height: 1.4; color: var(--ink-2); text-align: center; }
 html.nb .st-save-hint.is-err { color: var(--red); }
+
+html.nb .st-note {
+  display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 14px;
+  background: var(--pen-soft); color: var(--ink); font-size: 14.5px; line-height: 1.45;
+}
+html.nb .st-note svg { flex: none; margin-top: 2px; color: var(--pen); }

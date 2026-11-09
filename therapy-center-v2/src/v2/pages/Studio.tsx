@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
-import { studioApi, type StudioCreation, type StudioMode, type StudioReading, type StudioVideoModel, type StudioItem } from '../../api/client';
+import { studioApi, type StudioCreation, type StudioMode, type StudioReading, type StudioVideoModel, type StudioItem, type StudioTransform } from '../../api/client';
 import Icon from '../Icon';
 import './studio.css';
 
@@ -236,6 +236,33 @@ function VideoModelPick({ value, onChange, prices }: { value: StudioVideoModel; 
   );
 }
 
+// Shown only when the wish is about turning into something. 'end' is the default.
+const TRANSFORM_WORDS = /הופך|הופכ|להפוך|יהפוך|יהפכו|תהפוך|תהפכי|נהפך|הפיכה|turn(s|ed)? into|becomes?\b/i;
+const TRANSFORM_CHOICES: { id: StudioTransform; title: string; note: string }[] = [
+  { id: 'end', title: 'עם תמונת סיום', note: 'קודם מציירת את הדמות, ואז הסרטון הופך אליה. מדויק יותר.' },
+  { id: 'words', title: 'רק תיאור', note: 'בלי תמונה, הסרטון ממציא את הדמות לבד. קצת יותר זול.' },
+];
+
+function TransformPick({ value, onChange }: { value: StudioTransform; onChange: (t: StudioTransform) => void }) {
+  return (
+    <div className="st-vmodel" role="radiogroup" aria-label="איך לעשות את ההפיכה">
+      <span className="st-label">איך לעשות את ההפיכה?</span>
+      {TRANSFORM_CHOICES.map(c => (
+        <button key={c.id} type="button" role="radio" aria-checked={value === c.id} className={value === c.id ? 'is-on' : ''} onClick={() => onChange(c.id)}>
+          <span className="st-vmodel-dot" aria-hidden="true">{value === c.id && <Icon name="check" size={16} />}</span>
+          <span className="st-vmodel-body">
+            <span className="st-vmodel-top">
+              <b>{c.title}</b>
+              {c.id === 'end' && <span className="st-vmodel-rec">מומלץ</span>}
+            </span>
+            <small>{c.note}</small>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Piko's job statuses, as Michal reads them
 const STATUS_HE: Record<string, string> = { queued: 'ממתין בתור', working: 'מתחיל ליצור', running: 'נוצר עכשיו', saving: 'כמעט מוכן', done: 'מוכן', failed: 'לא הצליח' };
 const ORDER = ['failed', 'queued', 'working', 'running', 'saving', 'done'];
@@ -356,6 +383,7 @@ export default function Studio() {
   const [readingBusy, setReadingBusy] = useState(false);
   const [mode, setMode] = useState<StudioMode>('video');
   const [videoModel, setVideoModel] = useState<StudioVideoModel>('fast');
+  const [transform, setTransform] = useState<StudioTransform>('end');
   const [wish, setWish] = useState('');
   const [error, setError] = useState('');
   const [run, setRun] = useState<{ id: string | null; startedAt: number } | null>(null);
@@ -432,7 +460,7 @@ export default function Studio() {
     setError('');
     setRun({ id: null, startedAt: Date.now() });
     setTimeout(() => workRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-    const res = await studioApi.create({ image: photo.image, thumb: photo.thumb, wish: wish.trim(), mode, videoModel: mode === 'video' ? model : undefined, build: reading?.build, description: reading?.description });
+    const res = await studioApi.create({ image: photo.image, thumb: photo.thumb, wish: wish.trim(), mode, videoModel: mode === 'video' ? model : undefined, transform: mode === 'video' ? transform : undefined, build: reading?.build, description: reading?.description });
     if (!res.success || !res.data) {
       setRun(null);
       setError(res.error || 'משהו השתבש. אפשר לנסות שוב.');
@@ -541,6 +569,8 @@ export default function Studio() {
                   <Recorder mode={mode} disabled={false} onText={t => setWish(w => (w.trim() ? `${w.trim()} ${t}` : t))} />
                 </div>
 
+                {mode === 'video' && TRANSFORM_WORDS.test(wish) && <TransformPick value={transform} onChange={setTransform} />}
+
                 <button type="button" className="nb-btn st-go" onClick={() => go()} disabled={readingBusy}>
                   <Icon name="sparkle" size={20} /> {mode === 'video' ? (videoModel === 'mini' ? 'צרי סרטון טיוטה' : 'צרי סרטון') : 'צרי 2 תמונות'}
                 </button>
@@ -551,6 +581,7 @@ export default function Studio() {
             {running && (
               <>
                 <Progress creation={current} startedAt={run!.startedAt} />
+                {current?.note && <p className="st-note"><Icon name="sparkle" size={16} /> {current.note}</p>}
                 <div className="st-while">
                   <button type="button" className="nb-btn-ghost" onClick={reset}><Icon name="plus" size={18} /> עוד יצירה בינתיים</button>
                   <button type="button" className="nb-btn-ghost" onClick={() => goTab('mine')}><Icon name="image" size={18} /> כל היצירות</button>
@@ -570,6 +601,7 @@ export default function Studio() {
 
       {current && finished && (
         <section ref={doneRef} className="st-done">
+          {current.note && <p className="st-note"><Icon name="sparkle" size={16} /> {current.note}</p>}
           <Result creation={current} />
           {someFailed && (
             <div className="st-error" role="alert">
@@ -599,6 +631,7 @@ export default function Studio() {
               <button type="button" className="st-x" onClick={() => setOpenId(null)} aria-label="סגירה"><Icon name="close" /></button>
             </div>
             <span className={`st-status s-${statusOf(opened)}`}>{STATUS_HE[statusOf(opened)]} · {dayLabel(opened.createdAt)} {timeOf(opened.createdAt)}{MODEL_TAG[videoModelOf(opened) || ''] ? ` · ${MODEL_TAG[videoModelOf(opened)!]}` : ''}</span>
+            {opened.note && <p className="st-note"><Icon name="sparkle" size={16} /> {opened.note}</p>}
             {allFinal(opened) ? <Result creation={opened} /> : <Progress creation={opened} startedAt={startOf(opened)} />}
             {opened.items.every(i => i.status === 'failed') && <p className="st-error">היצירה הזאת לא הצליחה.</p>}
             <button type="button" className="st-del" onClick={() => remove(opened.id)}>

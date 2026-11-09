@@ -394,7 +394,7 @@ const studioView = (c: Doc) => {
 on('GET', '/api/therapy/studio/options', () => ({ defaultVideoModel: 'fast', video: [{ id: 'fast', usd: 0.34 }, { id: 'mini', usd: 0.11 }] }));
 on('GET', '/api/therapy/studio/creations', () => studio.map(studioView).reverse());
 on('POST', '/api/therapy/studio/creations', (_m, _q, b) => {
-  const c = { id: newId('st'), mode: b.mode, wish: b.wish || '', prompt: 'mock prompt', description: b.description || '', thumb: b.thumb, image: b.image, t0: Date.now(), createdAt: iso(new Date()),
+  const c = { id: newId('st'), mode: b.mode, wish: b.wish || '', prompt: 'mock prompt', description: b.description || '', note: /פיקא|ספיידר/.test(b.wish || '') ? 'דמויות מוכרות חסומות אצל המודלים, אז עיצבתי דמות מקורית בהשראתה.' : '', transform: /הופך|להפוך|יהפוך|תהפוך/.test(b.wish || '') ? (b.transform || 'end') : null, thumb: b.thumb, image: b.image, t0: Date.now(), createdAt: iso(new Date()),
     items: b.mode === 'video' ? [{ jobId: newId('j'), kind: 'video', model: b.videoModel === 'mini' ? 'mini' : 'fast', status: 'queued', usd: 0 }]
       : ['flare', 'sunburst'].map(model => ({ jobId: newId('j'), kind: 'image', model, status: 'queued', usd: 0 })) };
   studio.push(c); return studioView(c);
