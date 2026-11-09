@@ -14,6 +14,13 @@ import { runSlidesMigrationsIfNeeded } from './pages/slides/auth'
 // (see CURRENT_SLIDES_VERSION in pages/slides/auth.ts)
 runSlidesMigrationsIfNeeded();
 
+// Lets Android (older Chrome too) install Doing as an app on the home screen. Caches nothing.
+if (import.meta.env.PROD && !IS_DEMO && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => {});
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

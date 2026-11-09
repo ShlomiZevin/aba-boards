@@ -1,12 +1,19 @@
 {
+  "id": "/therapy/",
   "name": "Doing",
   "short_name": "Doing",
+  "description": "Doing - מרכז הטיפול",
   "start_url": "/therapy/",
   "scope": "/therapy/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#FFFBF3",
   "theme_color": "#FFFBF3",
   "dir": "rtl",
   "lang": "he",
-  "icons": [{ "src": "/therapy/doing-logo-transparent2.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
+  "icons": [
+    { "src": "/therapy/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/therapy/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/therapy/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }
