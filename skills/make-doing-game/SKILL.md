@@ -30,11 +30,17 @@ a tutorial, and PLAY it as a phone before anyone sees it. Never skip a step.
   `... sfx <prompt.txt> <out.mp3> <secs>`, `... loop ...`, `... voice "<Hebrew>" <out.mp3> [voiceId]`.
   - Every picture = OpenAI **gpt-image-2.5-flare** (default: scenes, props, icons, concept) or **gpt-image-2.5-sunburst**
     (the most exact: characters, poses, cover, title art - HIGH only for these). No other image model.
-  - Every sound = ElevenLabs. **Voice lines** use Start Doing's key with **`eleven_v4` + the Hebrew library voice Zina**
-    (`Tbj9UQjXon5RB9MPEyc2`, a warm young woman - make.mjs's default; v3 and the default English voices sounded foreign,
-    Shlomi 2026-11-16). Write **niqqud** on every line, direct with `[warm, gentle, slow]` tags, and **transcribe every
-    line back** (faster-whisper, audio decoded with ffmpeg to 16 kHz float32) - re-record or reword any that come out
-    wrong (שָׂמִים came out "שמעים" twice; "מְסַבְּנִים אֶת הַגּוּף" fixed it). Captions match the words exactly. **Effects and loops**
+  - Every sound = ElevenLabs. **Voice lines** use Start Doing's key with **`eleven_v4` + Nimrod**
+    (`ZiofZHcEBTn5sRySe5h8`, a warm Israeli man - make.mjs's default; Shlomi's pick from a 6-voice bake-off,
+    2026-11-16). Other good Hebrew library voices: Danit (woman, `s0T0DT6EAPeX57MQpn3I`), Itamar (`l7Q9rbdCC6j3J5dNlOOg`).
+    `eleven_multilingual_v2` and OpenAI TTS mangle Hebrew - don't. **Plain Hebrew spelling**: full niqqud made it
+    sound strange (עַכְשָׁו -> "achshau", יופי stressed on the last syllable); vowel marks only on a word that comes out
+    wrong. **Game-style audio tags on every line**, per phrase: `[excited, playful]`, `[curious, inviting]`,
+    `[delighted, cheering]`, `[proud, warm]`, `[giggles]` - never one flat tag for all. **Transcribe every line back**
+    (faster-whisper on ffmpeg-decoded 16 kHz audio) and re-record or reword any that come out wrong (doubled words,
+    an added "לי", a mangled verb - "בוא/בואי נשפשף" worked where "תשפשפי" didn't). Stress can't be transcribed:
+    record 2-3 takes of a short stressed word and keep the one whose first syllable is louder/higher.
+    Captions match the words exactly. **Effects and loops**
     (`sfx` / `loop`) borrow Plaxzy's ElevenLabs key, because Start Doing's key has no sound-generation permission
     (Shlomi's OK, 2026-11-16). make.mjs finds that key by itself in `plaxzy-creator/.env.local`, else in the gcloud
     secret `MAKEGAME_ELEVENLABS_KEY`. ElevenLabs allows 5 requests at a time, so generate in batches of 4.

@@ -28,6 +28,8 @@ body.shw-open { background: #FFFBF3 !important; overflow: hidden; }
 /* ---------------- top bar ---------------- */
 .shw-topbar {
   flex: 0 0 auto;
+  position: relative;
+  z-index: 1035; /* above the start / end screens: exit and the menu are always reachable */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -50,6 +52,8 @@ body.shw-open { background: #FFFBF3 !important; overflow: hidden; }
 .shw-icon.off { opacity: 0.6; }
 .shw-dots {
   flex: 1;
+  overflow: hidden;
+  align-items: center;
   display: flex;
   justify-content: center;
   gap: 8px;
@@ -60,8 +64,8 @@ body.shw-open { background: #FFFBF3 !important; overflow: hidden; }
   min-width: 0;
 }
 .shw-dot {
-  width: 16px; height: 16px; border-radius: 50%;
-  flex: 0 0 auto;
+  /* shrink to fit any number of steps on any phone */
+  flex: 0 1 16px; min-width: 7px; aspect-ratio: 1; height: auto; border-radius: 50%;
   background: #E9E3D3;
   transition: background 0.4s, transform 0.4s;
 }
@@ -432,3 +436,32 @@ body.shw-open { background: #FFFBF3 !important; overflow: hidden; }
   55% { transform: scale(1.05); opacity: 1; }
   100% { transform: scale(1.25) translateY(-8%); opacity: 0; }
 }
+
+/* ---------------- the adult's menu ---------------- */
+.shw-icon.open { background: var(--pen); color: #fff; }
+.shw-menu-dots { display: flex; gap: 4px; }
+.shw-menu-dots i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.shw-menu-backdrop { position: fixed; inset: 0; z-index: 1040; }
+.shw-menu {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 64px);
+  left: calc(env(safe-area-inset-left) + 12px);
+  min-width: 200px;
+  padding: 8px;
+  background: #fff;
+  border: 2px solid #EDE6D6;
+  border-radius: 20px;
+  box-shadow: 0 10px 28px rgba(42, 33, 64, 0.18);
+  display: flex; flex-direction: column; gap: 4px;
+  animation: shw-pop-in 0.2s ease both;
+}
+.shw-menu button {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 52px; padding: 0 14px;
+  border: none; border-radius: 14px; background: transparent;
+  font-family: 'Heebo', sans-serif; font-size: 1.05rem; color: var(--ink);
+  text-align: right; cursor: pointer;
+}
+.shw-menu button:active, .shw-menu button:hover { background: #F5F0FF; }
+.shw-menu button:disabled { opacity: 0.4; }
+.shw-menu button span { font-size: 1.3rem; width: 28px; text-align: center; }

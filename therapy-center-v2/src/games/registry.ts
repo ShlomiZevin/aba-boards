@@ -48,14 +48,6 @@ export const GAMES: GameDefinition[] = [
       },
     ],
   },
-];
-
-/**
- * Games that work by direct link only (/kid/:kidId/game/<id>) and are listed
- * nowhere - for Shlomi to try quietly before a game is offered. To release one,
- * move its entry into GAMES.
- */
-export const HIDDEN_GAMES: GameDefinition[] = [
   {
     id: 'shower-steps',
     name: 'המקלחת שלי',
@@ -89,6 +81,14 @@ export const HIDDEN_GAMES: GameDefinition[] = [
       { key: 'kidPictures', type: 'checkbox', label: 'דמות אישית של הילד (אם הועלו תמונות)', default: true },
     ],
   },
+];
+
+/**
+ * Games that work by direct link only (/kid/:kidId/game/<id>) and are listed
+ * nowhere - for Shlomi to try quietly before a game is offered. To release one,
+ * move its entry into GAMES.
+ */
+export const HIDDEN_GAMES: GameDefinition[] = [
 ];
 
 /** Scenes with artwork. Anything else falls back to the plain gradient. */

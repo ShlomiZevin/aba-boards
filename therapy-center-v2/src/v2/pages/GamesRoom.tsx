@@ -35,11 +35,12 @@ export default function GamesRoom() {
   const kid = kidQuery.data?.data;
   const played = stateQuery.data?.data || {};
   const entries: KidGameEntry[] = (kid?.games || []).filter(Boolean);
-  // On = switched on; with no entry yet, a game the kid already plays counts as on
-  // (kids who played before the games room existed keep their game).
+  // On = switched on. Only lego-tower (older than the games room) also counts as on
+  // when the kid already plays it with no entry - so its old players keep it. Any other
+  // game must be switched on, or one try by a therapist would show it to the parents.
   const isOn = (id: string) => {
     const e = entries.find((x) => x.id === id);
-    return e ? e.enabled !== false : !!played[id];
+    return e ? e.enabled !== false : id === 'lego-tower' && !!played[id];
   };
 
   const save = useMutation({

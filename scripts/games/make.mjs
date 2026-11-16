@@ -99,10 +99,11 @@ async function sfx([promptFile, out, secs = '1.5'], loop) {
   save(out, Buffer.from(await res.arrayBuffer()));
 }
 
-// Hebrew voice = eleven_v4 (beat v3 on Hebrew in the Shlomiverse's tests) with a Hebrew library voice:
-// Zina (young adult woman, warm). Write vowel marks (niqqud) on every line; audio tags in [brackets] direct
-// the delivery and are not read. Transcribe each line back before using it.
-async function voice([text, out, voiceId = 'Tbj9UQjXon5RB9MPEyc2']) {
+// Hebrew voice = eleven_v4 with Nimrod, a warm Israeli man (Hebrew library voice; Shlomi's pick in a
+// 6-voice bake-off, 2026-11-16). PLAIN Hebrew spelling - full niqqud made it sound strange (עַכְשָׁו came out
+// "achshau", יופי got the stress on the last syllable); add vowel marks only to a word that comes out wrong.
+// Direct every line with game-style audio tags in [brackets] (not read aloud). Transcribe each line back.
+async function voice([text, out, voiceId = 'ZiofZHcEBTn5sRySe5h8']) {
   if (!ELEVEN) throw new Error('ELEVENLABS_API_KEY missing in server/.env');
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
     method: 'POST', headers: { 'xi-api-key': ELEVEN, 'content-type': 'application/json', accept: 'audio/mpeg' },

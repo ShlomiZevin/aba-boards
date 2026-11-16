@@ -130,6 +130,7 @@ export default function ShowerSteps({
   const [sparkle, setSparkle] = useState(0);
   const [tutorial, setTutorial] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [muted, setMuted] = useState(() => {
     try { return localStorage.getItem(`showerMuted:${kidId}`) === '1'; } catch { return false; }
   });
@@ -485,19 +486,32 @@ export default function ShowerSteps({
           {steps.map((_, i) => <span key={i} className={`shw-dot${i < done ? ' on' : ''}${i === done && phase === 'play' ? ' now' : ''}`} />)}
         </div>
 
-        <button className={`shw-icon${muted ? ' off' : ''}`} onClick={toggleSound} aria-label="צלילים">
-          {muted ? '🔇' : '🔊'}
+        {/* one quiet menu for the adult: sound, how to play, settings */}
+        <button className={`shw-icon${menuOpen ? ' open' : ''}`} onClick={() => setMenuOpen((o) => !o)} aria-label="תפריט" aria-expanded={menuOpen}>
+          <span className="shw-menu-dots" aria-hidden><i /><i /><i /></span>
         </button>
-        <button
-          className="shw-icon"
-          onClick={() => { sound.unlock(); if (phase === 'play') showTutorial(); }}
-          aria-label="איך משחקים"
-          disabled={phase !== 'play'}
-        >?</button>
-        {canEdit && (
-          <button className="shw-icon" onClick={() => setShowSettings(true)} aria-label="הגדרות">⚙️</button>
-        )}
       </div>
+
+      {menuOpen && (
+        <div className="shw-menu-backdrop" onPointerDown={() => setMenuOpen(false)}>
+          <div className="shw-menu" onPointerDown={(e) => e.stopPropagation()}>
+            <button onClick={() => { toggleSound(); }}>
+              <span aria-hidden>{muted ? '🔇' : '🔊'}</span>{muted ? 'הפעלת צלילים' : 'השתקה'}
+            </button>
+            <button
+              disabled={phase !== 'play'}
+              onClick={() => { setMenuOpen(false); sound.unlock(); showTutorial(); }}
+            >
+              <span aria-hidden>👆</span>איך משחקים
+            </button>
+            {canEdit && (
+              <button onClick={() => { setMenuOpen(false); setShowSettings(true); }}>
+                <span aria-hidden>⚙️</span>הגדרות
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="shw-main">
         <div className="shw-scene-wrap">
