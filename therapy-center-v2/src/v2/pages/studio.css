@@ -210,3 +210,8 @@ html.nb .st-note {
   background: var(--pen-soft); color: var(--ink); font-size: 14.5px; line-height: 1.45;
 }
 html.nb .st-note svg { flex: none; margin-top: 2px; color: var(--pen); }
+
+html.nb .st-adv { font-size: 13px; color: var(--ink-soft, var(--ink)); }
+html.nb .st-adv summary { cursor: pointer; opacity: .7; }
+html.nb .st-adv p { margin: 6px 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--pen-soft);
+  font-family: ui-monospace, Consolas, monospace; line-height: 1.45; text-align: left; user-select: text; word-break: break-word; }

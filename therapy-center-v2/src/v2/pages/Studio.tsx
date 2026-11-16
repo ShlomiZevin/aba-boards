@@ -634,6 +634,14 @@ export default function Studio() {
             {opened.note && <p className="st-note"><Icon name="sparkle" size={16} /> {opened.note}</p>}
             {allFinal(opened) ? <Result creation={opened} /> : <Progress creation={opened} startedAt={startOf(opened)} />}
             {opened.items.every(i => i.status === 'failed') && <p className="st-error">היצירה הזאת לא הצליחה.</p>}
+            {/* for debugging: exactly what was sent to the model, closed by default */}
+            {opened.prompt && (
+              <details className="st-adv">
+                <summary>מתקדם: הפרומפט שנשלח</summary>
+                <p dir="ltr">{opened.prompt}</p>
+                {opened.endPrompt && <><b>תמונת הסיום</b><p dir="ltr">{opened.endPrompt}</p></>}
+              </details>
+            )}
             <button type="button" className="st-del" onClick={() => remove(opened.id)}>
               <Icon name="trash" size={16} /> הסרה מהרשימה
             </button>

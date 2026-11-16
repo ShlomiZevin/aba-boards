@@ -213,7 +213,7 @@ export interface StudioItem {
 export interface StudioCreation {
   id: string; mode: StudioMode; wish: string; prompt: string; description: string;
   thumb: string | null; usd: number; createdAt: string | null; items: StudioItem[];
-  note?: string; transform?: StudioTransform | null;
+  note?: string; transform?: StudioTransform | null; endPrompt?: string | null;
 }
 export interface StudioReading { description: string; build: string; ideas: { video: string[]; images: string[] } }
 

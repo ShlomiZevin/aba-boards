@@ -5,8 +5,9 @@
 //   pictures → two at once: flare + sunburst, medium quality, story 9:16
 //   video    → 6 s, 480p, 9:16, with sound, the photo is the first frame.
 //              The one choice she has: 'fast' (faithful faces, the default) or 'mini' (cheap draft).
-//   transformation videos (the kid turns into a creature / hero): Claude spots them in the wish and writes
-//              an original design (known characters are blocked by the models, so never a copy of one).
+//   prompts: one short English sentence, like a person types by hand (see writePrompt).
+//   transformation videos (the kid turns into a creature / hero): Claude spots them in the wish; known
+//              characters are blocked by the models, so they get a few plain words for an original look.
 //              'end' (default): first a picture of the final creature in the same place, then the video goes
 //              from the photo to it. 'words': the video model gets only the description.
 //
@@ -97,15 +98,12 @@ Keep everything joyful, gentle and safe for small children.`);
 
 const HEBREW = /[֐-׿]/;
 
-// Always added to the end of every prompt, whatever Claude wrote: the photos are almost always
-// of kids, and Michal wants them to recognise themselves in the result.
-const FACES = 'Keep every person\'s face identical to the reference photo: same facial features, face shape, '
-  + 'eyes, nose, mouth, skin tone, hair and age, so each child is clearly recognisable as themselves. '
-  + 'Do not change, beautify, swap or stylise any face; faces stay consistent in every frame.';
-
-// In a transformation the person becomes something else, so the faces hold only until it starts.
-const FACES_START = 'Before the transformation begins, keep every person\'s face identical to the reference photo: '
-  + 'same facial features, face shape, eyes, nose, mouth, skin tone, hair and age, clearly recognisable.';
+// Prompts are kept SHORT on purpose: one plain sentence, the way a person types it by hand
+// ("put the two kids in the car and make them drive"). The photo already shows the faces, clothes
+// and the build, so describing them in words only fights the photo and confuses the model.
+// One short sentence about the faces is added to every prompt.
+const FACES = 'Keep the faces exactly as in the photo.';
+const FACES_START = 'Keep the face exactly as in the photo until the change.';
 
 // Turn her wish (Hebrew, maybe spoken) + the photo into what Piko gets:
 //   { prompt, transform, endPrompt, note }  (endPrompt only for a transformation video).
@@ -121,44 +119,31 @@ async function composePrompt(image, opts, attempt = 1) {
   return { ...out, prompt: `${out.prompt} ${out.transform ? FACES_START : FACES}` };
 }
 
-async function writePrompt(image, { mode, wish, build }, strict) {
+async function writePrompt(image, { mode, wish }, strict) {
   const isVideo = mode === 'video';
   const out = await askClaude(image, `${CONTEXT}
 
-Michal's wish (may be empty, then pick the most natural magical idea yourself): "${wish || ''}"
-${build ? `The build in the photo: ${build}` : ''}
+Michal's wish: "${wish || ''}"
 
-Write the prompt for ${isVideo
-    ? 'an image-to-video model. This photo is the FIRST FRAME of a 6-second vertical video with sound.'
-    : 'an image model that gets this photo as a reference and makes a new vertical 9:16 picture.'}
-Rules:
-- English ONLY, 60-110 words, concrete and visual. Translate the wish; no Hebrew word or letter may remain.${strict ? ' Your previous answer contained Hebrew: write it entirely in English.' : ''}
-- Keep the children exactly as they are in the photo: the same faces (this matters most, they must be recognisable), hair and clothes. Keep the build's exact shape, colours and material, now real and working.
-- Prefer scenes where the faces stay visible and fairly close to the camera, with no fast turns, no masks or helmets covering the face.
-${isVideo
-    ? '- Describe the motion over the 6 seconds in order, the camera move, and the sound: cheerful music and matching sound effects, the kids laughing; no spoken words.'
-    : '- Describe the scene, the kids\' happy expressions, the light and a bright storybook-photo look.'}
-- Joyful, gentle, safe for small children. No text or letters in the image.
+Write the prompt for ${isVideo ? 'an image-to-video model (the photo is the first frame)' : 'an image model (the photo is the reference)'}.
+Write it the way a person types it by hand: ONE short, simple English sentence, under 20 words.
+Just say what happens, e.g. "Put the two kids in the car and make them drive away."
+"The kids sail away on the ship they built." "The balloon flies up into the sky with the kids in the basket."
+- Say "the kids" / "the boy" / "the girl" / "the build". Do NOT describe faces, hair, clothes, colours, the room,
+  the camera, the light, timing or sound: the model sees the photo.
+- Translate the wish faithfully, add nothing she did not ask for. If the wish is empty, write the most natural one:
+  the kids get into / onto what they built and it does its job.
+- English only, no Hebrew letter.${strict ? ' Your previous answer had Hebrew: write it in English.' : ''}
 
-Known characters: the image and video models block well-known characters (Pikachu, Pokémon, Spider-Man, Elsa,
-Disney, Marvel, Paw Patrol, Sonic, Mario, Minecraft...), by name AND by a close look-alike description. If the wish asks
-for one, never name it and never copy its look (no signature shape, ears, tail, cheeks, emblem, mask or colour pattern).
-Instead design an ORIGINAL creature / hero that keeps the spirit of the wish: its element and powers (electric, ice,
-web-slinging...), its mood (brave warrior, cute, magical), its main colour, but its own body, face and details.
-Describe it fully and concretely, like a 3D animated film character. Then set "note" to one short, warm Hebrew sentence
-for Michal, e.g. "דמויות מוכרות חסומות אצל המודלים, אז עיצבתי דמות מקורית בהשראתה: יצור חשמלי צהוב ולוחם."
+Known characters (Pikachu, Spider-Man, Elsa, Disney, Marvel...) are blocked by the models. Never name one; use a
+few plain words for an original look-alike in spirit instead (e.g. "a small yellow electric creature",
+"a red-and-blue superhero"), and set "note" to one short Hebrew sentence for Michal saying so.
 ${isVideo ? `
-Transformation: if in the wish a person (or the build) TURNS INTO / BECOMES a creature, character, hero or animal,
-set "transform": true. Then:
-- "prompt": one continuous shot, camera still, same place and lighting: the person looks at the camera, then magic
-  (sparks / light swirl / a flash) and they morph smoothly into the creature, which ends in a lively pose. Describe the
-  creature fully. Sound: magical whoosh and matching effects, no speech.
-- "endPrompt": a prompt for an image model that gets this photo as reference and draws the LAST FRAME: the exact same
-  place, camera angle and lighting as the photo, the person is gone, and in their place, filling the same part of the
-  frame, stands the creature in its final pose. Describe it in the same words as in "prompt". High quality 3D animated
-  film style, vertical 9:16, no text. 60-100 words, English only.
-Otherwise "transform": false and "endPrompt": "".` : ''}
-Answer ONLY with JSON: { "prompt": "...", ${isVideo ? '"transform": false, "endPrompt": "", ' : ''}"note": "" }`, 2000);
+Transformation: if someone TURNS INTO / BECOMES a creature, hero or animal, set "transform": true,
+"prompt": "<who> transforms into <what> with a magic flash." and
+"endPrompt": one short sentence for an image model that draws the last frame from the photo:
+"The same photo, but the <who> is now <what>, standing in the same place." Otherwise "transform": false, "endPrompt": "".` : ''}
+Answer ONLY with JSON: { "prompt": "...", ${isVideo ? '"transform": false, "endPrompt": "", ' : ''}"note": "" }`, 400);
   const prompt = String(out.prompt || '').trim();
   if (!prompt) throw new StudioError(500, piko.friendly('prompt'));
   const transform = isVideo && out.transform === true && !!String(out.endPrompt || '').trim();
@@ -181,7 +166,7 @@ const toIso = (v) => (v && typeof v.toDate === 'function' ? v.toDate().toISOStri
 function serialize(id, d) {
   return {
     id, mode: d.mode, wish: d.wish || '', prompt: d.prompt || '', description: d.description || '',
-    thumb: d.thumb || null, usd: d.usd || 0, createdAt: toIso(d.createdAt), note: d.note || '', transform: d.transform || null,
+    thumb: d.thumb || null, usd: d.usd || 0, createdAt: toIso(d.createdAt), note: d.note || '', transform: d.transform || null, endPrompt: d.endPrompt || null,
     items: (d.items || []).map(i => ({
       jobId: i.jobId, kind: i.kind, model: i.model || null, status: i.status,
       url: i.url || null, poster: i.poster || null, w: i.w || null, h: i.h || null, dur: i.dur || null,
@@ -192,13 +177,13 @@ function serialize(id, d) {
 
 const isFinal = (s) => s === 'done' || s === 'failed';
 
-async function create(req, { image, thumb, wish, mode, build, description, videoModel, transform: how }) {
+async function create(req, { image, thumb, wish, mode, description, videoModel, transform: how }) {
   if (mode !== 'video' && mode !== 'images') throw new StudioError(400, 'mode must be video or images');
   const model = VIDEO_MODELS.includes(videoModel) ? videoModel : DEFAULT_VIDEO_MODEL;
   if (!piko.configured()) throw new StudioError(500, piko.friendly('auth'));
   parseImage(image);
   const cleanWish = String(wish || '').slice(0, 1000).trim();
-  const { prompt, transform, endPrompt, note } = await composePrompt(image, { mode, wish: cleanWish, build: String(build || '').slice(0, 500) });
+  const { prompt, transform, endPrompt, note } = await composePrompt(image, { mode, wish: cleanWish });
   const withFrame = transform && how !== 'words';
 
   let items;
@@ -303,6 +288,7 @@ async function remove(req, id) {
 async function transcribe({ audio, mime, mode }) {
   if (!audio || !mime) throw new StudioError(400, 'חסרה הקלטה');
   const out = await piko.transcribe({ audio, mime, mode: mode === 'video' ? 'video' : 'image', hasStart: mode === 'video', refs: mode === 'video' ? 0 : 1 });
+  console.log(`[studio] transcribe ${mime} ${Math.round(audio.length * 0.75 / 1024)}KB heard: ${out?.text || ''}`);
   return { text: out?.text || '' };
 }
 
