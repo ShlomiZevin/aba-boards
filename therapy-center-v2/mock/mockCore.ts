@@ -56,6 +56,19 @@ const GOALS: [string, string, string][] = [
   ['k-noga', 'motor-fine', 'הרכבת פאזל 12 חלקים'],
   ['k-noga', 'play-social', 'משחק תורות עם חבר'],
   ['k-noga', 'adl', 'לבישת מעיל באופן עצמאי'],
+  ['k-noga', 'language', 'בקשה במשפט של 3 מילים'],
+  ['k-noga', 'language', 'מענה לשאלות מה ומי'],
+  ['k-noga', 'language', 'תיאור תמונה'],
+  ['k-noga', 'motor-fine', 'השחלת חרוזים קטנים'],
+  ['k-noga', 'motor-fine', 'גזירה בקו ישר'],
+  ['k-noga', 'motor-gross', 'גלגול קדימה'],
+  ['k-noga', 'motor-gross', 'עמידה על רגל אחת'],
+  ['k-noga', 'motor-gross', 'מסלול מוטורי'],
+  ['k-noga', 'play-social', 'משחק סמלי'],
+  ['k-noga', 'play-social', 'המתנה לתור'],
+  ['k-noga', 'cognitive', 'משחק הזיכרון'],
+  ['k-noga', 'cognitive', 'פעילות ברצף'],
+  ['k-noga', 'adl', 'שטיפת ידיים לבד'],
   ['k-liam', 'language', 'בקשה במילה אחת'],
   ['k-liam', 'cognitive', 'מיון לפי צבע'],
   ['k-liam', 'motor-gross', 'קפיצה על שתי רגליים'],
@@ -75,6 +88,7 @@ const PATTERN: [string, string, number, number, number, string][] = [
   // kidId, therapist, weekday(0=Sun), hh, mm, type
   ['k-noga', 'p-shira', 0, 8, 30, 'therapy'],
   ['k-noga', 'p-dana', 3, 10, 0, 'therapy'],
+  ['k-noga', 'p-yael', 2, 9, 0, 'therapy'],
   ['k-liam', 'p-dana', 1, 11, 0, 'therapy'],
   ['k-liam', 'p-yael', 4, 9, 0, 'therapy'],
   ['k-omer', 'p-rotem', 2, 14, 0, 'guidance'],
@@ -127,7 +141,7 @@ for (const s of sessions.filter(x => x.status === 'completed' && x.type === 'the
     cooperation: Math.max(30, Math.min(100, Math.round(base / 5) * 5)), sessionDuration: 90, sittingDuration: 25 + (seq % 4) * 5,
     mood: MOODS[seq % MOODS.length], concentrationLevel: 'טובה', newReinforcers: 'בועות סבון', wordsProduced: 'עוד, תן, בועה',
     breakActivities: 'טרמפולינה', endOfSessionActivity: 'שיר סיום', successes: 'השלימה משימה לבד', difficulties: '', notes: '',
-    goalsWorkedOn: kidGoals.slice(0, 3).map(g => ({ goalId: g.id, goalTitle: g.title, categoryId: g.categoryId })),
+    goalsWorkedOn: kidGoals.filter((_g, gi) => kidGoals.length <= 4 ? gi < 3 : (gi * 7 + seq * 3) % 5 < 2).map(g => ({ goalId: g.id, goalTitle: g.title, categoryId: g.categoryId })),
     additionalGoals: [], createdAt: s.scheduledDate, updatedAt: s.scheduledDate,
   });
 }
@@ -360,7 +374,19 @@ on('DELETE', '/api/therapy/docs/:id', (m, _q, _b, h) => {
   const i = docs.findIndex(x => x.id === m[1]); if (i >= 0) docs.splice(i, 1); return {};
 });
 
-on('GET', '/api/therapy/kids/:id/game-state', () => ({}));
+const gameStates: Record<string, Doc> = {};
+on('GET', '/api/therapy/kids/:id/game-state', (m) => gameStates[m[1]] || {});
+on('PUT', '/api/therapy/kids/:id/game-state/:gameId', (m, _q, b) => {
+  gameStates[m[1]] = { ...(gameStates[m[1]] || {}), [m[2]]: { ...(b as Doc), updatedAt: iso(new Date()) } };
+  return gameStates[m[1]];
+});
+on('POST', '/api/therapy/kids/:id/game-state/:gameId/reset', (m) => {
+  const prev = (gameStates[m[1]] || {})[m[2]] as Doc | undefined;
+  gameStates[m[1]] = { ...(gameStates[m[1]] || {}), [m[2]]: prev?.stats ? { stats: prev.stats } : {} };
+  return gameStates[m[1]];
+});
+// Per-kid game pictures: none in the mock - a game must look right without them.
+on('GET', '/api/therapy/kids/:id/game-assets/:gameId', () => ({}));
 on('GET', '/api/therapy/category-lp-templates', () => []);
 
 // crew hours, computed from forms

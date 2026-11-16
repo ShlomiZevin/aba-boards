@@ -50,6 +50,47 @@ export const GAMES: GameDefinition[] = [
   },
 ];
 
+/**
+ * Games that work by direct link only (/kid/:kidId/game/<id>) and are listed
+ * nowhere - for Shlomi to try quietly before a game is offered. To release one,
+ * move its entry into GAMES.
+ */
+export const HIDDEN_GAMES: GameDefinition[] = [
+  {
+    id: 'shower-steps',
+    name: 'המקלחת שלי',
+    icon: '🚿',
+    description: 'הילד עושה את שלבי המקלחת לפי הסדר: גורר את הפריט הזוהר אל הדמות, והתמונה משתנה. בסוף בועות לפוצץ.',
+    settings: [
+      {
+        key: 'steps',
+        type: 'select',
+        label: 'כמה שלבים',
+        default: 'full',
+        options: [
+          { value: 'full', label: 'כל 8 השלבים (כולל שמפו וחפיפה)' },
+          { value: 'noHair', label: '6 שלבים, בלי חפיפת ראש' },
+          { value: 'short', label: '4 שלבים (מרטיבים, מסבנים, שוטפים, מתנגבים)' },
+        ],
+      },
+      {
+        key: 'hint',
+        type: 'select',
+        label: 'כמה עזרה',
+        default: 'next',
+        options: [
+          { value: 'next', label: 'רק הפריט הבא פתוח וזוהר (בלי טעויות)' },
+          { value: 'all', label: 'כל הפריטים פתוחים, הבא זוהר (תרגול רצף)' },
+        ],
+      },
+      { key: 'bubbles', type: 'number', label: 'בועות לפוצץ בסוף (0 = בלי)', min: 0, max: 12, default: 6 },
+      { key: 'voice', type: 'checkbox', label: 'קריינות (הוראות בקול)', default: true },
+      { key: 'sound', type: 'checkbox', label: 'צלילים', default: true },
+      { key: 'kidPictures', type: 'checkbox', label: 'דמות אישית של הילד (אם הועלו תמונות)', default: true },
+    ],
+  },
+];
+
 /** Scenes with artwork. Anything else falls back to the plain gradient. */
 export const SCENES = ['city', 'space', 'hero', 'dino', 'pirate', 'race'] as const;
 export type SceneId = (typeof SCENES)[number];
@@ -59,7 +100,7 @@ export function sceneClass(scene: unknown): string {
 }
 
 const BY_ID: Record<string, GameDefinition> = {};
-GAMES.forEach((g) => {
+[...GAMES, ...HIDDEN_GAMES].forEach((g) => {
   BY_ID[g.id] = g;
 });
 

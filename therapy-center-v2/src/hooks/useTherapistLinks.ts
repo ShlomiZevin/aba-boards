@@ -15,6 +15,8 @@ export function useTherapistLinks() {
     home: () => isParentView ? `/p/${urlKidId}` : `${prefix}/`,
     kidDetail: (kidId: string) => isParentView ? `/p/${kidId}` : `${prefix}/kid/${kidId}`,
     kidGoals: (kidId: string) => `${prefix}/kid/${kidId}/goals`,
+    kidWeek: (kidId: string) => `${prefix}/kid/${kidId}/week`,
+    kidGames: (kidId: string) => isParentView ? `/p/${kidId}/games` : `${prefix}/kid/${kidId}/games`,
     kidAgenda: (kidId: string) => isParentView ? `/p/${kidId}/agenda` : `${prefix}/kid/${kidId}/agenda`,
     kidDailyReports: (kidId: string) => isParentView ? `/p/${kidId}/daily-reports` : `${prefix}/kid/${kidId}/daily-reports`,
     kidAgreement: (kidId: string) => isParentView ? `/p/${kidId}/agreement` : `${prefix}/kid/${kidId}/agreement`,

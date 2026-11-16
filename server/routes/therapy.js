@@ -187,22 +187,26 @@ router.post('/kids/:kidId/attach', requireSuperAdmin, asyncHandler(async (req, r
 
 // Mini-games (therapy-center/src/games). Config lives on the kid document
 // and is saved through PUT /kids/:kidId; only play state is served here.
-router.get('/kids/:kidId/game-state', asyncHandler(async (req, res) => {
-  const state = await therapyService.getKidGameState(req.params.kidId);
-  res.json(state);
-}));
+// Kid-scoped like the agenda (assertAgendaAccess below): parents their own
+// kid, therapists linked kids, admins their own kids.
+router.get('/kids/:kidId/game-state', (req, res) => agendaHandler(async () => {
+  res.json(await therapyService.getKidGameState(req.params.kidId));
+})(req, res));
 
-router.put('/kids/:kidId/game-state/:gameId', asyncHandler(async (req, res) => {
-  const state = await therapyService.saveKidGameState(
-    req.params.kidId, req.params.gameId, req.body
-  );
-  res.json(state);
-}));
+router.put('/kids/:kidId/game-state/:gameId', (req, res) => agendaHandler(async () => {
+  res.json(await therapyService.saveKidGameState(req.params.kidId, req.params.gameId, req.body));
+})(req, res));
 
-router.post('/kids/:kidId/game-state/:gameId/reset', asyncHandler(async (req, res) => {
-  const state = await therapyService.resetKidGameState(req.params.kidId, req.params.gameId);
-  res.json(state);
-}));
+router.post('/kids/:kidId/game-state/:gameId/reset', (req, res) => agendaHandler(async () => {
+  res.json(await therapyService.resetKidGameState(req.params.kidId, req.params.gameId));
+})(req, res));
+
+// Per-kid game pictures (e.g. a character drawn to look like the child).
+// Kept in Firestore behind the same kid access - never in git or a public URL.
+// Written by scripts/games/kid-assets.mjs; the game reads them here.
+router.get('/kids/:kidId/game-assets/:gameId', (req, res) => agendaHandler(async () => {
+  res.json(await therapyService.getKidGameAssets(req.params.kidId, req.params.gameId));
+})(req, res));
 
 // Daily agenda (סדר יום) — its own page, independent of the board.
 // Parents edit it too: planning tomorrow together is the whole point.

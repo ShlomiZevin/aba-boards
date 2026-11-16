@@ -27,7 +27,6 @@ import GoalProgressChart from '../components/GoalProgressChart';
 import GoalPlansTab from '../components/GoalPlansTab';
 import { agreementApi } from '../api/client';
 import LearningPlansTab from '../components/LearningPlansTab';
-import GameLauncher from '../components/GameLauncher';
 import DcEntryModal from '../components/DcEntryModal';
 import CreatePendingDcModal from '../components/CreatePendingDcModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -292,6 +291,10 @@ function CrewHoursTab({ kidId }: { kidId: string }) {
     </section>
   );
 }
+
+
+// השבוע במטרות is live by direct link only until Shlomi approves it (then delete this flag).
+const SHOW_GOALS_WEEK = false;
 
 export default function KidDetail() {
   const { kidId: urlKidId } = useParams<{ kidId: string }>();
@@ -889,6 +892,7 @@ export default function KidDetail() {
         )}
 
         <div className="kh-tiles">
+          {SHOW_GOALS_WEEK && !isParentView && <Link to={links.kidWeek(kidId!)} className="kh-tile tone-peach"><Icon name="target" /><span>השבוע במטרות</span></Link>}
           <Link to={links.kidAgenda(kidId!)} className="kh-tile tone-sky"><Icon name="agenda" /><span>סדר יום</span></Link>
           <Link to={links.kidDailyReports(kidId!)} className="kh-tile tone-mint"><Icon name="report" /><span>דיווח יומי</span></Link>
           {isParentView && <Link to={`/p/${kidId}/chat`} className="kh-tile tone-lilac"><Icon name="sparkle" /><span>צ׳אט AI</span></Link>}
@@ -896,7 +900,7 @@ export default function KidDetail() {
           {!isSimplifiedView && <a href={`/board.html?kid=${kidId}&mode=edit`} className="kh-tile tone-peach"><Icon name="edit" /><span>עריכת הלוח</span></a>}
           {!isSimplifiedView && <a href={`/stats.html?kid=${kidId}`} className="kh-tile tone-lilac"><Icon name="chart" /><span>סטטיסטיקה</span></a>}
           {isParentView && <Link to={`/p/${kidId}/models`} className="kh-tile tone-peach"><Icon name="blocks" /><span>מודלים</span></Link>}
-          {kid && <div className="kh-tile-game"><GameLauncher kid={kid} variant="toolbar" /></div>}
+          <Link to={links.kidGames(kidId!)} className="kh-tile tone-pink"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 8h10a4 4 0 0 1 4 4.2l-.4 3.6a2.4 2.4 0 0 1-4.3 1.2L15 15H9l-1.3 2a2.4 2.4 0 0 1-4.3-1.2L3 12.2A4 4 0 0 1 7 8z M7.5 11v3 M6 12.5h3 M15.5 12h.01 M17.5 13.5h.01" /></svg><span>חדר המשחקים</span></Link>
         </div>
       </header>
 

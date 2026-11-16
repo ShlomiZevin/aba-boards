@@ -7,6 +7,7 @@ import { getGame, configFor } from '../games/registry';
 import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { useTherapist } from '../contexts/TherapistContext';
 import LegoTower from '../games/LegoTower';
+import ShowerSteps from '../games/ShowerSteps';
 import type {
   ApiResponse,
   GameComponentProps,
@@ -19,6 +20,7 @@ import type {
 /** Each game's component, keyed by the id used in the registry. */
 const GAME_COMPONENTS: Record<string, ComponentType<GameComponentProps>> = {
   'lego-tower': LegoTower,
+  'shower-steps': ShowerSteps,
 };
 
 /**

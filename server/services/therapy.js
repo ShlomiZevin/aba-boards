@@ -2570,11 +2570,28 @@ function sanitizeGameState(body) {
   };
 }
 
+// Lego tower keeps its strict shape. Every other game saves bounded plain data
+// (strings, numbers, booleans, small arrays/objects - see sanitizeReportValue),
+// so a new game needs no server change. Convention: a game's lifetime tally
+// lives under `stats`, which survives a reset.
+function sanitizeAnyGameState(gameId, body) {
+  if (gameId === 'lego-tower') return sanitizeGameState(body);
+  const state = sanitizeReportValue(body || {}, 0) || {};
+  if (JSON.stringify(state).length > 20000) {
+    const err = new Error('Game state too large');
+    err.status = 400;
+    throw err;
+  }
+  state.updatedAt = new Date().toISOString();
+  return state;
+}
+
 async function saveKidGameState(kidId, gameId, body) {
   if (!GAME_ID_RE.test(gameId)) throw new Error('Invalid game id');
   const db = getDb();
-  const state = sanitizeGameState(body);
-  await db.collection('kidGames').doc(kidId).set({ [gameId]: state }, { merge: true });
+  const state = sanitizeAnyGameState(gameId, body);
+  // mergeFields replaces this game's whole map (a deep merge would keep stale keys)
+  await db.collection('kidGames').doc(kidId).set({ [gameId]: state }, { mergeFields: [new admin.firestore.FieldPath(gameId)] });
   return { [gameId]: state };
 }
 
@@ -2586,6 +2603,12 @@ async function resetKidGameState(kidId, gameId) {
 
   const data = doc.data() || {};
   const previous = data[gameId] || {};
+  if (gameId !== 'lego-tower') {
+    // Other games: clear the round, keep the lifetime tally under `stats`.
+    data[gameId] = { ...(previous.stats ? { stats: previous.stats } : {}), updatedAt: new Date().toISOString() };
+    await ref.set({ [gameId]: data[gameId] }, { mergeFields: [new admin.firestore.FieldPath(gameId)] });
+    return data;
+  }
   // Keep the lifetime tally — only the tower in progress is cleared.
   data[gameId] = {
     placed: [],
@@ -2595,6 +2618,16 @@ async function resetKidGameState(kidId, gameId) {
   };
   await ref.set(data, { merge: true });
   return data;
+}
+
+// Per-kid game pictures: kidGameAssets/{kidId}__{gameId}__{name} = { kidId, gameId, name, data (data URL) }
+async function getKidGameAssets(kidId, gameId) {
+  if (!GAME_ID_RE.test(gameId)) throw Object.assign(new Error('Invalid game id'), { status: 400 });
+  const snap = await getDb().collection('kidGameAssets')
+    .where('kidId', '==', kidId).where('gameId', '==', gameId).get();
+  const out = {};
+  snap.docs.forEach((d) => { const x = d.data(); out[x.name] = x.data; });
+  return out;
 }
 
 // ==================== DAILY AGENDA (סדר יום) ====================
@@ -2929,6 +2962,7 @@ module.exports = {
   getKidGameState,
   saveKidGameState,
   resetKidGameState,
+  getKidGameAssets,
   // Kids
   getAllKids,
   getKidById,

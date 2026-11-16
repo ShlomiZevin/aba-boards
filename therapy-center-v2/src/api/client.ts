@@ -133,6 +133,9 @@ export const gamesApi = {
     fetchApi<KidGameState>(`/kids/${kidId}/game-state/${gameId}/reset`, {
       method: 'POST',
     }),
+  /** Per-kid pictures for a game ({ name: dataUrl }), private to the kid's people. */
+  getAssets: (kidId: string, gameId: string) =>
+    fetchApi<Record<string, string>>(`/kids/${kidId}/game-assets/${gameId}`),
 };
 
 // Daily agenda (סדר יום)

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 import '../v2/pages/tm.css';
@@ -9,6 +9,8 @@ const BASE = import.meta.env.BASE_URL;
 export default function Login() {
   const { setKey } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ export default function Login() {
     setError('');
     const ok = await setKey(value.trim());
     if (ok) {
-      navigate('/');
+      navigate(from && from.startsWith('/') && !from.startsWith('/login') ? from : '/', { replace: true });
     } else {
       setError('מפתח גישה שגוי');
       setLoading(false);

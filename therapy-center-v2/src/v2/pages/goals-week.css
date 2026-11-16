@@ -1,0 +1,68 @@
+/* השבוע במטרות — classes prefixed wk- */
+html.nb .wk { display: flex; flex-direction: column; gap: 14px; max-width: 640px; margin: 0 auto; padding-bottom: 24px; }
+
+html.nb .wk-head { display: flex; align-items: center; gap: 10px; }
+html.nb .wk-back { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); flex: none; }
+html.nb .wk-title { flex: 1; min-width: 0; line-height: 1.2; }
+html.nb .wk-title h1 { font-size: 26px; margin: 0; }
+html.nb .wk-title span { font-size: 13px; color: var(--muted); }
+html.nb .wk-nav { display: flex; gap: 6px; align-items: center; }
+html.nb .wk-nav button { height: 36px; min-width: 36px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); display: grid; place-items: center; cursor: pointer; font: inherit; font-weight: 700; font-size: 13px; }
+html.nb .wk-nav button:disabled { opacity: .35; cursor: default; }
+html.nb .wk-nav .wk-now { padding: 0 10px; color: var(--pen-deep); }
+
+/* Sunday → Saturday */
+html.nb .wk-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+html.nb .wk-day { position: relative; text-align: center; border-radius: 12px; padding: 6px 2px 5px; font-size: 11.5px; line-height: 1.25; color: var(--muted); border: 1.5px dashed var(--line); min-width: 0; }
+html.nb .wk-day b { display: block; font-size: 13px; color: var(--ink); }
+html.nb .wk-day span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.nb .wk-day.is-done { border-style: solid; border-color: transparent; background: var(--green-soft); color: #1F6B49; }
+html.nb .wk-day.is-planned { border-style: solid; background: var(--card); color: var(--ink-2); }
+html.nb .wk-day.is-missing { border-style: solid; border-color: var(--red); background: var(--red-soft); color: var(--red); }
+html.nb .wk-day.is-today { box-shadow: 0 0 0 2.5px var(--pen); }
+html.nb .wk-day em { position: absolute; top: -7px; left: -5px; width: 18px; height: 18px; border-radius: 50%; background: var(--red); color: #fff; font-style: normal; font-weight: 800; font-size: 12px; display: grid; place-items: center; }
+html.nb .wk-warn { margin: -4px 0 0; font-size: 13px; color: var(--red); }
+
+/* summary + rings */
+html.nb .wk-sum { padding: 16px; }
+html.nb .wk-big { display: flex; align-items: center; gap: 14px; }
+html.nb .wk-big b { font-family: var(--f-display); font-weight: 400; font-size: 32px; line-height: 1; display: block; }
+html.nb .wk-big span { display: block; font-size: 13px; color: var(--muted); }
+html.nb .wk-ring-svg { flex: none; --deep: var(--pen); }
+html.nb .wk-ring-bg { stroke: var(--tone, var(--m-lilac)); }
+html.nb .wk-ring-fg { stroke: var(--deep); transition: stroke-dashoffset .5s ease; }
+@media (prefers-reduced-motion: reduce) { html.nb .wk-ring-fg { transition: none; } }
+html.nb .wk-ring-svg.tone-peach { --deep: #D9662F; }
+html.nb .wk-ring-svg.tone-yellow { --deep: #B38F00; }
+html.nb .wk-ring-svg.tone-sky { --deep: #2F6FD0; }
+html.nb .wk-ring-svg.tone-pink { --deep: #D0478A; }
+html.nb .wk-ring-svg.tone-mint { --deep: var(--green); }
+html.nb .wk-ring-svg.tone-lilac { --deep: var(--pen); }
+html.nb .wk-rings { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 4px; margin-top: 14px; }
+html.nb .wk-ring { appearance: none; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; border-radius: 14px; padding: 8px 2px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+html.nb .wk-ring[aria-pressed="true"] { background: var(--paper-2); box-shadow: inset 0 0 0 2px var(--line); }
+html.nb .wk-ring small { font-size: 12.5px; font-weight: 600; text-align: center; line-height: 1.2; }
+html.nb .wk-ring span { font-size: 12px; color: var(--muted); }
+html.nb .wk-ring span.is-full { color: var(--green); font-weight: 700; }
+
+/* left / done */
+html.nb .wk-toggle { display: flex; gap: 3px; padding: 3px; border-radius: 14px; background: var(--paper-2); border: 1px solid var(--line-2); }
+html.nb .wk-toggle button { flex: 1; appearance: none; border: 0; font: inherit; font-size: 14.5px; font-weight: 700; padding: 9px 6px; border-radius: 11px; background: none; color: var(--ink-2); cursor: pointer; }
+html.nb .wk-toggle button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow-paper); }
+
+html.nb .wk-list-card { padding: 16px; }
+html.nb .wk-list-card h2 { font-size: 21px; margin: 0; }
+html.nb .wk-sub { margin: 2px 0 4px; font-size: 13px; color: var(--muted); }
+html.nb .wk-clear { appearance: none; border: 0; background: none; padding: 0; font: inherit; color: var(--pen-deep); font-weight: 700; cursor: pointer; text-decoration: underline; }
+html.nb .wk-grp h3 { font-family: var(--f-body); font-weight: 700; font-size: 13.5px; margin: 14px 0 2px; display: flex; align-items: center; gap: 7px; }
+html.nb .wk-grp ul { list-style: none; margin: 0; padding: 0; }
+html.nb .wk-grp li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line-2); font-size: 14.5px; }
+html.nb .wk-grp li:first-child { border-top: 0; }
+html.nb .wk-t { flex: 1; min-width: 0; }
+html.nb .wk-open { width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--tone); flex: none; margin-top: 1px; filter: saturate(1.6) brightness(.85); }
+html.nb .wk-all { margin: 0; font-size: 13px; color: var(--green); font-weight: 600; }
+html.nb .wk-count { flex: none; min-width: 36px; height: 24px; padding: 0 6px; border-radius: 8px; background: var(--green); color: #fff; font-weight: 800; font-size: 13px; display: grid; place-items: center; }
+html.nb .wk-count.is-one { background: var(--green-soft); color: #1F6B49; }
+html.nb .wk-visits { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+html.nb .wk-visit { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--tone, var(--m-lilac)); color: var(--ink); }
+html.nb .wk-empty { text-align: center; }

@@ -13,6 +13,8 @@ import { DocPage, GeneralDocs } from './v2/pages/Docs';
 import KidDetail from './pages/KidDetail';
 import GamePage from './pages/GamePage';
 import AgendaPage from './pages/AgendaPage';
+import GoalsWeek from './v2/pages/GoalsWeek';
+import GamesRoom from './v2/pages/GamesRoom';
 import DailyReportsPage from './pages/DailyReportsPage';
 import GoalsPage from './pages/GoalsPage';
 import AgreementPage from './pages/AgreementPage';
@@ -116,6 +118,8 @@ function TherapistRoutes() {
           <Route path="/kids" element={<Kids />} />
           <Route path="/kid/:kidId" element={<KidDetail />} />
           <Route path="/kid/:kidId/goals" element={<GoalsPage />} />
+          <Route path="/kid/:kidId/week" element={<GoalsWeek />} />
+          <Route path="/kid/:kidId/games" element={<GamesRoom />} />
           <Route path="/kid/:kidId/game/:gameId" element={<GamePage />} />
           <Route path="/forms" element={<FormsOverview />} />
           <Route path="/notifications" element={<TherapistNotifications />} />
@@ -153,6 +157,7 @@ function ParentRoutes() {
     <TherapistContext.Provider value={{ isTherapistView: false, isParentView: true, practitionerId: null, parentKidId: kidId || null }}>
       <Routes>
         <Route path="/" element={<KidDetail />} />
+        <Route path="/games" element={<GamesRoom />} />
         <Route path="/game/:gameId" element={<GamePage />} />
         <Route path="/agenda" element={<AgendaPage />} />
         <Route path="/daily-reports/*" element={<DailyReportsPage />} />
@@ -171,8 +176,10 @@ function ParentRoutes() {
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
   if (isLoading) return null;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // Remember where they were going, so logging in lands on that page (a shared game link)
+  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   return <>{children}</>;
 }
 
@@ -231,8 +238,10 @@ function App() {
             <Route path="/kids" element={<AdminLayout><Kids /></AdminLayout>} />
             <Route path="/kid/:kidId" element={<AdminLayout><KidDetail /></AdminLayout>} />
             <Route path="/kid/:kidId/goals" element={<AdminLayout><GoalsPage /></AdminLayout>} />
+            <Route path="/kid/:kidId/week" element={<AdminLayout><GoalsWeek /></AdminLayout>} />
             <Route path="/kid/:kidId/agreement" element={<AdminLayout><AgreementPage /></AdminLayout>} />
-            <Route path="/kid/:kidId/game/:gameId" element={<GamePage />} />
+            <Route path="/kid/:kidId/games" element={<AdminLayout><GamesRoom /></AdminLayout>} />
+            <Route path="/kid/:kidId/game/:gameId" element={<AuthGuard><GamePage /></AuthGuard>} />
             <Route path="/kid/:kidId/agenda" element={<AuthGuard><AgendaPage /></AuthGuard>} />
             <Route path="/kid/:kidId/daily-reports/*" element={<AuthGuard><DailyReportsPage /></AuthGuard>} />
             <Route path="/forms" element={<AdminLayout><FormsOverview /></AdminLayout>} />
