@@ -99,11 +99,14 @@ async function sfx([promptFile, out, secs = '1.5'], loop) {
   save(out, Buffer.from(await res.arrayBuffer()));
 }
 
-async function voice([text, out, voiceId = 'EXAVITQu4vr4xnSDxMaL']) {
+// Hebrew voice = eleven_v4 (beat v3 on Hebrew in the Shlomiverse's tests) with a Hebrew library voice:
+// Zina (young adult woman, warm). Write vowel marks (niqqud) on every line; audio tags in [brackets] direct
+// the delivery and are not read. Transcribe each line back before using it.
+async function voice([text, out, voiceId = 'Tbj9UQjXon5RB9MPEyc2']) {
   if (!ELEVEN) throw new Error('ELEVENLABS_API_KEY missing in server/.env');
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
     method: 'POST', headers: { 'xi-api-key': ELEVEN, 'content-type': 'application/json', accept: 'audio/mpeg' },
-    body: JSON.stringify({ text, model_id: 'eleven_v3', language_code: 'he' }),
+    body: JSON.stringify({ text, model_id: 'eleven_v4', language_code: 'he', voice_settings: { stability: 0.3, similarity_boost: 0.75 } }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
   save(out, Buffer.from(await res.arrayBuffer()));

@@ -33,6 +33,8 @@ import './shower-steps.css';
  */
 
 const GAME_ID = 'shower-steps';
+/** How long the bubble cloud takes to cover the picture before it changes. */
+const SWAP_COVER_MS = 320;
 /** 0 dressed, 1 undressed, 2 wet, 3 shampoo in hair, 4 soap on body, 5 rinsed, 6 towel, 7 dressed clean */
 const GENERIC_SCENES = [scene0, scene1, scene2, scene3, scene4, scene5, scene6, scene7];
 
@@ -47,9 +49,9 @@ interface Step { item: ItemId; scene: number; voice: string; label: string; sfx:
 const ALL_STEPS: Step[] = [
   { item: 'basket', scene: 1, voice: 's1', label: 'מורידים בגדים', sfx: 'cloth' },
   { item: 'shower', scene: 2, voice: 's2', label: 'מרטיבים את הגוף', sfx: 'water', rub: { loop: 'rinse', fx: 'drop' } },
-  { item: 'shampoo', scene: 3, voice: 's-hair', label: 'שמים שמפו וחופפים', sfx: 'foam', rub: { loop: 'scrub', fx: 'foam' } },
+  { item: 'shampoo', scene: 3, voice: 's-hair', label: 'חופפים את הראש בשמפו', sfx: 'foam', rub: { loop: 'scrub', fx: 'foam' } },
   { item: 'shower', scene: 2, voice: 's-hair-rinse', label: 'שוטפים את הראש', sfx: 'water', rub: { loop: 'rinse', fx: 'drop' } },
-  { item: 'soap', scene: 4, voice: 's3', label: 'שמים סבון ומסבנים', sfx: 'foam', rub: { loop: 'scrub', fx: 'foam' } },
+  { item: 'soap', scene: 4, voice: 's3', label: 'מסבנים את הגוף', sfx: 'foam', rub: { loop: 'scrub', fx: 'foam' } },
   { item: 'shower', scene: 5, voice: 's4', label: 'שוטפים את הסבון', sfx: 'water', rub: { loop: 'rinse', fx: 'drop' } },
   { item: 'towel', scene: 6, voice: 's5', label: 'מתנגבים במגבת', sfx: 'towel', rub: { loop: 'towel', fx: 'fluff' } },
   { item: 'shirt', scene: 7, voice: 's6', label: 'מתלבשים. איזה נקי!', sfx: 'cloth' },
@@ -117,7 +119,7 @@ export default function ShowerSteps({
   const [phase, setPhase] = useState<Phase>('start');
   const [done, setDone] = useState(0); // steps completed this round
   const [shownScene, setShownScene] = useState(steps[0].scene - 1);
-  const [prevScene, setPrevScene] = useState<number | null>(null);
+  const [swap, setSwap] = useState(0); // bump = a soft bubble cloud covers the picture while it changes
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [, setPopped] = useState(0);
   const poppedRef = useRef(0);
@@ -196,7 +198,6 @@ export default function ShowerSteps({
   const resetRound = useCallback(() => {
     setDone(0);
     setShownScene(steps[0].scene - 1);
-    setPrevScene(null);
     setBubbles([]);
     setPopped(0);
     poppedRef.current = 0;
@@ -235,36 +236,35 @@ export default function ShowerSteps({
     setTutorial(false);
     sound.stopVoice();
     if (step.rub) {
-      // second move: rub the picture with the item - the next picture shows through
+      // second move: rub with the item - foam / drops / sparkles appear on the picture
       sound.play('tap');
       sound.play(step.sfx);
-      setPrevScene(null);
       setRub({ step, from: shownScene, key: Date.now() });
-      setShownScene(step.scene);
       if (!rubbedOnce.current) { rubbedOnce.current = true; later(() => sound.say(g('rub-m', 'rub-f')), 500); }
       return;
     }
-    finishStep(step, true);
+    finishStep(step);
   };
 
   const finishRub = () => {
     sound.stopLoop();
     const step = rub?.step;
-    later(() => setRub(null), 650);
-    if (step) finishStep(step, false);
+    if (step) finishStep(step);
+  };
+
+  /** Change the picture behind a soft bubble cloud, so two faces are never seen at once. */
+  const changeScene = (to: number, after?: () => void) => {
+    setSwap((n) => n + 1);
+    later(() => { setShownScene(to); setRub(null); after?.(); }, SWAP_COVER_MS);
   };
 
   /* ---------------- a step is done ---------------- */
-  const finishStep = (step: Step, crossfade: boolean) => {
+  const finishStep = (step: Step) => {
     busy.current = true;
     sound.stopVoice();
     sound.play('good');
-    if (crossfade) {
-      sound.play(step.sfx);
-      setPrevScene(shownScene);
-      setShownScene(step.scene);
-    }
-    setSparkle((s) => s + 1);
+    if (!step.rub) sound.play(step.sfx);
+    changeScene(step.scene, () => setSparkle((s) => s + 1));
     const nextDone = done + 1;
     setDone(nextDone);
     const praise = ['good1', 'good2', 'good3'][nextDone % 3];
@@ -458,7 +458,7 @@ export default function ShowerSteps({
   } as React.CSSProperties;
 
   const caption =
-    phase === 'bubbles' ? g('פוצץ את הבועות!', 'פוצצי את הבועות!')
+    phase === 'bubbles' ? g('בוא נפוצץ את הבועות!', 'בואי נפוצץ את הבועות!')
       : rub ? `${rub.step.label} 👆`
       : next ? next.label
         : '';
@@ -502,14 +502,12 @@ export default function ShowerSteps({
       <div className="shw-main">
         <div className="shw-scene-wrap">
           <div ref={sceneRef} className={`shw-scene${drag?.over ? ' over' : ''}`}>
-            {prevScene !== null && prevScene !== shownScene && (
-              <img key={`p${prevScene}`} className="shw-scene-img prev" src={scenes[prevScene]} alt="" draggable={false} />
-            )}
-            <img key={`s${shownScene}`} className="shw-scene-img now" src={scenes[shownScene]} alt="" draggable={false} />
+            <img className="shw-scene-img" src={scenes[shownScene]} alt="" draggable={false} />
+            {/* every picture preloaded, so a change never waits on the network */}
+            <div className="shw-preload" aria-hidden>{scenes.map((src, i) => <img key={i} src={src} alt="" />)}</div>
             {rub && (
               <RubLayer
                 key={rub.key}
-                topSrc={scenes[rub.from]}
                 tool={ITEM_ART[rub.step.item]}
                 fx={rub.step.rub!.fx}
                 onStart={() => { sound.unlock(); sound.startLoop(rub.step.rub!.loop); }}
@@ -518,6 +516,7 @@ export default function ShowerSteps({
                 onDone={finishRub}
               />
             )}
+            {swap > 0 && <div key={`swap${swap}`} className="shw-swap" aria-hidden><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>}
             {sparkle > 0 && <div key={sparkle} className="shw-sparkle" aria-hidden><i /><i /><i /><i /><i /><i /></div>}
 
             {caption && phase !== 'start' && phase !== 'end' && (
@@ -636,17 +635,18 @@ export default function ShowerSteps({
 }
 
 /* ============================================================================
- * The rub: the current picture lies on a canvas over the next one; the child's
- * finger (with the item) wipes it away and the next picture shows through.
- * It can't fail: idle for a while, the voice reminds; idle longer, it finishes
- * by itself, slowly.
+ * The rub: the child rubs the picture with the item and its effect builds up on
+ * top - foam where the soap or shampoo goes, droplets under the shower, sparkles
+ * with the towel. The picture underneath never moves; when the meter is full the
+ * game changes it behind a bubble cloud (changeScene). It can't fail: idle for a
+ * while, the voice reminds; idle longer, it finishes by itself, slowly.
  * ========================================================================== */
 const RUB_LENGTH = 3.6;   // how many picture-widths of rubbing finish the step
 const HINT_MS = 5000;
 const AUTO_MS = 9000;
 
-function RubLayer({ topSrc, tool, fx, onStart, onStop, onHint, onDone }: {
-  topSrc: string; tool: string; fx: Fx;
+function RubLayer({ tool, fx, onStart, onStop, onHint, onDone }: {
+  tool: string; fx: Fx;
   onStart: () => void; onStop: () => void; onHint: () => void; onDone: () => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -654,10 +654,9 @@ function RubLayer({ topSrc, tool, fx, onStart, onStop, onHint, onDone }: {
   const toolRef = useRef<HTMLDivElement>(null);
   const meterRef = useRef<HTMLDivElement>(null);
   const [touched, setTouched] = useState(false);
-  const [clearing, setClearing] = useState(false);
   const st = useRef({
     progress: 0, last: null as null | { x: number; y: number }, pointer: null as number | null,
-    lastActive: 0, hinted: false, done: false, w: 0, h: 0, lastFx: 0,
+    lastActive: 0, hinted: false, done: false, w: 0, h: 0, lastFx: 0, travel: 0,
   });
   const cb = useRef({ onStart, onStop, onHint, onDone });
   useEffect(() => { cb.current = { onStart, onStop, onHint, onDone }; });
@@ -670,34 +669,47 @@ function RubLayer({ topSrc, tool, fx, onStart, onStop, onHint, onDone }: {
     if (hook) hook.rubProgress = s.progress;
     if (s.progress >= 1 && !s.done) {
       s.done = true;
-      setClearing(true);
       cb.current.onStop();
       cb.current.onDone();
     }
   };
 
-  const erase = (x0: number, y0: number, x1: number, y1: number) => {
-    const c = canvasRef.current;
-    const ctx = c?.getContext('2d');
-    if (!c || !ctx) return;
-    const r = Math.max(30, st.current.w * 0.12);
-    const dist = Math.hypot(x1 - x0, y1 - y0);
-    const n = Math.max(1, Math.ceil(dist / (r / 3)));
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-out';
-    for (let i = 0; i <= n; i++) {
-      const x = x0 + ((x1 - x0) * i) / n;
-      const y = y0 + ((y1 - y0) * i) / n;
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, 'rgba(0,0,0,0.9)');
-      grad.addColorStop(0.6, 'rgba(0,0,0,0.5)');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
+  /** Paint the item's effect where the finger is: it stays, so the child sees the work build up. */
+  const paint = (x: number, y: number) => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    const r = Math.max(14, st.current.w * 0.05);
+    if (fx === 'foam') {
+      for (let i = 0; i < 3; i++) {
+        const cx = x + (Math.random() - 0.5) * r * 2.2;
+        const cy = y + (Math.random() - 0.5) * r * 1.6;
+        const rr = r * (0.45 + Math.random() * 0.55);
+        const g = ctx.createRadialGradient(cx - rr * 0.3, cy - rr * 0.3, rr * 0.1, cx, cy, rr);
+        g.addColorStop(0, 'rgba(255,255,255,0.98)');
+        g.addColorStop(0.7, 'rgba(246,250,255,0.95)');
+        g.addColorStop(1, 'rgba(214,228,245,0.85)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (fx === 'drop') {
+      // little shiny droplets that stay on the skin
+      for (let i = 0; i < 2; i++) {
+        const cx = x + (Math.random() - 0.5) * r * 3;
+        const cy = y + (Math.random() - 0.5) * r * 2.4;
+        const rr = r * (0.12 + Math.random() * 0.12);
+        ctx.fillStyle = 'rgba(150, 205, 255, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rr * 0.8, rr, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(cx - rr * 0.25, cy - rr * 0.35, rr * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
-    ctx.restore();
+    // the towel leaves nothing behind - it dries; its sparkles are the floating fx
   };
 
   const spawnFx = (x: number, y: number) => {
@@ -720,30 +732,20 @@ function RubLayer({ topSrc, tool, fx, onStart, onStop, onHint, onDone }: {
     if (toolRef.current) { toolRef.current.style.left = `${x}px`; toolRef.current.style.top = `${y}px`; }
   };
 
-  /* draw the current picture, cropped exactly like the <img> under it */
+  /* size the effect canvas to the picture */
   useEffect(() => {
     const wrap = wrapRef.current;
     const c = canvasRef.current;
     if (!wrap || !c) return;
-    const img = new Image();
-    img.onload = () => {
-      const rect = wrap.getBoundingClientRect();
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      st.current.w = rect.width;
-      st.current.h = rect.height;
-      c.width = Math.round(rect.width * dpr);
-      c.height = Math.round(rect.height * dpr);
-      const ctx = c.getContext('2d');
-      if (!ctx) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const scale = Math.max(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
-      const dw = img.naturalWidth * scale;
-      const dh = img.naturalHeight * scale;
-      ctx.drawImage(img, (rect.width - dw) * 0.5, (rect.height - dh) * 0.22, dw, dh);
-      if (toolRef.current) { toolRef.current.style.left = `${rect.width / 2}px`; toolRef.current.style.top = `${rect.height * 0.66}px`; }
-    };
-    img.src = topSrc;
-  }, [topSrc]);
+    const rect = wrap.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    st.current.w = rect.width;
+    st.current.h = rect.height;
+    c.width = Math.round(rect.width * dpr);
+    c.height = Math.round(rect.height * dpr);
+    c.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
+    moveTool(rect.width / 2, rect.height * 0.66);
+  }, []);
 
   /* errorless: a reminder, then it finishes slowly by itself */
   useEffect(() => {
@@ -754,14 +756,12 @@ function RubLayer({ topSrc, tool, fx, onStart, onStop, onHint, onDone }: {
       const idle = Date.now() - s.lastActive;
       if (idle > HINT_MS && !s.hinted) { s.hinted = true; cb.current.onHint(); }
       if (idle > AUTO_MS && s.w) {
-        const x = s.w * (0.3 + Math.random() * 0.4);
-        const y = s.h * (0.2 + Math.random() * 0.4);
-        erase(x, y, x + 20, y + 10);
+        paint(s.w * (0.3 + Math.random() * 0.4), s.h * (0.25 + Math.random() * 0.35));
         setProgress(s.progress + 0.08);
       }
     }, 400);
     return () => window.clearInterval(t);
-     
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const local = (e: { clientX: number; clientY: number }) => {
@@ -780,7 +780,7 @@ function RubLayer({ topSrc, tool, fx, onStart, onStop, onHint, onDone }: {
     s.lastActive = Date.now();
     setTouched(true);
     moveTool(p.x, p.y);
-    erase(p.x, p.y, p.x, p.y);
+    paint(p.x, p.y);
     cb.current.onStart();
   };
   const onMove = (e: React.PointerEvent) => {
@@ -788,10 +788,17 @@ function RubLayer({ topSrc, tool, fx, onStart, onStop, onHint, onDone }: {
     if (e.pointerId !== s.pointer || s.done) return;
     const p = local(e);
     const last = s.last || p;
-    erase(last.x, last.y, p.x, p.y);
+    const d = Math.hypot(p.x - last.x, p.y - last.y);
+    s.travel += d;
+    // paint along the stroke, about every 18px, so fast strokes leave no gaps
+    const step = 18;
+    while (s.travel >= step) {
+      s.travel -= step;
+      const t = 1 - s.travel / Math.max(d, 1);
+      paint(last.x + (p.x - last.x) * t, last.y + (p.y - last.y) * t);
+    }
     moveTool(p.x, p.y);
     spawnFx(p.x, p.y);
-    const d = Math.hypot(p.x - last.x, p.y - last.y);
     s.last = p;
     s.lastActive = Date.now();
     if (s.w) setProgress(s.progress + d / (s.w * RUB_LENGTH));
@@ -806,7 +813,7 @@ function RubLayer({ topSrc, tool, fx, onStart, onStop, onHint, onDone }: {
   };
 
   return (
-    <div ref={wrapRef} className={`shw-rub${clearing ? ' clearing' : ''}`}>
+    <div ref={wrapRef} className="shw-rub">
       <canvas
         ref={canvasRef}
         className="shw-rub-canvas"

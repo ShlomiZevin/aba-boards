@@ -108,8 +108,6 @@ body.shw-open { background: #FFFBF3 !important; overflow: hidden; }
   object-position: 50% 22%;
   pointer-events: none;
 }
-.shw-scene-img.now { animation: shw-fade-in 0.7s ease both; }
-.shw-scene-img.prev { animation: shw-fade-out 0.7s ease both; }
 @keyframes shw-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes shw-fade-out { from { opacity: 1; } to { opacity: 0; } }
 
@@ -334,13 +332,12 @@ body.shw-open { background: #FFFBF3 !important; overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .shw-card.next, .shw-bubble, .shw-sparkle i { animation: none !important; }
-  .shw-scene-img.now, .shw-scene-img.prev { animation-duration: 0.01s !important; }
+  .shw-swap, .shw-swap i { animation-duration: 0.6s !important; }
   .shw-hand-item, .shw-hand-finger { animation-duration: 3s; }
 }
 
 /* ---------------- the rub ---------------- */
-.shw-rub { position: absolute; inset: 0; z-index: 2; transition: opacity 0.6s ease; }
-.shw-rub.clearing { opacity: 0; pointer-events: none; }
+.shw-rub { position: absolute; inset: 0; z-index: 2; }
 .shw-rub-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
 .shw-rub-tool {
   position: absolute;
@@ -398,4 +395,40 @@ body.shw-open { background: #FFFBF3 !important; overflow: hidden; }
 }
 @media (prefers-reduced-motion: reduce) {
   .shw-rub-tool.resting, .shw-rub-hand { animation-duration: 3s; }
+}
+
+/* ---------------- the picture changes behind a bubble cloud ---------------- */
+.shw-preload { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+.shw-preload img { width: 1px; height: 1px; }
+.shw-swap {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.97) 0 55%, rgba(236,246,255,0.95) 80%, rgba(220,238,255,0.9) 100%);
+  animation: shw-cloud 0.95s ease both;
+}
+.shw-swap i {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff 0 18%, rgba(255,255,255,0.9) 40%, rgba(196,226,255,0.85) 100%);
+  box-shadow: 0 0 18px rgba(170, 210, 255, 0.6);
+  animation: shw-cloud-bubble 0.95s ease both;
+}
+.shw-swap i:nth-child(1) { left: 6%; top: 10%; width: 38%; aspect-ratio: 1; }
+.shw-swap i:nth-child(2) { left: 52%; top: 4%; width: 44%; aspect-ratio: 1; animation-delay: 0.03s; }
+.shw-swap i:nth-child(3) { left: 24%; top: 28%; width: 52%; aspect-ratio: 1; animation-delay: 0.05s; }
+.shw-swap i:nth-child(4) { left: -6%; top: 44%; width: 42%; aspect-ratio: 1; animation-delay: 0.02s; }
+.shw-swap i:nth-child(5) { left: 60%; top: 40%; width: 46%; aspect-ratio: 1; animation-delay: 0.06s; }
+.shw-swap i:nth-child(6) { left: 18%; top: 62%; width: 40%; aspect-ratio: 1; animation-delay: 0.04s; }
+.shw-swap i:nth-child(7) { left: 54%; top: 70%; width: 38%; aspect-ratio: 1; animation-delay: 0.07s; }
+.shw-swap i:nth-child(8) { left: 36%; top: -6%; width: 30%; aspect-ratio: 1; animation-delay: 0.01s; }
+.shw-swap i:nth-child(9) { left: 2%; top: 78%; width: 30%; aspect-ratio: 1; animation-delay: 0.08s; }
+@keyframes shw-cloud {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  52% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes shw-cloud-bubble {
+  0% { transform: scale(0.2); opacity: 0; }
+  30% { transform: scale(1); opacity: 1; }
+  55% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1.25) translateY(-8%); opacity: 0; }
 }

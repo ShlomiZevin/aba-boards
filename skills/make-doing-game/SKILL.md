@@ -30,7 +30,11 @@ a tutorial, and PLAY it as a phone before anyone sees it. Never skip a step.
   `... sfx <prompt.txt> <out.mp3> <secs>`, `... loop ...`, `... voice "<Hebrew>" <out.mp3> [voiceId]`.
   - Every picture = OpenAI **gpt-image-2.5-flare** (default: scenes, props, icons, concept) or **gpt-image-2.5-sunburst**
     (the most exact: characters, poses, cover, title art - HIGH only for these). No other image model.
-  - Every sound = ElevenLabs. **Voice lines** (Hebrew, `eleven_v3`) use Start Doing's key. **Effects and loops**
+  - Every sound = ElevenLabs. **Voice lines** use Start Doing's key with **`eleven_v4` + the Hebrew library voice Zina**
+    (`Tbj9UQjXon5RB9MPEyc2`, a warm young woman - make.mjs's default; v3 and the default English voices sounded foreign,
+    Shlomi 2026-11-16). Write **niqqud** on every line, direct with `[warm, gentle, slow]` tags, and **transcribe every
+    line back** (faster-whisper, audio decoded with ffmpeg to 16 kHz float32) - re-record or reword any that come out
+    wrong (שָׂמִים came out "שמעים" twice; "מְסַבְּנִים אֶת הַגּוּף" fixed it). Captions match the words exactly. **Effects and loops**
     (`sfx` / `loop`) borrow Plaxzy's ElevenLabs key, because Start Doing's key has no sound-generation permission
     (Shlomi's OK, 2026-11-16). make.mjs finds that key by itself in `plaxzy-creator/.env.local`, else in the gcloud
     secret `MAKEGAME_ELEVENLABS_KEY`. ElevenLabs allows 5 requests at a time, so generate in batches of 4.

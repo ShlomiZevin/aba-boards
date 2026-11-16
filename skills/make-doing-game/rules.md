@@ -48,3 +48,7 @@ extra, because the players are young children in ABA therapy. Add a principle he
 - **Announce the end** before it comes ("עוד רגע מסיימים" with two bubbles left): transitions are hard for these kids.
 - **Captions sit above every layer** (z-index over canvases and bubbles), or they vanish exactly when they matter.
 - **Bubbles and floating targets stay fully on the picture**: clamp each centre by half its own size.
+- **Never cross-fade or wipe between two paintings of the child**: no two generated pictures line up exactly, so a fade or
+  reveal shows two faces ("double eyes" - Shlomi, 2026-11-16). Change the picture in one cut behind a cover (a soft
+  bubble cloud, ~0.3s in, ~0.6s out). Rubbing paints only the effect (foam, drops, sparkles) on top of the one picture.
+  A true morph would need the character rigged (Blender / a 2D puppet) - ask before going there.
