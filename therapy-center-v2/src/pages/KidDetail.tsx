@@ -293,8 +293,6 @@ function CrewHoursTab({ kidId }: { kidId: string }) {
 }
 
 
-// השבוע במטרות is live by direct link only until Shlomi approves it (then delete this flag).
-const SHOW_GOALS_WEEK = false;
 
 export default function KidDetail() {
   const { kidId: urlKidId } = useParams<{ kidId: string }>();
@@ -892,7 +890,7 @@ export default function KidDetail() {
         )}
 
         <div className="kh-tiles">
-          {SHOW_GOALS_WEEK && !isParentView && <Link to={links.kidWeek(kidId!)} className="kh-tile tone-peach"><Icon name="target" /><span>השבוע במטרות</span></Link>}
+          {!isParentView && <Link to={links.kidWeek(kidId!)} className="kh-tile tone-peach"><Icon name="target" /><span>השבוע במטרות</span></Link>}
           <Link to={links.kidAgenda(kidId!)} className="kh-tile tone-sky"><Icon name="agenda" /><span>סדר יום</span></Link>
           <Link to={links.kidDailyReports(kidId!)} className="kh-tile tone-mint"><Icon name="report" /><span>דיווח יומי</span></Link>
           {isParentView && <Link to={`/p/${kidId}/chat`} className="kh-tile tone-lilac"><Icon name="sparkle" /><span>צ׳אט AI</span></Link>}
