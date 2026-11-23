@@ -15,9 +15,9 @@ function urls(files: Record<string, string>, dir: string) {
 const VOICES = urls(import.meta.glob('./voice/*.mp3', { eager: true, query: '?url', import: 'default' }) as Record<string, string>, 'voice');
 const EFFECTS = urls(import.meta.glob('./sfx/*.mp3', { eager: true, query: '?url', import: 'default' }) as Record<string, string>, 'sfx');
 
-export type Sfx = 'good' | 'back' | 'pop' | 'water' | 'foam' | 'towel' | 'cloth' | 'finale' | 'tap' | 'scrub' | 'rinse';
+export type Sfx = 'good' | 'back' | 'pop' | 'water' | 'foam' | 'towel' | 'cloth' | 'finale' | 'tap' | 'scrub' | 'rinse' | 'blower' | 'blower2' | 'blower3';
 
-const VOLUME: Partial<Record<Sfx, number>> = { pop: 0.8, back: 0.6, tap: 0.4, good: 0.8, finale: 0.8 };
+const VOLUME: Partial<Record<Sfx, number>> = { pop: 0.8, back: 0.6, tap: 0.4, good: 0.8, finale: 0.8, blower: 0.75, blower2: 0.75, blower3: 0.75 };
 
 export function useShowerSound(soundOn: boolean, voiceOn: boolean) {
   const ctxRef = useRef<AudioContext | null>(null);
@@ -56,20 +56,30 @@ export function useShowerSound(soundOn: boolean, voiceOn: boolean) {
   const stopVoice = useCallback(() => {
     queueRef.current.forEach((t) => window.clearTimeout(t));
     queueRef.current = [];
-    audioRef.current?.pause();
+    const a = audioRef.current;
+    if (a) { a.onended = null; a.pause(); }
   }, []);
 
-  /** Say a line now (cuts any line that is still talking). */
-  const say = useCallback((name: string) => {
-    if (!voiceOn) return;
+  /**
+   * Say a line now (cuts any line that is still talking). `onEnd` runs when it has
+   * finished - so the next line never talks over it - or soon, if there is no voice.
+   */
+  const say = useCallback((name: string, onEnd?: () => void) => {
     const a = audioRef.current;
     const url = VOICES[name];
-    if (!a || !url) return;
+    const done = () => { if (a) a.onended = null; onEnd?.(); };
+    if (!voiceOn || !a || !url) { if (onEnd) queueRef.current.push(window.setTimeout(onEnd, 700)); return; }
+    a.onended = null;
     a.pause();
     a.src = url;
     a.volume = 1;
     a.currentTime = 0;
-    a.play().catch(() => {});
+    if (onEnd) {
+      a.onended = done;
+      // safety net: a line that never reports its end (blocked autoplay) still moves the game on
+      queueRef.current.push(window.setTimeout(() => { if (a.onended === done) done(); }, 4000));
+    }
+    a.play().catch(() => { if (onEnd && a.onended === done) done(); });
   }, [voiceOn]);
 
   /** Say a line after a pause (cancelled by the next stopVoice). */

@@ -269,13 +269,12 @@ export default function ShowerSteps({
     const nextDone = done + 1;
     setDone(nextDone);
     const praise = ['good1', 'good2', 'good3'][nextDone % 3];
-    later(() => sound.say(praise), 500);
-
-    if (nextDone < steps.length) {
-      later(() => { sound.say(steps[nextDone].voice); busy.current = false; }, 1700);
-    } else {
-      later(() => startBubbles(), 1900);
-    }
+    // a 3s leaf-blower whoosh (the three takes in turn) between steps (his favourite sound), then the praise in full as it fades, then the next step
+    later(() => sound.play((['blower', 'blower2', 'blower3'] as const)[(nextDone - 1) % 3]), 120);
+    later(() => sound.say(praise, () => {
+      if (nextDone < steps.length) later(() => { sound.say(steps[nextDone].voice); busy.current = false; }, 350);
+      else later(() => startBubbles(), 350);
+    }), 2700);
   };
 
   const startBubbles = () => {
