@@ -41,7 +41,7 @@ async function image([promptFile, out, model = 'flare', quality = 'MEDIUM', size
   const [w, h] = size.split('x').map(Number);
   const r16 = (x) => Math.max(16, Math.round(x / 16) * 16);
   const fields = {
-    model: 'gpt-image-2.5-' + model, prompt: fs.readFileSync(promptFile, 'utf8').trim(),
+    model: (process.env.IMAGE_GEN || 'gpt-image-2.6-') + model, prompt: fs.readFileSync(promptFile, 'utf8').trim(),
     size: `${r16(w)}x${r16(h)}`, quality: quality.toLowerCase(), n: 1,
   };
   const png = /\.png$/i.test(out);

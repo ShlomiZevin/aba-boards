@@ -1,0 +1,205 @@
+{
+ "_note": "face = the empty area as % distance from each edge (safe rectangle; card/panel windows have rounded corners). panels: border-image slice in px of the source image.",
+ "card-green.webp": {
+  "w": 600,
+  "h": 800,
+  "face": {
+   "left": 8.7,
+   "top": 6.8,
+   "right": 8.8,
+   "bottom": 7.0
+  }
+ },
+ "card-blue.webp": {
+  "w": 600,
+  "h": 800,
+  "face": {
+   "left": 8.8,
+   "top": 6.9,
+   "right": 8.8,
+   "bottom": 7.0
+  }
+ },
+ "card-amber.webp": {
+  "w": 600,
+  "h": 800,
+  "face": {
+   "left": 8.7,
+   "top": 6.9,
+   "right": 8.8,
+   "bottom": 6.8
+  }
+ },
+ "card-purple.webp": {
+  "w": 600,
+  "h": 800,
+  "face": {
+   "left": 8.7,
+   "top": 6.9,
+   "right": 8.7,
+   "bottom": 6.9
+  }
+ },
+ "banner.webp": {
+  "w": 900,
+  "h": 236,
+  "face": {
+   "left": 13,
+   "top": 22,
+   "right": 13,
+   "bottom": 32
+  }
+ },
+ "banner-big.webp": {
+  "w": 1000,
+  "h": 305,
+  "face": {
+   "left": 14,
+   "top": 22,
+   "right": 14,
+   "bottom": 42
+  }
+ },
+ "star-full.webp": {
+  "w": 200,
+  "h": 200
+ },
+ "star-empty.webp": {
+  "w": 200,
+  "h": 200
+ },
+ "star-tray.webp": {
+  "w": 420,
+  "h": 122,
+  "face": {
+   "left": 9,
+   "top": 17,
+   "right": 9,
+   "bottom": 17
+  }
+ },
+ "btn-green.webp": {
+  "w": 900,
+  "h": 222,
+  "face": {
+   "left": 10,
+   "top": 17,
+   "right": 10,
+   "bottom": 20
+  }
+ },
+ "btn-cream.webp": {
+  "w": 900,
+  "h": 222,
+  "face": {
+   "left": 10,
+   "top": 17,
+   "right": 10,
+   "bottom": 20
+  }
+ },
+ "ib-back.webp": {
+  "w": 220,
+  "h": 220,
+  "face": {
+   "left": 12,
+   "top": 12,
+   "right": 12,
+   "bottom": 12
+  }
+ },
+ "ib-sound.webp": {
+  "w": 220,
+  "h": 220,
+  "face": {
+   "left": 12,
+   "top": 12,
+   "right": 12,
+   "bottom": 12
+  }
+ },
+ "ib-mute.webp": {
+  "w": 220,
+  "h": 220,
+  "face": {
+   "left": 12,
+   "top": 12,
+   "right": 12,
+   "bottom": 12
+  }
+ },
+ "ib-settings.webp": {
+  "w": 220,
+  "h": 220,
+  "face": {
+   "left": 12,
+   "top": 12,
+   "right": 12,
+   "bottom": 12
+  }
+ },
+ "ib-pause.webp": {
+  "w": 220,
+  "h": 220,
+  "face": {
+   "left": 12,
+   "top": 12,
+   "right": 12,
+   "bottom": 12
+  }
+ },
+ "ib-full.webp": {
+  "w": 220,
+  "h": 220,
+  "face": {
+   "left": 12,
+   "top": 12,
+   "right": 12,
+   "bottom": 12
+  }
+ },
+ "badge-stars.webp": {
+  "w": 420,
+  "h": 115,
+  "face": {
+   "left": 9,
+   "top": 16,
+   "right": 22,
+   "bottom": 16
+  }
+ },
+ "panel.webp": {
+  "w": 700,
+  "h": 1065,
+  "face": {
+   "left": 5.4,
+   "top": 3.6,
+   "right": 5.7,
+   "bottom": 4.0
+  },
+  "slice": 150,
+  "sliceNote": "border-image-slice: 150 fill (corner ornaments end ~133px in, ~149px down)"
+ },
+ "panel-amber.webp": {
+  "w": 700,
+  "h": 1065,
+  "face": {
+   "left": 6.3,
+   "top": 4.3,
+   "right": 6.1,
+   "bottom": 4.2
+  },
+  "slice": 150,
+  "sliceNote": "border-image-slice: 150 fill (corner ornaments end ~133px in, ~149px down)"
+ },
+ "chip.webp": {
+  "w": 600,
+  "h": 188,
+  "face": {
+   "left": 9,
+   "top": 12,
+   "right": 9,
+   "bottom": 14
+  }
+ }
+}

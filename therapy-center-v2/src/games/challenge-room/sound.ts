@@ -19,7 +19,7 @@ const VOICES = urls(import.meta.glob('./voice/*.mp3', { eager: true, query: '?ur
 const EFFECTS = urls(import.meta.glob('./sfx/*.mp3', { eager: true, query: '?url', import: 'default' }) as Record<string, string>, 'sfx');
 const LINES = LINES_JSON as Record<string, string>;
 
-const VOLUME: Record<string, number> = { tap: 0.45, soft: 0.5, star: 0.7, note: 0.85, turn: 0.8, switch: 0.8, end: 0.85, start: 0.6 };
+const VOLUME: Record<string, number> = { good: 1, star: 1, tap: 0.45, soft: 0.5, note: 0.85, turn: 0.8, switch: 0.8, end: 0.85, start: 0.6 };
 
 export function useChallengeSound(soundOn: boolean, voiceOn: boolean, gender: 'm' | 'f') {
   const ctxRef = useRef<AudioContext | null>(null);
@@ -41,6 +41,8 @@ export function useChallengeSound(soundOn: boolean, voiceOn: boolean, gender: 'm
   const unlock = useCallback(() => {
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;
+    // iPhone: let game sounds play even with the ring/silent switch on (Safari 17+)
+    try { const nav = navigator as unknown as { audioSession?: { type: string } }; if (nav.audioSession && nav.audioSession.type !== 'playback') nav.audioSession.type = 'playback'; } catch { /* ignore */ }
     let ctx = ctxRef.current;
     if (ctx && (ctx.state as string) === 'closed') ctx = null;
     if (!ctx) { ctx = new AC(); ctxRef.current = ctx; loadAll(ctx); }
@@ -98,7 +100,7 @@ export function useChallengeSound(soundOn: boolean, voiceOn: boolean, gender: 'm
     a.play().catch(() => { window.clearTimeout(safety.current); safety.current = window.setTimeout(done, 1200); });
   }, [voiceOn, resolve]);
 
-  const play = useCallback((name: string) => {
+  const play = useCallback((name: string, rate = 1) => {
     if (!soundOn) return;
     const ctx = ctxRef.current;
     if (!ctx) return;
@@ -115,6 +117,7 @@ export function useChallengeSound(soundOn: boolean, voiceOn: boolean, gender: 'm
     if (buf) {
       const src = ctx.createBufferSource();
       src.buffer = buf;
+      src.playbackRate.value = rate;
       const g = ctx.createGain();
       g.gain.value = VOLUME[base] ?? 0.75;
       src.connect(g).connect(ctx.destination);

@@ -84,6 +84,7 @@ export const GAMES: GameDefinition[] = [
   {
     id: 'challenge-room',
     name: 'חדר האתגרים',
+    bg: '#0e1524',
     icon: '🖐️',
     description: 'אתגרי קשב, עצירה, זיכרון וגמישות על ארבעה פדים גדולים. כל סבב נמדד ונשמר להיסטוריה של המטפלת.',
     // levels, per-challenge settings and history live in the game's own adult panel (config.cr)

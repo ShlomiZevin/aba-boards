@@ -36,6 +36,10 @@ export interface ChallengeDef {
   /** may suggest the next level: every check must pass in 2 rounds in a row */
   passed: (summary: Record<string, Val>) => boolean;
   demo: Settings;
+  /** the card's frame colour on the menu */
+  color: 'green' | 'blue' | 'amber' | 'purple';
+  /** 1-3 stars for a finished round (what the child sees) */
+  score: (summary: Record<string, Val>, s: Settings) => number;
 }
 
 const COLOR_OPTIONS = (Object.keys(COLORS) as ColorId[]).map((c) => ({ value: c, label: COLORS[c].name }));
@@ -113,7 +117,7 @@ function makeSeeLight(): Challenge {
         next();
       } else if (p.pod !== null) {
         wrong++;
-        ctx.neutral();
+        ctx.neutral('wrong', p.pod);
       }
     },
     abort() {
@@ -195,7 +199,7 @@ function goTrialRunner(ctx: Ctx, extra: () => Trial, done: (outcome: string) => 
       ctx.setPod(cur.pod, OFF);
       if (rt < minRt()) { end('anticipation', rt); return true; }
       if (cur.go) { ctx.flash(cur.pod, cur.color); ctx.success(); end('hit', rt); }
-      else { ctx.neutral(); end('commission', rt); }
+      else { ctx.neutral('wait', cur.pod); end('commission', rt); }
       return true;
     },
     abort() {
@@ -265,14 +269,15 @@ function summarizeGo(trials: Trial[]) {
 }
 
 // ====================================================================================
-// 3. זוכר את הרצף - watch the lights without touching, then repeat them.
+// 3. זוכר את הרצף - Simon: watch, then repeat. Every right answer adds ONE light to the
+//    same sequence (A, AB, ABC...). A mistake: try that length again (retries), else the
+//    round ends. The measure is the span - the longest sequence repeated.
 // ====================================================================================
 function makeSequence(): Challenge {
   let ctx: Ctx;
-  let seqNo = 0;
-  let total = 0;
   let seq: PodId[] = [];
-  let attempt = 1;
+  let attempt = 0;          // running attempt number (trial i)
+  let tries = 0;            // tries at the current length
   let phase: 'idle' | 'show' | 'answer' = 'idle';
   let pos = 0;
   let answer: number[] = [];
@@ -280,36 +285,28 @@ function makeSequence(): Challenge {
   let replays = 0;
   let idle = 0;
   let saidNotYet = false;
+  let maxLen = 8;
+  let bestBefore = 0;
+  let saidRecord = false;
 
-  const build = () => {
-    const len = s2n(ctx.settings, 'length', 2);
-    const out: PodId[] = [];
-    for (let k = 0; k < len; k++) {
-      let p = Math.floor(ctx.rand() * 4) as PodId;
-      if (!bool(ctx.settings.repeats)) while (k > 0 && p === out[k - 1]) p = Math.floor(ctx.rand() * 4) as PodId;
-      out.push(p);
-    }
-    return out;
-  };
-  const nextSeq = () => {
-    if (seqNo >= total) { ctx.later(600, () => ctx.finish()); return; }
-    if (total - seqNo === 1 && total >= 4) ctx.say('almost-end');
-    seq = build(); attempt = 1; replays = 0; early = 0;
-    ctx.later(seqNo === 0 ? 300 : 1200, play);
+  const addOne = () => {
+    let p = Math.floor(ctx.rand() * 4) as PodId;
+    if (!bool(ctx.settings.repeats)) while (seq.length && p === seq[seq.length - 1]) p = Math.floor(ctx.rand() * 4) as PodId;
+    seq.push(p);
   };
   const play = () => {
-    phase = 'show'; pos = 0; answer = []; saidNotYet = false;
-    ctx.overlay({ status: { icon: '👀', text: 'מסתכלים' }, actions: [] });
+    phase = 'show'; pos = 0; answer = []; saidNotYet = false; early = 0;
+    ctx.overlay({ status: { icon: '👀', text: 'מסתכלים' }, actions: [], progress: { now: seq.length, max: maxLen } });
     ctx.setPods(allOff());
-    const lit = s2n(ctx.settings, 'litMs', 700);
-    const gap = s2n(ctx.settings, 'gapMs', 400);
-    let at = 700;
+    const lit = s2n(ctx.settings, 'litMs', 600);
+    const gap = s2n(ctx.settings, 'gapMs', 250);
+    let at = 500;
     seq.forEach((p) => {
       ctx.later(at, () => { ctx.setPod(p, { color: POD_COLORS[p], mode: 'lit' }); ctx.sfx(`note${p + 1}`); });
       ctx.later(at + lit, () => ctx.setPod(p, OFF));
       at += lit + gap;
     });
-    ctx.later(at + 300, yourTurn);
+    ctx.later(at + 150, yourTurn);
   };
   const yourTurn = () => {
     phase = 'answer';
@@ -320,14 +317,25 @@ function makeSequence(): Challenge {
   };
   const armIdle = () => { ctx.cancel(idle); idle = ctx.later(8000, () => { if (phase === 'answer') { ctx.say('your-turn'); armIdle(); } }); };
   const logAttempt = (outcome: 'full' | 'error', errorAt: number) => {
+    attempt++;
     ctx.log({
-      kind: 'trial', i: seqNo + 1, length: seq.length, attempt, outcome,
+      kind: 'trial', i: attempt, length: seq.length, attempt: tries, outcome,
       itemsCorrect: outcome === 'full' ? seq.length : errorAt, errorAt: outcome === 'full' ? -1 : errorAt + 1,
       early, replays, seq: seq.map((p) => p + 1).join('-'), answer: answer.map((p) => p + 1).join('-'),
     });
   };
   return {
-    start(c) { ctx = c; total = s2n(c.settings, 'trials', 5); c.setPods(allOff()); nextSeq(); },
+    start(c) {
+      ctx = c;
+      maxLen = s2n(c.settings, 'maxLength', 8);
+      bestBefore = s2n(c.settings, 'best', 0);
+      seq = [];
+      const startLen = Math.max(1, Math.min(maxLen, s2n(c.settings, 'startLength', 1)));
+      for (let k = 0; k < startLen; k++) addOne();
+      tries = 1;
+      c.setPods(allOff());
+      c.later(300, play);
+    },
     press(p) {
       if (phase !== 'answer') {
         early++;
@@ -347,23 +355,29 @@ function makeSequence(): Challenge {
           phase = 'idle'; ctx.cancel(idle);
           ctx.overlay({ status: null });
           logAttempt('full', -1);
-          ctx.later(350, () => ctx.success());
-          seqNo++;
-          nextSeq();
+          ctx.later(300, () => ctx.success());
+          if (seq.length >= maxLen) { ctx.later(900, () => ctx.finish()); return; }
+          // the sequence grows by one
+          const grown = seq.length + 1;
+          ctx.later(700, () => {
+            if (!saidRecord && bestBefore > 0 && grown > bestBefore) { saidRecord = true; ctx.sfx('levelup'); ctx.say('new-record'); }
+            else ctx.say('one-more');
+          });
+          addOne();
+          tries = 1;
+          ctx.later(2000, play);
         }
       } else {
         phase = 'idle'; ctx.cancel(idle);
         ctx.overlay({ status: null });
-        ctx.neutral();
+        ctx.neutral('wrong', p.pod);
         logAttempt('error', pos);
-        const retry = ctx.settings.onError !== 'next' && attempt <= s2n(ctx.settings, 'maxRetries', 2);
-        if (retry) {
-          attempt++;
-          ctx.later(600, () => ctx.say('try-again'));
-          ctx.later(2200, play);
+        if (tries <= s2n(ctx.settings, 'retries', 1)) {
+          tries++;
+          ctx.later(700, () => ctx.say('try-again'));
+          ctx.later(2300, play);
         } else {
-          seqNo++;
-          nextSeq();
+          ctx.later(900, () => ctx.finish());
         }
       }
     },
@@ -373,28 +387,27 @@ function makeSequence(): Challenge {
     abort() { phase = 'idle'; ctx.cancel(idle); ctx.overlay({ status: null, actions: [] }); },
     resume() { ctx.later(800, play); },
     demoAnswer: () => (phase === 'answer' ? seq[pos] : null),
-    remaining: () => total - seqNo,
+    remaining: () => maxLen - seq.length,
   };
 }
 
-function summarizeSeq(trials: Trial[]) {
+function summarizeSeq(trials: Trial[], s: Settings) {
   const t = trialsOnly(trials);
-  const seqs = new Map<number, Trial[]>();
-  t.forEach((x) => { const k = num(x.i); seqs.set(k, [...(seqs.get(k) || []), x]); });
-  const all = [...seqs.values()];
-  const firstTry = all.filter((a) => a[0]?.outcome === 'full').length;
-  const full = all.filter((a) => a.some((x) => x.outcome === 'full')).length;
+  const start = s2n(s, 'startLength', 1);
+  const full = t.filter((x) => x.outcome === 'full');
   const errs = t.filter((x) => x.outcome === 'error');
-  const maxLen = Math.max(0, ...t.filter((x) => x.outcome === 'full').map((x) => num(x.length)));
+  const lengths = [...new Set(t.map((x) => num(x.length)))];
+  const firstTry = lengths.filter((L) => { const first = t.find((x) => num(x.length) === L); return first?.outcome === 'full'; }).length;
+  const span = Math.max(0, ...full.map((x) => num(x.length)));
   return {
-    sequences: all.length,
-    firstTryPct: pct(firstTry, all.length),
-    fullPct: pct(full, all.length),
-    maxLength: maxLen,
-    itemsToFirstError: errs.length ? Math.round((errs.reduce((a, x) => a + num(x.itemsCorrect), 0) / errs.length) * 10) / 10 : null,
+    span,
+    gained: Math.max(0, span - start + 1),
+    reachedMax: span >= s2n(s, 'maxLength', 8),
     attempts: t.length,
-    attemptsPerSequence: all.length ? Math.round((t.length / all.length) * 10) / 10 : null,
-    replays: all.reduce((a, arr) => a + Math.max(0, ...arr.map((x) => num(x.replays))), 0),
+    errors: errs.length,
+    firstTryPct: pct(firstTry, lengths.length),
+    itemsToFirstError: errs.length ? Math.round((errs.reduce((a, x) => a + num(x.itemsCorrect), 0) / errs.length) * 10) / 10 : null,
+    replays: t.reduce((a, x) => a + num(x.replays), 0),
     earlyPresses: earlyCount(trials),
     hinted: hintCount(trials),
   } as Record<string, Val>;
@@ -548,6 +561,8 @@ function summarizeSwitch(trials: Trial[]) {
 const N = (key: string, label: string, min: number, max: number, step = 1, help?: string): Field => ({ key, label, type: 'number', min, max, step, help });
 const C = (key: string, label: string, help?: string): Field => ({ key, label, type: 'checkbox', help });
 
+
+const starsFor = (p: number) => (p >= 90 ? 3 : p >= 70 ? 2 : 1);
 export const CHALLENGES: ChallengeDef[] = [
   {
     id: 'light',
@@ -557,10 +572,10 @@ export const CHALLENGES: ChallengeDef[] = [
     emoji: '💡',
     howto: () => ['c1-howto'],
     levels: [
-      { name: 'האור מחכה עד שלוחצים', settings: { trials: 8, windowMs: 0, isiMs: 1500, isiJitter: 0, random: true, color: 'blue' } },
-      { name: '3 שניות ללחוץ', settings: { trials: 10, windowMs: 3000, isiMs: 1200, isiJitter: 0, random: true, color: 'blue' } },
-      { name: '2 שניות, קצב משתנה', settings: { trials: 12, windowMs: 2000, isiMs: 1000, isiJitter: 400, random: true, color: 'blue' } },
-      { name: 'מהיר', settings: { trials: 16, windowMs: 1400, isiMs: 700, isiJitter: 600, random: true, color: 'blue' } },
+      { name: 'האור מחכה עד שלוחצים', settings: { trials: 12, windowMs: 0, isiMs: 800, isiJitter: 200, random: true, color: 'blue' } },
+      { name: 'שנייה וחצי ללחוץ', settings: { trials: 16, windowMs: 1500, isiMs: 600, isiJitter: 250, random: true, color: 'blue' } },
+      { name: 'שנייה ללחוץ', settings: { trials: 20, windowMs: 1000, isiMs: 450, isiJitter: 250, random: true, color: 'blue' } },
+      { name: 'בזק', settings: { trials: 25, windowMs: 750, isiMs: 300, isiJitter: 200, random: true, color: 'blue' } },
     ],
     fields: [
       N('trials', 'מספר ניסיונות', 3, 60),
@@ -596,6 +611,8 @@ export const CHALLENGES: ChallengeDef[] = [
     ],
     passed: (s) => num(s.accuracy) >= 80,
     demo: { trials: 3, windowMs: 0, isiMs: 900, random: true, color: 'blue' },
+    color: 'purple',
+    score: (m) => starsFor(num(m.accuracy)),
   },
   {
     id: 'gonogo',
@@ -605,10 +622,10 @@ export const CHALLENGES: ChallengeDef[] = [
     emoji: '🚦',
     howto: (s) => [`go-${color(s, 'goColor', 'green')}`, `nogo-${color(s, 'nogoColor', 'red')}`],
     levels: [
-      { name: 'קל: 80% לוחצים', settings: { trials: 15, goPct: 80, stimMs: 2000, windowMs: 2000, isiMs: 1500, isiJitter: 0, varStim: false } },
-      { name: 'בינוני: 70% לוחצים', settings: { trials: 20, goPct: 70, stimMs: 1500, windowMs: 1500, isiMs: 1200, isiJitter: 0, varStim: false } },
-      { name: 'מתקדם: חצי חצי', settings: { trials: 20, goPct: 50, stimMs: 1200, windowMs: 1200, isiMs: 1000, isiJitter: 0, varStim: false } },
-      { name: 'מאתגר: זמנים משתנים', settings: { trials: 24, goPct: 50, stimMs: 1200, windowMs: 1400, isiMs: 1000, isiJitter: 800, varStim: true } },
+      { name: 'קל: 80% לוחצים', settings: { trials: 20, goPct: 80, stimMs: 1100, windowMs: 1100, isiMs: 750, isiJitter: 150, varStim: false } },
+      { name: 'בינוני: 70% לוחצים', settings: { trials: 25, goPct: 70, stimMs: 900, windowMs: 900, isiMs: 600, isiJitter: 200, varStim: false } },
+      { name: 'מתקדם: 60% לוחצים, מהיר', settings: { trials: 30, goPct: 60, stimMs: 700, windowMs: 750, isiMs: 500, isiJitter: 250, varStim: false } },
+      { name: 'מאתגר: חצי חצי, זמנים משתנים', settings: { trials: 36, goPct: 50, stimMs: 650, windowMs: 800, isiMs: 400, isiJitter: 300, varStim: true } },
     ],
     fields: [
       N('trials', 'מספר ניסיונות', 4, 80),
@@ -634,6 +651,8 @@ export const CHALLENGES: ChallengeDef[] = [
     ],
     passed: (s) => num(s.goPct) >= 80 && num(s.nogoPct) >= 80,
     demo: { trials: 4, goPct: 50, stimMs: 1800, windowMs: 1800, isiMs: 900, forceDemo: true, minRt: 0 },
+    color: 'amber',
+    score: (m) => starsFor(Math.min(num(m.goPct), num(m.nogoPct))),
   },
   {
     id: 'sequence',
@@ -643,34 +662,35 @@ export const CHALLENGES: ChallengeDef[] = [
     emoji: '🔢',
     howto: () => ['c3-howto'],
     levels: [
-      { name: 'שני אורות', settings: { length: 2, trials: 5, litMs: 800, gapMs: 450, repeats: false, onError: 'retry', maxRetries: 2, replay: true } },
-      { name: 'שלושה אורות', settings: { length: 3, trials: 5, litMs: 750, gapMs: 400, repeats: false, onError: 'retry', maxRetries: 2, replay: true } },
-      { name: 'ארבעה אורות', settings: { length: 4, trials: 5, litMs: 700, gapMs: 400, repeats: false, onError: 'retry', maxRetries: 1, replay: true } },
-      { name: 'חמישה אורות', settings: { length: 5, trials: 5, litMs: 650, gapMs: 350, repeats: true, onError: 'retry', maxRetries: 1, replay: false } },
-      { name: 'שישה ויותר', settings: { length: 6, trials: 5, litMs: 600, gapMs: 350, repeats: true, onError: 'next', maxRetries: 0, replay: false } },
+      { name: 'מתחילים מאור אחד', settings: { startLength: 1, maxLength: 6, litMs: 600, gapMs: 250, repeats: false, retries: 1, replay: true } },
+      { name: 'מתחילים משניים', settings: { startLength: 2, maxLength: 8, litMs: 520, gapMs: 220, repeats: false, retries: 1, replay: true } },
+      { name: 'מתחילים משלושה', settings: { startLength: 3, maxLength: 10, litMs: 460, gapMs: 200, repeats: true, retries: 1, replay: false } },
+      { name: 'מהיר', settings: { startLength: 3, maxLength: 12, litMs: 400, gapMs: 180, repeats: true, retries: 0, replay: false } },
+      { name: 'מהיר מאוד', settings: { startLength: 4, maxLength: 14, litMs: 350, gapMs: 150, repeats: true, retries: 0, replay: false } },
     ],
     fields: [
-      N('length', 'אורך הרצף', 1, 10),
-      N('trials', 'מספר רצפים', 1, 20),
-      N('litMs', 'משך כל אור (מ״ש)', 200, 2000, 50),
-      N('gapMs', 'הפסקה בין אורות (מ״ש)', 100, 2000, 50),
+      N('startLength', 'מתחילים מכמה אורות', 1, 10),
+      N('maxLength', 'עד כמה אורות (סוף הסבב)', 2, 20),
+      N('litMs', 'משך כל אור (מ״ש)', 150, 2000, 50),
+      N('gapMs', 'הפסקה בין אורות (מ״ש)', 80, 2000, 20),
       C('repeats', 'אותו אור יכול לחזור פעמיים ברצף'),
-      { key: 'onError', label: 'אחרי טעות', type: 'select', options: [{ value: 'retry', label: 'מנסים שוב את אותו רצף' }, { value: 'next', label: 'עוברים לרצף הבא' }] },
-      N('maxRetries', 'כמה ניסיונות חוזרים', 0, 5),
+      N('retries', 'ניסיונות חוזרים אחרי טעות (0 = הסבב נגמר)', 0, 5),
       C('replay', 'כפתור "לראות שוב" לפני שעונים'),
     ],
     make: makeSequence,
-    summarize: (trials) => summarizeSeq(trials),
+    summarize: (trials, s) => summarizeSeq(trials, s),
     metrics: [
-      { key: 'firstTryPct', label: 'רצפים נכונים בניסיון ראשון', unit: '%' },
-      { key: 'fullPct', label: 'רצפים שהושלמו (כולל חזרות)', unit: '%' },
-      { key: 'maxLength', label: 'הרצף הארוך שהושלם' },
+      { key: 'span', label: 'הרצף הארוך שחזר עליו' },
+      { key: 'gained', label: 'כמה אורות הוסיף בסבב' },
+      { key: 'errors', label: 'טעויות' },
+      { key: 'firstTryPct', label: 'אורכים שעבר בניסיון ראשון', unit: '%' },
       { key: 'itemsToFirstError', label: 'פריטים נכונים עד הטעות' },
       { key: 'earlyPresses', label: 'לחיצות בזמן ההצגה' },
-      { key: 'attemptsPerSequence', label: 'ניסיונות לרצף' },
     ],
-    passed: (s) => num(s.firstTryPct) >= 80,
-    demo: { length: 2, trials: 1, litMs: 800, gapMs: 450, onError: 'next', replay: false },
+    passed: (s) => num(s.gained) >= 4 || s.reachedMax === true,
+    demo: { startLength: 1, maxLength: 3, litMs: 600, gapMs: 300, retries: 0, replay: false },
+    color: 'blue',
+    score: (m, st) => { const r = num(m.span) / Math.max(1, s2n(st, 'maxLength', 8)); return r >= 0.85 ? 3 : r >= 0.5 ? 2 : 1; },
   },
   {
     id: 'switch',
@@ -680,10 +700,10 @@ export const CHALLENGES: ChallengeDef[] = [
     emoji: '🔄',
     howto: () => ['c4-watch'],
     levels: [
-      { name: 'החלפה אחת', settings: { blocks: 2, trialsPerBlock: 10, practice: 3, colors: 2, goPct: 50, stimMs: 1800, windowMs: 1800, isiMs: 1300, prepMs: 3000 } },
-      { name: 'שתי החלפות', settings: { blocks: 3, trialsPerBlock: 8, practice: 2, colors: 2, goPct: 50, stimMs: 1500, windowMs: 1500, isiMs: 1200, prepMs: 2500 } },
-      { name: 'החלפות מהירות', settings: { blocks: 4, trialsPerBlock: 6, practice: 1, colors: 2, goPct: 50, stimMs: 1300, windowMs: 1300, isiMs: 1100, prepMs: 2000 } },
-      { name: 'שלושה צבעים', settings: { blocks: 4, trialsPerBlock: 8, practice: 2, colors: 3, goPct: 40, stimMs: 1500, windowMs: 1500, isiMs: 1200, prepMs: 2500 } },
+      { name: 'שתי החלפות', settings: { blocks: 3, trialsPerBlock: 10, practice: 2, colors: 2, goPct: 50, stimMs: 1100, windowMs: 1100, isiMs: 750, prepMs: 2000 } },
+      { name: 'שלוש החלפות', settings: { blocks: 4, trialsPerBlock: 8, practice: 1, colors: 2, goPct: 50, stimMs: 900, windowMs: 900, isiMs: 600, prepMs: 1800 } },
+      { name: 'החלפות מהירות', settings: { blocks: 5, trialsPerBlock: 6, practice: 1, colors: 2, goPct: 50, stimMs: 750, windowMs: 800, isiMs: 500, prepMs: 1500 } },
+      { name: 'שלושה צבעים', settings: { blocks: 5, trialsPerBlock: 8, practice: 1, colors: 3, goPct: 40, stimMs: 850, windowMs: 900, isiMs: 550, prepMs: 1800 } },
     ],
     fields: [
       N('blocks', 'מספר כללים (החלפות + 1)', 2, 8),
@@ -708,6 +728,8 @@ export const CHALLENGES: ChallengeDef[] = [
     ],
     passed: (s) => num(s.goPct) >= 80 && num(s.nogoPct) >= 80,
     demo: { blocks: 2, trialsPerBlock: 2, practice: 0, colors: 2, goPct: 50, stimMs: 1800, windowMs: 1800, isiMs: 900, prepMs: 1200 },
+    color: 'green',
+    score: (m) => starsFor(num(m.accuracy)),
   },
 ];
 

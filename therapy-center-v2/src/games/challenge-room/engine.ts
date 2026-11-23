@@ -43,6 +43,8 @@ export interface Overlay {
   banner: { title: string; rules?: RuleChip[] } | null;
   /** action buttons the child may use now (e.g. replay the sequence) */
   actions: { id: string; label: string }[];
+  /** a small progress line (the sequence's length out of its max) */
+  progress?: { now: number; max: number } | null;
 }
 export interface Press { pod: PodId | null; t: number }
 
@@ -60,8 +62,8 @@ export interface Ctx {
   say(id: string, onEnd?: () => void): void;
   /** a success the child earned: sound, stars, sometimes a praise line */
   success(kind?: 'good' | 'stop'): void;
-  /** a mistake: quiet, never a buzzer */
-  neutral(): void;
+  /** a mistake: clear but gentle - 'wrong' (not this one) or 'wait' (pressed on a wait colour), on a pod */
+  neutral(kind?: 'wrong' | 'wait', pod?: number | null): void;
   log(t: Trial): void;
   rand(): number;
   finish(): void;
@@ -114,6 +116,10 @@ export interface RunnerHooks {
   onSay(id: string, onEnd?: () => void): void;
   onStar(stars: number): void;
   onFlash(i: number, color: ColorId | null, ms: number): void;
+  /** a success moment for the screen (burst) - streak = successes in a row */
+  onSuccess?(kind: 'good' | 'stop', streak: number): void;
+  /** a miss for the screen: the pod shakes and shows a calm 'not this one' / 'this one waits' */
+  onMiss?(kind: 'wrong' | 'wait', pod: number | null, count: number): void;
   onFinish(r: RoundResult): void;
 }
 
@@ -148,6 +154,8 @@ export class Runner {
   private startedAt = new Date().toISOString();
   private praiseCount = 0;
   private epoch = 0;
+  private streak = 0;
+  private misses = 0;
   private lastPress: Record<string, number> = {};
   paused = false;
   readonly rand: () => number;
@@ -293,6 +301,8 @@ export class Runner {
       this.hooks.onSay(id, onEnd ? () => { if (!this.paused && !this.finished && ep === this.epoch) onEnd(); } : undefined);
     },
     success: (kind = 'good') => {
+      this.streak++;
+      this.hooks.onSuccess?.(kind, this.streak);
       if (this.demo) { this.hooks.onSfx(kind === 'stop' ? 'stop-good' : 'good'); return; }
       this.successes++;
       this.hooks.onSfx(kind === 'stop' ? 'stop-good' : 'good');
@@ -308,7 +318,12 @@ export class Runner {
         }
       }
     },
-    neutral: () => { if (this.errorSound) this.hooks.onSfx('soft'); },
+    neutral: (kind = 'wrong', pod = null) => {
+      this.streak = 0;
+      this.misses++;
+      this.hooks.onMiss?.(kind, pod ?? null, this.misses);
+      if (this.errorSound) this.hooks.onSfx(kind === 'wait' ? 'wait-miss' : 'miss');
+    },
     log: (tr) => {
       if (this.demo) return;
       const row: Trial = { ...tr };

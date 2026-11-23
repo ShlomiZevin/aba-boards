@@ -28,10 +28,12 @@ a tutorial, and PLAY it as a phone before anyone sees it. Never skip a step.
 - **The makers - Start Doing's own keys** (`server/.env`; the one exception is sound effects, below; never print a key):
   `node scripts/games/make.mjs image <prompt.txt> <out> [flare|sunburst] [MEDIUM|HIGH] [WxH] [--ref a.jpg ...] [--transparent]`,
   `... sfx <prompt.txt> <out.mp3> <secs>`, `... loop ...`, `... voice "<Hebrew>" <out.mp3> [voiceId]`.
-  - Every picture = OpenAI **gpt-image-2.5-flare** (default: scenes, props, icons, concept) or **gpt-image-2.5-sunburst**
-    (the most exact: characters, poses, cover, title art - HIGH only for these). No other image model. (The Shlomiverse
-    moved to **2.6** flare/sunburst on 2026-11-22; make.mjs is still on 2.5 - try 2.6 on Start Doing's key once, and if it
-    works switch make.mjs and this line.) **Prompt the WHAT, never the HOW**: say what the thing is and what the picture
+  - Every picture = OpenAI **gpt-image-2.6-flare** (default: scenes, props, icons, concept) or **gpt-image-2.6-sunburst**
+    (the most exact: characters, poses, cover, title art - HIGH only for these). No other image model. make.mjs calls 2.6
+    since 2026-11-23 (works on Start Doing's key). **Design every screen with them too** (his rule: "everything you need to
+    design, use GPT image models - they are great in designing"): mockups of the menu, the question screen, feedback
+    moments and the end screen first, then painted pieces (badges, blank buttons, trophy) cut from new pictures.
+    **Prompt the WHAT, never the HOW**: say what the thing is and what the picture
     is for (transparent, a sheet, the empty place where the game draws), let the painter design it.
     Pieces cut from a sheet: ask for "crisp clean edges, no outer glow, no drop shadow, fully transparent around every
     piece", cut by shape (never by grid), trim on real paint (alpha > 40), and look at every cut on a contrasting
@@ -166,8 +168,11 @@ the settings are (per kid), the look (the concept picture), the sounds and voice
 ## 5. Build - the rules for children in ABA
 Read `rules.md` in this folder (the ABA-specific rules) AND the Shlomiverse `rules.md` (general craft: phone first,
 the play area is the screen, painted not drawn, sound that comes back on iPhone, test with real taps). The short of it:
-1. **Errorless and kind**: no losing, no lives, no timers that punish, no buzzers or "wrong!" - a wrong move gently
-   returns and the right place glows. Success is loud and happy; mistakes are quiet.
+1. **Kind, and unmistakably clear** (his rule, 2026-11-23: "it's for autistic kids, so it should be very clear when I
+   succeed and when I don't"): no losing, no lives, no punishing timers, no buzzers - but every tap gets an answer you
+   cannot miss - ON THE PIECE ITSELF, never a sticker/emoji/badge laid over it ("ugly"). Right = the piece glows green and
+   bounces, a burst, a joyful sound. Wrong = the piece glows red and shakes, a gentle "uh-oh" sound (never a buzzer), and
+   the first few misses said in words ("אופס, על זה מחכים"). Quiet mistakes read as "nothing happened".
 2. **Calm senses**: soft colours, no flashing, no sudden loud sounds, a sound switch remembered per kid (a setting),
    music off by default.
 3. **No reading needed**: every instruction is a picture + a short Hebrew voice line (ElevenLabs), with the words on

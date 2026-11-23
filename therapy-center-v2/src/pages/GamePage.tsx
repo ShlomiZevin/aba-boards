@@ -97,6 +97,8 @@ export default function GamePage() {
     return <div className="empty-state"><p>המשחק לא נמצא.</p></div>;
   }
   if (kidQuery.isLoading || stateQuery.isLoading) {
+    // a full-screen game waits on its own colour, so nothing of the app flashes first
+    if (def.bg) return <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: def.bg }} />;
     return <div className="empty-state"><p>טוען…</p></div>;
   }
   if (!kid) {

@@ -80,10 +80,10 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
         <div className="cr-panel-body">
           <section className="cr-sec">
             <h2>כללי</h2>
-            <label className="cr-row"><input type="checkbox" checked={soundOn} onChange={(e) => onSave(cr, { sound: e.target.checked })} /> צלילים</label>
-            <label className="cr-row"><input type="checkbox" checked={voiceOn} onChange={(e) => onSave(cr, { voice: e.target.checked })} /> הוראות בקול</label>
-            <label className="cr-row"><input type="checkbox" checked={cr.voicePraise} onChange={(e) => onSave({ ...cr, voicePraise: e.target.checked })} /> מילות עידוד בקול (מדי פעם, עם כוכב)</label>
-            <label className="cr-row"><input type="checkbox" checked={cr.errorSound} onChange={(e) => onSave({ ...cr, errorSound: e.target.checked })} /> צליל רך אחרי טעות (כבוי = שקט לגמרי)</label>
+            <label className="cr-row is-check"><input type="checkbox" checked={soundOn} onChange={(e) => onSave(cr, { sound: e.target.checked })} /> צלילים</label>
+            <label className="cr-row is-check"><input type="checkbox" checked={voiceOn} onChange={(e) => onSave(cr, { voice: e.target.checked })} /> הוראות בקול</label>
+            <label className="cr-row is-check"><input type="checkbox" checked={cr.voicePraise} onChange={(e) => onSave({ ...cr, voicePraise: e.target.checked })} /> מילות עידוד בקול (מדי פעם, עם כוכב)</label>
+            <label className="cr-row is-check"><input type="checkbox" checked={cr.errorSound} onChange={(e) => onSave({ ...cr, errorSound: e.target.checked })} /> צליל רך אחרי טעות (כבוי = שקט לגמרי)</label>
             <label className="cr-row">כוכב על כל
               <input type="number" min={1} max={10} value={cr.starsEvery} onChange={(e) => onSave({ ...cr, starsEvery: Math.max(1, Math.min(10, Number(e.target.value) || 3)) })} />
               הצלחות (גם עצירה נכונה היא הצלחה)
@@ -108,7 +108,7 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
                     </label>
                     <p className="cr-note">החלפת רמה מחזירה את ההגדרות לברירת המחדל של הרמה.</p>
                     {def.fields.map((f) => (
-                      <label key={f.key} className={`cr-row${changed.includes(f.key) ? ' is-changed' : ''}`}>
+                      <label key={f.key} className={`cr-row${f.type === 'checkbox' ? ' is-check' : ''}${changed.includes(f.key) ? ' is-changed' : ''}`}>
                         {f.type === 'checkbox' ? (
                           <><input type="checkbox" checked={s[f.key] === true} onChange={(e) => setField(def, f, e.target.checked)} /> {f.label}</>
                         ) : f.type === 'select' ? (

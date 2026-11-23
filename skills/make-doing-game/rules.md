@@ -5,8 +5,9 @@ in the Shlomiverse rules: `~/.claude/skills/make-verse-game/rules.md`. These are
 extra, because the players are young children in ABA therapy. Add a principle here whenever a round teaches one.
 
 ## The child
-- **Errorless learning**: the game never says "wrong". A misplaced piece floats back softly, the right target glows or
-  a hand shows it. No lives, no game over, no score that goes down.
+- **Errorless, not silent**: no lives, no game over, no score that goes down, never a buzzer or a red "wrong!" screen -
+  but a miss is always SHOWN clearly (the piece shakes, a calm badge, a gentle sound) and the right target glows or a
+  hand shows it. Clear feedback is the point for autistic children; a mistake that "does nothing" confuses them.
 - **Predictable**: the same screen layout every round, the same sounds for the same events, nothing surprising.
   A change of scene is announced (a voice line) before it happens.
 - **One step at a time**: one target active, the rest dimmed. Never two things moving that the child didn't start.
@@ -31,7 +32,7 @@ extra, because the players are young children in ABA therapy. Add a principle he
 
 ## Pictures of a real child
 - A character that looks like the child is made only on Shlomi's ask, from the photo he gives, with
-  `gpt-image-2.5-sunburst` HIGH and the photo as `--ref`. Same face, hair and clothes in every picture - compare every
+  `gpt-image-2.6-sunburst` HIGH and the photo as `--ref`. Same face, hair and clothes in every picture - compare every
   pose with the photo and regenerate any that drift (a visual schedule's steps 4-5 drifted once).
 - Bath / shower / dressing steps: the child is always modestly covered (a towel, foam, the shower curtain, shown from
   the shoulders up) - never undressed in a picture.
@@ -52,3 +53,35 @@ extra, because the players are young children in ABA therapy. Add a principle he
   reveal shows two faces ("double eyes" - Shlomi, 2026-11-16). Change the picture in one cut behind a cover (a soft
   bubble cloud, ~0.3s in, ~0.6s out). Rubbing paints only the effect (foam, drops, sparkles) on top of the one picture.
   A true morph would need the character rigged (Blender / a 2D puppet) - ask before going there.
+
+## Learnt on challenge-room (2026-11-23, his play-tests)
+- **Upright phone, always** ("why are you doing it wide? regular format, like holding the mobile vertically"): every game
+  is laid out for a phone held upright; on a computer it is a phone-shaped column in the middle (width
+  `min(100%, 100dvh * 0.5625)`), on a phone held sideways a "turn the phone" card.
+- **The play pieces take the screen** ("the pod should take a large amount of the screen") - 2x2 quadrants, each piece
+  ~95% of its cell's width.
+- **Ask before explaining**: before a game, "רוצה לראות הסבר?" with two big buttons ("כן, להסביר" / "לא, לשחק!") - never
+  run a demo by itself. The explanation = the voice lines, then the demo hand plays a short round.
+- **The demo hand comes from the bottom of the phone**, fingertip up, landing exactly on the target's centre, and leaves
+  after its tap (a hand from above, pointing down, "doesn't look good").
+- **"On" is the same picture filling with colour**: a lit piece keeps its own lines (make a mask from the picture's own
+  ridges/edges with a high-pass filter) and its face fills with the colour - never a second, different picture.
+- **Faster than you think** ("make it more challenging, more fast"): a level 1 that feels calm to an adult is slow for
+  the child. Short gaps (0.3-0.8 s), short showings, more trials; levels that speed up.
+- **Feedback lives on the piece** (his note: "not a different emoji - just the fingerprint highlighted with the colour glowing"): right = green glow + bounce, wrong = red glow + shake. Badges, check-mark stickers, outline rings and confetti over the pads were all rejected ("the green inside the fingerprint is enough") - confetti only on the end screen. The lit look copies the menu icons (deep colour, bright thick lines, glossy shine) - compare a crop of the game with the icon side by side.
+- **Success must be FUN**: the target glows and bounces, confetti + a ring, the target bounces, the counter
+  jumps, a streak shows from 3 in a row ("x3") and the success sound climbs a little higher with each one in a row. Joyful,
+  never loud (effects about -18 LUFS, the voice -18).
+- **Simon is cumulative**: one sequence that grows by one light after each right answer (A, AB, ABC...) until a
+  mistake - not a new random sequence each time. Measure the span; say "new record" when the child passes their best.
+- **No flicker on entering**: decode every picture before the game shows (fade in when ready), let the game page wait on
+  the game's own colour (`bg` in the registry entry), and give each screen a short fade-in.
+- **iPhone silent switch**: Web Audio obeys it, an <audio> voice does not - set `navigator.audioSession.type = 'playback'`
+  in the first tap, or effects are silent while the voice talks.
+- **RTL and effects**: absolutely positioned effects inside an RTL container land on the wrong side - give effect layers
+  `direction: ltr`.
+- **A measuring game**: the scoring engine has no React, runs on its own clock and is fast-forwarded by scripted players
+  in tests (perfect / impulsive / passive / early / double press / pause). Scripted players must react like a child
+  (>= 300 ms) - faster presses are rightly counted as "too early".
+- **"Put it live" for a new game** = in `GAMES` (every games room shows it to admins / therapists), switched on for no kid
+  until he says so - parents see nothing.

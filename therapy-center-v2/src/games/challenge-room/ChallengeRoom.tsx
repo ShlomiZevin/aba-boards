@@ -17,6 +17,7 @@ import { readCr, writeCr } from './config';
 import type { CrConfig } from './config';
 import { useChallengeSound } from './sound';
 import AdultPanel from './AdultPanel';
+import { Banner, FitText, PaintButton, IconButton, Stars, Card, Panel, Chip, StarsBadge } from './ui';
 import './challenge-room.css';
 
 const ART = Object.fromEntries(
@@ -28,7 +29,7 @@ const GAME_ID = 'challenge-room';
 const EMPTY_OV: Overlay = { status: null, rules: null, banner: null, actions: [] };
 type Screen = 'home' | 'intro' | 'play' | 'end' | 'panel';
 
-interface EndInfo { def: ChallengeDef; level: number; result: RoundResult; summary: Record<string, unknown>; suggest: number | null; saved: boolean | null }
+interface EndInfo { def: ChallengeDef; level: number; result: RoundResult; summary: Record<string, unknown>; suggest: number | null; saved: boolean | null; record: boolean; stars: number }
 
 export default function ChallengeRoom({ config, state, canEdit, onSaveState, onSaveConfig, onExit, kid }: GameComponentProps) {
   const qc = useQueryClient();
@@ -51,6 +52,17 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
   const [end, setEnd] = useState<EndInfo | null>(null);
   const [hintFlash, setHintFlash] = useState(false);
   const [isFull, setIsFull] = useState(false);
+  const [ready, setReady] = useState(false);
+  /** feedback ON the pads themselves: the fingerprint glows green (right) or red (wrong) */
+  const [fb, setFb] = useState<{ id: number; pods: number[]; kind: 'yes' | 'no' } | null>(null);
+  const fbId = useRef(0);
+  const crCount = useRef(0);
+  const [bursts, setBursts] = useState<{ id: number; pod: number; kind: 'good' | 'stop'; streak: number }[]>([]);
+  const [winPod, setWinPod] = useState<number>(-1);
+  const [starBump, setStarBump] = useState(0);
+  const lastLit = useRef<{ pod: number; t: number }>({ pod: -1, t: 0 });
+  const streakRef = useRef(0);
+  const burstId = useRef(0);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const runnerRef = useRef<Runner | null>(null);
@@ -69,6 +81,20 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
   });
   const rounds = roundsQuery.data?.data || [];
 
+  // show the game only when its pictures are decoded - no flash of a half-drawn screen
+  useEffect(() => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; setReady(true); } };
+    const t = window.setTimeout(finish, 2500);
+    Promise.all(Object.values(ART).map((u) => new Promise<void>((res) => {
+      const img = new Image();
+      img.onload = () => { if (img.decode) img.decode().then(() => res(), () => res()); else res(); };
+      img.onerror = () => res();
+      img.src = u;
+    }))).then(finish);
+    return () => window.clearTimeout(t);
+  }, []);
+
   // true full screen: portal into <body>, drop the app's padding
   useEffect(() => {
     document.body.classList.add('cr-open');
@@ -86,6 +112,15 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
   }, []);
 
   const saveCr = useCallback((next: CrConfig) => onSaveConfig(writeCr(config, next)), [config, onSaveConfig]);
+
+  /** confetti bursts across the screen (end of a round) */
+  const celebrate = useCallback(() => {
+    [0, 1, 2, 3].forEach((pod, k) => window.setTimeout(() => {
+      const id = ++burstId.current;
+      setBursts((b) => [...b.slice(-6), { id, pod, kind: 'good', streak: 0 }]);
+      window.setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 1100);
+    }, k * 180));
+  }, []);
 
   // ---------------- the round loop ----------------
   const stopLoop = useCallback(() => {
@@ -107,7 +142,8 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     const summary = def.summarize(r.trials, s);
     const key = settingsKey(level, s);
     const valid = !r.focusLost;
-    const info: EndInfo = { def, level, result: r, summary, suggest: null, saved: null };
+    const roundStars = r.stoppedEarly ? 0 : def.score(summary, s);
+    const info: EndInfo = { def, level, result: r, summary, suggest: null, saved: null, record: false, stars: roundStars };
     // a level-up suggestion: this round and the previous one with the same conditions passed
     const prev = rounds.find((x) => x.challenge === def.id && x.settingsKey === key && x.valid !== false && !x.stoppedEarly);
     if (canEdit && valid && !r.stoppedEarly && def.passed(summary) && prev && def.passed(prev.summary as typeof summary) && level < def.levels.length) {
@@ -115,10 +151,15 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     }
     setEnd(info);
     setScreen('end');
+    if (!r.stoppedEarly) window.setTimeout(() => celebrate(), 250);
     if (!r.stoppedEarly) { snd.play('end'); window.setTimeout(() => snd.say('end'), 900); }
-    // lifetime stars, kept in play state
-    const prevStats = (state as unknown as { stats?: { stars?: number; rounds?: number } }).stats || {};
-    onSaveState({ stats: { stars: (prevStats.stars || 0) + r.stars, rounds: (prevStats.rounds || 0) + 1 } } as never);
+    // lifetime stars + the best sequence, kept in play state
+    const prevStats = (state as unknown as { stats?: { stars?: number; rounds?: number; bestSpan?: number; best?: Record<string, number> } }).stats || {};
+    const bestMap = { ...(prevStats.best || {}), [def.id]: Math.max((prevStats.best || {})[def.id] || 0, roundStars) };
+    const span = def.id === 'sequence' ? Number(summary.span) || 0 : 0;
+    const bestSpan = Math.max(prevStats.bestSpan || 0, span);
+    if (def.id === 'sequence' && span > (prevStats.bestSpan || 0) && (prevStats.bestSpan || 0) > 0) info.record = true;
+    onSaveState({ stats: { stars: (prevStats.stars || 0) + roundStars, rounds: (prevStats.rounds || 0) + 1, bestSpan, best: bestMap } } as never);
     if (kid?.id && r.trials.length) {
       gamesApi.saveRound(kid.id, GAME_ID, {
         challenge: def.id,
@@ -142,25 +183,60 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
         qc.invalidateQueries({ queryKey: ['game-rounds', kid.id, GAME_ID] });
       });
     }
-  }, [stopLoop, saveCr, rounds, canEdit, snd, state, onSaveState, kid?.id, qc]);
+  }, [stopLoop, saveCr, rounds, canEdit, snd, state, onSaveState, kid?.id, qc, celebrate]);
 
   const startRound = useCallback((def: ChallengeDef, asDemo: boolean) => {
     stopLoop();
     snd.stopVoice();
     const level = levelOf(def.id);
-    const settings = asDemo ? { ...effectiveSettings(def, level, crRef.current.overrides[def.id]), ...def.demo } : effectiveSettings(def, level, crRef.current.overrides[def.id]);
+    const best = ((state as unknown as { stats?: { bestSpan?: number } }).stats || {}).bestSpan || 0;
+    const settings = asDemo ? { ...effectiveSettings(def, level, crRef.current.overrides[def.id]), ...def.demo } : { ...effectiveSettings(def, level, crRef.current.overrides[def.id]), best };
     const ch = def.make();
     chRef.current = ch;
-    setPods(allOff()); setOv(EMPTY_OV); setStars(0); setPaused(null); setFlash({}); setHand(null);
+    setPods(allOff()); setOv(EMPTY_OV); setStars(0); setPaused(null); setFlash({}); setHand(null); setFb(null);
+    crCount.current = 0;
     setDemo(asDemo);
     setEnd(null);
     botRef.current = null;
     const runner = new Runner(ch, settings, {
-      onPods: (p) => setPods(p),
+      onPods: (p) => {
+        const i = p.findIndex((x) => x.mode === 'lit');
+        if (i >= 0) lastLit.current = { pod: i, t: performance.now() };
+        setPods(p);
+      },
       onOverlay: (o) => setOv({ ...o }),
-      onSfx: (n) => snd.play(n),
+      onSfx: (n) => {
+        // each success in a row sounds a little higher - a streak you can hear
+        if (n === 'good') snd.play(n, 1 + Math.min(8, Math.max(0, streakRef.current - 1)) * 0.045);
+        else snd.play(n);
+      },
+      onSuccess: (kind, streak) => {
+        streakRef.current = streak;
+        const recent = performance.now() - lastLit.current.t < 2500;
+        const pod = kind === 'good' && !recent ? -1 : lastLit.current.pod;
+        const id = ++burstId.current;
+        setBursts((b) => [...b.slice(-4), { id, pod, kind, streak }]);
+        window.setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 1100);
+        if (pod >= 0) { setWinPod(pod); window.setTimeout(() => setWinPod((w) => (w === pod ? -1 : w)), 450); }
+        // a whole sequence right = all four glow green; otherwise the pad that was right
+        const glow = def.id === 'sequence' || pod < 0 ? [0, 1, 2, 3] : [pod];
+        const fid = ++fbId.current;
+        setFb({ id: fid, pods: glow, kind: 'yes' });
+        window.setTimeout(() => setFb((f) => (f && f.id === fid ? null : f)), 650);
+        if (kind === 'stop') {
+          crCount.current++;
+          if (crCount.current === 1 || crCount.current % 4 === 0) window.setTimeout(() => snd.say('great-wait'), 350);
+        }
+      },
+      onMiss: (kind, pod, count) => {
+        const fid = ++fbId.current;
+        setFb({ id: fid, pods: pod === null ? [0, 1, 2, 3] : [pod], kind: 'no' });
+        window.setTimeout(() => setFb((f) => (f && f.id === fid ? null : f)), 750);
+        // the first misses of a round are said in words - then only seen and heard
+        if (count <= 3) window.setTimeout(() => snd.say(kind === 'wait' ? 'oops-wait' : 'oops'), 250);
+      },
       onSay: (id, cb) => snd.say(id, cb),
-      onStar: (n) => setStars(n),
+      onStar: (n) => { setStars(n); setStarBump((x) => x + 1); },
       onFlash: (i, c, ms) => {
         setFlash((f) => ({ ...f, [i]: c }));
         window.setTimeout(() => setFlash((f) => { const g = { ...f }; delete g[i]; return g; }), ms);
@@ -183,7 +259,7 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     };
     if (asDemo) go();
     else { snd.play('start'); snd.say('ready', () => window.setTimeout(go, 300)); }
-  }, [stopLoop, snd, levelOf, finishRound]);
+  }, [stopLoop, snd, levelOf, finishRound, state]);
 
   // the demo's hand: presses the right pod ~0.8s after it is due, shows a stop hand on no-go
   const runBot = (runner: Runner) => {
@@ -198,11 +274,12 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
       return;
     }
     if (!botRef.current || botRef.current.pod !== a) {
-      botRef.current = { pod: a, at: now + 850 };
+      botRef.current = { pod: a, at: now + 600 };
       setHand({ pod: a, kind: 'tap' });
     } else if (now >= botRef.current.at) {
       botRef.current = null;
       runner.press(a as PodId);
+      window.setTimeout(() => setHand((h) => (h && h.kind === 'tap' && h.pod === a ? null : h)), 380);
     }
   };
   const podsRef = useRef(pods);
@@ -279,27 +356,32 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     snd.unlock();
     setCurrent(def);
     setScreen('intro');
-    if (!cr.seenDemo.includes(def.id)) {
-      window.setTimeout(() => startRound(def, true), 200);
-    }
+  };
+  /** the explanation: say how it works, then the demo hand plays a short round */
+  const explain = () => {
+    snd.unlock();
+    const lines = current.howto(effectiveSettings(current, levelOf(current.id), cr.overrides[current.id]));
+    const step = (k: number) => { if (k < lines.length) snd.say(lines[k], () => step(k + 1)); else startRound(current, true); };
+    step(0);
   };
   // intro: say how to play
   useEffect(() => {
     if (screen !== 'intro') return;
-    const lines = current.howto(effectiveSettings(current, levelOf(current.id), cr.overrides[current.id]));
-    const step = (k: number) => { if (k < lines.length) snd.say(lines[k], () => step(k + 1)); };
-    const t = window.setTimeout(() => step(0), 350);
+    const t = window.setTimeout(() => snd.say('explain-q'), 350);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, current]);
 
   useEffect(() => {
-    if (screen === 'home') {
+    if (screen === 'home' && ready) {
       const t = window.setTimeout(() => snd.say('intro'), 400);
       return () => window.clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen]);
+  }, [screen, ready]);
+
+  // a soft whoosh when a new screen comes in
+  useEffect(() => { if (ready && screen !== 'play') snd.play('whoosh'); }, [screen, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goHome = () => { stopLoop(); snd.stopVoice(); runnerRef.current = null; setPaused(null); setScreen('home'); };
   const toggleFull = () => {
@@ -318,7 +400,9 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     };
   });
 
-  const levelChip = (def: ChallengeDef) => `רמה ${levelOf(def.id)}`;
+  const stats = ((state as unknown as { stats?: { stars?: number; best?: Record<string, number> } }).stats) || {};
+  const bestStars = (id: string) => Math.min(3, (stats.best || {})[id] || 0);
+  const totalStars = stats.stars || 0;
 
   // ---------------- render ----------------
   const ruleChip = (c: RuleChip, big = false) => (
@@ -329,14 +413,34 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     </span>
   );
 
+  const ruleRow = (c: RuleChip) => (
+    <Chip key={c.color}>
+      <span className="cr-mini-pad" style={{ '--c': COLORS[c.color].hex } as React.CSSProperties}>
+        {ART.pad && <img src={ART.pad} alt="" />}
+        <i className="cr-mini-fill" />
+        {ART['pad-ridges'] && <i className="cr-mini-print" style={{ WebkitMaskImage: `url(${ART['pad-ridges']})`, maskImage: `url(${ART['pad-ridges']})` }} />}
+      </span>
+      {ART[c.press ? 'hand-up' : 'stop-hand'] && <img className="cr-mini-hand" src={ART[c.press ? 'hand-up' : 'stop-hand']} alt="" />}
+      <span className="cr-chip-text"><FitText max={21} min={11}>{c.press ? 'לוחצים' : 'לא לוחצים'}</FitText></span>
+    </Chip>
+  );
+
   const topBar = (
     <div className="cr-top">
-      <button type="button" className="cr-icon-btn" onClick={() => (screen === 'play' ? pause('adult') : screen === 'home' ? onExit() : goHome())} aria-label={screen === 'home' ? 'יציאה' : 'חזרה'}>
-        {screen === 'play' ? '⏸' : '→'}
-      </button>
-      <div className="cr-top-mid">{screen === 'play' && ov.rules && ov.rules.map((c) => ruleChip(c))}</div>
+      {screen === 'play'
+        ? <IconButton name="pause" label="עצירה" fallback="⏸" onClick={() => pause('adult')} />
+        : <IconButton name="back" label={screen === 'home' ? 'יציאה' : 'חזרה'} fallback="→" onClick={() => (screen === 'home' ? onExit() : goHome())} />}
+      <div className="cr-top-mid">
+        {screen === 'home' && <StarsBadge n={totalStars} />}
+        {screen === 'play' && ov.rules && ov.rules.map((c) => ruleChip(c))}
+        {screen === 'play' && ov.progress && (
+          <div className="cr-prog" aria-label={`${ov.progress.now} מתוך ${ov.progress.max}`}>
+            {Array.from({ length: ov.progress.max }).map((_, k) => <i key={k} className={k < ov.progress!.now ? 'on' : ''} />)}
+          </div>
+        )}
+      </div>
       <div className="cr-top-end">
-        {screen === 'play' && !demo && <span className="cr-stars" aria-label={`${stars} כוכבים`}>⭐ {stars}</span>}
+        {screen === 'play' && !demo && <span key={starBump} className={`cr-stars${starBump ? ' is-bump' : ''}`} aria-label={`${stars} כוכבים`}>⭐ {stars}</span>}
         {screen === 'play' && !demo && (
           <button
             type="button"
@@ -348,11 +452,11 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
               e.currentTarget.addEventListener('pointerup', clear, { once: true });
               e.currentTarget.addEventListener('pointerleave', clear, { once: true });
             }}
-          >🤝</button>
+          >תיווך</button>
         )}
-        {screen !== 'play' && <button type="button" className="cr-icon-btn" onClick={toggleSound} aria-label="צלילים">{soundOn ? '🔊' : '🔇'}</button>}
-        {screen !== 'play' && <button type="button" className="cr-icon-btn" onClick={toggleFull} aria-label="מסך מלא">{isFull ? '🗗' : '⛶'}</button>}
-        {screen === 'home' && canEdit && <button type="button" className="cr-icon-btn" onClick={() => setScreen('panel')} aria-label="הגדרות">⚙️</button>}
+        {screen !== 'play' && <IconButton name="full" label={isFull ? 'יציאה ממסך מלא' : 'מסך מלא'} fallback="⛶" onClick={toggleFull} />}
+        {screen !== 'play' && <IconButton name={soundOn ? 'sound' : 'mute'} label="צלילים" fallback={soundOn ? '🔊' : '🔇'} onClick={toggleSound} />}
+        {screen === 'home' && canEdit && <IconButton name="settings" label="הגדרות" fallback="⚙️" onClick={() => setScreen('panel')} />}
       </div>
     </div>
   );
@@ -361,14 +465,15 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     <div className="cr-grid">
       {[0, 1, 2, 3].map((i) => {
         const p = pods[i];
-        const lit = p.mode === 'lit' || flash[i] !== undefined;
-        const c = (flash[i] ?? p.color) as ColorId | null;
+        const f = fb && fb.pods.includes(i) ? fb.kind : null;
+        const lit = p.mode === 'lit' || flash[i] !== undefined || !!f;
+        const c = (f === 'yes' ? 'green' : f === 'no' ? 'red' : flash[i] ?? p.color) as ColorId | null;
         return (
           <div key={i} className="cr-cell">
-            <span className="cr-num">{i + 1}</span>
+            <span className={`cr-num at-${i}`}>{i + 1}</span>
             <button
               type="button"
-              className={`cr-pad${lit ? ' is-lit' : ''}${p.mode === 'base' ? ' is-base' : ''}${flash[i] !== undefined ? ' is-flash' : ''}`}
+              className={`cr-pad${lit ? ' is-lit' : ''}${p.mode === 'base' ? ' is-base' : ''}${flash[i] !== undefined ? ' is-flash' : ''}${winPod === i ? ' is-win' : ''}${f ? ` is-fb-${f}` : ''}`}
               style={{ '--c': c ? COLORS[c].hex : 'transparent' } as React.CSSProperties}
               onPointerDown={onPodDown(i)}
               onPointerUp={onPodUp}
@@ -376,11 +481,11 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
               aria-label={`פד ${i + 1}`}
             >
               {ART.pad ? <img className="cr-pad-img" src={ART.pad} alt="" draggable={false} /> : <span className="cr-pad-fallback" />}
-              <span className="cr-pad-glow" />
-              <span className="cr-pad-print" style={ART['print-mask'] ? { WebkitMaskImage: `url(${ART['print-mask']})`, maskImage: `url(${ART['print-mask']})` } : undefined} />
+              <span className="cr-pad-fill" />
+              <span className="cr-pad-print" style={ART['pad-ridges'] ? { WebkitMaskImage: `url(${ART['pad-ridges']})`, maskImage: `url(${ART['pad-ridges']})` } : undefined} />
             </button>
             {hand && hand.pod === i && (
-              <img className={`cr-hand is-${hand.kind}`} src={ART[hand.kind === 'tap' ? 'hand' : 'stop-hand']} alt="" />
+              <img className={`cr-hand is-${hand.kind}`} src={ART[hand.kind === 'tap' ? 'hand-up' : 'stop-hand']} alt="" />
             )}
           </div>
         );
@@ -393,8 +498,13 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
       )}
       {ov.banner && (
         <div className="cr-banner">
-          <h2>{ov.banner.title}</h2>
-          {ov.banner.rules && <div className="cr-banner-rules">{ov.banner.rules.map((c) => ruleChip(c, true))}</div>}
+          <Panel amber={ov.banner.title !== 'הכלל'}>
+            <div className="cr-panel-head">
+              {ov.banner.title !== 'הכלל' && <span className="cr-swap-icon" aria-hidden>🔄</span>}
+              <Banner text={ov.banner.title} />
+            </div>
+            {ov.banner.rules && <div className="cr-banner-rules">{ov.banner.rules.map((c) => ruleRow(c))}</div>}
+          </Panel>
         </div>
       )}
       {demo && <div className="cr-demo-tag">הדגמה</div>}
@@ -407,16 +517,13 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
       <div className="cr-home">
         <div className="cr-title">
           {ART.title ? <img src={ART.title} alt="חדר האתגרים" /> : <h1>חדר האתגרים</h1>}
-          {firstName && <div className="cr-title-name">של {firstName}</div>}
+          {firstName && <div className="cr-title-name"><Banner text={`של ${firstName}`} max={26} /></div>}
         </div>
         <ul className="cr-cards">
           {CHALLENGES.map((def) => (
             <li key={def.id}>
-              <button type="button" className="cr-card" onClick={() => openChallenge(def)}>
-                {ART[def.icon] ? <img src={ART[def.icon]} alt="" /> : <span className="cr-card-emoji">{def.emoji}</span>}
-                <b>{def.name}</b>
-                <span className="cr-card-level">{levelChip(def)}</span>
-              </button>
+              <Card color={def.color} icon={ART[def.icon]} name={def.name} stars={bestStars(def.id)} onClick={() => openChallenge(def)}
+                sub={canEdit ? <span className="cr-card-level">רמה {levelOf(def.id)}</span> : undefined} />
             </li>
           ))}
         </ul>
@@ -428,10 +535,9 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     const nogoC = (s.nogoColor as ColorId) || 'red';
     body = (
       <div className="cr-intro">
-        {ART[current.icon] ? <img className="cr-intro-icon" src={ART[current.icon]} alt="" /> : <span className="cr-card-emoji">{current.emoji}</span>}
-        <h1>{current.name}</h1>
-        {current.id === 'gonogo' && <div className="cr-banner-rules">{ruleChip({ color: goC, press: true }, true)}{ruleChip({ color: nogoC, press: false }, true)}</div>}
-        {current.id === 'switch' && <div className="cr-banner-rules">{ruleChip({ color: 'green', press: true }, true)}<span className="cr-swap">⇄</span>{ruleChip({ color: 'red', press: true }, true)}</div>}
+        <div className="cr-intro-card"><Card big color={current.color} icon={ART[current.icon]} name={current.name} stars={bestStars(current.id)} /></div>
+        {current.id === 'gonogo' && <div className="cr-intro-rules">{ruleRow({ color: nogoC, press: false })}{ruleRow({ color: goC, press: true })}</div>}
+        {current.id === 'switch' && <div className="cr-intro-rules">{ruleRow({ color: 'red', press: false })}{ruleRow({ color: 'green', press: true })}</div>}
         {canEdit && current.levels.length > 1 && (
           <div className="cr-levels" role="radiogroup" aria-label="רמה">
             {current.levels.map((lv, k) => (
@@ -448,12 +554,12 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
             <span className="cr-level-name">{current.levels[levelOf(current.id) - 1].name}</span>
           </div>
         )}
-        <div className="cr-intro-btns">
-          <button type="button" className="cr-btn cr-btn-main" onClick={() => { snd.unlock(); startRound(current, false); }}>מתחילים</button>
-          <div className="cr-intro-row">
-            <button type="button" className="cr-btn cr-btn-soft" onClick={() => { snd.unlock(); startRound(current, true); }}>הדגמה</button>
-            <button type="button" className="cr-btn cr-btn-soft" onClick={() => { snd.unlock(); const l = current.howto(s); const st = (k: number) => { if (k < l.length) snd.say(l[k], () => st(k + 1)); }; st(0); }}>🔊 שוב</button>
-          </div>
+        <p className="cr-ask"><span aria-hidden>✦</span> רוצה לראות הסבר? <span aria-hidden>✦</span></p>
+        <div className="cr-choice">
+          <PaintButton kind="green" className="is-play" onClick={() => { snd.unlock(); startRound(current, false); }}
+            icon={<span className="cr-play-tri" aria-hidden />}>לא, לשחק!</PaintButton>
+          <PaintButton kind="cream" className="is-explain" onClick={explain}
+            icon={ART['q-explain'] ? <img src={ART['q-explain']} alt="" /> : <span>💡</span>}>כן, להסביר</PaintButton>
         </div>
       </div>
     );
@@ -461,18 +567,21 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     body = padGrid;
   } else if (screen === 'end' && end) {
     const sum = end.summary as Record<string, string | number | boolean | null>;
+    const title = end.result.stoppedEarly ? 'עצרנו כאן' : end.record ? 'שיא חדש!' : end.stars >= 3 ? 'מושלם!' : 'כל הכבוד!';
     body = (
       <div className="cr-end">
-        <div className="cr-end-stars">{'⭐'.repeat(Math.min(10, Math.max(1, end.result.stars)))}</div>
-        <h1>{end.result.stoppedEarly ? 'עצרנו כאן' : 'סיימנו! כל הכבוד'}</h1>
-        <div className="cr-intro-btns">
-          <button type="button" className="cr-btn cr-btn-main" onClick={() => startRound(end.def, false)}>שוב</button>
-          <button type="button" className="cr-btn cr-btn-soft" onClick={goHome}>לכל האתגרים</button>
+        {!end.result.stoppedEarly && ART.trophy && <img className="cr-trophy" src={ART.trophy} alt="" />}
+        {!end.result.stoppedEarly && <Stars n={end.stars} className="is-end" />}
+        <div className="cr-end-banner"><Banner big text={title} /></div>
+        {end.def.id === 'sequence' && !end.result.stoppedEarly && <p className="cr-end-span">זכרת רצף של <b>{String(sum.span)}</b> אורות</p>}
+        <div className="cr-end-btns">
+          <PaintButton kind="green" onClick={() => startRound(end.def, false)} icon={<span aria-hidden>↻</span>}>שוב</PaintButton>
+          <PaintButton kind="cream" onClick={goHome}>לכל האתגרים</PaintButton>
         </div>
         {canEdit && (
-          <div className="cr-end-adult">
+          <Panel className="cr-end-adult">
             <div className="cr-end-head">
-              <b>{end.def.name} · רמה {end.level}</b>
+              <b>למבוגר · {end.def.name} · רמה {end.level}</b>
               {end.result.focusLost && <span className="cr-flag is-bad">סבב לא תקין (החלון איבד פוקוס)</span>}
               {end.result.stoppedEarly && <span className="cr-flag">נעצר מוקדם</span>}
               {end.result.hints > 0 && <span className="cr-flag">תיווך: {end.result.hints}</span>}
@@ -485,13 +594,13 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
             </dl>
             {end.suggest && (
               <div className="cr-suggest">
-                שני סבבים רצופים מעל 80% באותם תנאים.
+                שני סבבים רצופים עברו את הרף באותם תנאים.
                 <button type="button" className="cr-btn cr-btn-soft" onClick={() => { saveCr({ ...cr, levels: { ...cr.levels, [end.def.id]: end.suggest! }, overrides: { ...cr.overrides, [end.def.id]: {} } }); setEnd({ ...end, suggest: null }); }}>
                   להעלות לרמה {end.suggest}
                 </button>
               </div>
             )}
-          </div>
+          </Panel>
         )}
       </div>
     );
@@ -504,22 +613,32 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
   const bg = ART.bg ? `url(${ART.bg})` : undefined;
   const bgTall = ART['bg-tall'] ? `url(${ART['bg-tall']})` : bg;
   const game = (
-    <div ref={rootRef} className={`cr is-${screen}`} dir="rtl" style={{ '--bg': bg, '--bg-tall': bgTall } as React.CSSProperties}
+    <div ref={rootRef} className={`cr is-${screen}${ready ? ' is-ready' : ''}`} dir="rtl" style={{ '--bg': bg, '--bg-tall': bgTall, '--btn-main': ART['btn-main'] ? `url(${ART['btn-main']})` : undefined, '--btn-soft': ART['btn-soft'] ? `url(${ART['btn-soft']})` : undefined } as React.CSSProperties}
       onPointerDown={() => snd.unlock()}>
       <div className="cr-phone">
       {screen !== 'panel' && topBar}
-      <div className="cr-body">{body}</div>
+      <div key={screen} className="cr-body cr-enter">{body}</div>
       {paused && (
         <div className="cr-pause">
-          <div className="cr-pause-card">
-            <h2>עצרנו</h2>
+          <Panel className="cr-pause-card">
+            <div className="cr-panel-head"><Banner text="עצרנו" /></div>
             {paused === 'focus' && <p>המשחק נעצר כי החלון יצא מהמסך. הסבב יסומן כלא תקין למדידה.</p>}
-            <button type="button" className="cr-btn cr-btn-main" onClick={resume}>ממשיכים</button>
-            <button type="button" className="cr-btn cr-btn-soft" onClick={() => { setPaused(null); runnerRef.current?.stopEarly(); }}>סיום הסבב</button>
-          </div>
+            <PaintButton kind="green" onClick={resume}>ממשיכים</PaintButton>
+            <PaintButton kind="cream" className="is-stop" onClick={() => { setPaused(null); runnerRef.current?.stopEarly(); }}>סיום הסבב</PaintButton>
+          </Panel>
         </div>
       )}
-      {snd.caption && <div className="cr-caption">{snd.caption}</div>}
+      <div className={`cr-fx${screen === 'play' ? ' is-grid' : ''}`}>
+      {bursts.map((b) => (
+        <div key={b.id} className={`cr-burst is-${b.kind} at-${b.pod}`}>
+          {screen !== 'play' && Array.from({ length: 16 }).map((_, k) => (
+            <i key={k} className="cr-burst-bit" style={{ '--a': `${k * 22.5 + (b.id % 3) * 8}deg`, '--d': `${80 + (k % 4) * 26}px`, '--h': `${(k * 47 + b.id * 31) % 360}` } as React.CSSProperties} />
+          ))}
+          {b.streak >= 3 && <b className="cr-burst-streak">×{b.streak}</b>}
+        </div>
+      ))}
+      </div>
+      {snd.caption && screen !== 'panel' && screen !== 'intro' && <div className="cr-caption">{snd.caption}</div>}
       </div>
       <div className="cr-rotate" aria-live="polite"><span>📱</span>מחזיקים את הטלפון לגובה</div>
     </div>

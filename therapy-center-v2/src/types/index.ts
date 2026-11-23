@@ -591,6 +591,8 @@ export interface GameDefinition {
   icon: string;
   description: string;
   settings: GameSetting[];
+  /** a full-screen game's own background colour, shown while it loads (no flash of the app) */
+  bg?: string;
 }
 
 /** The contract every game component implements. */
