@@ -93,6 +93,18 @@ export const GAMES: GameDefinition[] = [
       { key: 'voice', type: 'checkbox', label: 'הוראות בקול', default: true },
     ],
   },
+  {
+    id: 'challenge-room-3d',
+    name: 'חדר האתגרים 3D',
+    bg: '#6f8fcf',
+    icon: '🤖',
+    description: 'אותם אתגרים של חדר האתגרים (קשב, עצירה, זיכרון וגמישות) בחדר צעצועים בתלת מימד: קונסולה עם ארבעה כפתורים גדולים ורובוט חבר. כל סבב נמדד ונשמר להיסטוריה.',
+    // levels, per-challenge settings and history live in the game's own adult panel (config.cr)
+    settings: [
+      { key: 'sound', type: 'checkbox', label: 'צלילים', default: true },
+      { key: 'voice', type: 'checkbox', label: 'הוראות בקול', default: true },
+    ],
+  },
 
 ];
 

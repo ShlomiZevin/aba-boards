@@ -9,6 +9,7 @@ import { useTherapist } from '../contexts/TherapistContext';
 import LegoTower from '../games/LegoTower';
 import ShowerSteps from '../games/ShowerSteps';
 import ChallengeRoom from '../games/challenge-room/ChallengeRoom';
+import ChallengeRoom3D from '../games/challenge-room-3d';
 import type {
   ApiResponse,
   GameComponentProps,
@@ -23,6 +24,7 @@ const GAME_COMPONENTS: Record<string, ComponentType<GameComponentProps>> = {
   'lego-tower': LegoTower,
   'shower-steps': ShowerSteps,
   'challenge-room': ChallengeRoom,
+  'challenge-room-3d': ChallengeRoom3D,
 };
 
 /**

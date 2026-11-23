@@ -695,7 +695,7 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
       ))}
       </div>
       {detailsSheet}
-      {snd.caption && screen !== 'panel' && screen !== 'intro' && <div className="cr-caption">{snd.caption}</div>}
+      {snd.caption && screen !== 'panel' && screen !== 'intro' && screen !== 'end' && <div className="cr-caption">{snd.caption}</div>}
       </div>
       <div className="cr-rotate" aria-live="polite"><span>📱</span>מחזיקים את הטלפון לגובה</div>
     </div>

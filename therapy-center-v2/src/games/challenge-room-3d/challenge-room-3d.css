@@ -1,0 +1,55 @@
+/* חדר האתגרים בתלת מימד - classes prefixed cr3- (the menus reuse the 2D game's cr- classes) */
+.cr3 { background: #6f8fcf; }
+.cr3 .cr-phone.cr3-phone { background: #8fb2ec; }
+
+/* the 3D world fills the phone behind everything */
+.cr3-world { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.cr3-canvas { display: block; width: 100%; height: 100%; }
+.cr3 .cr-top, .cr3 .cr3-body { position: relative; z-index: 4; }
+
+/* the play layer: same box as the world, so the button positions match */
+.cr3-play { position: absolute; inset: 0; z-index: 3; direction: ltr; touch-action: none; }
+.cr3-play .cr-status, .cr3-play .cr-actions, .cr3-play .cr-banner, .cr3-play .cr-demo-tag { direction: rtl; }
+.cr3-status { top: calc(var(--top) + 16px) !important; transform: translateX(-50%) !important; background: rgba(20, 30, 64, 0.78) !important; border-color: rgba(255, 255, 255, 0.25) !important; box-shadow: 0 6px 20px rgba(10, 20, 50, 0.3); }
+.cr3-actions { top: calc(var(--top) + 76px) !important; bottom: auto !important; }
+.cr3-soft { background: rgba(20, 30, 64, 0.72) !important; border: 2px solid rgba(255, 255, 255, 0.4) !important; color: #fff; }
+.cr3-play .cr-demo-tag { bottom: calc(env(safe-area-inset-bottom, 0px) + 74px); }
+
+/* small key numbers printed near each corner of the console */
+.cr3-num {
+  position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900;
+  color: rgba(70, 90, 140, 0.75); background: rgba(255, 255, 255, 0.35); pointer-events: none;
+}
+@media (pointer: coarse) { .cr3-num { display: none; } }
+
+/* the demo hand comes up from the bottom, fingertip on the button's centre */
+.cr3-hand { position: absolute; width: var(--s); height: auto; pointer-events: none; z-index: 6; filter: drop-shadow(0 8px 12px rgba(20, 30, 60, 0.35)); }
+.cr3-hand.is-tap { transform: translate(-38%, -4%); animation: cr3-hand-in 0.55s ease-out; }
+.cr3-hand.is-stop { width: calc(var(--s) * 1.1); transform: translate(-50%, -60%); animation: cr3-stop-in 0.3s ease-out; }
+@keyframes cr3-hand-in { 0% { opacity: 0; transform: translate(-38%, 70%); } 70% { opacity: 1; transform: translate(-38%, -4%); } 85% { transform: translate(-38%, 0%) scale(0.97); } 100% { transform: translate(-38%, -4%); } }
+@keyframes cr3-stop-in { from { opacity: 0; transform: translate(-50%, -45%) scale(0.8); } }
+
+/* a streak floats up from the button */
+.cr3-streak {
+  position: absolute; transform: translate(-50%, -50%); font-size: 34px; font-weight: 900; color: #fff4b0; pointer-events: none;
+  text-shadow: 0 3px 0 #b07a00, 0 0 14px rgba(255, 220, 90, 0.8); animation: cr3-streak 1s ease-out forwards; white-space: nowrap; z-index: 6;
+}
+@keyframes cr3-streak { 0% { opacity: 0; transform: translate(-50%, -20%) scale(0.5); } 25% { opacity: 1; transform: translate(-50%, -90%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -170%) scale(1); } }
+
+/* a rule chip on the menus: a little cream push button lit in the colour */
+.cr3-mini-btn {
+  width: 1.9em; height: 1.9em; border-radius: 50%; flex: none; display: inline-block;
+  background: radial-gradient(circle at 38% 30%, color-mix(in srgb, var(--c) 35%, #fff) 0 12%, var(--c) 45%, color-mix(in srgb, var(--c) 70%, #000) 100%);
+  box-shadow: 0 0 0 3px #e6ebf5, 0 0 0 5px #b8c3dc, 0 3px 6px rgba(0, 0, 0, 0.25), 0 0 12px color-mix(in srgb, var(--c) 60%, transparent);
+}
+
+/* loading: the game's colour, the title and a bar that always moves - no flash of the app */
+.cr3-loading { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: #6f8fcf; }
+.cr3-loading-card { width: min(80vw, 380px); display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.cr3-bar { width: 70%; height: 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.3); overflow: hidden; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15); }
+.cr3-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffe08a, #ffc83d); border-radius: 10px; transition: width 0.2s ease; }
+.cr3 .cr-phone { transition: opacity 0.45s ease; }
+
+.cr3-fail { z-index: 40; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; padding: 20px; text-align: center; font-size: 20px; font-weight: 800; }
+@media (prefers-reduced-motion: reduce) { .cr3-hand, .cr3-streak { animation-duration: 0.01s; } }
