@@ -26,6 +26,7 @@ import type {
   CategoryLpTemplate,
   GoalTableBlock,
   KidGameState,
+  GameRoundRecord,
   GamePlayState,
   KidAgenda,
   AgendaDay,
@@ -136,6 +137,14 @@ export const gamesApi = {
   /** Per-kid pictures for a game ({ name: dataUrl }), private to the kid's people. */
   getAssets: (kidId: string, gameId: string) =>
     fetchApi<Record<string, string>>(`/kids/${kidId}/game-assets/${gameId}`),
+  /** Measuring games: save one finished round / read the kid's rounds (newest first). */
+  saveRound: (kidId: string, gameId: string, round: Record<string, unknown>) =>
+    fetchApi<GameRoundRecord>(`/kids/${kidId}/game-rounds/${gameId}`, {
+      method: 'POST',
+      body: JSON.stringify(round),
+    }),
+  getRounds: (kidId: string, gameId: string) =>
+    fetchApi<GameRoundRecord[]>(`/kids/${kidId}/game-rounds/${gameId}`),
 };
 
 // Daily agenda (סדר יום)

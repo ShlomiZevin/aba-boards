@@ -602,6 +602,8 @@ export interface GameComponentProps {
   onSaveState: (state: GamePlayState) => void;
   onSaveConfig: (config: GameConfigValues) => void;
   onExit: () => void;
+  /** The kid playing (optional - older games ignore it). */
+  kid?: GameKid;
 }
 
 /** Play state, written by the game itself into `kidGames/{kidId}`. */
@@ -613,6 +615,26 @@ export interface GamePlayState {
 }
 
 export type KidGameState = Record<string, GamePlayState>;
+
+/** One saved round of a measuring game (kidGameRounds). Shapes belong to the game. */
+export interface GameRoundRecord {
+  id: string;
+  kidId: string;
+  gameId: string;
+  createdAt: string;
+  by?: string | null;
+  settings: Record<string, string | number | boolean | null>;
+  summary: Record<string, string | number | boolean | null>;
+  trials: Record<string, string | number | boolean | null>[];
+  [key: string]: unknown;
+}
+
+/** The kid a game is played for (name for titles, gender for voice/grammar). */
+export interface GameKid {
+  id: string;
+  name: string;
+  gender?: string;
+}
 
 // ==================== DAILY REPORT (דיווח יומי) ====================
 // Mirrors the paper daily form. Field meanings live in utils/dailyReport.ts.

@@ -208,6 +208,17 @@ router.get('/kids/:kidId/game-assets/:gameId', (req, res) => agendaHandler(async
   res.json(await therapyService.getKidGameAssets(req.params.kidId, req.params.gameId));
 })(req, res));
 
+// Game rounds (measuring games like challenge-room): one record per round,
+// read back by the game's adult panel for history, graphs and CSV.
+router.post('/kids/:kidId/game-rounds/:gameId', (req, res) => agendaHandler(async () => {
+  const by = req.authType === 'parent' ? 'parent' : req.authType === 'therapist' ? 'therapist' : 'admin';
+  res.json(await therapyService.saveKidGameRound(req.params.kidId, req.params.gameId, req.body, by));
+})(req, res));
+
+router.get('/kids/:kidId/game-rounds/:gameId', (req, res) => agendaHandler(async () => {
+  res.json(await therapyService.getKidGameRounds(req.params.kidId, req.params.gameId));
+})(req, res));
+
 // Daily agenda (סדר יום) — its own page, independent of the board.
 // Parents edit it too: planning tomorrow together is the whole point.
 const agendaHandler = (fn) => async (req, res) => {

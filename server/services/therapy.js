@@ -2630,6 +2630,52 @@ async function getKidGameAssets(kidId, gameId) {
   return out;
 }
 
+// Game rounds: one document per finished (or stopped) round of a measuring game,
+// e.g. challenge-room. kidGameRounds/{auto} = { kidId, gameId, createdAt, ...round }.
+// The round is rebuilt from flat pieces: top-level primitives, flat `settings` /
+// `summary` maps, and a `trials` list of flat objects - never trusted as sent.
+const ROUND_KEY_RE = /^[a-zA-Z][a-zA-Z0-9]{0,40}$/;
+function flatMap(obj, maxKeys = 80) {
+  const out = {};
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
+  for (const [k, v] of Object.entries(obj).slice(0, maxKeys)) {
+    if (!ROUND_KEY_RE.test(k)) continue;
+    if (typeof v === 'string') out[k] = v.slice(0, 300);
+    else if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    else if (typeof v === 'boolean') out[k] = v;
+    else if (v === null) out[k] = null;
+  }
+  return out;
+}
+function sanitizeGameRound(body) {
+  const b = body || {};
+  const round = flatMap(b, 40);
+  round.settings = flatMap(b.settings);
+  round.summary = flatMap(b.summary);
+  round.trials = Array.isArray(b.trials) ? b.trials.slice(0, 400).map((t) => flatMap(t, 30)) : [];
+  if (JSON.stringify(round).length > 200000) {
+    throw Object.assign(new Error('Round too large'), { status: 400 });
+  }
+  return round;
+}
+async function saveKidGameRound(kidId, gameId, body, by) {
+  if (!GAME_ID_RE.test(gameId)) throw Object.assign(new Error('Invalid game id'), { status: 400 });
+  const round = sanitizeGameRound(body);
+  const doc = { ...round, kidId, gameId, by: by || null, createdAt: new Date().toISOString() };
+  const ref = await getDb().collection('kidGameRounds').add(doc);
+  return { id: ref.id, ...doc };
+}
+async function getKidGameRounds(kidId, gameId, limit = 300) {
+  if (!GAME_ID_RE.test(gameId)) throw Object.assign(new Error('Invalid game id'), { status: 400 });
+  // No orderBy in the query (needs no composite index); sorted here.
+  const snap = await getDb().collection('kidGameRounds')
+    .where('kidId', '==', kidId).where('gameId', '==', gameId).get();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, limit);
+}
+
 // ==================== DAILY AGENDA (סדר יום) ====================
 // A day plan per kid: what happens in the morning, afternoon and evening.
 // Independent of the board — no coins, no rewards, no board fields touched.
@@ -2962,6 +3008,8 @@ module.exports = {
   getKidGameState,
   saveKidGameState,
   resetKidGameState,
+  saveKidGameRound,
+  getKidGameRounds,
   getKidGameAssets,
   // Kids
   getAllKids,

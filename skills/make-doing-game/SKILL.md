@@ -29,7 +29,13 @@ a tutorial, and PLAY it as a phone before anyone sees it. Never skip a step.
   `node scripts/games/make.mjs image <prompt.txt> <out> [flare|sunburst] [MEDIUM|HIGH] [WxH] [--ref a.jpg ...] [--transparent]`,
   `... sfx <prompt.txt> <out.mp3> <secs>`, `... loop ...`, `... voice "<Hebrew>" <out.mp3> [voiceId]`.
   - Every picture = OpenAI **gpt-image-2.5-flare** (default: scenes, props, icons, concept) or **gpt-image-2.5-sunburst**
-    (the most exact: characters, poses, cover, title art - HIGH only for these). No other image model.
+    (the most exact: characters, poses, cover, title art - HIGH only for these). No other image model. (The Shlomiverse
+    moved to **2.6** flare/sunburst on 2026-11-22; make.mjs is still on 2.5 - try 2.6 on Start Doing's key once, and if it
+    works switch make.mjs and this line.) **Prompt the WHAT, never the HOW**: say what the thing is and what the picture
+    is for (transparent, a sheet, the empty place where the game draws), let the painter design it.
+    Pieces cut from a sheet: ask for "crisp clean edges, no outer glow, no drop shadow, fully transparent around every
+    piece", cut by shape (never by grid), trim on real paint (alpha > 40), and look at every cut on a contrasting
+    background. Store each picture at the size it is drawn at its biggest (soft art = cut too small).
   - Every sound = ElevenLabs. **Voice lines** use Start Doing's key with **`eleven_v4` + Nimrod**
     (`ZiofZHcEBTn5sRySe5h8`, a warm Israeli man - make.mjs's default; Shlomi's pick from a 6-voice bake-off,
     2026-11-16). Other good Hebrew library voices: Danit (woman, `s0T0DT6EAPeX57MQpn3I`), Itamar (`l7Q9rbdCC6j3J5dNlOOg`).
@@ -40,7 +46,12 @@ a tutorial, and PLAY it as a phone before anyone sees it. Never skip a step.
     (faster-whisper on ffmpeg-decoded 16 kHz audio) and re-record or reword any that come out wrong (doubled words,
     an added "לי", a mangled verb - "בוא/בואי נשפשף" worked where "תשפשפי" didn't). Stress can't be transcribed:
     record 2-3 takes of a short stressed word and keep the one whose first syllable is louder/higher.
-    Captions match the words exactly. **Effects and loops**
+    Captions match the words exactly. **Also read the Shlomiverse `make-verse-game/elevenlabs.md`** (the full voice
+    guide; its key/paths are the verse's - ours are above). From it: always `language_code: "he"`; **tags SHORT, 2-4
+    words, shorter than the line** (a long tag made v4 repeat the line); no `...` or dashes inside a sentence;
+    stability ~0.5 (lower = more range, more glitches; 0.8+ = robotic); no breathy/whisper/sigh tags as "softness";
+    ONE pass + one speech-to-text check + at most one re-take of the failed lines with a new `seed` - if many fail, fix
+    the prompt, don't re-roll. **Effects and loops**
     (`sfx` / `loop`) borrow Plaxzy's ElevenLabs key, because Start Doing's key has no sound-generation permission
     (Shlomi's OK, 2026-11-16). make.mjs finds that key by itself in `plaxzy-creator/.env.local`, else in the gcloud
     secret `MAKEGAME_ELEVENLABS_KEY`. ElevenLabs allows 5 requests at a time, so generate in batches of 4.
@@ -74,6 +85,27 @@ screen, sizes from the measured viewport, `useGameSound.ts`, settings behind a g
 
 **Games never touch the board** (`tasks`, `completedTasks`, `totalMoney`, `dailyReward`) - a game is its own loop.
 
+### Two kinds of games - the game center (Shlomi, 2026-11-23)
+He wants a **game center per kid** (the games room above: games switched on per kid, with per-kid settings and
+pictures) and, for some games, **games for everyone**, reached from the app's main menu (`src/v2/NbNav.tsx`) rather
+than from one kid's page. Ask on the first game which kind it is. Until the first "for everyone" game is built and
+the design is settled with him, the proposal is: a `scope: 'kid' | 'all'` field on the registry entry; `'all'` games
+get a menu item (one "משחקים" page listing them) and still play FOR a kid when one is picked (so state, gender and
+settings keep working), or as a guest with local-only state when none is. Write the settled design here once he
+approves it, and update this section.
+
+### Every game has its card art
+The games room shows each game as a card; an emoji icon is only a placeholder. Each new game ships with:
+- **a cover** (painted, 4:3, the game's world and character, no words on faces) - the games-room card;
+- **title art** (the Hebrew name as painted lettering, transparent; check every letter) - the game's start screen;
+- both made with make.mjs from the approved look, shown to him before use.
+
+### The game's start screen (adapted from the Shlomiverse menu rule)
+The painting IS the screen (tall painted art, title at the top, the character's face clear, buttons at the bottom).
+ONE big "בוא נשחק / בואי נשחקי" button (breathing gently), a small "?" (tutorial) and a small sound button; a gear only
+for `canEdit`; the way out (`onExit`) always visible. No paragraph of text - a child can't read it; the voice says it.
+Painted pieces, Hebrew written over them in code. Fits 320x568 up to a landscape tablet without scrolling.
+
 ## 2. The child comes first
 Read before any idea - the game must fit THIS child:
 - The kid document (`kids/{kidId}`: `name`, `age`, `gender`, `kidDescription`, `behaviorGoals`), the kid's active
@@ -95,7 +127,8 @@ Read before any idea - the game must fit THIS child:
   answer" dialogue.
 - **Taken in Start Doing** (offer none of these again unless he asks): stacking a tower one earned piece at a time
   (`lego-tower`); a routine done as a sticker scene - drag the glowing item onto the child, then rub the picture with
-  it (`shower-steps`). Add each new game's mechanic to this line.
+  it (`shower-steps`); BlazePod-style light pads - go/no-go, Simon sequence, rule switch, see-light (`challenge-room`).
+  Add each new game's mechanic to this line.
 - **Offer the LOOK too, as pictures**: painted (gouache storybook - the default for a child's own character), 3D
   (Blender / three.js), pixel art, clay... He picks the look from concept pictures, not words. If he leaves it to you,
   choose the look that makes the child's character clearest and the screen calmest.
@@ -149,6 +182,15 @@ the play area is the screen, painted not drawn, sound that comes back on iPhone,
    `--paper`, `--pen`, `--ink`, `tone-*`; fonts from the app), a clear exit back to the kid page (`onExit`).
    Full-screen games render through a portal like the tower.
 8. **A test hook**: `window.<GAME_ID_UPPER> = { state, ... }` so tests read the game, not pixels.
+9. **Clear without the tutorial**: the screen always shows the next thing to do (the target glows, a hand shows the
+   move after a few seconds of nothing). Every tap answers - even a tap on nothing gives a small soft reaction.
+10. **A sound for every event** (calm versions): pick-up, drop in place, gentle return, step done, round done
+    (bigger), transitions; 2-4 variants for anything repeated, never the same one twice in a row; levelled. List the
+    game's events and tick each one before he sees it.
+11. **Sound comes back on iPhone**: wake the AudioContext on EVERY tap (not `once`), check `state !== 'running'`, play
+    a 1-sample silent buffer in the tap, rebuild it if it still won't run. Stop sounds on pause and `pagehide`.
+12. **Delays run on the game's clock** (a `later(sec, fn)` list ticked by the game loop), not scattered `setTimeout`s,
+    so pause works and tests can fast-forward.
 
 ## 6. The tutorial
 Short and visual for a child: a hand shows the move once (an animated hand doing a real valid move), the voice says
@@ -172,6 +214,23 @@ settings sheet has one line per setting explaining it.
   `server/` (Cloud Run - it prints "Deployment complete!" even on failure: look for ERROR). Claude has standing
   permission to deploy once verified; never commit/push unasked.
 - Verify live on a phone size: open the kid's game on startdoing.co.il and play a round.
+
+## Several games at once - sub-agents
+When he describes several games, run one sub-agent per game (Agent tool, `general-purpose`), in parallel. This session
+stays the manager: it owns the idea, the plan and his approvals, and checks every result before he sees it.
+- **The brief** (the agent knows only what's in it): "read `skills/make-doing-game/SKILL.md` and `rules.md` first"; the
+  game id; the approved idea + plan + concept picture path (`game-assets/<id>/`); the kid (or "for everyone"); what
+  it may touch: ONLY `src/games/<Name>.tsx`, `src/games/<name>.css`, `src/games/<id>/`, `game-assets/<id>/`.
+- **Shared files are the manager's**: `registry.ts`, `GamePage.tsx` (GAME_COMPONENTS), `types.ts`, `App.tsx`, the menu,
+  server code. The agent returns the registry entry and the import line; the manager adds them (new games go into
+  `HIDDEN_GAMES` first). This keeps parallel agents from overwriting each other.
+- **Ports**: each agent runs its own Vite on its own port (5201, 5202, ...), never 5199 if the manager uses it.
+- **No agent deploys, commits, turns a game on for a real kid or uploads kid pictures** - those are the manager's,
+  on his word.
+- **Check what comes back** like your own work: run its play test, read the screenshots at all sizes, play the
+  tutorial; send it back (SendMessage to the same agent) with exact fixes until it is clean.
+- Concept pictures and the plan go to him BEFORE the agent builds; an agent may make the concept picture, but the pick
+  is his.
 
 ## 9. Remember it
 A memory note for the game (where it is, its settings, which kid has it, how to update it), and any general lesson as

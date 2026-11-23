@@ -385,6 +385,14 @@ on('POST', '/api/therapy/kids/:id/game-state/:gameId/reset', (m) => {
   gameStates[m[1]] = { ...(gameStates[m[1]] || {}), [m[2]]: prev?.stats ? { stats: prev.stats } : {} };
   return gameStates[m[1]];
 });
+// Game rounds (measuring games): kept in memory for the session.
+const gameRounds: Doc[] = [];
+on('POST', '/api/therapy/kids/:id/game-rounds/:gameId', (m, _q, b) => {
+  const d = { ...(b as Doc), id: 'r' + (gameRounds.length + 1), kidId: m[1], gameId: m[2], by: 'admin', createdAt: iso(new Date()) };
+  gameRounds.push(d); return d;
+});
+on('GET', '/api/therapy/kids/:id/game-rounds/:gameId', (m) =>
+  gameRounds.filter(r => r.kidId === m[1] && r.gameId === m[2]).slice().reverse());
 // Per-kid game pictures: none in the mock - a game must look right without them.
 on('GET', '/api/therapy/kids/:id/game-assets/:gameId', () => ({}));
 on('GET', '/api/therapy/category-lp-templates', () => []);

@@ -8,6 +8,7 @@ import { useTherapistLinks } from '../hooks/useTherapistLinks';
 import { useTherapist } from '../contexts/TherapistContext';
 import LegoTower from '../games/LegoTower';
 import ShowerSteps from '../games/ShowerSteps';
+import ChallengeRoom from '../games/challenge-room/ChallengeRoom';
 import type {
   ApiResponse,
   GameComponentProps,
@@ -21,6 +22,7 @@ import type {
 const GAME_COMPONENTS: Record<string, ComponentType<GameComponentProps>> = {
   'lego-tower': LegoTower,
   'shower-steps': ShowerSteps,
+  'challenge-room': ChallengeRoom,
 };
 
 /**
@@ -109,6 +111,7 @@ export default function GamePage() {
       onSaveState={(next) => saveState.mutate(next)}
       onSaveConfig={handleSaveConfig}
       onExit={handleExit}
+      kid={{ id: kid.id, name: kid.name, gender: kid.gender }}
     />
   );
 }

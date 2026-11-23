@@ -81,6 +81,18 @@ export const GAMES: GameDefinition[] = [
       { key: 'kidPictures', type: 'checkbox', label: 'דמות אישית של הילד (אם הועלו תמונות)', default: true },
     ],
   },
+  {
+    id: 'challenge-room',
+    name: 'חדר האתגרים',
+    icon: '🖐️',
+    description: 'אתגרי קשב, עצירה, זיכרון וגמישות על ארבעה פדים גדולים. כל סבב נמדד ונשמר להיסטוריה של המטפלת.',
+    // levels, per-challenge settings and history live in the game's own adult panel (config.cr)
+    settings: [
+      { key: 'sound', type: 'checkbox', label: 'צלילים', default: true },
+      { key: 'voice', type: 'checkbox', label: 'הוראות בקול', default: true },
+    ],
+  },
+
 ];
 
 /**
