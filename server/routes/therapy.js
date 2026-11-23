@@ -219,6 +219,12 @@ router.get('/kids/:kidId/game-rounds/:gameId', (req, res) => agendaHandler(async
   res.json(await therapyService.getKidGameRounds(req.params.kidId, req.params.gameId));
 })(req, res));
 
+// Resetting a game's data (adults only - parents can't wipe a therapist's records).
+router.delete('/kids/:kidId/game-rounds/:gameId', (req, res) => agendaHandler(async () => {
+  if (req.authType === 'parent') throw Object.assign(new Error('אין הרשאה'), { status: 403 });
+  res.json(await therapyService.deleteKidGameRounds(req.params.kidId, req.params.gameId));
+})(req, res));
+
 // Daily agenda (סדר יום) — its own page, independent of the board.
 // Parents edit it too: planning tomorrow together is the whole point.
 const agendaHandler = (fn) => async (req, res) => {

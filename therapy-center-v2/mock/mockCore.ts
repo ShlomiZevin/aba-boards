@@ -391,6 +391,11 @@ on('POST', '/api/therapy/kids/:id/game-rounds/:gameId', (m, _q, b) => {
   const d = { ...(b as Doc), id: 'r' + (gameRounds.length + 1), kidId: m[1], gameId: m[2], by: 'admin', createdAt: iso(new Date()) };
   gameRounds.push(d); return d;
 });
+on('DELETE', '/api/therapy/kids/:id/game-rounds/:gameId', (m) => {
+  let n = 0;
+  for (let i = gameRounds.length - 1; i >= 0; i--) if (gameRounds[i].kidId === m[1] && gameRounds[i].gameId === m[2]) { gameRounds.splice(i, 1); n++; }
+  return { deleted: n };
+});
 on('GET', '/api/therapy/kids/:id/game-rounds/:gameId', (m) =>
   gameRounds.filter(r => r.kidId === m[1] && r.gameId === m[2]).slice().reverse());
 // Per-kid game pictures: none in the mock - a game must look right without them.

@@ -13,9 +13,11 @@ export interface CrConfig {
   errorSound: boolean;
   /** challenges whose demo already ran once (it runs by itself the first time) */
   seenDemo: string[];
+  /** the level goes up by itself after ROUNDS_TO_LEVEL_UP passed rounds (else the adult approves) */
+  autoLevel: boolean;
 }
 
-export const DEFAULT_CR: CrConfig = { levels: {}, overrides: {}, starsEvery: 3, voicePraise: true, errorSound: true, seenDemo: [] };
+export const DEFAULT_CR: CrConfig = { levels: {}, overrides: {}, starsEvery: 3, voicePraise: true, errorSound: true, seenDemo: [], autoLevel: true };
 
 export function readCr(config: GameConfigValues): CrConfig {
   try {

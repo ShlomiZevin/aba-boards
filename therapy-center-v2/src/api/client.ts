@@ -145,6 +145,9 @@ export const gamesApi = {
     }),
   getRounds: (kidId: string, gameId: string) =>
     fetchApi<GameRoundRecord[]>(`/kids/${kidId}/game-rounds/${gameId}`),
+  /** delete every saved round of this game for the kid (adults only) */
+  deleteRounds: (kidId: string, gameId: string) =>
+    fetchApi<{ deleted: number }>(`/kids/${kidId}/game-rounds/${gameId}`, { method: 'DELETE' }),
 };
 
 // Daily agenda (סדר יום)

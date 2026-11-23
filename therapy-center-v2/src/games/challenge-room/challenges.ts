@@ -624,7 +624,7 @@ export const CHALLENGES: ChallengeDef[] = [
     levels: [
       { name: 'קל: 80% לוחצים', settings: { trials: 20, goPct: 80, stimMs: 1100, windowMs: 1100, isiMs: 750, isiJitter: 150, varStim: false } },
       { name: 'בינוני: 70% לוחצים', settings: { trials: 25, goPct: 70, stimMs: 900, windowMs: 900, isiMs: 600, isiJitter: 200, varStim: false } },
-      { name: 'מתקדם: 60% לוחצים, מהיר', settings: { trials: 30, goPct: 60, stimMs: 700, windowMs: 750, isiMs: 500, isiJitter: 250, varStim: false } },
+      { name: 'מתקדם: חצי ירוק חצי אדום', settings: { trials: 30, goPct: 50, stimMs: 700, windowMs: 750, isiMs: 500, isiJitter: 250, varStim: false } },
       { name: 'מאתגר: חצי חצי, זמנים משתנים', settings: { trials: 36, goPct: 50, stimMs: 650, windowMs: 800, isiMs: 400, isiJitter: 300, varStim: true } },
     ],
     fields: [
@@ -746,4 +746,29 @@ export function effectiveSettings(def: ChallengeDef, level: number, overrides?: 
 /** A stable key for "the same conditions" - level + every setting - to compare rounds fairly. */
 export function settingsKey(level: number, s: Settings) {
   return `${level}|` + Object.keys(s).sort().map((k) => `${k}=${s[k]}`).join(',');
+}
+
+/** How a challenge's level goes up: rounds in a row that passed, at this level, valid and not stopped. */
+export const ROUNDS_TO_LEVEL_UP = 2;
+
+/** what the adult reads about passing a level (one line per challenge) */
+export const PASS_RULE: Record<string, string> = {
+  light: '80% תגובות נכונות',
+  gonogo: '80% לחיצה על ירוק וגם 80% עצירה על אדום',
+  sequence: 'להוסיף לפחות 4 אורות לרצף (או להגיע לסוף)',
+  switch: '80% לחיצה וגם 80% עצירה, לפי הכלל שמתחלף',
+};
+
+interface RoundLike { challenge?: unknown; level?: unknown; valid?: unknown; stoppedEarly?: unknown; summary?: Record<string, Val> }
+
+/** passed rounds in a row (newest first) at this level - the way to the next level */
+export function levelStreak(def: ChallengeDef, level: number, rounds: RoundLike[]): number {
+  let n = 0;
+  for (const r of rounds) {
+    if (r.challenge !== def.id) continue;
+    if (Number(r.level) !== level) break;
+    if (r.valid === false || r.stoppedEarly) continue;
+    if (def.passed((r.summary || {}) as Record<string, Val>)) n++; else break;
+  }
+  return n;
 }

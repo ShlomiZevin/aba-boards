@@ -2676,6 +2676,19 @@ async function getKidGameRounds(kidId, gameId, limit = 300) {
     .slice(0, limit);
 }
 
+/** Deletes a kid's saved rounds of one game (an adult's "reset the data"); returns how many. */
+async function deleteKidGameRounds(kidId, gameId) {
+  if (!GAME_ID_RE.test(gameId)) throw Object.assign(new Error('Invalid game id'), { status: 400 });
+  const db = getDb();
+  const snap = await db.collection('kidGameRounds').where('kidId', '==', kidId).where('gameId', '==', gameId).get();
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  return { deleted: snap.docs.length };
+}
+
 // ==================== DAILY AGENDA (סדר יום) ====================
 // A day plan per kid: what happens in the morning, afternoon and evening.
 // Independent of the board — no coins, no rewards, no board fields touched.
@@ -3010,6 +3023,7 @@ module.exports = {
   resetKidGameState,
   saveKidGameRound,
   getKidGameRounds,
+  deleteKidGameRounds,
   getKidGameAssets,
   // Kids
   getAllKids,

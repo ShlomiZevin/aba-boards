@@ -83,5 +83,29 @@ extra, because the players are young children in ABA therapy. Add a principle he
 - **A measuring game**: the scoring engine has no React, runs on its own clock and is fast-forwarded by scripted players
   in tests (perfect / impulsive / passive / early / double press / pause). Scripted players must react like a child
   (>= 300 ms) - faster presses are rightly counted as "too early".
+- **Menus rejected twice (2026-11-23) - why, and the method that fixes it**: (1) the design had decorative leaves,
+  ribbon banners and badge plaques ("why the leaves? it's stupid", "very simple, like a PowerPoint"); (2) the build was
+  re-assembled from cut pieces and CSS and looked nothing like the design. The method now: a DESIGNER sub-agent paints 3
+  home directions to a premium kids-game bar and picks; then every menu screen is painted final (1024x1536, sunburst
+  HIGH); for each screen a PLATE = the same painting with only the changing text removed; `layout.json` = measured
+  boxes (% of the canvas) of every button and changing text; the code shows the plate as the screen and lays only
+  hit areas + changing text on the boxes. Then the build is screenshotted next to the design and fixed until they match.
+  Never rebuild a painted design out of generic pieces.
+- **Menus are designed too** (his rule: "have designs per menus, not only the screens - a real, super impressive game"): GPT paints 3 main-menu directions from the game's art, he picks, then GPT designs every other menu in that style, then blank pieces are painted + measured (`pieces.json` faces) and the code lays words/icons on the faces. No decorative leaves/laurels ("stupid").
 - **"Put it live" for a new game** = in `GAMES` (every games room shows it to admins / therapists), switched on for no kid
   until he says so - parents see nothing.
+- **Levels must be visible and reachable** (his question: "why is everything level 1? how do I reach level 2?"): every
+  level has a name; the rule to pass a round is written for adults (`PASS_RULE`); N passed rounds IN A ROW at the same
+  level (stopped / invalid rounds don't count) raise the level BY ITSELF by default (an adult switch turns it into
+  "the adult approves"). The child's end screen says where it stands in one big line ("עלית לרמה 2!" /
+  "עוד סבב מוצלח אחד לרמה 2") with progress dots; the adult's level picker shows "1/2 לרמה 2".
+- **Results after every round, readable**: the child gets stars + the level line; the adult opens a "תוצאות הסבב" sheet
+  with big numbers per measure, a pass/fail verdict against the level's bar and how to level up - never a strip of
+  7-pixel stats squeezed into a painted box. History gets a small trend graph per challenge with the 80% bar.
+- **Adults can wipe the data**: two resets - achievements only (stars, bests) and everything (saved rounds via the
+  DELETE route, stars, levels), each with a two-step confirm. Parents can't delete.
+- **Words**: never "תיווך" (professional jargon he dislikes) - say "עם עזרה". Gendered voice lines need niqqud in the
+  TTS text or the voice speaks feminine to everyone.
+- **A delayed voice line must be cancelled when the child acts**: a question said 350 ms after a screen opens cut off
+  the explanation the child had already asked for, and the demo never started. Keep such timers in a ref; clear them on
+  every button that starts something.

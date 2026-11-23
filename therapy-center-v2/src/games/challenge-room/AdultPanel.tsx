@@ -1,14 +1,13 @@
 /**
  * The adult's panel (admins / therapists): levels and settings per challenge,
- * the round history with each challenge's own measures, and CSV export.
+ * the round history with each challenge's own measures.
  * Rounds are compared only under the same conditions (level + settings).
  */
 import { useMemo, useState } from 'react';
 import type { GameConfigValues, GameRoundRecord } from '../../types';
-import { CHALLENGES, challengeById, effectiveSettings } from './challenges';
+import { CHALLENGES, challengeById, effectiveSettings, levelStreak, ROUNDS_TO_LEVEL_UP, PASS_RULE } from './challenges';
 import type { ChallengeDef, Field } from './challenges';
 import type { CrConfig } from './config';
-import { downloadCsv } from './config';
 import type { Settings, Val } from './engine';
 
 interface Props {
@@ -19,6 +18,43 @@ interface Props {
   voiceOn: boolean;
   onSave: (next: CrConfig, extra?: GameConfigValues) => void;
   onClose: () => void;
+  /** clears the child's stars and bests (the saved round history stays) */
+  onResetProgress?: () => void;
+  /** deletes every saved round, the stars and the levels - a fresh start */
+  onResetData?: () => Promise<boolean>;
+}
+
+/** the measure a progress graph follows per challenge (0-100 where it is a %) */
+const GRAPH: Record<string, { key: string; label: string; pct: boolean }> = {
+  light: { key: 'accuracy', label: 'תגובות נכונות %', pct: true },
+  gonogo: { key: 'nogoPct', label: 'עצר על אדום %', pct: true },
+  sequence: { key: 'span', label: 'אורך הרצף', pct: false },
+  switch: { key: 'accuracy', label: 'דיוק %', pct: true },
+};
+
+/** a small line graph of the last rounds (oldest -> newest, right to left like the page) */
+function Trend({ rounds, def }: { rounds: GameRoundRecord[]; def: ChallengeDef }) {
+  const g = GRAPH[def.id];
+  const pts = rounds.filter((r) => r.challenge === def.id && r.valid !== false && !r.stoppedEarly)
+    .slice(0, 20).reverse()
+    .map((r) => ({ v: Number(r.summary?.[g.key]), lv: Number(r.level) || 1 }))
+    .filter((x) => Number.isFinite(x.v));
+  if (pts.length < 2) return null;
+  const W = 300, H = 90, P = 10;
+  const max = g.pct ? 100 : Math.max(4, ...pts.map((x) => x.v));
+  const x = (k: number) => W - P - (k * (W - 2 * P)) / (pts.length - 1);
+  const y = (v: number) => H - P - (v / max) * (H - 2 * P);
+  return (
+    <div className="cr-trend">
+      <div className="cr-trend-head"><b>{def.name}</b><span>{g.label} · {pts.length} סבבים אחרונים</span></div>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${def.name}: ${pts.map((p) => p.v).join(', ')}`}>
+        {g.pct && <line x1={P} x2={W - P} y1={y(80)} y2={y(80)} className="cr-trend-bar" />}
+        <polyline points={pts.map((p, k) => `${x(k)},${y(p.v)}`).join(' ')} className="cr-trend-line" />
+        {pts.map((p, k) => <circle key={k} cx={x(k)} cy={y(p.v)} r={3.4} className={`cr-trend-dot lv-${Math.min(5, p.lv)}`}><title>{`רמה ${p.lv}: ${p.v}`}</title></circle>)}
+      </svg>
+      {g.pct && <div className="cr-trend-note">הקו המקווקו = 80%, הרף לעליית רמה</div>}
+    </div>
+  );
 }
 
 const fmtDate = (iso: string) => {
@@ -27,7 +63,9 @@ const fmtDate = (iso: string) => {
 };
 const show = (v: unknown, unit?: string) => (v === null || v === undefined || v === '' ? '—' : `${v}${unit === '%' ? '%' : unit ? ` ${unit}` : ''}`);
 
-export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSave, onClose }: Props) {
+export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSave, onClose, onResetProgress, onResetData }: Props) {
+  const [resetAsk, setResetAsk] = useState<'' | 'ask' | 'done'>('');
+  const [wipeAsk, setWipeAsk] = useState<'' | 'ask' | 'busy' | 'done' | 'fail'>('');
   const [tab, setTab] = useState<'settings' | 'history'>('settings');
   const [open, setOpen] = useState<string>(CHALLENGES[0].id);
   const [filter, setFilter] = useState<string>('all');
@@ -46,24 +84,6 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
   };
 
   const shown = useMemo(() => rounds.filter((r) => filter === 'all' || r.challenge === filter), [rounds, filter]);
-
-  const exportRounds = () => {
-    downloadCsv(`חדר-האתגרים-${kidName || 'ילד'}-סבבים.csv`, shown.map((r) => {
-      const row: Record<string, Val> = {
-        תאריך: fmtDate(r.createdAt), משחק: String(r.challengeName || r.challenge), רמה: Number(r.level) || null,
-        תקין: r.valid !== false ? 'כן' : 'לא', 'נעצר מוקדם': r.stoppedEarly ? 'כן' : 'לא', תיווך: Number(r.hints) || 0,
-        'משך (שנ׳)': Math.round((Number(r.durationMs) || 0) / 1000), 'מי שיחק': String(r.by || ''),
-      };
-      Object.entries(r.summary || {}).forEach(([k, v]) => { row[`מדד:${k}`] = v; });
-      Object.entries(r.settings || {}).forEach(([k, v]) => { row[`הגדרה:${k}`] = v; });
-      return row;
-    }));
-  };
-  const exportTrials = () => {
-    const rows: Record<string, Val>[] = [];
-    shown.forEach((r) => (r.trials || []).forEach((t) => rows.push({ תאריך: fmtDate(r.createdAt), סבב: r.id, משחק: String(r.challenge), רמה: Number(r.level) || null, ...t })));
-    downloadCsv(`חדר-האתגרים-${kidName || 'ילד'}-ניסיונות.csv`, rows);
-  };
 
   return (
     <div className="cr-panel">
@@ -88,6 +108,47 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
               <input type="number" min={1} max={10} value={cr.starsEvery} onChange={(e) => onSave({ ...cr, starsEvery: Math.max(1, Math.min(10, Number(e.target.value) || 3)) })} />
               הצלחות (גם עצירה נכונה היא הצלחה)
             </label>
+            <div className="cr-row">
+              {resetAsk === '' && onResetProgress && <button type="button" className="cr-btn cr-btn-soft cr-reset" onClick={() => setResetAsk('ask')}>איפוס ההישגים (כוכבים ושיאים)</button>}
+              {resetAsk === 'ask' && (<>
+                <span>לאפס את כל הכוכבים והשיאים של {kidName}? ההיסטוריה של הסבבים נשמרת.</span>
+                <button type="button" className="cr-btn cr-btn-soft cr-reset is-danger" onClick={() => { onResetProgress?.(); setResetAsk('done'); }}>כן, לאפס</button>
+                <button type="button" className="cr-btn cr-btn-soft cr-reset" onClick={() => setResetAsk('')}>ביטול</button>
+              </>)}
+              {resetAsk === 'done' && <span>✓ ההישגים אופסו</span>}
+            </div>
+            {onResetData && (
+              <div className="cr-row">
+                {wipeAsk === '' && <button type="button" className="cr-btn cr-btn-soft cr-reset" onClick={() => setWipeAsk('ask')}>איפוס כל הנתונים (היסטוריה, כוכבים ורמות)</button>}
+                {wipeAsk === 'ask' && (<>
+                  <span>למחוק את כל {rounds.length} הסבבים השמורים של {kidName}, את הכוכבים ואת הרמות? אי אפשר לבטל.</span>
+                  <button type="button" className="cr-btn cr-btn-soft cr-reset is-danger" onClick={async () => { setWipeAsk('busy'); setWipeAsk((await onResetData()) ? 'done' : 'fail'); }}>כן, למחוק הכול</button>
+                  <button type="button" className="cr-btn cr-btn-soft cr-reset" onClick={() => setWipeAsk('')}>ביטול</button>
+                </>)}
+                {wipeAsk === 'busy' && <span>מוחק…</span>}
+                {wipeAsk === 'done' && <span>✓ כל הנתונים נמחקו - מתחילים מרמה 1</span>}
+                {wipeAsk === 'fail' && <span>המחיקה לא הצליחה. נסו שוב.</span>}
+              </div>
+            )}
+          </section>
+          <section className="cr-sec">
+            <h2>רמות</h2>
+            <p className="cr-note">לכל אתגר יש כמה רמות (רמה 1 הכי קלה). עולים רמה אחרי {ROUNDS_TO_LEVEL_UP} סבבים מוצלחים ברצף באותה רמה. סבב שנעצר באמצע או יצא מהמסך לא נספר.</p>
+            <label className="cr-row is-check"><input type="checkbox" checked={cr.autoLevel} onChange={(e) => onSave({ ...cr, autoLevel: e.target.checked })} /> הרמה עולה לבד (כבוי = המבוגר מאשר בסוף הסבב)</label>
+            <ul className="cr-lvlist">
+              {CHALLENGES.map((def) => {
+                const lv = level(def.id);
+                const st = levelStreak(def, lv, rounds);
+                return (
+                  <li key={def.id}>
+                    <b>{def.name}</b>
+                    <span>רמה {lv} מתוך {def.levels.length}: {def.levels[lv - 1].name}</span>
+                    <span className="cr-lvlist-rule">סבב מוצלח = {PASS_RULE[def.id]}</span>
+                    <span className="cr-lvlist-prog">{lv >= def.levels.length ? 'ברמה הגבוהה ביותר' : `לרמה ${lv + 1}: ${Math.min(st, ROUNDS_TO_LEVEL_UP)} מתוך ${ROUNDS_TO_LEVEL_UP} סבבים מוצלחים`}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
           {CHALLENGES.map((def) => {
             const lv = level(def.id);
@@ -101,6 +162,9 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
                 </button>
                 {open === def.id && (
                   <div className="cr-sec-body">
+                    <ol className="cr-lvnames">
+                      {def.levels.map((l, k) => <li key={k} className={k + 1 === lv ? 'is-on' : ''}>רמה {k + 1}: {l.name}</li>)}
+                    </ol>
                     <label className="cr-row">רמה
                       <select value={lv} onChange={(e) => onSave({ ...cr, levels: { ...cr.levels, [def.id]: Number(e.target.value) }, overrides: { ...cr.overrides, [def.id]: {} } })}>
                         {def.levels.map((l, k) => <option key={k} value={k + 1}>{k + 1}. {l.name}</option>)}
@@ -141,10 +205,13 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
               <option value="all">כל האתגרים</option>
               {CHALLENGES.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
-            <button type="button" className="cr-btn cr-btn-soft" disabled={!shown.length} onClick={exportRounds}>ייצוא סבבים (CSV)</button>
-            <button type="button" className="cr-btn cr-btn-soft" disabled={!shown.length} onClick={exportTrials}>ייצוא ניסיונות (CSV)</button>
           </div>
           {!shown.length && <p className="cr-note">עוד אין סבבים שמורים.</p>}
+          {shown.length > 1 && (
+            <div className="cr-trends">
+              {CHALLENGES.filter((d) => filter === 'all' || d.id === filter).map((d) => <Trend key={d.id} rounds={shown} def={d} />)}
+            </div>
+          )}
           <ul className="cr-hist">
             {shown.map((r, k) => {
               const def = challengeById(String(r.challenge));
@@ -158,7 +225,8 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
                     <span className="cr-hist-date">{fmtDate(r.createdAt)}</span>
                     {r.valid === false && <span className="cr-flag is-bad">לא תקין</span>}
                     {Boolean(r.stoppedEarly) && <span className="cr-flag">נעצר מוקדם</span>}
-                    {Number(r.hints) > 0 && <span className="cr-flag">תיווך {String(r.hints)}</span>}
+                    {Number(r.hints) > 0 && <span className="cr-flag">עם עזרה: {String(r.hints)}</span>}
+                    {def && r.valid !== false && !r.stoppedEarly && <span className={`cr-flag ${def.passed((r.summary || {}) as Record<string, Val>) ? 'is-pass' : ''}`}>{def.passed((r.summary || {}) as Record<string, Val>) ? 'עבר את הרף' : 'מתחת לרף'}</span>}
                     {differs && <span className="cr-flag is-info">תנאים שונים מהסבב הקודם</span>}
                   </div>
                   {def && (
