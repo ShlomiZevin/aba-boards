@@ -94,6 +94,29 @@ export const GAMES: GameDefinition[] = [
     ],
   },
   {
+    id: 'back-to-base',
+    name: 'חזור לבסיס',
+    bg: '#0e1524',
+    icon: '🏠',
+    description: 'משחק 2 של חדר האתגרים: נדלק אור - לוחצים עליו, ואז חוזרים הביתה ולוחצים על הבית. רצף פעולות ושמירה על כלל קבוע. כל סבב נמדד ונשמר להיסטוריה.',
+    // levels, settings and history live in the game's own adult panel (config.cr), like the room
+    settings: [
+      { key: 'sound', type: 'checkbox', label: 'צלילים', default: true },
+      { key: 'voice', type: 'checkbox', label: 'הוראות בקול', default: true },
+    ],
+  },
+  {
+    id: 'count-then-touch',
+    name: 'סופרים לפני שנוגעים',
+    bg: '#0e1524',
+    icon: '⏳',
+    description: 'משחק 3 של חדר האתגרים: הפד נדלק בצהוב וסופר - מחכים. כשהוא נהיה ירוק, לוחצים. השהיית תגובה מכוונת. כל סבב נמדד ונשמר להיסטוריה.',
+    settings: [
+      { key: 'sound', type: 'checkbox', label: 'צלילים', default: true },
+      { key: 'voice', type: 'checkbox', label: 'הוראות בקול', default: true },
+    ],
+  },
+  {
     id: 'challenge-room-3d',
     name: 'חדר האתגרים 3D',
     bg: '#6f8fcf',

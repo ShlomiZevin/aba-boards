@@ -8,7 +8,7 @@
 import {
   COLORS, POD_COLORS, OFF, allOff, shuffle, mean, median, pct, num, bool,
 } from './engine';
-import type { Challenge, ColorId, Ctx, PodId, Press, Settings, Trial, Val, RuleChip } from './engine';
+import type { Challenge, ColorId, Ctx, PodId, PodView, Press, Settings, Trial, Val, RuleChip } from './engine';
 
 export interface Field {
   key: string;
@@ -37,7 +37,7 @@ export interface ChallengeDef {
   passed: (summary: Record<string, Val>) => boolean;
   demo: Settings;
   /** the card's frame colour on the menu */
-  color: 'green' | 'blue' | 'amber' | 'purple';
+  color: 'green' | 'blue' | 'amber' | 'purple' | 'orange';
   /** 1-3 stars for a finished round (what the child sees) */
   score: (summary: Record<string, Val>, s: Settings) => number;
 }
@@ -556,6 +556,271 @@ function summarizeSwitch(trials: Trial[]) {
 }
 
 // ====================================================================================
+// 7. חזור לבסיס - one pod is home (a yellow pad with a house). A blue light comes on
+//    somewhere else: touch it, then go back home. Only the touch on home ends the
+//    sequence and starts the next one. Errorless: a wrong touch is shown and logged,
+//    the sequence waits for the right one.
+// ====================================================================================
+const HOME_C: ColorId = 'yellow';
+const TARGET_C: ColorId = 'blue';
+function makeBase(): Challenge {
+  let ctx: Ctx;
+  let i = 0;
+  let total = 0;
+  let base: PodId = 3;
+  let phase: 'idle' | 'target' | 'return' = 'idle';
+  let targets: PodId[] = [];
+  let k = 0;                 // which target in the chain is lit
+  let onset = 0;
+  let firstRt: number | null = null;
+  let leftAt = 0;            // when the last target was touched
+  let err = { wrongTarget: 0, baseEarly: 0, skipReturn: 0 };
+  let cued = false;
+  let idle = 0;
+
+  const homeView = (lit: boolean): PodView => ({ color: HOME_C, mode: lit ? 'lit' : 'base', icon: 'house' });
+  const showHome = (lit = false) => ctx.setPod(base, homeView(lit));
+  const next = () => {
+    phase = 'idle';
+    if (i >= total) { ctx.later(500, () => ctx.finish()); return; }
+    if (total - i === 2 && total >= 6) ctx.say('almost-end');
+    const every = s2n(ctx.settings, 'moveEvery', 0);
+    if (every > 0 && i > 0 && i % every === 0) {
+      // home moves: the old home goes dark, the new one pops in with a sound and a line
+      ctx.setPod(base, OFF);
+      base = podOtherThan(base, ctx.rand);
+      ctx.later(350, () => { showHome(true); ctx.sfx('switch'); ctx.say('new-base'); });
+      ctx.later(2100, () => { showHome(false); ctx.later(isi(ctx), start); });
+      return;
+    }
+    ctx.later(isi(ctx), start);
+  };
+  const start = () => {
+    const chain = Math.max(1, Math.min(3, s2n(ctx.settings, 'chain', 1)));
+    targets = [];
+    let last = base as number;
+    for (let c = 0; c < chain; c++) {
+      const opts = [0, 1, 2, 3].filter((p) => p !== base && p !== last) as PodId[];
+      const p = pick(opts, ctx.rand); targets.push(p); last = p;
+    }
+    k = 0; firstRt = null; err = { wrongTarget: 0, baseEarly: 0, skipReturn: 0 }; cued = false;
+    lightTarget();
+  };
+  const armIdle = (line: string) => {
+    ctx.cancel(idle);
+    idle = ctx.later(6500, () => {
+      if (phase === 'return' && !cued) { cued = true; showHome(true); }
+      ctx.say(line);
+      armIdle(line);
+    });
+  };
+  const lightTarget = () => {
+    phase = 'target';
+    onset = ctx.now();
+    ctx.setPod(targets[k], { color: TARGET_C, mode: 'lit' });
+    armIdle('idle-press');
+  };
+  const goReturn = () => {
+    phase = 'return';
+    leftAt = ctx.now();
+    if (bool(ctx.settings.returnCue)) showHome(true);
+    armIdle('go-home');
+  };
+  return {
+    start(c) {
+      ctx = c;
+      total = s2n(c.settings, 'trials', 8);
+      base = (Math.max(1, Math.min(4, s2n(c.settings, 'basePod', 4))) - 1) as PodId;
+      c.setPods(allOff());
+      showHome(false);
+      c.later(600, next);
+    },
+    press(p) {
+      if (p.pod === null) return;
+      if (phase === 'idle') { ctx.log({ kind: 'early', at: Math.round(p.t) }); return; }
+      if (phase === 'target') {
+        const want = targets[k];
+        if (p.pod === want) {
+          if (firstRt === null) firstRt = Math.round(p.t - onset);
+          ctx.cancel(idle);
+          ctx.setPod(want, OFF);
+          ctx.flash(want, TARGET_C, 260);
+          ctx.sfx('tap1');
+          k++;
+          if (k < targets.length) ctx.later(250, lightTarget);
+          else goReturn();
+        } else if (p.pod === base) { err.baseEarly++; ctx.neutral('wrong', p.pod); }
+        else { err.wrongTarget++; ctx.neutral('wrong', p.pod); }
+        return;
+      }
+      // phase === 'return'
+      if (p.pod === base) {
+        ctx.cancel(idle);
+        const errors = err.wrongTarget + err.baseEarly + err.skipReturn;
+        ctx.log({
+          kind: 'trial', i: i + 1, base: base + 1, targets: targets.map((x) => x + 1).join('-'),
+          outcome: errors ? 'error' : 'clean', ...err, cued, rt: firstRt, returnRt: Math.round(p.t - leftAt),
+        });
+        phase = 'idle';
+        showHome(false);
+        ctx.flash(base, HOME_C, 300);
+        ctx.success('good', base);
+        i++;
+        next();
+      } else { err.skipReturn++; ctx.neutral('wrong', p.pod); }
+    },
+    abort() {
+      ctx.cancel(idle);
+      if (phase !== 'idle') ctx.log({ kind: 'trial', i: i + 1, outcome: 'void', void: true });
+      phase = 'idle';
+    },
+    resume() { ctx.setPods(allOff()); showHome(false); next(); },
+    demoAnswer: () => (phase === 'target' ? targets[k] : phase === 'return' ? base : null),
+    remaining: () => total - i,
+  };
+}
+
+function summarizeBase(trials: Trial[]) {
+  const t = trialsOnly(trials);
+  const clean = t.filter((x) => x.outcome === 'clean');
+  const sum = (k: string) => t.reduce((a, x) => a + num(x[k]), 0);
+  return {
+    trials: t.length,
+    clean: clean.length,
+    cleanPct: pct(clean.length, t.length),
+    skipReturn: sum('skipReturn'),
+    skipRounds: t.filter((x) => num(x.skipReturn) > 0).length,
+    baseEarly: sum('baseEarly'),
+    wrongTarget: sum('wrongTarget'),
+    orderErrors: sum('skipReturn') + sum('baseEarly') + sum('wrongTarget'),
+    cuedReturns: t.filter((x) => x.cued === true).length,
+    meanRt: mean(t.map((x) => num(x.rt)).filter((x) => x > 0)),
+    meanReturnRt: mean(t.map((x) => num(x.returnRt)).filter((x) => x > 0)),
+    earlyPresses: earlyCount(trials),
+    hinted: hintCount(trials),
+  } as Record<string, Val>;
+}
+
+// ====================================================================================
+// 8. סופרים לפני שנוגעים - a pad turns yellow and counts (1, 2, 3...): wait. When it
+//    turns green, touch it. The wait and the time allowed to answer are separate
+//    settings (spec: teach the pause, not slow answers). A touch while yellow is an
+//    early press - logged, the light goes out calmly, the next one comes.
+// ====================================================================================
+const WAIT_C: ColorId = 'yellow';
+const GO_C: ColorId = 'green';
+function makeWait(): Challenge {
+  let ctx: Ctx;
+  let i = 0;
+  let total = 0;
+  let pod: PodId | null = null;
+  let last = -1;
+  let phase: 'idle' | 'wait' | 'go' = 'idle';
+  let onset = 0;
+  let goAt = 0;
+  let waitMs = 0;
+  let wrong = 0;
+  let timers: number[] = [];
+
+  const clearT = () => { timers.forEach((t) => ctx.cancel(t)); timers = []; };
+  const next = () => {
+    phase = 'idle';
+    if (i >= total) { ctx.later(500, () => ctx.finish()); return; }
+    if (total - i === 2 && total >= 6) ctx.say('almost-end');
+    ctx.later(isi(ctx), show);
+  };
+  const show = () => {
+    const lo = s2n(ctx.settings, 'waitMs', 1000);
+    const hi = Math.max(lo, s2n(ctx.settings, 'waitMax', lo));
+    waitMs = hi > lo ? Math.round((lo + ctx.rand() * (hi - lo)) / 100) * 100 : lo;
+    const p = podOtherThan(last, ctx.rand); last = p; pod = p;
+    phase = 'wait'; wrong = 0; onset = ctx.now();
+    const showCount = ctx.settings.showCount !== false;
+    const voice = bool(ctx.settings.countVoice);
+    ctx.setPod(p, { color: WAIT_C, mode: 'lit', count: showCount ? 1 : null });
+    if (voice) ctx.say('n1');
+    // one number every second while waiting
+    for (let n = 2; (n - 1) * 1000 < waitMs; n++) {
+      timers.push(ctx.later((n - 1) * 1000, () => {
+        if (phase !== 'wait' || pod === null) return;
+        ctx.setPod(pod, { color: WAIT_C, mode: 'lit', count: showCount ? n : null });
+        if (voice && n <= 5) ctx.say(`n${n}`); else ctx.sfx('tap2');
+      }));
+    }
+    timers.push(ctx.later(waitMs, go));
+  };
+  const go = () => {
+    if (pod === null) return;
+    phase = 'go'; goAt = ctx.now();
+    ctx.setPod(pod, { color: GO_C, mode: 'lit' });
+    ctx.sfx('turn');
+    const win = s2n(ctx.settings, 'windowMs', 0);
+    if (win > 0) timers.push(ctx.later(win, miss));
+    else timers.push(ctx.later(6000, () => { if (phase === 'go') ctx.say('idle-press'); }));
+  };
+  const end = (outcome: string, row: Record<string, Val>) => {
+    clearT();
+    ctx.log({ kind: 'trial', i: i + 1, pod: (pod ?? 0) + 1, waitMs, outcome, wrong, ...row });
+    if (pod !== null) ctx.setPod(pod, OFF);
+    pod = null; phase = 'idle'; i++;
+  };
+  const miss = () => { end('miss', { rt: null, waited: null }); next(); };
+  return {
+    start(c) { ctx = c; total = s2n(c.settings, 'trials', 8); c.setPods(allOff()); c.later(300, next); },
+    press(p) {
+      if (p.pod === null) return;
+      if (phase === 'idle') { ctx.log({ kind: 'early', at: Math.round(p.t) }); return; }
+      const at = pod;
+      if (p.pod !== pod) {
+        if (phase === 'go') { wrong++; ctx.neutral('wrong', p.pod); return; }
+        // any touch while it is still yellow is pressing too early
+        end('early', { rt: null, waited: Math.round(p.t - onset), otherPod: true });
+        ctx.neutral('wait', at);
+        next();
+        return;
+      }
+      if (phase === 'wait') {
+        end('early', { rt: null, waited: Math.round(p.t - onset) });
+        ctx.neutral('wait', at);
+        next();
+        return;
+      }
+      end('hit', { rt: Math.round(p.t - goAt), waited: Math.round(p.t - onset) });
+      if (at !== null) ctx.flash(at, GO_C, 300);
+      ctx.success('stop', at ?? undefined);
+      next();
+    },
+    abort() {
+      clearT();
+      if (phase !== 'idle') ctx.log({ kind: 'trial', i: i + 1, outcome: 'void', void: true });
+      pod = null; phase = 'idle';
+    },
+    resume() { next(); },
+    demoAnswer: () => (phase === 'go' ? pod : null),
+    remaining: () => total - i,
+  };
+}
+
+function summarizeWait(trials: Trial[]) {
+  const t = trialsOnly(trials);
+  const hits = t.filter((x) => x.outcome === 'hit');
+  const earlyT = t.filter((x) => x.outcome === 'early');
+  return {
+    trials: t.length,
+    hits: hits.length,
+    waitPct: pct(hits.length, t.length),
+    earlyTrials: earlyT.length,
+    misses: t.filter((x) => x.outcome === 'miss').length,
+    wrongPresses: t.reduce((a, x) => a + num(x.wrong), 0),
+    meanWaited: mean(hits.map((x) => num(x.waited))),
+    meanEarlyAt: mean(earlyT.map((x) => num(x.waited))),
+    meanRt: mean(hits.map((x) => num(x.rt))),
+    earlyPresses: earlyCount(trials),
+    hinted: hintCount(trials),
+  } as Record<string, Val>;
+}
+
+// ====================================================================================
 // definitions
 // ====================================================================================
 const N = (key: string, label: string, min: number, max: number, step = 1, help?: string): Field => ({ key, label, type: 'number', min, max, step, help });
@@ -733,7 +998,90 @@ export const CHALLENGES: ChallengeDef[] = [
   },
 ];
 
-export const challengeById = (id: string) => CHALLENGES.find((c) => c.id === id);
+/**
+ * Games 2 and 3 (spec games 7 and 8): each is its own game in the games room with ONE
+ * challenge - the same engine, pads, plates, levels and history as the room.
+ */
+export const EXTRA_CHALLENGES: ChallengeDef[] = [
+  {
+    id: 'base',
+    name: 'חזור לבסיס',
+    short: 'רצף פעולות',
+    icon: 'machine-base',
+    emoji: '🏠',
+    howto: () => ['c7-howto'],
+    levels: [
+      { name: 'הבית נדלק ומראה את הדרך חזרה', settings: { trials: 8, chain: 1, moveEvery: 0, returnCue: true, basePod: 4, isiMs: 700, isiJitter: 150 } },
+      { name: 'חוזרים הביתה בלי רמז', settings: { trials: 10, chain: 1, moveEvery: 0, returnCue: false, basePod: 4, isiMs: 600, isiJitter: 150 } },
+      { name: 'הבית זז', settings: { trials: 12, chain: 1, moveEvery: 4, returnCue: false, basePod: 4, isiMs: 600, isiJitter: 150 } },
+      { name: 'שני אורות ואז הביתה', settings: { trials: 10, chain: 2, moveEvery: 0, returnCue: false, basePod: 4, isiMs: 600, isiJitter: 150 } },
+      { name: 'שני אורות, והבית זז', settings: { trials: 12, chain: 2, moveEvery: 4, returnCue: false, basePod: 4, isiMs: 550, isiJitter: 150 } },
+    ],
+    fields: [
+      N('trials', 'מספר סבבים (אור + חזרה הביתה)', 3, 40),
+      N('chain', 'כמה אורות לפני החזרה הביתה', 1, 3),
+      N('moveEvery', 'הבית זז כל כמה סבבים (0 = קבוע)', 0, 20),
+      C('returnCue', 'הבית נדלק כשצריך לחזור (רמז)'),
+      N('basePod', 'איפה הבית בהתחלה (1-4)', 1, 4),
+      N('isiMs', 'זמן בין סבבים (מ״ש)', 200, 5000, 100),
+    ],
+    make: makeBase,
+    summarize: (trials) => summarizeBase(trials),
+    metrics: [
+      { key: 'cleanPct', label: 'רצפים נכונים בלי טעות', unit: '%' },
+      { key: 'skipReturn', label: 'דילג על החזרה הביתה' },
+      { key: 'baseEarly', label: 'לחץ על הבית לפני האור' },
+      { key: 'wrongTarget', label: 'לחץ על מקום אחר' },
+      { key: 'cuedReturns', label: 'חזר הביתה רק אחרי רמז' },
+      { key: 'meanReturnRt', label: 'זמן חזרה הביתה', unit: 'מ״ש' },
+    ],
+    passed: (s) => num(s.cleanPct) >= 80,
+    demo: { trials: 2, chain: 1, moveEvery: 0, returnCue: true, basePod: 4, isiMs: 800 },
+    color: 'purple',
+    score: (m) => starsFor(num(m.cleanPct)),
+  },
+  {
+    id: 'wait',
+    name: 'סופרים לפני שנוגעים',
+    short: 'השהיית תגובה',
+    icon: 'machine-wait',
+    emoji: '⏳',
+    howto: () => ['c8-howto'],
+    levels: [
+      { name: 'מחכים שנייה', settings: { trials: 8, waitMs: 1000, waitMax: 1000, windowMs: 0, isiMs: 900, isiJitter: 200, showCount: true, countVoice: true } },
+      { name: 'מחכים שתי שניות', settings: { trials: 8, waitMs: 2000, waitMax: 2000, windowMs: 0, isiMs: 900, isiJitter: 200, showCount: true, countVoice: true } },
+      { name: 'מחכים שלוש שניות', settings: { trials: 10, waitMs: 3000, waitMax: 3000, windowMs: 4000, isiMs: 800, isiJitter: 250, showCount: true, countVoice: true } },
+      { name: 'זמני המתנה משתנים', settings: { trials: 10, waitMs: 1500, waitMax: 4000, windowMs: 3000, isiMs: 800, isiJitter: 300, showCount: true, countVoice: false } },
+    ],
+    fields: [
+      N('trials', 'מספר ניסיונות', 3, 40),
+      N('waitMs', 'זמן המתנה (מ״ש)', 500, 8000, 100),
+      N('waitMax', 'זמן המתנה מקסימלי - יותר מהמינימום = משתנה (מ״ש)', 500, 10000, 100),
+      N('windowMs', 'כמה זמן אפשר ללחוץ אחרי הירוק (מ״ש, 0 = עד שלוחצים)', 0, 10000, 100),
+      N('isiMs', 'זמן בין ניסיונות (מ״ש)', 300, 5000, 100),
+      C('showCount', 'מספרים סופרים על הפד בזמן ההמתנה'),
+      C('countVoice', 'סופרים בקול (אחת, שתיים, שלוש)'),
+    ],
+    make: makeWait,
+    summarize: (trials) => summarizeWait(trials),
+    metrics: [
+      { key: 'waitPct', label: 'המתנות מוצלחות', unit: '%' },
+      { key: 'earlyTrials', label: 'לחיצות מוקדמות (לפני הירוק)' },
+      { key: 'meanWaited', label: 'משך ההמתנה בפועל', unit: 'מ״ש' },
+      { key: 'meanEarlyAt', label: 'לחיצה מוקדמת אחרי', unit: 'מ״ש' },
+      { key: 'misses', label: 'לא לחץ בזמן' },
+      { key: 'meanRt', label: 'זמן תגובה אחרי הירוק', unit: 'מ״ש' },
+    ],
+    passed: (s) => num(s.waitPct) >= 80,
+    demo: { trials: 2, waitMs: 2000, waitMax: 2000, windowMs: 0, isiMs: 800, showCount: true, countVoice: true },
+    color: 'orange',
+    score: (m) => starsFor(num(m.waitPct)),
+  },
+];
+
+const ALL_CHALLENGES = [...CHALLENGES, ...EXTRA_CHALLENGES];
+export const challengeById = (id: string) => ALL_CHALLENGES.find((c) => c.id === id);
+
 
 /** The settings a round runs with: the level's preset, then the adult's overrides. */
 export function effectiveSettings(def: ChallengeDef, level: number, overrides?: Settings): Settings {
@@ -757,6 +1105,8 @@ export const PASS_RULE: Record<string, string> = {
   gonogo: '80% לחיצה על ירוק וגם 80% עצירה על אדום',
   sequence: 'להוסיף לפחות 4 אורות לרצף (או להגיע לסוף)',
   switch: '80% לחיצה וגם 80% עצירה, לפי הכלל שמתחלף',
+  base: '80% מהרצפים נכונים (אור ואז הביתה) בלי טעות',
+  wait: '80% המתנות מוצלחות (לוחצים רק כשירוק)',
 };
 
 interface RoundLike { challenge?: unknown; level?: unknown; valid?: unknown; stoppedEarly?: unknown; summary?: Record<string, Val> }

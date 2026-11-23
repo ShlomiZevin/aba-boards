@@ -22,6 +22,8 @@ interface Props {
   onResetProgress?: () => void;
   /** deletes every saved round, the stars and the levels - a fresh start */
   onResetData?: () => Promise<boolean>;
+  /** the challenges this game has (the room: all four; games 2 and 3: one each) */
+  defs?: ChallengeDef[];
 }
 
 /** the measure a progress graph follows per challenge (0-100 where it is a %) */
@@ -29,6 +31,8 @@ const GRAPH: Record<string, { key: string; label: string; pct: boolean }> = {
   light: { key: 'accuracy', label: 'תגובות נכונות %', pct: true },
   gonogo: { key: 'nogoPct', label: 'עצר על אדום %', pct: true },
   sequence: { key: 'span', label: 'אורך הרצף', pct: false },
+  base: { key: 'cleanPct', label: 'רצפים נכונים %', pct: true },
+  wait: { key: 'waitPct', label: 'המתנות מוצלחות %', pct: true },
   switch: { key: 'accuracy', label: 'דיוק %', pct: true },
 };
 
@@ -63,11 +67,11 @@ const fmtDate = (iso: string) => {
 };
 const show = (v: unknown, unit?: string) => (v === null || v === undefined || v === '' ? '—' : `${v}${unit === '%' ? '%' : unit ? ` ${unit}` : ''}`);
 
-export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSave, onClose, onResetProgress, onResetData }: Props) {
+export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSave, onClose, onResetProgress, onResetData, defs = CHALLENGES }: Props) {
   const [resetAsk, setResetAsk] = useState<'' | 'ask' | 'done'>('');
   const [wipeAsk, setWipeAsk] = useState<'' | 'ask' | 'busy' | 'done' | 'fail'>('');
   const [tab, setTab] = useState<'settings' | 'history'>('settings');
-  const [open, setOpen] = useState<string>(CHALLENGES[0].id);
+  const [open, setOpen] = useState<string>(defs[0].id);
   const [filter, setFilter] = useState<string>('all');
 
   const level = (id: string) => Math.max(1, Math.min(challengeById(id)!.levels.length, cr.levels[id] || 1));
@@ -136,7 +140,7 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
             <p className="cr-note">לכל אתגר יש כמה רמות (רמה 1 הכי קלה). עולים רמה אחרי {ROUNDS_TO_LEVEL_UP} סבבים מוצלחים ברצף באותה רמה. סבב שנעצר באמצע או יצא מהמסך לא נספר.</p>
             <label className="cr-row is-check"><input type="checkbox" checked={cr.autoLevel} onChange={(e) => onSave({ ...cr, autoLevel: e.target.checked })} /> הרמה עולה לבד (כבוי = המבוגר מאשר בסוף הסבב)</label>
             <ul className="cr-lvlist">
-              {CHALLENGES.map((def) => {
+              {defs.map((def) => {
                 const lv = level(def.id);
                 const st = levelStreak(def, lv, rounds);
                 return (
@@ -203,13 +207,13 @@ export default function AdultPanel({ cr, rounds, kidName, soundOn, voiceOn, onSa
           <div className="cr-hist-tools">
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">כל האתגרים</option>
-              {CHALLENGES.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              {defs.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
           {!shown.length && <p className="cr-note">עוד אין סבבים שמורים.</p>}
           {shown.length > 1 && (
             <div className="cr-trends">
-              {CHALLENGES.filter((d) => filter === 'all' || d.id === filter).map((d) => <Trend key={d.id} rounds={shown} def={d} />)}
+              {defs.filter((d) => filter === 'all' || d.id === filter).map((d) => <Trend key={d.id} rounds={shown} def={d} />)}
             </div>
           )}
           <ul className="cr-hist">

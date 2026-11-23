@@ -720,3 +720,30 @@ button.cr-pcard:active { transform: scale(0.96); }
 .cr-panel > .cr-panel-head { width: auto; margin: 0; justify-content: flex-start; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; }
 .cr-panel > .cr-panel-head h1 { flex: 1 1 calc(100% - 70px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 560px) { .cr-panel > .cr-panel-head .cr-tabs { flex: 1 1 100%; } }
+
+/* ---- games 2 and 3: the home pad (חזור לבסיס) and the counting pad (סופרים לפני שנוגעים) ---- */
+/* home, resting: the face half-filled with its own yellow, the house on it - always findable, calm */
+.cr-pad.is-base { box-shadow: 0 0 0 5px color-mix(in srgb, var(--base) 55%, transparent); }
+.cr-pad.is-base .cr-pad-fill { --c: var(--base); opacity: 0.5; transform: scale(1); }
+.cr-pad-icon {
+  position: absolute; left: 31%; top: 30%; width: 38%; height: 38%; object-fit: contain;
+  pointer-events: none; filter: drop-shadow(0 3px 0 rgba(20, 30, 80, 0.35));
+}
+.cr-pad.is-base .cr-pad-icon { opacity: 0.85; }
+/* home, calling the child back: bright and breathing */
+.cr-pad.is-home-lit { animation: cr-home-call 1.1s ease-in-out infinite; }
+@keyframes cr-home-call { 50% { transform: scale(1.045); } }
+/* the count while waiting: one big number on the yellow face, popping in each second */
+.cr-pad-count {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: 'Fredoka', 'Varela Round', system-ui, sans-serif; font-weight: 700;
+  font-size: min(40cqw, 36cqh); line-height: 1; color: #fff;
+  -webkit-text-stroke: 0.06em #8a5a00; paint-order: stroke fill;
+  text-shadow: 0 0.06em 0 #8a5a00;
+  pointer-events: none; animation: cr-count-pop 0.35s cubic-bezier(.3,1.5,.5,1);
+}
+@keyframes cr-count-pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .cr-pad.is-home-lit, .cr-pad-count { animation: none; } }
+/* the level strip: the word "רמה" and the buttons never squeeze - only the level's name gives way */
+.cr-levels2-label, .cr-levels2 .cr-level, .cr-level-next { flex-shrink: 0; }
+.cr-levels2 .cr-level-name { min-width: 0; flex: 0 1 auto; }

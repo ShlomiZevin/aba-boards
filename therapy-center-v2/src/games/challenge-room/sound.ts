@@ -98,7 +98,8 @@ export function useChallengeSound(soundOn: boolean, voiceOn: boolean, gender: 'm
   const say = useCallback((id: string, onEnd?: () => void) => {
     const key = resolve(id);
     const a = audioRef.current;
-    const text = LINES[key] || '';
+    // counting (n1..n5) is already the big number on the pad - no caption under it
+    const text = /^n\d$/.test(key) ? '' : LINES[key] || '';
     window.clearTimeout(safety.current);
     let called = false;
     const done = () => { if (called) return; called = true; if (a) a.onended = null; setCaption(''); onEnd?.(); };

@@ -10,6 +10,7 @@ import LegoTower from '../games/LegoTower';
 import ShowerSteps from '../games/ShowerSteps';
 import ChallengeRoom from '../games/challenge-room/ChallengeRoom';
 import ChallengeRoom3D from '../games/challenge-room-3d';
+import { BackToBase, CountThenTouch } from '../games/challenge-room/OneChallenge';
 import type {
   ApiResponse,
   GameComponentProps,
@@ -25,6 +26,8 @@ const GAME_COMPONENTS: Record<string, ComponentType<GameComponentProps>> = {
   'shower-steps': ShowerSteps,
   'challenge-room': ChallengeRoom,
   'challenge-room-3d': ChallengeRoom3D,
+  'back-to-base': BackToBase,
+  'count-then-touch': CountThenTouch,
 };
 
 /**

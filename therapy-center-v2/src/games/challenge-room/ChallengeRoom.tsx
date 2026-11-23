@@ -29,7 +29,6 @@ const ART = ART_ALL;
 /** decoded before the game shows: the plates, the pieces and the pad */
 const PRELOAD = [...Object.values(ART), ...Object.values(V2)];
 
-const GAME_ID = 'challenge-room';
 const EMPTY_OV: Overlay = { status: null, rules: null, banner: null, actions: [] };
 type Screen = 'home' | 'intro' | 'play' | 'end' | 'panel';
 
@@ -37,7 +36,14 @@ interface EndInfo { def: ChallengeDef; level: number; result: RoundResult; summa
   /** this round passed the level's bar / passed rounds in a row at this level (with this one) / the level it just went up to */
   passed: boolean; streak: number; levelUp: number | null }
 
-export default function ChallengeRoom({ config, state, canEdit, onSaveState, onSaveConfig, onExit, kid }: GameComponentProps) {
+/**
+ * The room (all four challenges, a home screen with their machines) - or, with `only`, a game of ONE
+ * challenge (games 2 and 3): it opens on that challenge's intro, which then is its menu.
+ */
+export default function ChallengeRoom({ config, state, canEdit, onSaveState, onSaveConfig, onExit, kid, gameId = 'challenge-room', only }: GameComponentProps & { gameId?: string; only?: string[] }) {
+  const GAME_ID = gameId;
+  const defs = useMemo(() => (only ? only.map((id) => challengeById(id)!).filter(Boolean) : CHALLENGES), [only]);
+  const single = defs.length === 1;
   const qc = useQueryClient();
   const cr = useMemo(() => readCr(config), [config]);
   const soundOn = config.sound !== false;
@@ -46,8 +52,8 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
   const firstName = (kid?.name || '').trim().split(/\s+/)[0] || '';
   const snd = useChallengeSound(soundOn, voiceOn, gender);
 
-  const [screen, setScreen] = useState<Screen>('home');
-  const [current, setCurrent] = useState<ChallengeDef>(CHALLENGES[0]);
+  const [screen, setScreen] = useState<Screen>(single ? 'intro' : 'home');
+  const [current, setCurrent] = useState<ChallengeDef>(defs[0]);
   const [pods, setPods] = useState<PodView[]>(allOff());
   const [flash, setFlash] = useState<Record<number, ColorId | null>>({});
   const [ov, setOv] = useState<Overlay>(EMPTY_OV);
@@ -214,10 +220,10 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
         if (n === 'good') snd.play(n, 1 + Math.min(8, Math.max(0, streakRef.current - 1)) * 0.045);
         else snd.play(n);
       },
-      onSuccess: (kind, streak) => {
+      onSuccess: (kind, streak, at) => {
         streakRef.current = streak;
         const recent = performance.now() - lastLit.current.t < 2500;
-        const pod = kind === 'good' && !recent ? -1 : lastLit.current.pod;
+        const pod = at !== undefined ? at : kind === 'good' && !recent ? -1 : lastLit.current.pod;
         const id = ++burstId.current;
         setBursts((b) => [...b.slice(-4), { id, pod, kind, streak }]);
         window.setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 1100);
@@ -399,7 +405,7 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
   // a soft whoosh when a new screen comes in
   useEffect(() => { if (ready && screen !== 'play') snd.play('whoosh'); }, [screen, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const goHome = () => { stopLoop(); snd.stopVoice(); runnerRef.current = null; setPaused(null); setScreen('home'); };
+  const goHome = () => { stopLoop(); snd.stopVoice(); runnerRef.current = null; setPaused(null); setScreen(single ? 'intro' : 'home'); };
   const toggleFull = () => {
     snd.unlock();
     if (document.fullscreenElement) void document.exitFullscreen();
@@ -412,6 +418,7 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     (window as unknown as Record<string, unknown>).CHALLENGE_ROOM = {
       screen, current: current.id, pods, overlay: ov, stars, paused, demo, end: end ? { summary: end.summary, saved: end.saved, suggest: end.suggest, trials: end.result.trials } : null,
       runner: runnerRef.current,
+      answer: () => chRef.current?.demoAnswer?.() ?? null,
       ff: (ms: number) => { const r = runnerRef.current; if (r) for (let k = 0; k < ms / 10; k++) r.advance(10); },
     };
   });
@@ -461,8 +468,8 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
             <span className={`cr-num at-${i}`}>{i + 1}</span>
             <button
               type="button"
-              className={`cr-pad${lit ? ' is-lit' : ''}${p.mode === 'base' ? ' is-base' : ''}${flash[i] !== undefined ? ' is-flash' : ''}${winPod === i ? ' is-win' : ''}${f ? ` is-fb-${f}` : ''}`}
-              style={{ '--c': c ? COLORS[c].hex : 'transparent' } as React.CSSProperties}
+              style={{ '--c': c ? COLORS[c].hex : 'transparent', '--base': COLORS[(p.color || 'yellow') as ColorId].hex } as React.CSSProperties}
+              className={`cr-pad${lit ? ' is-lit' : ''}${p.mode === 'base' ? ' is-base' : ''}${p.icon === 'house' && lit ? ' is-home-lit' : ''}${flash[i] !== undefined ? ' is-flash' : ''}${winPod === i ? ' is-win' : ''}${f ? ` is-fb-${f}` : ''}`}
               onPointerDown={onPodDown(i)}
               onPointerUp={onPodUp}
               onPointerCancel={onPodUp}
@@ -471,6 +478,8 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
               {ART.pad ? <img className="cr-pad-img" src={ART.pad} alt="" draggable={false} /> : <span className="cr-pad-fallback" />}
               <span className="cr-pad-fill" />
               <span className="cr-pad-print" style={ART['pad-ridges'] ? { WebkitMaskImage: `url(${ART['pad-ridges']})`, maskImage: `url(${ART['pad-ridges']})` } : undefined} />
+              {p.icon === 'house' && <img className="cr-pad-icon" src={V2.house} alt="" draggable={false} />}
+              {p.count ? <span key={p.count} className="cr-pad-count">{p.count}</span> : null}
             </button>
             {wins.filter((w) => w.pods.includes(i)).map((w) => (
               <span key={w.id} className="cr-win" aria-hidden>
@@ -564,9 +573,12 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     );
   } else if (screen === 'intro') {
     const s = effectiveSettings(current, levelOf(current.id), cr.overrides[current.id]);
-    const hasRule = current.id === 'gonogo' || current.id === 'switch';
-    const pressC: ColorId = current.id === 'switch' ? 'green' : ((s.goColor as ColorId) || 'green');
-    const nogoC: ColorId = current.id === 'switch' ? 'red' : ((s.nogoColor as ColorId) || 'red');
+    const hasRule = current.id === 'gonogo' || current.id === 'switch' || current.id === 'wait';
+    // the wait game's rule: green = press, yellow (still counting) = wait
+    const pressC: ColorId = current.id === 'switch' || current.id === 'wait' ? 'green' : ((s.goColor as ColorId) || 'green');
+    const nogoC: ColorId = current.id === 'switch' ? 'red' : current.id === 'wait' ? 'yellow' : ((s.nogoColor as ColorId) || 'red');
+    // a one-challenge game: the intro is its menu, so the adults' gear sits here (painted in, like home)
+    const gear = single && canEdit;
     const mach = MACHINES[current.id];
     const boxR = (L.intro.machine.width * 1024) / (L.intro.machine.height * 1536);
     const pr = mach.w / mach.h;
@@ -593,7 +605,7 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
       </div>
     ) : undefined;
     body = (
-      <Plate src={V2[hasRule ? 'intro-plate' : 'intro-norule-plate']} className="is-intro" below={levels}>
+      <Plate src={V2[`intro${hasRule ? '' : '-norule'}${gear ? '-gear' : ''}-plate`]} className="is-intro" below={levels}>
         <div style={boxStyle(L.intro.machine)}>
           <div className="cr-machine" style={{ left: `${(100 - mw) / 2}%`, width: `${mw}%`, height: `${mh}%` }}>
             <img src={V2[`machine-${current.id}`]} alt={current.name} draggable={false} />
@@ -608,9 +620,10 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
           <Piece src={padOf(nogoC)} box={L.intro.padNogo} />
           <Piece src={V2['hand-stop']} box={L.intro.handNogo} />
         </>}
-        {!soundOn && <Piece src={V2['btn-mute']} box={L.intro.soundCircle} />}
-        <Hit id="sound" shape="circle" box={L.intro.sound} label={soundOn ? 'השתקה' : 'צלילים'} onClick={toggleSound} />
-        <Hit id="back" shape="circle" box={L.intro.back} label="חזרה" onClick={goHome} />
+        {!soundOn && <Piece src={V2['btn-mute']} box={gear ? L.home.soundCircle : L.intro.soundCircle} />}
+        {gear && <Hit id="settings" shape="circle" box={L.home.settings} label="הגדרות" onClick={() => setScreen('panel')} />}
+        <Hit id="sound" shape="circle" box={gear ? L.home.sound : L.intro.sound} label={soundOn ? 'השתקה' : 'צלילים'} onClick={toggleSound} />
+        <Hit id="back" shape="circle" box={L.intro.back} label={single ? 'יציאה' : 'חזרה'} onClick={single ? onExit : goHome} />
         <Hit id="play" shape="round" box={L.intro.play} label="לא, לשחק!" onClick={() => { snd.unlock(); window.clearTimeout(askTimer.current); startRound(current, false); }} />
         <Hit id="explain" shape="round" box={L.intro.explain} label="כן, להסביר" onClick={explain} />
       </Plate>
@@ -619,14 +632,14 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
     body = padGrid;
   } else if (screen === 'end' && end) {
     body = (
-      <Plate src={V2['end-plate']} className="is-end">
+      <Plate src={V2[single ? 'end-menu-plate' : 'end-plate']} className="is-end">
         {L.end.stars.map((b, k) => (
           <img key={k} className={`cr-end-star${k < end.stars ? ' is-on' : ''}`} src={V2[k < end.stars ? 'star-full' : 'star-empty']} alt="" draggable={false}
             style={boxStyle(b, { animationDelay: `${0.35 + k * 0.3}s` })} />
         ))}
         <span className="cr-sr" aria-live="polite">{end.stars} כוכבים</span>
         <Hit id="again" shape="card" box={L.end.again} label="שוב" onClick={() => startRound(end.def, false)} />
-        <Hit id="all" shape="card" box={L.end.all} label="לכל האתגרים" onClick={goHome} />
+        <Hit id="all" shape="card" box={L.end.all} label={single ? 'לתפריט' : 'לכל האתגרים'} onClick={goHome} />
         <div className={`cr-lvbox${end.levelUp ? ' is-up' : ''}`} style={boxStyle(L.end.stats)}>
           <div className="cr-lvbox-main">
             {levelLine(end)}
@@ -641,7 +654,7 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
       </Plate>
     );
   } else if (screen === 'panel') {
-    body = <AdultPanel cr={cr} rounds={rounds} kidName={kid?.name || ''} soundOn={soundOn} voiceOn={voiceOn}
+    body = <AdultPanel cr={cr} rounds={rounds} kidName={kid?.name || ''} soundOn={soundOn} voiceOn={voiceOn} defs={defs}
       onSave={(next, extra) => onSaveConfig({ ...writeCr(config, next), ...(extra || {}) })}
       onResetProgress={() => onSaveState({ stats: {} } as never)}
       onResetData={async () => {
@@ -653,7 +666,7 @@ export default function ChallengeRoom({ config, state, canEdit, onSaveState, onS
         qc.invalidateQueries({ queryKey: ['game-rounds', kid.id, GAME_ID] });
         return true;
       }}
-      onClose={() => setScreen('home')} />;
+      onClose={() => setScreen(single ? 'intro' : 'home')} />;
   }
 
   const game = (

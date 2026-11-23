@@ -32,6 +32,10 @@ export interface PodView {
   color: ColorId | null;
   /** off = dark; lit = glowing in `color`; base = a calm ring marks it (home pod) */
   mode: 'off' | 'lit' | 'base';
+  /** a big number on the pad (counting while waiting) */
+  count?: number | null;
+  /** a symbol on the pad: the home base */
+  icon?: 'house' | null;
 }
 export interface RuleChip { color: ColorId; press: boolean }
 export interface Overlay {
@@ -61,7 +65,7 @@ export interface Ctx {
   /** a voice line; gendered lines are resolved by the sound layer (`intro` -> intro-m) */
   say(id: string, onEnd?: () => void): void;
   /** a success the child earned: sound, stars, sometimes a praise line */
-  success(kind?: 'good' | 'stop'): void;
+  success(kind?: 'good' | 'stop', pod?: number): void;
   /** a mistake: clear but gentle - 'wrong' (not this one) or 'wait' (pressed on a wait colour), on a pod */
   neutral(kind?: 'wrong' | 'wait', pod?: number | null): void;
   log(t: Trial): void;
@@ -117,7 +121,7 @@ export interface RunnerHooks {
   onStar(stars: number): void;
   onFlash(i: number, color: ColorId | null, ms: number): void;
   /** a success moment for the screen (burst) - streak = successes in a row */
-  onSuccess?(kind: 'good' | 'stop', streak: number): void;
+  onSuccess?(kind: 'good' | 'stop', streak: number, pod?: number): void;
   /** a miss for the screen: the pod shakes and shows a calm 'not this one' / 'this one waits' */
   onMiss?(kind: 'wrong' | 'wait', pod: number | null, count: number): void;
   onFinish(r: RoundResult): void;
@@ -300,9 +304,9 @@ export class Runner {
       const ep = this.epoch;
       this.hooks.onSay(id, onEnd ? () => { if (!this.paused && !this.finished && ep === this.epoch) onEnd(); } : undefined);
     },
-    success: (kind = 'good') => {
+    success: (kind = 'good', pod) => {
       this.streak++;
-      this.hooks.onSuccess?.(kind, this.streak);
+      this.hooks.onSuccess?.(kind, this.streak, pod);
       if (this.demo) { this.hooks.onSfx(kind === 'stop' ? 'stop-good' : 'good'); return; }
       this.successes++;
       this.hooks.onSfx(kind === 'stop' ? 'stop-good' : 'good');

@@ -83,6 +83,8 @@ export const MACHINES: Record<string, { w: number; h: number; tray: Box }> = {
   gonogo: { w: 1017, h: 898, tray: { left: 21.4, top: 77.5, width: 56.7, height: 15.4 } },
   sequence: { w: 1016, h: 862, tray: { left: 22.7, top: 77.7, width: 53.3, height: 14.8 } },
   switch: { w: 999, h: 931, tray: { left: 20.9, top: 80.2, width: 57.3, height: 13.3 } },
+  base: { w: 1018, h: 980, tray: { left: 21.0, top: 76.4, width: 57.6, height: 14.7 } },
+  wait: { w: 1022, h: 887, tray: { left: 20.5, top: 76.6, width: 58.4, height: 16.5 } },
 };
 
 export const boxStyle = (b: Box, extra?: CSSProperties): CSSProperties => ({
