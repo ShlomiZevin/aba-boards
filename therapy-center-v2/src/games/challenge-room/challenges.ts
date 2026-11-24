@@ -76,11 +76,13 @@ function makeSeeLight(): Challenge {
   let idle = 0;
   let total = 0;
   const ORDER: PodId[] = [0, 1, 3, 2]; // around the square
+  // speedUp: the lights come faster and stay less as the round goes on (down to 60% at the end)
+  const pace = () => (ctx.settings.speedUp === true && total > 1 ? 1 - 0.4 * (i / (total - 1)) : 1);
 
   const next = () => {
     if (i >= total) { ctx.later(500, () => ctx.finish()); return; }
     if (total - i === 2 && total >= 6) ctx.say('almost-end');
-    ctx.later(isi(ctx), show);
+    ctx.later(Math.max(150, Math.round(isi(ctx) * pace())), show);
   };
   const show = () => {
     const pod = ctx.settings.random === false ? ORDER[order++ % 4] : podOtherThan(last, ctx.rand);
@@ -90,7 +92,7 @@ function makeSeeLight(): Challenge {
     onset = ctx.now();
     ctx.setPod(pod, { color: color(ctx.settings, 'color', 'blue'), mode: 'lit' });
     const win = s2n(ctx.settings, 'windowMs', 0);
-    if (win > 0) timeout = ctx.later(win, miss);
+    if (win > 0) timeout = ctx.later(Math.max(400, Math.round(win * pace())), miss);
     else idle = ctx.later(7000, () => ctx.say('idle-press'));
   };
   const clear = () => {
@@ -837,17 +839,19 @@ export const CHALLENGES: ChallengeDef[] = [
     emoji: '💡',
     howto: () => ['c1-howto'],
     levels: [
-      { name: 'האור מחכה עד שלוחצים', settings: { trials: 12, windowMs: 0, isiMs: 800, isiJitter: 200, random: true, color: 'blue' } },
-      { name: 'שנייה וחצי ללחוץ', settings: { trials: 16, windowMs: 1500, isiMs: 600, isiJitter: 250, random: true, color: 'blue' } },
-      { name: 'שנייה ללחוץ', settings: { trials: 20, windowMs: 1000, isiMs: 450, isiJitter: 250, random: true, color: 'blue' } },
-      { name: 'בזק', settings: { trials: 25, windowMs: 750, isiMs: 300, isiJitter: 200, random: true, color: 'blue' } },
+      { name: 'האור מחכה עד שלוחצים', settings: { trials: 30, windowMs: 0, isiMs: 550, isiJitter: 150, random: true, speedUp: false, color: 'blue' } },
+      { name: 'שנייה וחצי ללחוץ', settings: { trials: 40, windowMs: 1500, isiMs: 450, isiJitter: 150, random: true, speedUp: false, color: 'blue' } },
+      { name: 'שנייה ללחוץ, ומאיץ', settings: { trials: 50, windowMs: 1100, isiMs: 380, isiJitter: 120, random: true, speedUp: true, color: 'blue' } },
+      { name: 'מהר', settings: { trials: 60, windowMs: 900, isiMs: 300, isiJitter: 100, random: true, speedUp: true, color: 'blue' } },
+      { name: 'בזק', settings: { trials: 80, windowMs: 750, isiMs: 250, isiJitter: 80, random: true, speedUp: true, color: 'blue' } },
     ],
     fields: [
-      N('trials', 'מספר ניסיונות', 3, 60),
+      N('trials', 'מספר ניסיונות', 3, 200),
       N('windowMs', 'כמה זמן האור דולק (מ״ש, 0 = עד שלוחצים)', 0, 10000, 100),
       N('isiMs', 'זמן בין אורות (מ״ש)', 200, 5000, 100),
       N('isiJitter', 'שינוי אקראי בזמן בין אורות (± מ״ש)', 0, 2000, 100),
       C('random', 'מיקום אקראי (כבוי = מסביב לפי הסדר)'),
+      C('speedUp', 'מאיץ במהלך הסבב (בסוף עד 60% מהזמנים)'),
       { key: 'color', label: 'צבע האור', type: 'select', options: COLOR_OPTIONS },
     ],
     make: makeSeeLight,
