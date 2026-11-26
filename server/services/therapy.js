@@ -2652,7 +2652,7 @@ function sanitizeGameRound(body) {
   const round = flatMap(b, 40);
   round.settings = flatMap(b.settings);
   round.summary = flatMap(b.summary);
-  round.trials = Array.isArray(b.trials) ? b.trials.slice(0, 400).map((t) => flatMap(t, 30)) : [];
+  round.trials = Array.isArray(b.trials) ? b.trials.slice(0, 800).map((t) => flatMap(t, 30)) : [];
   if (JSON.stringify(round).length > 200000) {
     throw Object.assign(new Error('Round too large'), { status: 400 });
   }

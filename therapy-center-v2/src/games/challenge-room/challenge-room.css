@@ -747,3 +747,6 @@ button.cr-pcard:active { transform: scale(0.96); }
 /* the level strip: the word "רמה" and the buttons never squeeze - only the level's name gives way */
 .cr-levels2-label, .cr-levels2 .cr-level, .cr-level-next { flex-shrink: 0; }
 .cr-levels2 .cr-level-name { min-width: 0; flex: 0 1 auto; }
+/* 8 levels fit a 360-390px phone: the circles shrink a little instead of running past the strip */
+.cr-levels2 { gap: 4px; }
+.cr-levels2 .cr-level { width: min(38px, 8.4vw); height: min(38px, 8.4vw); min-width: min(38px, 8.4vw); min-height: min(38px, 8.4vw); }
